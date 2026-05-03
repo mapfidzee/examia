@@ -162,7 +162,6 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
 
   async function uploadFile(event: React.ChangeEvent<HTMLInputElement>) {
     const selectedFile = event.target.files?.[0]
-
     if (!selectedFile) return
 
     const maximumFileSize = 10 * 1024 * 1024
@@ -234,7 +233,6 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
   async function startRecording() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-
       audioChunksRef.current = []
 
       const recorder = new MediaRecorder(stream)
@@ -281,7 +279,6 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
 
   function stopRecording() {
     if (!mediaRecorderRef.current) return
-
     mediaRecorderRef.current.stop()
     setIsRecording(false)
   }
@@ -432,8 +429,12 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
       padding: '20px'
     }}>
       <h1 style={{ fontSize: '30px', marginBottom: '10px' }}>
-        Lesson Room
+        EXAMIA Lesson Room
       </h1>
+
+      <p style={{ color: '#94a3b8', maxWidth: '760px' }}>
+        A controlled learning space for chat, files, voice notes, and guided teaching.
+      </p>
 
       {message && <p>{message}</p>}
 
@@ -518,10 +519,10 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
       {request && request.status === 'PAID' && hasEntered && (
         <section style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(0, 2fr) minmax(280px, 1fr)',
+          gridTemplateColumns: 'minmax(0, 2fr) minmax(300px, 1fr)',
           gap: '20px',
           alignItems: 'start',
-          maxWidth: '1100px'
+          maxWidth: '1180px'
         }}>
           <div style={{
             border: '1px solid #334155',
@@ -548,24 +549,67 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
                 Lesson Flow
               </p>
 
-              <div style={{
-                display: 'grid',
-                gap: '8px',
-                marginTop: '10px'
-              }}>
+              <div style={{ display: 'grid', gap: '8px', marginTop: '10px' }}>
                 <div style={{ color: '#cbd5e1', fontSize: '14px' }}>
-                  <strong>1. Question:</strong> Student asks a clear question.
+                  <strong>1. Question:</strong> Student states the exact problem clearly.
                 </div>
                 <div style={{ color: '#cbd5e1', fontSize: '14px' }}>
-                  <strong>2. Response:</strong> Teacher responds by chat or voice note.
+                  <strong>2. Evidence:</strong> Student uploads worksheet, picture, or answer attempt if needed.
                 </div>
                 <div style={{ color: '#cbd5e1', fontSize: '14px' }}>
-                  <strong>3. Explanation:</strong> Teacher may upload files, examples, or steps.
+                  <strong>3. Teaching:</strong> Teacher explains by chat, file, or voice note.
                 </div>
                 <div style={{ color: '#cbd5e1', fontSize: '14px' }}>
-                  <strong>4. Follow-up:</strong> Student confirms understanding or asks again.
+                  <strong>4. Check:</strong> Student confirms understanding or asks a follow-up.
+                </div>
+                <div style={{ color: '#cbd5e1', fontSize: '14px' }}>
+                  <strong>5. Summary:</strong> Teacher gives final short summary or next practice task.
                 </div>
               </div>
+            </div>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '12px',
+              marginBottom: '15px'
+            }}>
+              <div style={{
+                padding: '12px',
+                border: '1px solid #334155',
+                borderRadius: '10px',
+                backgroundColor: '#020617'
+              }}>
+                <h3 style={{ marginTop: 0 }}>Student Guide</h3>
+                <p style={{ color: '#cbd5e1', fontSize: '14px' }}>
+                  Ask one clear question at a time. Upload your work if the teacher needs to see your attempt. After the explanation, say whether you understand or need another example.
+                </p>
+              </div>
+
+              <div style={{
+                padding: '12px',
+                border: '1px solid #334155',
+                borderRadius: '10px',
+                backgroundColor: '#020617'
+              }}>
+                <h3 style={{ marginTop: 0 }}>Teacher Guide</h3>
+                <p style={{ color: '#cbd5e1', fontSize: '14px' }}>
+                  Welcome the student, identify the exact difficulty, explain step by step, and finish with a short check for understanding.
+                </p>
+              </div>
+            </div>
+
+            <div style={{
+              padding: '12px',
+              border: '1px solid #334155',
+              borderRadius: '10px',
+              backgroundColor: '#020617',
+              marginBottom: '15px'
+            }}>
+              <h3 style={{ marginTop: 0 }}>Session Rhythm</h3>
+              <p style={{ color: '#cbd5e1', fontSize: '14px', marginBottom: 0 }}>
+                Chat first → upload files if needed → use voice note for explanation → student confirms understanding.
+              </p>
             </div>
 
             <div style={{
