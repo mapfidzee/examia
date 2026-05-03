@@ -61,9 +61,7 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
   const [uploading, setUploading] = useState(false)
 
   const [isRecording, setIsRecording] = useState(false)
-  const [recordingMessage, setRecordingMessage] = useState('No voice note recorded yet.')
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
-  const [audioPreviewUrl, setAudioPreviewUrl] = useState('')
+  const [recordingMessage, setRecordingMessage] = useState('Voice explanation is ready. Tap Start Recording to speak.')
   const [uploadingAudio, setUploadingAudio] = useState(false)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -233,6 +231,7 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
   async function startRecording() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+
       audioChunksRef.current = []
 
       const recorder = new MediaRecorder(stream)
@@ -244,55 +243,46 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
         }
       }
 
-      recorder.onstop = () => {
+      recorder.onstop = async () => {
         const recordedBlob = new Blob(audioChunksRef.current, {
           type: 'audio/webm',
         })
 
+        stream.getTracks().forEach((track) => track.stop())
+
         const maximumAudioSize = 5 * 1024 * 1024
 
         if (recordedBlob.size > maximumAudioSize) {
-          alert('Voice note is too large. Please record a shorter voice note.')
-          setAudioBlob(null)
-          setAudioPreviewUrl('')
-          setRecordingMessage('Voice note was too large. Please try again.')
+          alert('Voice explanation is too large. Please keep it shorter.')
+          setRecordingMessage('Voice explanation was too long. Please try a shorter explanation.')
           return
         }
 
-        const previewUrl = URL.createObjectURL(recordedBlob)
-
-        setAudioBlob(recordedBlob)
-        setAudioPreviewUrl(previewUrl)
-        setRecordingMessage('Voice note ready. You can play it or upload it.')
-
-        stream.getTracks().forEach((track) => track.stop())
+        await uploadVoiceExplanation(recordedBlob)
       }
 
       recorder.start()
       setIsRecording(true)
-      setRecordingMessage('Recording... speak clearly and keep it short.')
+      setRecordingMessage('Recording voice explanation... Tap Stop & Send when finished.')
     } catch (error) {
       alert('Microphone access failed. Please allow microphone permission.')
       console.error(error)
     }
   }
 
-  function stopRecording() {
+  function stopAndSendRecording() {
     if (!mediaRecorderRef.current) return
-    mediaRecorderRef.current.stop()
+
     setIsRecording(false)
+    setRecordingMessage('Sending voice explanation...')
+    mediaRecorderRef.current.stop()
   }
 
-  async function uploadAudioNote() {
-    if (!audioBlob) {
-      alert('Please record a voice note first.')
-      return
-    }
-
+  async function uploadVoiceExplanation(audioBlob: Blob) {
     setUploadingAudio(true)
 
-    const audioName = `Voice note from ${userName} (${userRole})`
-    const audioPath = `${resolvedParams.id}/${Date.now()}-voice-note.webm`
+    const audioName = `Voice explanation from ${userName} (${userRole})`
+    const audioPath = `${resolvedParams.id}/${Date.now()}-voice-explanation.webm`
 
     const { error: uploadError } = await supabase.storage
       .from('lesson-audio')
@@ -301,9 +291,10 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
       })
 
     if (uploadError) {
-      alert('Voice note upload failed.')
+      alert('Voice explanation upload failed.')
       console.error(uploadError)
       setUploadingAudio(false)
+      setRecordingMessage('Voice explanation upload failed. Please try again.')
       return
     }
 
@@ -319,16 +310,15 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
       })
 
     if (databaseError) {
-      alert('Voice note uploaded, but the audio record was not saved.')
+      alert('Voice explanation uploaded, but the record was not saved.')
       console.error(databaseError)
       setUploadingAudio(false)
+      setRecordingMessage('Voice explanation record failed. Please try again.')
       return
     }
 
-    setAudioBlob(null)
-    setAudioPreviewUrl('')
-    setRecordingMessage('Voice note uploaded successfully.')
     setUploadingAudio(false)
+    setRecordingMessage('Voice explanation sent. You can record another one.')
   }
 
   async function getAudioUrl(audio: LessonAudioNote) {
@@ -433,7 +423,7 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
       </h1>
 
       <p style={{ color: '#94a3b8', maxWidth: '760px' }}>
-        A controlled learning space for chat, files, voice notes, and guided teaching.
+        A controlled learning space for chat, files, quick voice explanations, and guided teaching.
       </p>
 
       {message && <p>{message}</p>}
@@ -557,7 +547,7 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
                   <strong>2. Evidence:</strong> Student uploads worksheet, picture, or answer attempt if needed.
                 </div>
                 <div style={{ color: '#cbd5e1', fontSize: '14px' }}>
-                  <strong>3. Teaching:</strong> Teacher explains by chat, file, or voice note.
+                  <strong>3. Teaching:</strong> Teacher explains by chat, file, or quick voice explanation.
                 </div>
                 <div style={{ color: '#cbd5e1', fontSize: '14px' }}>
                   <strong>4. Check:</strong> Student confirms understanding or asks a follow-up.
@@ -608,7 +598,7 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
             }}>
               <h3 style={{ marginTop: 0 }}>Session Rhythm</h3>
               <p style={{ color: '#cbd5e1', fontSize: '14px', marginBottom: 0 }}>
-                Chat first → upload files if needed → use voice note for explanation → student confirms understanding.
+                Chat first → upload files if needed → use quick voice explanation for teaching → student confirms understanding.
               </p>
             </div>
 
@@ -674,6 +664,61 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
           </div>
 
           <div>
+            <div style={{
+              border: '1px solid #334155',
+              borderRadius: '12px',
+              padding: '15px',
+              backgroundColor: '#0f172a',
+              marginBottom: '20px'
+            }}>
+              <h2 style={{ marginTop: 0 }}>Quick Voice Explanation</h2>
+
+              <p style={{ color: '#cbd5e1', fontSize: '14px' }}>
+                Mobile-friendly voice teaching. Tap Start Recording, speak clearly, then tap Stop & Send.
+              </p>
+
+              <p style={{ color: isRecording ? '#22c55e' : '#94a3b8', fontSize: '14px' }}>
+                {recordingMessage}
+              </p>
+
+              {!isRecording && (
+                <button
+                  onClick={startRecording}
+                  disabled={uploadingAudio}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    backgroundColor: '#16a34a',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: 'bold',
+                    marginBottom: '10px'
+                  }}
+                >
+                  {uploadingAudio ? 'Sending...' : 'Start Recording'}
+                </button>
+              )}
+
+              {isRecording && (
+                <button
+                  onClick={stopAndSendRecording}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    backgroundColor: '#dc2626',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: 'bold',
+                    marginBottom: '10px'
+                  }}
+                >
+                  Stop & Send
+                </button>
+              )}
+            </div>
+
             <div style={{
               border: '1px solid #334155',
               borderRadius: '12px',
@@ -766,59 +811,15 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
               padding: '15px',
               backgroundColor: '#0f172a'
             }}>
-              <h2 style={{ marginTop: 0 }}>Voice Notes</h2>
+              <h2 style={{ marginTop: 0 }}>Voice Explanations</h2>
 
               <p style={{ color: '#cbd5e1', fontSize: '14px' }}>
-                Record short teaching or answer voice notes. Keep them brief for low-data learning.
+                All quick voice explanations appear here and can be replayed.
               </p>
-
-              <p style={{ color: '#94a3b8', fontSize: '13px' }}>
-                {recordingMessage}
-              </p>
-
-              <button
-                onClick={isRecording ? stopRecording : startRecording}
-                disabled={uploadingAudio}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  backgroundColor: isRecording ? '#dc2626' : '#16a34a',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontWeight: 'bold',
-                  marginBottom: '10px'
-                }}
-              >
-                {isRecording ? 'Stop Recording' : 'Start Recording'}
-              </button>
-
-              {audioPreviewUrl && (
-                <div style={{ marginBottom: '10px' }}>
-                  <audio controls src={audioPreviewUrl} style={{ width: '100%' }} />
-
-                  <button
-                    onClick={uploadAudioNote}
-                    disabled={uploadingAudio}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      backgroundColor: '#3b82f6',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontWeight: 'bold',
-                      marginTop: '10px'
-                    }}
-                  >
-                    {uploadingAudio ? 'Uploading voice note...' : 'Upload Voice Note'}
-                  </button>
-                </div>
-              )}
 
               {audioNotes.length === 0 && (
                 <p style={{ color: '#94a3b8', fontSize: '14px' }}>
-                  No voice notes yet.
+                  No voice explanations yet.
                 </p>
               )}
 
