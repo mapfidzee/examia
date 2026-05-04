@@ -44,6 +44,16 @@ type LessonAudioNote = {
   created_at: string
 }
 
+type LessonAudioSignal = {
+  id: string
+  lesson_id: string
+  sender_name: string
+  sender_role: string
+  signal_type: string
+  signal_data: any
+  created_at: string
+}
+
 export default function LessonRoom({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
 
@@ -61,11 +71,25 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
   const [uploading, setUploading] = useState(false)
 
   const [isRecording, setIsRecording] = useState(false)
-  const [recordingMessage, setRecordingMessage] = useState('Voice explanation is ready. Tap Start Recording to speak.')
+  const [recordingMessage, setRecordingMessage] = useState(
+    'Voice explanation is ready. Tap Start Recording to speak.'
+  )
   const [uploadingAudio, setUploadingAudio] = useState(false)
+
+  const [liveAudioStatus, setLiveAudioStatus] = useState('Live audio call is ready.')
+  const [callActive, setCallActive] = useState(false)
+  const [incomingCall, setIncomingCall] = useState<any | null>(null)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
+
+  const peerConnectionRef = useRef<RTCPeerConnection | null>(null)
+  const localStreamRef = useRef<MediaStream | null>(null)
+  const currentCallIdRef = useRef<string>('')
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null)
+
+  const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([])
+  const remoteDescriptionReadyRef = useRef(false)
 
   async function loadLesson() {
     const { data, error } = await supabase
@@ -141,13 +165,11 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
   async function sendMessage() {
     if (!newMessage.trim()) return
 
-    const { error } = await supabase
-      .from('lesson_messages')
-      .insert({
-        lesson_request_id: resolvedParams.id,
-        sender: `${userName} (${userRole})`,
-        message: newMessage,
-      })
+    const { error } = await supabase.from('lesson_messages').insert({
+      lesson_request_id: resolvedParams.id,
+      sender: `${userName} (${userRole})`,
+      message: newMessage,
+    })
 
     if (error) {
       alert('Message failed to send.')
@@ -186,17 +208,15 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
       return
     }
 
-    const { error: databaseError } = await supabase
-      .from('lesson_files')
-      .insert({
-        lesson_id: resolvedParams.id,
-        file_name: selectedFile.name,
-        file_path: filePath,
-        file_size: selectedFile.size,
-        file_type: selectedFile.type || 'unknown',
-        uploaded_by_name: userName,
-        uploaded_by_role: userRole,
-      })
+    const { error: databaseError } = await supabase.from('lesson_files').insert({
+      lesson_id: resolvedParams.id,
+      file_name: selectedFile.name,
+      file_path: filePath,
+      file_size: selectedFile.size,
+      file_type: selectedFile.type || 'unknown',
+      uploaded_by_name: userName,
+      uploaded_by_role: userRole,
+    })
 
     if (databaseError) {
       alert('File uploaded, but the file record was not saved.')
@@ -298,16 +318,14 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
       return
     }
 
-    const { error: databaseError } = await supabase
-      .from('lesson_audio_notes')
-      .insert({
-        lesson_id: resolvedParams.id,
-        audio_name: audioName,
-        audio_path: audioPath,
-        audio_size: audioBlob.size,
-        uploaded_by_name: userName,
-        uploaded_by_role: userRole,
-      })
+    const { error: databaseError } = await supabase.from('lesson_audio_notes').insert({
+      lesson_id: resolvedParams.id,
+      audio_name: audioName,
+      audio_path: audioPath,
+      audio_size: audioBlob.size,
+      uploaded_by_name: userName,
+      uploaded_by_role: userRole,
+    })
 
     if (databaseError) {
       alert('Voice explanation uploaded, but the record was not saved.')
@@ -332,6 +350,273 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
     }
 
     return data.signedUrl
+  }
+
+  async function sendLiveSignal(signalType: string, signalData: any) {
+    const { error } = await supabase.from('lesson_audio_signals').insert({
+      lesson_id: resolvedParams.id,
+      sender_name: userName,
+      sender_role: userRole,
+      signal_type: signalType,
+      signal_data: signalData,
+    })
+
+    if (error) {
+      console.error(error)
+      setLiveAudioStatus('Live audio signal failed.')
+    }
+  }
+
+  async function addBufferedCandidates() {
+    if (!peerConnectionRef.current) return
+    if (!remoteDescriptionReadyRef.current) return
+
+    const candidates = [...pendingCandidatesRef.current]
+    pendingCandidatesRef.current = []
+
+    for (const candidate of candidates) {
+      try {
+        await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate))
+      } catch (error) {
+        console.error(error)
+      }
+    }
+  }
+
+  function createPeerConnection(callId: string) {
+    pendingCandidatesRef.current = []
+    remoteDescriptionReadyRef.current = false
+
+    const peerConnection = new RTCPeerConnection({
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+      ],
+    })
+
+    peerConnection.onicecandidate = async (event) => {
+      if (event.candidate) {
+        await sendLiveSignal('candidate', {
+          callId,
+          candidate: event.candidate.toJSON(),
+        })
+      }
+    }
+
+    peerConnection.ontrack = (event) => {
+      const remoteStream = event.streams[0]
+
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = remoteStream
+        remoteAudioRef.current.play().catch((error) => {
+          console.error(error)
+          setLiveAudioStatus('Remote audio is ready. Tap play if the browser blocks autoplay.')
+        })
+      }
+
+      setLiveAudioStatus('Connected. You should hear the other person now.')
+    }
+
+    peerConnection.onconnectionstatechange = () => {
+      if (peerConnection.connectionState === 'connected') {
+        setLiveAudioStatus('Live audio connected.')
+        setCallActive(true)
+      }
+
+      if (
+        peerConnection.connectionState === 'disconnected' ||
+        peerConnection.connectionState === 'failed' ||
+        peerConnection.connectionState === 'closed'
+      ) {
+        setLiveAudioStatus('Live audio ended or disconnected.')
+        setCallActive(false)
+      }
+    }
+
+    peerConnectionRef.current = peerConnection
+    return peerConnection
+  }
+
+  async function startLiveAudioCall() {
+    try {
+      const callId = `${resolvedParams.id}-${Date.now()}`
+      currentCallIdRef.current = callId
+
+      setIncomingCall(null)
+      setLiveAudioStatus('Starting live audio call...')
+
+      const localStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: false,
+      })
+
+      localStreamRef.current = localStream
+
+      const peerConnection = createPeerConnection(callId)
+
+      localStream.getTracks().forEach((track) => {
+        peerConnection.addTrack(track, localStream)
+      })
+
+      const offer = await peerConnection.createOffer()
+      await peerConnection.setLocalDescription(offer)
+
+      await sendLiveSignal('offer', {
+        callId,
+        offer,
+      })
+
+      setCallActive(true)
+      setLiveAudioStatus('Calling... Ask the other person to click Accept Call.')
+    } catch (error) {
+      alert('Could not start live audio. Please allow microphone permission.')
+      console.error(error)
+      setLiveAudioStatus('Could not start live audio.')
+    }
+  }
+
+  async function acceptLiveAudioCall() {
+    if (!incomingCall) return
+
+    try {
+      const callId = incomingCall.callId
+      currentCallIdRef.current = callId
+
+      setLiveAudioStatus('Accepting live audio call...')
+
+      const localStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: false,
+      })
+
+      localStreamRef.current = localStream
+
+      const peerConnection = createPeerConnection(callId)
+
+      localStream.getTracks().forEach((track) => {
+        peerConnection.addTrack(track, localStream)
+      })
+
+      await peerConnection.setRemoteDescription(
+        new RTCSessionDescription(incomingCall.offer)
+      )
+
+      remoteDescriptionReadyRef.current = true
+      await addBufferedCandidates()
+
+      const answer = await peerConnection.createAnswer()
+      await peerConnection.setLocalDescription(answer)
+
+      await sendLiveSignal('answer', {
+        callId,
+        answer,
+      })
+
+      setIncomingCall(null)
+      setCallActive(true)
+      setLiveAudioStatus('Call accepted. Connecting audio...')
+    } catch (error) {
+      alert('Could not accept live audio. Please allow microphone permission.')
+      console.error(error)
+      setLiveAudioStatus('Could not accept live audio.')
+    }
+  }
+
+  async function handleLiveAudioSignal(signal: LessonAudioSignal) {
+    if (!hasEntered) return
+
+    if (signal.sender_name === userName && signal.sender_role === userRole) {
+      return
+    }
+
+    const signalData = signal.signal_data
+
+    if (signal.signal_type === 'offer') {
+      setIncomingCall({
+        callId: signalData.callId,
+        offer: signalData.offer,
+      })
+
+      setLiveAudioStatus(`${signal.sender_name} is calling. Click Accept Call.`)
+      return
+    }
+
+    if (signal.signal_type === 'answer') {
+      if (!peerConnectionRef.current) return
+      if (signalData.callId !== currentCallIdRef.current) return
+
+      await peerConnectionRef.current.setRemoteDescription(
+        new RTCSessionDescription(signalData.answer)
+      )
+
+      remoteDescriptionReadyRef.current = true
+      await addBufferedCandidates()
+
+      setLiveAudioStatus('Answer received. Connecting live audio...')
+      return
+    }
+
+    if (signal.signal_type === 'candidate') {
+      if (signalData.callId !== currentCallIdRef.current) return
+
+      if (!peerConnectionRef.current || !remoteDescriptionReadyRef.current) {
+        pendingCandidatesRef.current.push(signalData.candidate)
+        return
+      }
+
+      try {
+        await peerConnectionRef.current.addIceCandidate(
+          new RTCIceCandidate(signalData.candidate)
+        )
+      } catch (error) {
+        console.error(error)
+      }
+
+      return
+    }
+
+    if (signal.signal_type === 'end') {
+      if (signalData.callId !== currentCallIdRef.current) return
+
+      closeLiveAudio(false)
+      setLiveAudioStatus(`${signal.sender_name || 'The other person'} ended the call.`)
+    }
+  }
+
+  async function endLiveAudioCall() {
+    await sendLiveSignal('end', {
+      callId: currentCallIdRef.current,
+      sender_name: userName,
+    })
+
+    closeLiveAudio(true)
+  }
+
+  function closeLiveAudio(showMessage: boolean) {
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close()
+      peerConnectionRef.current = null
+    }
+
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((track) => track.stop())
+      localStreamRef.current = null
+    }
+
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.srcObject = null
+    }
+
+    pendingCandidatesRef.current = []
+    remoteDescriptionReadyRef.current = false
+    currentCallIdRef.current = ''
+
+    setIncomingCall(null)
+    setCallActive(false)
+
+    if (showMessage) {
+      setLiveAudioStatus('Live audio call ended.')
+    }
   }
 
   function formatFileSize(size: number) {
@@ -404,12 +689,30 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
       )
       .subscribe()
 
+    const liveAudioChannel = supabase
+      .channel(`lesson-live-audio-${resolvedParams.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'lesson_audio_signals',
+          filter: `lesson_id=eq.${resolvedParams.id}`,
+        },
+        (payload) => {
+          handleLiveAudioSignal(payload.new as LessonAudioSignal)
+        }
+      )
+      .subscribe()
+
     return () => {
       supabase.removeChannel(messageChannel)
       supabase.removeChannel(fileChannel)
       supabase.removeChannel(audioChannel)
+      supabase.removeChannel(liveAudioChannel)
+      closeLiveAudio(false)
     }
-  }, [resolvedParams.id])
+  }, [resolvedParams.id, hasEntered, userName, userRole])
 
   return (
     <main style={{
@@ -423,7 +726,7 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
       </h1>
 
       <p style={{ color: '#94a3b8', maxWidth: '760px' }}>
-        A controlled learning space for chat, files, quick voice explanations, and guided teaching.
+        A controlled learning space for chat, files, quick voice explanations, live audio, and guided teaching.
       </p>
 
       {message && <p>{message}</p>}
@@ -437,11 +740,9 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
           backgroundColor: '#0f172a'
         }}>
           <h2>Lesson Locked</h2>
-
           <p style={{ color: '#cbd5e1' }}>
             This lesson room is locked until payment is confirmed.
           </p>
-
           <p>
             Current status: <strong>{request.status}</strong>
           </p>
@@ -547,7 +848,7 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
                   <strong>2. Evidence:</strong> Student uploads worksheet, picture, or answer attempt if needed.
                 </div>
                 <div style={{ color: '#cbd5e1', fontSize: '14px' }}>
-                  <strong>3. Teaching:</strong> Teacher explains by chat, file, or quick voice explanation.
+                  <strong>3. Teaching:</strong> Teacher explains by chat, file, quick voice explanation, or live audio.
                 </div>
                 <div style={{ color: '#cbd5e1', fontSize: '14px' }}>
                   <strong>4. Check:</strong> Student confirms understanding or asks a follow-up.
@@ -556,50 +857,6 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
                   <strong>5. Summary:</strong> Teacher gives final short summary or next practice task.
                 </div>
               </div>
-            </div>
-
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '12px',
-              marginBottom: '15px'
-            }}>
-              <div style={{
-                padding: '12px',
-                border: '1px solid #334155',
-                borderRadius: '10px',
-                backgroundColor: '#020617'
-              }}>
-                <h3 style={{ marginTop: 0 }}>Student Guide</h3>
-                <p style={{ color: '#cbd5e1', fontSize: '14px' }}>
-                  Ask one clear question at a time. Upload your work if the teacher needs to see your attempt. After the explanation, say whether you understand or need another example.
-                </p>
-              </div>
-
-              <div style={{
-                padding: '12px',
-                border: '1px solid #334155',
-                borderRadius: '10px',
-                backgroundColor: '#020617'
-              }}>
-                <h3 style={{ marginTop: 0 }}>Teacher Guide</h3>
-                <p style={{ color: '#cbd5e1', fontSize: '14px' }}>
-                  Welcome the student, identify the exact difficulty, explain step by step, and finish with a short check for understanding.
-                </p>
-              </div>
-            </div>
-
-            <div style={{
-              padding: '12px',
-              border: '1px solid #334155',
-              borderRadius: '10px',
-              backgroundColor: '#020617',
-              marginBottom: '15px'
-            }}>
-              <h3 style={{ marginTop: 0 }}>Session Rhythm</h3>
-              <p style={{ color: '#cbd5e1', fontSize: '14px', marginBottom: 0 }}>
-                Chat first → upload files if needed → use quick voice explanation for teaching → student confirms understanding.
-              </p>
             </div>
 
             <div style={{
@@ -636,7 +893,7 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
             <textarea
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type lesson message here. Example: I need help with question 3, especially the second step."
+              placeholder="Type lesson message here."
               style={{
                 width: '100%',
                 padding: '10px',
@@ -671,6 +928,85 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
               backgroundColor: '#0f172a',
               marginBottom: '20px'
             }}>
+              <h2 style={{ marginTop: 0 }}>Live Audio Call</h2>
+
+              <p style={{ color: '#cbd5e1', fontSize: '14px' }}>
+                Real-time voice call inside EXAMIA. Best for paid audio lessons.
+              </p>
+
+              <p style={{ color: callActive ? '#22c55e' : '#94a3b8', fontSize: '14px' }}>
+                {liveAudioStatus}
+              </p>
+
+              <audio
+                ref={remoteAudioRef}
+                controls
+                autoPlay
+                style={{ width: '100%', marginBottom: '10px' }}
+              />
+
+              {incomingCall && !callActive && (
+                <button
+                  onClick={acceptLiveAudioCall}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    backgroundColor: '#16a34a',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: 'bold',
+                    marginBottom: '10px'
+                  }}
+                >
+                  Accept Call
+                </button>
+              )}
+
+              {!callActive && !incomingCall && (
+                <button
+                  onClick={startLiveAudioCall}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    backgroundColor: '#16a34a',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: 'bold',
+                    marginBottom: '10px'
+                  }}
+                >
+                  Start Live Audio Call
+                </button>
+              )}
+
+              {callActive && (
+                <button
+                  onClick={endLiveAudioCall}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    backgroundColor: '#dc2626',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: 'bold',
+                    marginBottom: '10px'
+                  }}
+                >
+                  End Call
+                </button>
+              )}
+            </div>
+
+            <div style={{
+              border: '1px solid #334155',
+              borderRadius: '12px',
+              padding: '15px',
+              backgroundColor: '#0f172a',
+              marginBottom: '20px'
+            }}>
               <h2 style={{ marginTop: 0 }}>Quick Voice Explanation</h2>
 
               <p style={{ color: '#cbd5e1', fontSize: '14px' }}>
@@ -688,7 +1024,7 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
                   style={{
                     width: '100%',
                     padding: '14px',
-                    backgroundColor: '#16a34a',
+                    backgroundColor: '#3b82f6',
                     color: 'white',
                     border: 'none',
                     borderRadius: '8px',
@@ -728,10 +1064,6 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
             }}>
               <h2 style={{ marginTop: 0 }}>Lesson Files</h2>
 
-              <p style={{ color: '#cbd5e1', fontSize: '14px' }}>
-                Upload worksheets, notes, pictures, PDFs, or answer sheets here.
-              </p>
-
               <label style={{
                 display: 'block',
                 border: '1px dashed #64748b',
@@ -753,12 +1085,6 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
                 {uploading ? 'Uploading file...' : 'Click to upload file'}
               </label>
 
-              {files.length === 0 && (
-                <p style={{ color: '#94a3b8', fontSize: '14px' }}>
-                  No files uploaded yet.
-                </p>
-              )}
-
               {files.map((file) => (
                 <div
                   key={file.id}
@@ -770,20 +1096,12 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
                     backgroundColor: '#020617'
                   }}
                 >
-                  <p style={{
-                    margin: 0,
-                    fontWeight: 'bold',
-                    wordBreak: 'break-word'
-                  }}>
+                  <p style={{ margin: 0, fontWeight: 'bold', wordBreak: 'break-word' }}>
                     {file.file_name}
                   </p>
 
                   <p style={{ margin: '5px 0', color: '#94a3b8', fontSize: '13px' }}>
                     {formatFileSize(file.file_size)}
-                  </p>
-
-                  <p style={{ margin: '5px 0', color: '#94a3b8', fontSize: '13px' }}>
-                    Uploaded by {file.uploaded_by_name} ({file.uploaded_by_role})
                   </p>
 
                   <button
@@ -812,10 +1130,6 @@ export default function LessonRoom({ params }: { params: Promise<{ id: string }>
               backgroundColor: '#0f172a'
             }}>
               <h2 style={{ marginTop: 0 }}>Voice Explanations</h2>
-
-              <p style={{ color: '#cbd5e1', fontSize: '14px' }}>
-                All quick voice explanations appear here and can be replayed.
-              </p>
 
               {audioNotes.length === 0 && (
                 <p style={{ color: '#94a3b8', fontSize: '14px' }}>
@@ -873,10 +1187,6 @@ function AudioNoteCard({
 
       <p style={{ margin: '5px 0', color: '#94a3b8', fontSize: '13px' }}>
         {formatFileSize(audio.audio_size)}
-      </p>
-
-      <p style={{ margin: '5px 0', color: '#94a3b8', fontSize: '13px' }}>
-        Uploaded by {audio.uploaded_by_name} ({audio.uploaded_by_role})
       </p>
 
       {audioUrl ? (
