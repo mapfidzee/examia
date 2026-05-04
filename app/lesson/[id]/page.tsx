@@ -90,6 +90,7 @@ export default function LessonRoom({
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
+  const messagesEndRef = useRef<HTMLDivElement | null>(null)
 
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null)
   const localStreamRef = useRef<MediaStream | null>(null)
@@ -102,6 +103,10 @@ export default function LessonRoom({
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   async function loadLesson() {
     const { data, error } = await supabase
@@ -847,7 +852,9 @@ export default function LessonRoom({
 
                 <div className="messagesBox">
                   {messages.length === 0 && (
-                    <p className="emptyText">No messages yet. Start the lesson conversation here.</p>
+                    <p className="emptyText">
+                      No messages yet. Start the lesson conversation here.
+                    </p>
                   )}
 
                   {messages.map((msg) => {
@@ -867,6 +874,8 @@ export default function LessonRoom({
                       </div>
                     )
                   })}
+
+                  <div ref={messagesEndRef} />
                 </div>
 
                 <div className="composer">
@@ -1333,8 +1342,9 @@ export default function LessonRoom({
           border: 1px solid rgba(148, 163, 184, 0.22);
           background: rgba(2, 6, 23, 0.7);
           border-radius: 20px;
-          padding: 13px;
+          padding: 13px 13px 90px;
           margin: 16px 18px 0;
+          scroll-behavior: smooth;
         }
 
         .emptyText {
@@ -1417,14 +1427,6 @@ export default function LessonRoom({
           overflow: hidden;
         }
 
-        .modeCard::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          opacity: 0.16;
-        }
-
         .liveMode {
           background:
             linear-gradient(135deg, rgba(22, 163, 74, 0.18), rgba(15, 23, 42, 0.92));
@@ -1455,7 +1457,6 @@ export default function LessonRoom({
           color: #ffffff;
           font-size: 22px;
           font-weight: 900;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
         }
 
         .liveIcon {
