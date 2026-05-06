@@ -16,7 +16,8 @@ type TeacherProfile = {
 type LessonRequest = {
   id: string
   subject: string
-  custom_subject: string | null
+  custom_subject?: string | null
+  subject_other?: string | null
   grade_level: string | null
   problem: string
   preferred_time: string | null
@@ -43,6 +44,14 @@ export default function TeacherDashboardPage() {
 
   useEffect(() => {
     setMounted(true)
+
+    if (typeof window !== 'undefined') {
+      const savedEmail = localStorage.getItem('examia_teacher_email')
+      if (savedEmail) {
+        setTeacherEmail(savedEmail)
+        findTeacher(savedEmail)
+      }
+    }
   }, [])
 
   const offeredLessons = useMemo(
@@ -79,31 +88,38 @@ export default function TeacherDashboardPage() {
 
   if (!mounted) return null
 
-  async function findTeacher() {
-    if (!teacherEmail.trim()) {
+  async function findTeacher(emailOverride?: string) {
+    const emailToUse = (emailOverride || teacherEmail).trim().toLowerCase()
+
+    if (!emailToUse) {
       alert('Please enter your teacher email.')
       return
     }
 
     setLoading(true)
-    setMessage('')
+    setMessage('Loading teacher workspace...')
     setTeacher(null)
     setLessons([])
 
     const { data: teacherData, error: teacherError } = await supabase
       .from('teacher_profiles')
       .select('*')
-      .eq('email', teacherEmail.trim().toLowerCase())
+      .eq('email', emailToUse)
       .single()
 
     if (teacherError || !teacherData) {
       console.error(teacherError)
       alert('Teacher profile not found.')
+      setMessage('')
       setLoading(false)
       return
     }
 
     setTeacher(teacherData)
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('examia_teacher_email', emailToUse)
+    }
 
     if (teacherData.status !== 'APPROVED') {
       setMessage('Your teacher profile is not approved yet.')
@@ -120,11 +136,13 @@ export default function TeacherDashboardPage() {
     if (lessonError) {
       console.error(lessonError)
       alert('Could not load your assigned lessons.')
+      setMessage('')
       setLoading(false)
       return
     }
 
     setLessons(lessonData || [])
+    setMessage('')
     setLoading(false)
   }
 
@@ -175,8 +193,8 @@ export default function TeacherDashboardPage() {
             <p className="panelKicker">Teacher workflow</p>
             <h2>Offer. Accept. Teach. Complete.</h2>
             <p>
-              The lesson room opens only when the lesson is paid and the teacher
-              has accepted the assignment.
+              This dashboard is now your teaching front door. Accepted paid lessons
+              show a Join Lesson button automatically.
             </p>
           </div>
         </section>
@@ -199,7 +217,7 @@ export default function TeacherDashboardPage() {
               className="input"
             />
 
-            <button onClick={findTeacher} disabled={loading} className="loadButton">
+            <button onClick={() => findTeacher()} disabled={loading} className="loadButton">
               {loading ? 'Loading lessons...' : 'Load My Lessons'}
             </button>
           </div>
@@ -232,8 +250,8 @@ export default function TeacherDashboardPage() {
             <p className="sectionKicker">Approval required</p>
             <h2>Profile not approved yet</h2>
             <p>
-              Your teacher profile must be approved by admin before you can
-              receive or open lesson assignments.
+              Your teacher profile must be approved by admin before you can receive
+              or open lesson assignments.
             </p>
           </section>
         )}
@@ -257,7 +275,7 @@ export default function TeacherDashboardPage() {
             <LessonDecisionSection
               kicker="Queue 2"
               title="Accepted / Active Lessons"
-              description="These lessons are accepted. Open the room only when payment is confirmed and the room is ready."
+              description="These lessons are accepted. Once paid or active, the Join Lesson button opens the room."
               tone="green"
               lessons={acceptedLessons}
               emptyText="No accepted lessons right now."
@@ -835,8 +853,9 @@ function LessonDecisionSection({
                   <Detail label="Subject" value={displaySubject(lesson)} />
                   <Detail label="Grade / Level" value={lesson.grade_level || 'Not provided'} />
                   <Detail label="Preferred Time" value={lesson.preferred_time || 'Not provided'} />
-                  <Detail label="Scheduled Time" value={lesson.scheduled_time || 'Not scheduled'} />
+                  <Detail label="Scheduled Time" value={formatDate(lesson.scheduled_time, 'Not scheduled')} />
                   <Detail label="Created At" value={formatDate(lesson.created_at)} />
+                  <Detail label="Started At" value={formatDate(lesson.started_at)} />
                   <Detail label="Lesson ID" value={lesson.id} />
                 </div>
 
@@ -863,7 +882,7 @@ function LessonDecisionSection({
                 {mode === 'accepted' && ready && (
                   <div className="buttonRow">
                     <button className="roomButton" onClick={() => onOpenRoom(lesson.id)}>
-                      Open Lesson Room
+                      Join Lesson
                     </button>
                   </div>
                 )}
@@ -905,9 +924,7 @@ function CompletedHistorySection({ lessons }: { lessons: LessonRequest[] }) {
                   <h3>{displaySubject(lesson)}</h3>
                 </div>
 
-                <span className="statusBadge status-APPROVED">
-                  COMPLETED
-                </span>
+                <span className="statusBadge status-APPROVED">COMPLETED</span>
               </div>
 
               <ProblemBlock problem={lesson.problem || 'Not provided'} />
@@ -915,7 +932,7 @@ function CompletedHistorySection({ lessons }: { lessons: LessonRequest[] }) {
               <div className="detailsGrid">
                 <Detail label="Subject" value={displaySubject(lesson)} />
                 <Detail label="Grade / Level" value={lesson.grade_level || 'Not provided'} />
-                <Detail label="Scheduled Time" value={lesson.scheduled_time || 'Not scheduled'} />
+                <Detail label="Scheduled Time" value={formatDate(lesson.scheduled_time, 'Not scheduled')} />
                 <Detail label="Created At" value={formatDate(lesson.created_at)} />
                 <Detail label="Started At" value={formatDate(effectiveStartedAt(lesson))} />
                 <Detail label="Completed At" value={formatDate(effectiveCompletedAt(lesson))} />
@@ -954,15 +971,16 @@ function Detail({ label, value }: { label: string; value: string }) {
 }
 
 function displaySubject(lesson: LessonRequest) {
-  if (lesson.subject === 'Other' && lesson.custom_subject) {
-    return lesson.custom_subject
-  }
-
+  if (lesson.subject === 'Other' && lesson.custom_subject) return lesson.custom_subject
+  if (lesson.subject === 'Other' && lesson.subject_other) return lesson.subject_other
   return lesson.subject || 'Not provided'
 }
 
 function lessonRoomReady(lesson: LessonRequest) {
-  return lesson.status === 'PAID' && lesson.teacher_status === 'ACCEPTED'
+  return (
+    lesson.teacher_status === 'ACCEPTED' &&
+    (lesson.status === 'PAID' || lesson.status === 'ACTIVE')
+  )
 }
 
 function formatList(value: string[] | null) {
@@ -970,12 +988,12 @@ function formatList(value: string[] | null) {
   return value.join(', ')
 }
 
-function formatDate(value: string | null) {
-  if (!value) return 'Not recorded'
+function formatDate(value: string | null | undefined, fallback = 'Not recorded') {
+  if (!value) return fallback
 
   const date = new Date(value)
 
-  if (Number.isNaN(date.getTime())) return 'Not recorded'
+  if (Number.isNaN(date.getTime())) return fallback
 
   return date.toLocaleString()
 }
