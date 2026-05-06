@@ -7,6 +7,16 @@ type PageProps = {
   params: Promise<{ id: string }>
 }
 
+type LessonStatus =
+  | 'NEW'
+  | 'MATCHED'
+  | 'PAID'
+  | 'ACTIVE'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'FAILED'
+  | string
+
 type LessonRequest = {
   id: string
   subject: string
@@ -15,7 +25,7 @@ type LessonRequest = {
   problem: string
   preferred_time: string
   scheduled_time: string | null
-  status: string
+  status: LessonStatus
   assigned_teacher: string | null
   student_name?: string | null
   created_at?: string
@@ -111,13 +121,27 @@ export default function LessonRoomPage({ params }: PageProps) {
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
 
-  const isCompleted = lesson?.status === 'COMPLETED'
-  const isPaid =
-    lesson?.status === 'PAID' ||
-    lesson?.status === 'ACTIVE' ||
-    lesson?.status === 'COMPLETED'
+  const lessonStatus = lesson?.status || 'NEW'
 
-  const canUseRoom = entered && isPaid && !isCompleted
+  const isPaid = lessonStatus === 'PAID'
+  const isActive = lessonStatus === 'ACTIVE'
+  const isCompleted = lessonStatus === 'COMPLETED'
+  const isCancelled = lessonStatus === 'CANCELLED'
+  const isFailed = lessonStatus === 'FAILED'
+  const isLocked = isCompleted || isCancelled || isFailed
+
+  const canEnterRoom = lessonStatus === 'PAID' || lessonStatus === 'ACTIVE' || isLocked
+  const canChat = entered && (isPaid || isActive) && !isLocked
+  const canUseLiveTools = entered && isActive && !isLocked
+
+  const sessionLabel = useMemo(() => {
+    if (isPaid) return 'Waiting / Preparation'
+    if (isActive) return 'Live Session Active'
+    if (isCompleted) return 'Completed'
+    if (isCancelled) return 'Cancelled'
+    if (isFailed) return 'Failed'
+    return 'Locked Until Paid'
+  }, [isPaid, isActive, isCompleted, isCancelled, isFailed])
 
   const displaySubject = useMemo(() => {
     if (!lesson) return ''
@@ -222,8 +246,18 @@ export default function LessonRoomPage({ params }: PageProps) {
           table: 'lesson_requests',
           filter: `id=eq.${id}`,
         },
-        (payload) => {
-          setLesson(payload.new as LessonRequest)
+        async (payload) => {
+          const updatedLesson = payload.new as LessonRequest
+          setLesson(updatedLesson)
+
+          if (
+            updatedLesson.status === 'COMPLETED' ||
+            updatedLesson.status === 'CANCELLED' ||
+            updatedLesson.status === 'FAILED' ||
+            updatedLesson.status === 'PAID'
+          ) {
+            await endLiveAudio(false)
+          }
         }
       )
       .subscribe()
@@ -303,7 +337,7 @@ export default function LessonRoomPage({ params }: PageProps) {
   }
 
   async function sendMessage() {
-    if (!message.trim() || !canUseRoom) return
+    if (!message.trim() || !canChat) return
 
     const text = message.trim()
     setMessage('')
@@ -321,7 +355,7 @@ export default function LessonRoomPage({ params }: PageProps) {
   }
 
   async function uploadFile() {
-    if (!selectedFile || !canUseRoom) return
+    if (!selectedFile || !canUseLiveTools) return
 
     if (selectedFile.size > 10 * 1024 * 1024) {
       setSystemNote('File too large. Maximum file size is 10MB.')
@@ -376,7 +410,7 @@ export default function LessonRoomPage({ params }: PageProps) {
   }
 
   async function startRecording() {
-    if (!canUseRoom) return
+    if (!canUseLiveTools) return
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -496,7 +530,7 @@ export default function LessonRoomPage({ params }: PageProps) {
   }
 
   async function startLiveAudio() {
-    if (!canUseRoom) return
+    if (!canUseLiveTools) return
 
     try {
       callIdRef.current = `${id}-${Date.now()}`
@@ -523,6 +557,7 @@ export default function LessonRoomPage({ params }: PageProps) {
 
   async function handleIncomingSignal(signal: LessonAudioSignal) {
     if (!entered) return
+    if (!isActive) return
     if (signal.sender_name === name && signal.sender_role === role) return
     if (signal.lesson_id !== id) return
 
@@ -616,7 +651,7 @@ export default function LessonRoomPage({ params }: PageProps) {
   }
 
   async function markLessonStarted() {
-    if (!lesson || busy) return
+    if (!lesson || busy || isLocked) return
 
     setBusy(true)
 
@@ -630,13 +665,15 @@ export default function LessonRoomPage({ params }: PageProps) {
 
     if (error) {
       setSystemNote('Could not start lesson.')
+    } else {
+      setSystemNote('Lesson is now ACTIVE. Live teaching tools are enabled.')
     }
 
     setBusy(false)
   }
 
   async function completeLesson() {
-    if (!lesson || busy) return
+    if (!lesson || busy || isLocked) return
 
     setBusy(true)
 
@@ -644,6 +681,7 @@ export default function LessonRoomPage({ params }: PageProps) {
       .from('lesson_requests')
       .update({
         status: 'COMPLETED',
+        started_at: lesson.started_at || new Date().toISOString(),
         completed_at: new Date().toISOString(),
       })
       .eq('id', id)
@@ -658,13 +696,13 @@ export default function LessonRoomPage({ params }: PageProps) {
     setBusy(false)
   }
 
-  function formatDate(value?: string | null) {
-    if (!value) return 'Not set'
+  function formatDate(value?: string | null, fallback = 'Not set') {
+    if (!value) return fallback
 
     const date = new Date(value)
 
     if (Number.isNaN(date.getTime())) {
-      return 'Not scheduled'
+      return fallback
     }
 
     return date.toLocaleString()
@@ -733,6 +771,12 @@ export default function LessonRoomPage({ params }: PageProps) {
               </div>
             </div>
 
+            {!canEnterRoom && (
+              <div className="mt-5 rounded-2xl border border-red-300/20 bg-red-500/10 p-4 text-sm text-red-100">
+                This room is not open yet. The lesson must be marked PAID or ACTIVE before normal entry.
+              </div>
+            )}
+
             <div className="mt-6 space-y-4">
               <input
                 value={name}
@@ -759,7 +803,8 @@ export default function LessonRoomPage({ params }: PageProps) {
 
               <button
                 onClick={enterRoom}
-                className="w-full rounded-2xl bg-cyan-300 px-5 py-3 font-bold text-slate-950 shadow-lg shadow-cyan-500/20"
+                disabled={!canEnterRoom}
+                className="w-full rounded-2xl bg-cyan-300 px-5 py-3 font-bold text-slate-950 shadow-lg shadow-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Enter Lesson Room
               </button>
@@ -787,14 +832,18 @@ export default function LessonRoomPage({ params }: PageProps) {
               </h1>
 
               <p className="mt-3 max-w-3xl text-slate-300">
-                A guided learning room for chat, files, voice explanations, live audio,
-                timed sessions, and clean lesson completion.
+                A governed learning room for preparation, live teaching, files,
+                voice explanations, audio support, and locked lesson completion.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-2">
               <span className="rounded-full border border-cyan-300/30 bg-cyan-300/10 px-4 py-2 text-sm text-cyan-100">
                 {lesson.status}
+              </span>
+
+              <span className="rounded-full border border-emerald-300/30 bg-emerald-300/10 px-4 py-2 text-sm text-emerald-100">
+                {sessionLabel}
               </span>
 
               <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200">
@@ -810,12 +859,29 @@ export default function LessonRoomPage({ params }: PageProps) {
           )}
         </header>
 
-        {isCompleted && (
-          <div className="mb-6 rounded-[2rem] border border-emerald-300/20 bg-emerald-400/10 p-6 shadow-xl">
-            <h2 className="text-2xl font-bold text-emerald-100">Lesson Completed</h2>
+        {isPaid && (
+          <div className="mb-6 rounded-[2rem] border border-blue-300/20 bg-blue-400/10 p-6 shadow-xl">
+            <h2 className="text-2xl font-bold text-blue-100">Waiting / Preparation Mode</h2>
+            <p className="mt-2 text-blue-50">
+              Chat and presence are available. Live audio, uploads, and voice recording unlock only when the lesson becomes ACTIVE.
+            </p>
+          </div>
+        )}
 
+        {isActive && (
+          <div className="mb-6 rounded-[2rem] border border-emerald-300/20 bg-emerald-400/10 p-6 shadow-xl">
+            <h2 className="text-2xl font-bold text-emerald-100">Live Session Active</h2>
             <p className="mt-2 text-emerald-50">
-              This lesson has been marked as completed. The teaching room is now closed for normal use.
+              The session is active. Live audio, files, and voice notes are enabled.
+            </p>
+          </div>
+        )}
+
+        {isLocked && (
+          <div className="mb-6 rounded-[2rem] border border-red-300/20 bg-red-500/10 p-6 shadow-xl">
+            <h2 className="text-2xl font-bold text-red-100">Lesson {lesson.status}</h2>
+            <p className="mt-2 text-red-50">
+              This lesson is closed for normal activity. History remains visible, but live tools are locked.
             </p>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -830,12 +896,11 @@ export default function LessonRoomPage({ params }: PageProps) {
           </div>
         )}
 
-        {!isPaid && (
+        {!canEnterRoom && (
           <div className="mb-6 rounded-[2rem] border border-red-300/20 bg-red-500/10 p-6 shadow-xl">
-            <h2 className="text-2xl font-bold text-red-100">Payment Gate Active</h2>
-
+            <h2 className="text-2xl font-bold text-red-100">Room Locked</h2>
             <p className="mt-2 text-red-50">
-              This lesson room is visible, but normal interaction is locked until the lesson status becomes PAID or ACTIVE.
+              This lesson room opens only when the lesson is PAID or ACTIVE.
             </p>
           </div>
         )}
@@ -844,7 +909,7 @@ export default function LessonRoomPage({ params }: PageProps) {
           <Panel title="Subject" value={displaySubject} note={lesson.grade_level || 'Level not provided'} />
           <Panel title="Teacher" value={lesson.assigned_teacher || 'Not assigned'} note="Assigned learning support" />
           <Panel title="Preferred Time" value={lesson.preferred_time || 'Not provided'} note="Student requested time" />
-          <Panel title="Scheduled Time" value={formatDate(lesson.scheduled_time)} note="Confirmed lesson time" />
+          <Panel title="Scheduled Time" value={formatDate(lesson.scheduled_time, 'Not scheduled')} note="Confirmed lesson time" />
         </section>
 
         <section className="mb-6 grid gap-6 lg:grid-cols-3">
@@ -895,7 +960,7 @@ export default function LessonRoomPage({ params }: PageProps) {
             <div className="mt-4 space-y-3">
               <button
                 onClick={markLessonStarted}
-                disabled={busy || isCompleted}
+                disabled={busy || isLocked || isActive}
                 className="w-full rounded-2xl bg-emerald-300 px-4 py-3 font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Mark Lesson Active
@@ -903,7 +968,7 @@ export default function LessonRoomPage({ params }: PageProps) {
 
               <button
                 onClick={completeLesson}
-                disabled={busy || isCompleted}
+                disabled={busy || isLocked}
                 className="w-full rounded-2xl bg-rose-300 px-4 py-3 font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Complete Lesson
@@ -929,7 +994,7 @@ export default function LessonRoomPage({ params }: PageProps) {
               {!callActive ? (
                 <button
                   onClick={startLiveAudio}
-                  disabled={!canUseRoom}
+                  disabled={!canUseLiveTools}
                   className="rounded-2xl bg-cyan-300 px-4 py-3 font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Start Live Audio
@@ -951,6 +1016,12 @@ export default function LessonRoomPage({ params }: PageProps) {
                   </button>
                 </>
               )}
+
+              {!canUseLiveTools && (
+                <p className="rounded-2xl bg-slate-950/60 p-4 text-sm text-slate-400">
+                  Live audio unlocks when the lesson status is ACTIVE.
+                </p>
+              )}
             </div>
           </div>
 
@@ -962,7 +1033,7 @@ export default function LessonRoomPage({ params }: PageProps) {
               {!recording ? (
                 <button
                   onClick={startRecording}
-                  disabled={!canUseRoom || uploadingAudio}
+                  disabled={!canUseLiveTools || uploadingAudio}
                   className="rounded-2xl bg-violet-300 px-4 py-3 font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Record Voice Note
@@ -981,7 +1052,9 @@ export default function LessonRoomPage({ params }: PageProps) {
                   ? 'Uploading audio note...'
                   : recording
                     ? 'Recording now...'
-                    : 'Ready for short audio explanations.'}
+                    : canUseLiveTools
+                      ? 'Ready for short audio explanations.'
+                      : 'Voice notes unlock when the lesson is ACTIVE.'}
               </p>
             </div>
           </div>
@@ -1027,14 +1100,14 @@ export default function LessonRoomPage({ params }: PageProps) {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') sendMessage()
                 }}
-                disabled={!canUseRoom}
-                placeholder={canUseRoom ? 'Type your message...' : 'Room is locked'}
+                disabled={!canChat}
+                placeholder={canChat ? 'Type your message...' : 'Chat is locked'}
                 className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-cyan-300 disabled:opacity-50"
               />
 
               <button
                 onClick={sendMessage}
-                disabled={!canUseRoom || !message.trim()}
+                disabled={!canChat || !message.trim()}
                 className="rounded-2xl bg-cyan-300 px-6 py-3 font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Send
@@ -1050,18 +1123,24 @@ export default function LessonRoomPage({ params }: PageProps) {
               <div className="mt-4 space-y-3">
                 <input
                   type="file"
-                  disabled={!canUseRoom}
+                  disabled={!canUseLiveTools}
                   onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                   className="w-full rounded-2xl border border-white/10 bg-slate-900 p-3 text-sm text-slate-200 disabled:opacity-50"
                 />
 
                 <button
                   onClick={uploadFile}
-                  disabled={!canUseRoom || !selectedFile || uploadingFile}
+                  disabled={!canUseLiveTools || !selectedFile || uploadingFile}
                   className="w-full rounded-2xl bg-cyan-300 px-4 py-3 font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {uploadingFile ? 'Uploading...' : 'Upload File'}
                 </button>
+
+                {!canUseLiveTools && (
+                  <p className="rounded-2xl bg-slate-950/60 p-4 text-sm text-slate-400">
+                    File upload unlocks when the lesson is ACTIVE.
+                  </p>
+                )}
               </div>
 
               <div className="mt-5 space-y-3">
