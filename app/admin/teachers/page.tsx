@@ -177,7 +177,7 @@ export default function AdminTeachersPage() {
         )}
       </div>
 
-      <style jsx>{`
+      <style jsx global>{`
         .adminPage {
           min-height: 100vh;
           background:
@@ -572,10 +572,7 @@ export default function AdminTeachersPage() {
             align-items: flex-start;
           }
 
-          .quickInfoGrid {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-          }
-
+          .quickInfoGrid,
           .profileGrid {
             grid-template-columns: repeat(3, minmax(0, 1fr));
           }
@@ -649,7 +646,9 @@ function DecisionSection({
                 <div>
                   <p className="miniLabel">Teacher decision record</p>
                   <h3>{teacher.full_name || 'Unnamed Teacher'}</h3>
-                  <p className="teacherEmail">{teacher.email || 'No email provided'}</p>
+                  <p className="teacherEmail">
+                    {teacher.email || 'No email provided'}
+                  </p>
                 </div>
 
                 <span className={`statusBadge status-${teacher.status}`}>
@@ -710,7 +709,9 @@ function ProfileRecords({ teachers }: { teachers: TeacherProfile[] }) {
                 <div>
                   <p className="miniLabel">Teacher profile</p>
                   <h3>{teacher.full_name || 'Unnamed Teacher'}</h3>
-                  <p className="profileEmail">{teacher.email || 'No email provided'}</p>
+                  <p className="profileEmail">
+                    {teacher.email || 'No email provided'}
+                  </p>
                 </div>
 
                 <span className={`statusBadge status-${teacher.status}`}>
