@@ -55,14 +55,7 @@ type LessonAudioSignal = {
   call_id: string
   sender_name: string
   sender_role: string
-  signal_type:
-    | 'offer'
-    | 'answer'
-    | 'candidate'
-    | 'decline'
-    | 'end'
-    | 'restart-offer'
-    | 'restart-answer'
+  signal_type: 'offer' | 'answer' | 'candidate' | 'decline' | 'end'
   payload: any
   created_at: string
 }
@@ -73,10 +66,8 @@ type CallState =
   | 'incoming'
   | 'connecting'
   | 'connected'
-  | 'reconnecting'
   | 'declined'
   | 'ended'
-  | 'failed'
 
 export default function LessonRoomPage({ params }: PageProps) {
   const { id } = use(params)
@@ -99,15 +90,18 @@ export default function LessonRoomPage({ params }: PageProps) {
   const [incomingCall, setIncomingCall] = useState<LessonAudioSignal | null>(null)
   const [currentCallId, setCurrentCallId] = useState<string | null>(null)
   const [remoteCaller, setRemoteCaller] = useState<string | null>(null)
-  const [muted, setMuted] = useState(false)
+
+  const [wakeLockSupported, setWakeLockSupported] = useState(false)
+  const [wakeLockActive, setWakeLockActive] = useState(false)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
+
   const peerRef = useRef<RTCPeerConnection | null>(null)
   const localStreamRef = useRef<MediaStream | null>(null)
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null)
   const processedSignalsRef = useRef<Set<string>>(new Set())
-  const reconnectAttemptedRef = useRef(false)
+  const wakeLockRef = useRef<any>(null)
 
   const isPaid = lesson?.status === 'PAID'
   const isActive = lesson?.status === 'ACTIVE'
@@ -117,10 +111,27 @@ export default function LessonRoomPage({ params }: PageProps) {
     lesson?.status === 'FAILED'
 
   const liveToolsEnabled = isActive
+  const prepMode = isPaid
 
   useEffect(() => {
     loadEverything()
   }, [id])
+
+  useEffect(() => {
+    setWakeLockSupported('wakeLock' in navigator)
+
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible' && wakeLockActive) {
+        await requestWakeLock()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [wakeLockActive])
 
   async function loadEverything() {
     const { data: lessonData } = await supabase
@@ -168,7 +179,8 @@ export default function LessonRoomPage({ params }: PageProps) {
     channel
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState()
-        setOnlineUsers(Object.values(state).flat())
+        const users = Object.values(state).flat()
+        setOnlineUsers(users)
       })
       .on(
         'postgres_changes',
@@ -178,7 +190,9 @@ export default function LessonRoomPage({ params }: PageProps) {
           table: 'lesson_requests',
           filter: `id=eq.${id}`,
         },
-        payload => setLesson(payload.new as LessonRequest)
+        payload => {
+          setLesson(payload.new as LessonRequest)
+        }
       )
       .on(
         'postgres_changes',
@@ -188,7 +202,9 @@ export default function LessonRoomPage({ params }: PageProps) {
           table: 'lesson_messages',
           filter: `lesson_request_id=eq.${id}`,
         },
-        payload => setMessages(prev => [...prev, payload.new as LessonMessage])
+        payload => {
+          setMessages(prev => [...prev, payload.new as LessonMessage])
+        }
       )
       .on(
         'postgres_changes',
@@ -198,7 +214,9 @@ export default function LessonRoomPage({ params }: PageProps) {
           table: 'lesson_files',
           filter: `lesson_id=eq.${id}`,
         },
-        payload => setFiles(prev => [payload.new as LessonFile, ...prev])
+        payload => {
+          setFiles(prev => [payload.new as LessonFile, ...prev])
+        }
       )
       .on(
         'postgres_changes',
@@ -208,7 +226,9 @@ export default function LessonRoomPage({ params }: PageProps) {
           table: 'lesson_audio_notes',
           filter: `lesson_id=eq.${id}`,
         },
-        payload => setAudioNotes(prev => [payload.new as LessonAudioNote, ...prev])
+        payload => {
+          setAudioNotes(prev => [payload.new as LessonAudioNote, ...prev])
+        }
       )
       .on(
         'postgres_changes',
@@ -235,7 +255,7 @@ export default function LessonRoomPage({ params }: PageProps) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [entered, name, role, id, currentCallId, callState])
+  }, [entered, name, role, id])
 
   async function enterRoom() {
     if (!name.trim()) return
@@ -255,12 +275,19 @@ export default function LessonRoomPage({ params }: PageProps) {
   }
 
   async function markActive() {
-    await supabase.from('lesson_requests').update({ status: 'ACTIVE' }).eq('id', id)
+    await supabase
+      .from('lesson_requests')
+      .update({ status: 'ACTIVE' })
+      .eq('id', id)
   }
 
   async function completeLesson() {
-    await supabase.from('lesson_requests').update({ status: 'COMPLETED' }).eq('id', id)
     await endCall()
+
+    await supabase
+      .from('lesson_requests')
+      .update({ status: 'COMPLETED' })
+      .eq('id', id)
   }
 
   async function uploadFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -276,9 +303,11 @@ export default function LessonRoomPage({ params }: PageProps) {
 
     const filePath = `${id}/${Date.now()}-${file.name}`
 
-    const { error } = await supabase.storage.from('lesson-files').upload(filePath, file)
+    const { error: uploadError } = await supabase.storage
+      .from('lesson-files')
+      .upload(filePath, file)
 
-    if (!error) {
+    if (!uploadError) {
       await supabase.from('lesson_files').insert({
         lesson_id: id,
         file_name: file.name,
@@ -299,7 +328,9 @@ export default function LessonRoomPage({ params }: PageProps) {
       .from('lesson-files')
       .createSignedUrl(file.file_path, 60)
 
-    if (!error && data?.signedUrl) window.open(data.signedUrl, '_blank')
+    if (!error && data?.signedUrl) {
+      window.open(data.signedUrl, '_blank')
+    }
   }
 
   async function startRecording() {
@@ -310,7 +341,9 @@ export default function LessonRoomPage({ params }: PageProps) {
 
     audioChunksRef.current = []
 
-    recorder.ondataavailable = event => audioChunksRef.current.push(event.data)
+    recorder.ondataavailable = event => {
+      audioChunksRef.current.push(event.data)
+    }
 
     recorder.onstop = async () => {
       const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
@@ -320,7 +353,7 @@ export default function LessonRoomPage({ params }: PageProps) {
         return
       }
 
-      const audioName = `audio-note-${Date.now()}.webm`
+      const audioName = `voice-note-${Date.now()}.webm`
       const audioPath = `${id}/${audioName}`
 
       const { error } = await supabase.storage
@@ -362,19 +395,35 @@ export default function LessonRoomPage({ params }: PageProps) {
     }
   }
 
-  async function getLocalAudioStream() {
-    if (localStreamRef.current) return localStreamRef.current
+  async function requestWakeLock() {
+    try {
+      if (!('wakeLock' in navigator)) {
+        setWakeLockSupported(false)
+        return
+      }
 
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-    localStreamRef.current = stream
-    return stream
+      wakeLockRef.current = await (navigator as any).wakeLock.request('screen')
+      setWakeLockActive(true)
+
+      wakeLockRef.current.addEventListener('release', () => {
+        setWakeLockActive(false)
+      })
+    } catch {
+      setWakeLockActive(false)
+    }
   }
 
-  async function addLocalTracks(peer: RTCPeerConnection) {
-    const stream = await getLocalAudioStream()
-    stream.getTracks().forEach(track => {
-      peer.addTrack(track, stream)
-    })
+  async function releaseWakeLock() {
+    try {
+      if (wakeLockRef.current) {
+        await wakeLockRef.current.release()
+        wakeLockRef.current = null
+      }
+    } catch {
+      // Ignore release errors
+    }
+
+    setWakeLockActive(false)
   }
 
   function createPeerConnection(callId: string) {
@@ -392,57 +441,43 @@ export default function LessonRoomPage({ params }: PageProps) {
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = event.streams[0]
       }
-      reconnectAttemptedRef.current = false
       setCallState('connected')
     }
 
-    peer.oniceconnectionstatechange = async () => {
-      const state = peer.iceConnectionState
-
-      if (state === 'connected' || state === 'completed') {
-        reconnectAttemptedRef.current = false
-        setCallState('connected')
-      }
-
-      if (state === 'disconnected') {
-        setCallState('reconnecting')
-
-        if (!reconnectAttemptedRef.current && currentCallId) {
-          reconnectAttemptedRef.current = true
-          await restartIce(currentCallId)
-        }
-      }
-
-      if (state === 'failed') {
-        setCallState('failed')
-      }
-
-      if (state === 'closed') {
-        setCallState('ended')
-      }
-    }
-
     peer.onconnectionstatechange = () => {
-      if (peer.connectionState === 'connected') {
-        reconnectAttemptedRef.current = false
+      if (
+        peer.connectionState === 'connected' ||
+        peer.iceConnectionState === 'connected'
+      ) {
         setCallState('connected')
       }
 
-      if (peer.connectionState === 'failed') {
-        setCallState('failed')
-      }
-
-      if (peer.connectionState === 'disconnected') {
-        setCallState('reconnecting')
-      }
-
-      if (peer.connectionState === 'closed') {
-        setCallState('ended')
+      if (
+        peer.connectionState === 'failed' ||
+        peer.connectionState === 'disconnected' ||
+        peer.connectionState === 'closed'
+      ) {
+        if (callState !== 'ended') setCallState('ended')
       }
     }
 
     peerRef.current = peer
     return peer
+  }
+
+  async function getLocalAudioStream() {
+    if (localStreamRef.current) return localStreamRef.current
+
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    localStreamRef.current = stream
+    return stream
+  }
+
+  async function addLocalTracks(peer: RTCPeerConnection) {
+    const stream = await getLocalAudioStream()
+    stream.getTracks().forEach(track => {
+      peer.addTrack(track, stream)
+    })
   }
 
   async function insertSignal(
@@ -463,16 +498,15 @@ export default function LessonRoomPage({ params }: PageProps) {
   async function startCall() {
     if (!liveToolsEnabled || !name) return
 
+    await requestWakeLock()
+
     const callId =
       typeof crypto !== 'undefined' && crypto.randomUUID
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random()}`
 
-    cleanupPeerOnly()
-
     setCurrentCallId(callId)
     setCallState('calling')
-    reconnectAttemptedRef.current = false
 
     const peer = createPeerConnection(callId)
     await addLocalTracks(peer)
@@ -486,7 +520,7 @@ export default function LessonRoomPage({ params }: PageProps) {
   async function acceptCall() {
     if (!incomingCall) return
 
-    cleanupPeerOnly()
+    await requestWakeLock()
 
     setCallState('connecting')
     setCurrentCallId(incomingCall.call_id)
@@ -495,26 +529,15 @@ export default function LessonRoomPage({ params }: PageProps) {
     const peer = createPeerConnection(incomingCall.call_id)
     await addLocalTracks(peer)
 
-    await peer.setRemoteDescription(new RTCSessionDescription(incomingCall.payload))
+    await peer.setRemoteDescription(
+      new RTCSessionDescription(incomingCall.payload)
+    )
 
     const answer = await peer.createAnswer()
     await peer.setLocalDescription(answer)
 
     await insertSignal(incomingCall.call_id, 'answer', answer)
-
     setIncomingCall(null)
-  }
-
-  async function restartIce(callId: string) {
-    if (!peerRef.current) return
-
-    try {
-      const offer = await peerRef.current.createOffer({ iceRestart: true })
-      await peerRef.current.setLocalDescription(offer)
-      await insertSignal(callId, 'restart-offer', offer)
-    } catch {
-      setCallState('failed')
-    }
   }
 
   async function declineCall() {
@@ -537,39 +560,23 @@ export default function LessonRoomPage({ params }: PageProps) {
 
     cleanupCall()
     setCallState('ended')
-  }
-
-  function cleanupPeerOnly() {
-    peerRef.current?.close()
-    peerRef.current = null
-
-    if (remoteAudioRef.current) {
-      remoteAudioRef.current.srcObject = null
-    }
+    await releaseWakeLock()
   }
 
   function cleanupCall() {
-    cleanupPeerOnly()
+    peerRef.current?.close()
+    peerRef.current = null
 
     localStreamRef.current?.getTracks().forEach(track => track.stop())
     localStreamRef.current = null
 
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.srcObject = null
+    }
+
     setIncomingCall(null)
     setCurrentCallId(null)
     setRemoteCaller(null)
-    reconnectAttemptedRef.current = false
-  }
-
-  function toggleMute() {
-    const stream = localStreamRef.current
-    if (!stream) return
-
-    const nextMuted = !muted
-    stream.getAudioTracks().forEach(track => {
-      track.enabled = !nextMuted
-    })
-
-    setMuted(nextMuted)
   }
 
   async function handleAudioSignal(signal: LessonAudioSignal) {
@@ -579,12 +586,7 @@ export default function LessonRoomPage({ params }: PageProps) {
     if (signal.sender_name === name && signal.sender_role === role) return
 
     if (signal.signal_type === 'offer') {
-      if (
-        callState === 'idle' ||
-        callState === 'ended' ||
-        callState === 'declined' ||
-        callState === 'failed'
-      ) {
+      if (callState === 'idle' || callState === 'ended' || callState === 'declined') {
         setIncomingCall(signal)
         setCurrentCallId(signal.call_id)
         setRemoteCaller(signal.sender_name)
@@ -608,83 +610,51 @@ export default function LessonRoomPage({ params }: PageProps) {
     if (signal.signal_type === 'candidate') {
       if (peerRef.current && signal.payload) {
         try {
-          await peerRef.current.addIceCandidate(new RTCIceCandidate(signal.payload))
+          await peerRef.current.addIceCandidate(
+            new RTCIceCandidate(signal.payload)
+          )
         } catch {
-          // Candidate arrived before connection was ready.
+          // Ignore candidates that arrive before remote description settles.
         }
       }
-      return
-    }
-
-    if (signal.signal_type === 'restart-offer') {
-      if (!peerRef.current) return
-
-      setCallState('reconnecting')
-
-      try {
-        await peerRef.current.setRemoteDescription(
-          new RTCSessionDescription(signal.payload)
-        )
-
-        const answer = await peerRef.current.createAnswer()
-        await peerRef.current.setLocalDescription(answer)
-
-        await insertSignal(signal.call_id, 'restart-answer', answer)
-      } catch {
-        setCallState('failed')
-      }
-
-      return
-    }
-
-    if (signal.signal_type === 'restart-answer') {
-      if (!peerRef.current) return
-
-      try {
-        await peerRef.current.setRemoteDescription(
-          new RTCSessionDescription(signal.payload)
-        )
-      } catch {
-        setCallState('failed')
-      }
-
       return
     }
 
     if (signal.signal_type === 'decline') {
       cleanupCall()
       setCallState('declined')
+      await releaseWakeLock()
       return
     }
 
     if (signal.signal_type === 'end') {
       cleanupCall()
       setCallState('ended')
+      await releaseWakeLock()
     }
   }
 
   if (!entered) {
     return (
-      <main className="min-h-screen bg-[#0B1120] text-white px-4 py-8">
-        <div className="mx-auto max-w-md rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl">
-          <div className="rounded-2xl bg-blue-600/15 px-4 py-3 text-sm font-semibold text-blue-200">
-            EXAMIA Controlled Lesson Space
-          </div>
-
-          <h1 className="mt-5 text-3xl font-bold tracking-tight">Join Lesson Room</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-300">
-            Enter as student, teacher, or admin to access the governed lesson space.
+      <main className="min-h-screen bg-slate-950 text-white p-4">
+        <div className="max-w-xl mx-auto mt-10 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+          <p className="text-sm text-blue-300 font-semibold">
+            EXAMIA CONTROLLED LESSON SPACE
+          </p>
+          <h1 className="text-2xl font-bold mt-2">Join Lesson Room</h1>
+          <p className="text-slate-300 mt-2">
+            Enter your name and role to join this governed learning room.
           </p>
 
           <input
-            className="mt-6 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 outline-none focus:border-blue-400"
+            className="w-full mt-6 p-3 rounded-xl bg-slate-800 border border-slate-700"
             placeholder="Your name"
             value={name}
             onChange={e => setName(e.target.value)}
           />
 
           <select
-            className="mt-3 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 outline-none focus:border-blue-400"
+            className="w-full mt-3 p-3 rounded-xl bg-slate-800 border border-slate-700"
             value={role}
             onChange={e => setRole(e.target.value as any)}
           >
@@ -695,9 +665,9 @@ export default function LessonRoomPage({ params }: PageProps) {
 
           <button
             onClick={enterRoom}
-            className="mt-5 w-full rounded-2xl bg-blue-600 px-4 py-3 font-bold hover:bg-blue-500"
+            className="w-full mt-5 bg-blue-600 hover:bg-blue-700 rounded-xl p-3 font-semibold"
           >
-            Enter Room
+            Enter Lesson Room
           </button>
         </div>
       </main>
@@ -705,93 +675,81 @@ export default function LessonRoomPage({ params }: PageProps) {
   }
 
   return (
-    <main className="min-h-screen bg-[#0B1120] text-white">
-      <div className="mx-auto max-w-7xl px-4 py-5">
-        <header className="overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 p-5 shadow-2xl">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <main className="min-h-screen bg-slate-950 text-white p-4">
+      <div className="max-w-6xl mx-auto space-y-5">
+        <header className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+          <p className="text-sm text-blue-300 font-semibold">
+            EXAMIA CONTROLLED LESSON SPACE
+          </p>
+
+          <div className="mt-2 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div>
-              <p className="text-sm font-bold uppercase tracking-wide text-blue-300">
-                EXAMIA Controlled Lesson Space
-              </p>
-              <h1 className="mt-2 text-3xl font-bold tracking-tight">
-                Lesson Room
-              </h1>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
-                Governed learning room for preparation, live teaching, chat,
-                files, voice explanations, audio support, and locked completion.
+              <h1 className="text-3xl font-bold">Lesson Room</h1>
+              <p className="text-slate-300 mt-2 max-w-3xl">
+                A governed learning room for preparation, live teaching, files,
+                voice explanations, audio support, and locked lesson completion.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Badge label={lesson?.status || 'Loading'} tone={statusTone(lesson?.status)} />
-              <Badge label={`${onlineUsers.length} online`} tone="blue" />
-              <Badge label={callStatusText(callState)} tone={callTone(callState)} />
+              <StatusPill text={lesson?.status || 'Loading'} />
+              <StatusPill text={`${onlineUsers.length} online`} />
+              <StatusPill text={callStateLabel(callState)} />
             </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {prepMode && <StatusPill text="Preparation Mode" tone="yellow" />}
+            {isActive && <StatusPill text="Live Session Active" tone="green" />}
+            {isClosed && <StatusPill text="Lesson Locked" tone="red" />}
           </div>
         </header>
 
         {isActive && (
-          <div className="mt-4 rounded-3xl border border-green-500/30 bg-green-500/10 p-4">
-            <p className="font-bold text-green-200">Live Session Active</p>
+          <section className="rounded-2xl border border-green-700 bg-green-950/40 p-4">
+            <p className="font-bold text-green-100">Live Session Active</p>
             <p className="mt-1 text-sm text-green-100/80">
               Live audio, files, chat, and voice notes are enabled.
             </p>
-          </div>
+          </section>
         )}
 
-        {isPaid && (
-          <div className="mt-4 rounded-3xl border border-yellow-500/30 bg-yellow-500/10 p-4">
-            <p className="font-bold text-yellow-200">Preparation Mode</p>
-            <p className="mt-1 text-sm text-yellow-100/80">
-              The room is paid and ready. Mark the lesson active when teaching begins.
-            </p>
-          </div>
-        )}
-
-        {isClosed && (
-          <div className="mt-4 rounded-3xl border border-red-500/30 bg-red-500/10 p-4">
-            <p className="font-bold text-red-200">Lesson Locked</p>
-            <p className="mt-1 text-sm text-red-100/80">
-              This lesson has been closed. Normal teaching tools are locked.
-            </p>
-          </div>
-        )}
-
-        <section className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <SummaryCard title="Subject" value={lesson?.subject || 'Not set'} helper={lesson?.level || 'Level not set'} />
-          <SummaryCard title="Teacher" value={lesson?.assigned_teacher || 'Not assigned'} helper="Assigned learning support" />
-          <SummaryCard title="Preferred Time" value={lesson?.preferred_time || 'Not set'} helper="Student requested time" />
-          <SummaryCard title="Scheduled Time" value={lesson?.scheduled_time || 'Not scheduled'} helper="Confirmed lesson time" />
+        <section className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <Info label="Subject" value={lesson?.subject} />
+          <Info label="Level" value={lesson?.level || 'Not set'} />
+          <Info label="Teacher" value={lesson?.assigned_teacher || 'Not assigned'} />
+          <Info label="Preferred Time" value={lesson?.preferred_time} />
+          <Info label="Scheduled Time" value={lesson?.scheduled_time || 'Not scheduled'} />
+          <Info label="Learning Problem" value={lesson?.problem} />
         </section>
 
-        <section className="mt-5 rounded-3xl border border-white/10 bg-white/5 p-5">
-          <p className="text-sm font-semibold text-slate-400">Learning Problem</p>
-          <p className="mt-2 text-lg font-semibold">{lesson?.problem || 'Not set'}</p>
-        </section>
-
-        <section className="mt-5 rounded-3xl border border-white/10 bg-white/5 p-5">
+        <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
           <h2 className="text-xl font-bold">Live Presence</h2>
+          <p className="text-slate-400 text-sm mt-1">
+            Who is currently inside the room.
+          </p>
+
           <div className="mt-4 flex flex-wrap gap-2">
             {onlineUsers.map((user, index) => (
               <span
                 key={index}
-                className="rounded-2xl border border-white/10 bg-slate-900 px-4 py-2 text-sm"
+                className="px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-sm"
               >
-                <span className="font-bold">{user.name}</span>{' '}
+                <span className="font-semibold">{user.name}</span>{' '}
                 <span className="text-slate-400">{user.role}</span>
               </span>
             ))}
           </div>
         </section>
 
-        <div className="mt-5 grid gap-5 xl:grid-cols-[420px_1fr]">
+        <section className="grid lg:grid-cols-[360px_1fr] gap-5">
           <div className="space-y-5">
-            <Panel title="Lesson Control" description="Start, monitor, and close the session.">
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+            <Panel title="Lesson Control" subtitle="Start, monitor, and close the session.">
+              <div className="grid gap-3">
                 <button
                   onClick={markActive}
                   disabled={isClosed || isActive}
-                  className="rounded-2xl bg-green-600 px-4 py-3 font-bold hover:bg-green-500 disabled:bg-slate-700 disabled:text-slate-400"
+                  className="bg-green-600 disabled:bg-slate-700 hover:bg-green-700 rounded-xl px-4 py-3 font-semibold"
                 >
                   Mark Lesson Active
                 </button>
@@ -799,116 +757,123 @@ export default function LessonRoomPage({ params }: PageProps) {
                 <button
                   onClick={completeLesson}
                   disabled={isClosed}
-                  className="rounded-2xl bg-red-600 px-4 py-3 font-bold hover:bg-red-500 disabled:bg-slate-700 disabled:text-slate-400"
+                  className="bg-red-600 disabled:bg-slate-700 hover:bg-red-700 rounded-xl px-4 py-3 font-semibold"
                 >
                   Complete Lesson
                 </button>
               </div>
             </Panel>
 
-            <Panel title="Live Audio" description="Low-data real-time voice support.">
-              <div className="rounded-3xl border border-white/10 bg-slate-950 p-4">
-                <p className="text-sm font-semibold text-slate-400">Connection</p>
-                <p className="mt-1 text-2xl font-bold">{callStatusText(callState)}</p>
-                <p className="mt-2 text-sm text-slate-400">
-                  {callHelpText(callState, remoteCaller)}
+            <Panel title="Live Audio" subtitle="Low-data real-time voice support.">
+              <div className="p-4 rounded-xl bg-slate-800 border border-slate-700">
+                <p className="font-semibold">Connection</p>
+                <p className="text-slate-300 mt-1">{callStateLabel(callState)}</p>
+              </div>
+
+              <div className="mt-4 rounded-xl border border-yellow-700 bg-yellow-900/30 p-4">
+                <p className="font-semibold text-yellow-100">
+                  Keep screen awake during live audio
                 </p>
+                <p className="mt-1 text-sm text-yellow-100/80">
+                  If the phone screen sleeps, the browser may weaken or stop the audio connection.
+                </p>
+
+                <div className="mt-3 flex flex-wrap gap-3">
+                  <button
+                    onClick={requestWakeLock}
+                    disabled={!wakeLockSupported || wakeLockActive}
+                    className="rounded-xl bg-yellow-600 px-4 py-2 font-semibold hover:bg-yellow-700 disabled:bg-slate-700"
+                  >
+                    {wakeLockActive ? 'Screen Awake Active' : 'Keep Screen Awake'}
+                  </button>
+
+                  <button
+                    onClick={releaseWakeLock}
+                    disabled={!wakeLockActive}
+                    className="rounded-xl bg-slate-700 px-4 py-2 font-semibold hover:bg-slate-600 disabled:bg-slate-800"
+                  >
+                    Release
+                  </button>
+                </div>
+
+                {!wakeLockSupported && (
+                  <p className="mt-2 text-sm text-red-200">
+                    This browser may not support screen wake lock. Keep the phone screen on manually.
+                  </p>
+                )}
               </div>
 
               {callState === 'incoming' && (
-                <div className="mt-4 rounded-3xl border border-blue-400/40 bg-blue-500/10 p-4">
-                  <p className="font-bold text-blue-100">Incoming Audio Call</p>
-                  <p className="mt-1 text-sm text-blue-100/80">
+                <div className="mt-4 p-4 rounded-xl bg-blue-950 border border-blue-700">
+                  <h3 className="font-bold">Incoming Audio Call</h3>
+                  <p className="text-blue-100 mt-1">
                     {remoteCaller} is calling.
                   </p>
 
-                  <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div className="mt-4 flex gap-3">
                     <button
                       onClick={acceptCall}
-                      className="rounded-2xl bg-green-600 px-4 py-3 font-bold hover:bg-green-500"
+                      className="bg-green-600 hover:bg-green-700 rounded-xl px-4 py-3 font-semibold"
                     >
-                      Accept
+                      Accept Call
                     </button>
 
                     <button
                       onClick={declineCall}
-                      className="rounded-2xl bg-red-600 px-4 py-3 font-bold hover:bg-red-500"
+                      className="bg-red-600 hover:bg-red-700 rounded-xl px-4 py-3 font-semibold"
                     >
-                      Decline
+                      Decline Call
                     </button>
                   </div>
                 </div>
               )}
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+              <div className="mt-4 grid gap-3">
                 <button
                   onClick={startCall}
                   disabled={
                     !liveToolsEnabled ||
                     callState === 'calling' ||
-                    callState === 'incoming' ||
                     callState === 'connecting' ||
-                    callState === 'connected' ||
-                    callState === 'reconnecting'
+                    callState === 'connected'
                   }
-                  className="rounded-2xl bg-blue-600 px-4 py-3 font-bold hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-400"
+                  className="bg-blue-600 disabled:bg-slate-700 hover:bg-blue-700 rounded-xl px-4 py-3 font-semibold"
                 >
                   Start Live Audio
                 </button>
 
                 <button
-                  onClick={toggleMute}
-                  disabled={!localStreamRef.current || callState === 'idle'}
-                  className="rounded-2xl bg-slate-700 px-4 py-3 font-bold hover:bg-slate-600 disabled:bg-slate-800 disabled:text-slate-500"
-                >
-                  {muted ? 'Unmute' : 'Mute'}
-                </button>
-
-                <button
                   onClick={endCall}
                   disabled={callState === 'idle' || callState === 'ended'}
-                  className="rounded-2xl bg-red-600 px-4 py-3 font-bold hover:bg-red-500 disabled:bg-slate-700 disabled:text-slate-400"
+                  className="bg-red-600 disabled:bg-slate-700 hover:bg-red-700 rounded-xl px-4 py-3 font-semibold"
                 >
-                  End Live Audio
+                  End Call
                 </button>
               </div>
-
-              {callState === 'failed' && (
-                <button
-                  onClick={startCall}
-                  className="mt-3 w-full rounded-2xl bg-yellow-600 px-4 py-3 font-bold hover:bg-yellow-500"
-                >
-                  Restart Audio
-                </button>
-              )}
 
               <audio ref={remoteAudioRef} autoPlay playsInline />
             </Panel>
 
-            <Panel title="Voice Notes" description="Record short explanations for replay.">
+            <Panel title="Voice Notes" subtitle="Record short explanations for low-data learning.">
               {!recording ? (
                 <button
                   onClick={startRecording}
                   disabled={isClosed}
-                  className="w-full rounded-2xl bg-purple-600 px-4 py-3 font-bold hover:bg-purple-500 disabled:bg-slate-700 disabled:text-slate-400"
+                  className="bg-purple-600 disabled:bg-slate-700 hover:bg-purple-700 rounded-xl px-4 py-3 font-semibold w-full"
                 >
                   Record Voice Note
                 </button>
               ) : (
                 <button
                   onClick={stopRecording}
-                  className="w-full rounded-2xl bg-red-600 px-4 py-3 font-bold hover:bg-red-500"
+                  className="bg-red-600 hover:bg-red-700 rounded-xl px-4 py-3 font-semibold w-full"
                 >
                   Stop Recording
                 </button>
               )}
-
-              <p className="mt-3 text-sm text-slate-400">
-                {recording ? 'Recording now...' : 'Ready for short audio explanations.'}
-              </p>
             </Panel>
 
-            <Panel title="Audio Notes" description="Replay recorded explanations.">
+            <Panel title="Audio Notes" subtitle="Replay recorded explanations.">
               <div className="space-y-3">
                 {audioNotes.length === 0 && (
                   <p className="text-sm text-slate-400">No audio notes yet.</p>
@@ -917,15 +882,16 @@ export default function LessonRoomPage({ params }: PageProps) {
                 {audioNotes.map(note => (
                   <div
                     key={note.id}
-                    className="rounded-2xl border border-white/10 bg-slate-950 p-3"
+                    className="bg-slate-800 border border-slate-700 rounded-xl p-3"
                   >
-                    <p className="break-all font-semibold">{note.audio_name}</p>
-                    <p className="mt-1 text-xs text-slate-400">
-                      {formatBytes(note.audio_size)} · {note.uploaded_by_name} ({note.uploaded_by_role})
+                    <p className="font-semibold break-all">{note.audio_name}</p>
+                    <p className="text-sm text-slate-400 mt-1">
+                      Recorded by {note.uploaded_by_name} ({note.uploaded_by_role})
                     </p>
+
                     <button
                       onClick={() => playAudioNote(note)}
-                      className="mt-3 rounded-xl bg-slate-700 px-4 py-2 text-sm font-bold hover:bg-slate-600"
+                      className="mt-3 bg-slate-700 hover:bg-slate-600 rounded-xl px-4 py-2"
                     >
                       Play
                     </button>
@@ -936,27 +902,27 @@ export default function LessonRoomPage({ params }: PageProps) {
           </div>
 
           <div className="space-y-5">
-            <Panel title="Lesson Chat" description="Shared conversation between student, teacher, and admin.">
-              <div className="h-[520px] overflow-y-auto rounded-3xl border border-white/10 bg-slate-950 p-4">
-                <div className="space-y-3">
-                  {messages.map(msg => (
-                    <div key={msg.id} className="rounded-2xl bg-slate-900 p-4">
-                      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                        <p className="font-bold text-blue-200">{msg.sender}</p>
-                        <p className="text-xs text-slate-500">
-                          {new Date(msg.created_at).toLocaleString()}
-                        </p>
-                      </div>
-                      <p className="mt-2 leading-6 text-slate-100">{msg.message}</p>
+            <Panel title="Lesson Chat" subtitle="Shared conversation between student, teacher, and admin.">
+              <div className="h-[520px] overflow-y-auto space-y-3 bg-slate-950 border border-slate-800 rounded-xl p-4">
+                {messages.map(msg => (
+                  <div key={msg.id} className="bg-slate-800 rounded-xl p-3">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-sm text-blue-300 font-semibold">
+                        {msg.sender}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {new Date(msg.created_at).toLocaleString()}
+                      </p>
                     </div>
-                  ))}
-                </div>
+                    <p className="mt-1">{msg.message}</p>
+                  </div>
+                ))}
               </div>
 
               <div className="mt-4 flex gap-2">
                 <input
-                  className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 outline-none focus:border-blue-400 disabled:text-slate-500"
-                  placeholder={isClosed ? 'Lesson is locked' : 'Type your message...'}
+                  className="flex-1 p-3 rounded-xl bg-slate-800 border border-slate-700 min-w-0"
+                  placeholder={isClosed ? 'Lesson is locked' : 'Type a lesson message...'}
                   value={message}
                   onChange={e => setMessage(e.target.value)}
                   disabled={isClosed}
@@ -968,27 +934,26 @@ export default function LessonRoomPage({ params }: PageProps) {
                 <button
                   onClick={sendMessage}
                   disabled={isClosed}
-                  className="rounded-2xl bg-blue-600 px-5 py-3 font-bold hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-400"
+                  className="bg-blue-600 disabled:bg-slate-700 hover:bg-blue-700 rounded-xl px-5 font-semibold"
                 >
                   Send
                 </button>
               </div>
             </Panel>
 
-            <Panel title="Files" description="Upload and download learning materials.">
-              <div className="rounded-3xl border border-dashed border-white/15 bg-slate-950 p-4">
-                <input
-                  type="file"
-                  disabled={isClosed}
-                  onChange={uploadFile}
-                  className="w-full text-sm"
-                />
-                {uploadingFile && (
-                  <p className="mt-2 text-sm text-blue-300">Uploading file...</p>
-                )}
-              </div>
+            <Panel title="Files" subtitle="Upload and download learning materials.">
+              <input
+                type="file"
+                disabled={isClosed}
+                onChange={uploadFile}
+                className="block w-full text-sm"
+              />
 
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {uploadingFile && (
+                <p className="text-blue-300 mt-2">Uploading file...</p>
+              )}
+
+              <div className="mt-4 grid md:grid-cols-2 gap-3">
                 {files.length === 0 && (
                   <p className="text-sm text-slate-400">No files uploaded yet.</p>
                 )}
@@ -996,15 +961,16 @@ export default function LessonRoomPage({ params }: PageProps) {
                 {files.map(file => (
                   <div
                     key={file.id}
-                    className="rounded-2xl border border-white/10 bg-slate-950 p-4"
+                    className="bg-slate-800 border border-slate-700 rounded-xl p-3"
                   >
-                    <p className="break-all font-bold">{file.file_name}</p>
-                    <p className="mt-1 text-xs text-slate-400">
-                      {formatBytes(file.file_size)} · {file.uploaded_by_name} ({file.uploaded_by_role})
+                    <p className="font-semibold break-all">{file.file_name}</p>
+                    <p className="text-sm text-slate-400 mt-1">
+                      Uploaded by {file.uploaded_by_name} ({file.uploaded_by_role})
                     </p>
+
                     <button
                       onClick={() => downloadFile(file)}
-                      className="mt-3 rounded-xl bg-slate-700 px-4 py-2 text-sm font-bold hover:bg-slate-600"
+                      className="mt-3 bg-slate-700 hover:bg-slate-600 rounded-xl px-4 py-2"
                     >
                       Download
                     </button>
@@ -1013,117 +979,69 @@ export default function LessonRoomPage({ params }: PageProps) {
               </div>
             </Panel>
           </div>
-        </div>
+        </section>
       </div>
     </main>
   )
 }
 
+function Info({ label, value }: { label: string; value: any }) {
+  return (
+    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+      <p className="text-slate-400 text-sm">{label}</p>
+      <p className="font-semibold mt-1">{value || 'Not set'}</p>
+    </div>
+  )
+}
+
 function Panel({
   title,
-  description,
+  subtitle,
   children,
 }: {
   title: string
-  description: string
+  subtitle: string
   children: React.ReactNode
 }) {
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-xl">
+    <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
       <h2 className="text-xl font-bold">{title}</h2>
-      <p className="mt-1 text-sm text-slate-400">{description}</p>
+      <p className="text-slate-400 text-sm mt-1">{subtitle}</p>
       <div className="mt-4">{children}</div>
     </section>
   )
 }
 
-function SummaryCard({
-  title,
-  value,
-  helper,
+function StatusPill({
+  text,
+  tone = 'slate',
 }: {
-  title: string
-  value: string
-  helper: string
+  text: string
+  tone?: 'slate' | 'green' | 'yellow' | 'red'
 }) {
-  return (
-    <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-      <p className="text-sm font-semibold text-slate-400">{title}</p>
-      <p className="mt-2 text-xl font-bold">{value}</p>
-      <p className="mt-1 text-xs text-slate-500">{helper}</p>
-    </div>
-  )
-}
-
-function Badge({
-  label,
-  tone,
-}: {
-  label: string
-  tone: 'blue' | 'green' | 'yellow' | 'red' | 'slate'
-}) {
-  const tones = {
-    blue: 'border-blue-400/30 bg-blue-500/10 text-blue-200',
-    green: 'border-green-400/30 bg-green-500/10 text-green-200',
-    yellow: 'border-yellow-400/30 bg-yellow-500/10 text-yellow-200',
-    red: 'border-red-400/30 bg-red-500/10 text-red-200',
-    slate: 'border-white/10 bg-white/5 text-slate-200',
-  }
+  const toneClass =
+    tone === 'green'
+      ? 'bg-green-900/50 border-green-700 text-green-100'
+      : tone === 'yellow'
+        ? 'bg-yellow-900/50 border-yellow-700 text-yellow-100'
+        : tone === 'red'
+          ? 'bg-red-900/50 border-red-700 text-red-100'
+          : 'bg-slate-800 border-slate-700 text-slate-100'
 
   return (
-    <span className={`rounded-full border px-3 py-1 text-sm font-bold ${tones[tone]}`}>
-      {label}
+    <span className={`px-3 py-1 rounded-full border text-sm ${toneClass}`}>
+      {text}
     </span>
   )
 }
 
-function statusTone(status?: string): 'blue' | 'green' | 'yellow' | 'red' | 'slate' {
-  if (status === 'ACTIVE') return 'green'
-  if (status === 'PAID') return 'yellow'
-  if (status === 'COMPLETED') return 'blue'
-  if (status === 'CANCELLED' || status === 'FAILED') return 'red'
-  return 'slate'
-}
-
-function callTone(state: CallState): 'blue' | 'green' | 'yellow' | 'red' | 'slate' {
-  if (state === 'connected') return 'green'
-  if (state === 'calling' || state === 'incoming' || state === 'connecting') return 'blue'
-  if (state === 'reconnecting') return 'yellow'
-  if (state === 'failed' || state === 'declined') return 'red'
-  return 'slate'
-}
-
-function callStatusText(state: CallState) {
-  if (state === 'idle') return 'Audio idle'
-  if (state === 'calling') return 'Calling'
-  if (state === 'incoming') return 'Incoming call'
-  if (state === 'connecting') return 'Connecting'
-  if (state === 'connected') return 'Audio connected'
-  if (state === 'reconnecting') return 'Reconnecting'
-  if (state === 'declined') return 'Call declined'
-  if (state === 'ended') return 'Call ended'
-  if (state === 'failed') return 'Connection failed'
+function callStateLabel(callState: CallState) {
+  if (callState === 'idle') return 'Audio idle'
+  if (callState === 'calling') return 'Calling...'
+  if (callState === 'incoming') return 'Incoming call'
+  if (callState === 'connecting') return 'Connecting...'
+  if (callState === 'connected') return 'Audio connected'
+  if (callState === 'declined') return 'Call declined'
+  if (callState === 'ended') return 'Call ended'
   return 'Audio idle'
-}
-
-function callHelpText(state: CallState, remoteCaller: string | null) {
-  if (state === 'idle') return 'Start live audio when the lesson is active.'
-  if (state === 'calling') return 'Waiting for the other person to accept.'
-  if (state === 'incoming') return `${remoteCaller || 'Someone'} is requesting live audio.`
-  if (state === 'connecting') return 'Audio is negotiating a secure peer connection.'
-  if (state === 'connected') return 'Live audio is currently connected.'
-  if (state === 'reconnecting') return 'The connection weakened. EXAMIA is trying to recover it.'
-  if (state === 'declined') return 'The call was declined.'
-  if (state === 'ended') return 'The live audio session ended.'
-  if (state === 'failed') return 'The connection failed. Restart audio if needed.'
-  return ''
-}
-
-function formatBytes(bytes: number) {
-  if (!bytes) return '0 KB'
-
-  const kb = bytes / 1024
-  if (kb < 1024) return `${Math.round(kb)} KB`
-
-  return `${(kb / 1024).toFixed(1)} MB`
 }
