@@ -7,15 +7,16 @@ import { supabase } from '../../lib/supabase'
 type LessonRequest = {
   id: string
   subject: string
-  custom_subject: string | null
+  custom_subject?: string | null
+  subject_other?: string | null
   grade_level: string | null
   problem: string
   preferred_time: string | null
   scheduled_time: string | null
   status: string
   assigned_teacher: string | null
-  teacher_id: string | null
-  teacher_status: string | null
+  teacher_id?: string | null
+  teacher_status?: string | null
   created_at: string | null
   started_at: string | null
   completed_at: string | null
@@ -47,17 +48,23 @@ function StudentDashboardContent() {
     if (!mounted) return
 
     const lessonIdFromUrl = searchParams.get('lessonId')
+    const savedLessonId =
+      typeof window !== 'undefined' ? localStorage.getItem('examia_student_lesson_id') : null
 
-    if (lessonIdFromUrl) {
-      setLessonId(lessonIdFromUrl)
-      loadLessonById(lessonIdFromUrl)
+    const targetLessonId = lessonIdFromUrl || savedLessonId
+
+    if (targetLessonId) {
+      setLessonId(targetLessonId)
+      loadLessonById(targetLessonId)
     }
   }, [mounted, searchParams])
 
   if (!mounted) return null
 
   async function loadLessonById(id: string) {
-    if (!id.trim()) {
+    const cleanId = id.trim()
+
+    if (!cleanId) {
       alert('Please enter your lesson ID.')
       return
     }
@@ -69,7 +76,7 @@ function StudentDashboardContent() {
     const { data, error } = await supabase
       .from('lesson_requests')
       .select('*')
-      .eq('id', id.trim())
+      .eq('id', cleanId)
       .single()
 
     if (error || !data) {
@@ -83,6 +90,10 @@ function StudentDashboardContent() {
     setLesson(data)
     setMessage('')
     setLoading(false)
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('examia_student_lesson_id', cleanId)
+    }
   }
 
   async function loadLesson() {
@@ -103,9 +114,8 @@ function StudentDashboardContent() {
             <p className="eyebrow">EXAMIA STUDENT DASHBOARD</p>
             <h1>My Lesson Journey</h1>
             <p className="heroText">
-              Track your lesson from request to teacher assignment, active lesson
-              room, and completed history. Your lesson record stays visible so
-              learning does not disappear after the session ends.
+              Track your lesson from request to teacher assignment, room access,
+              active learning, and completed history.
             </p>
           </div>
 
@@ -113,8 +123,8 @@ function StudentDashboardContent() {
             <p className="panelKicker">Student flow</p>
             <h2>Request. Match. Learn. Complete.</h2>
             <p>
-              Enter your Lesson ID to see where your lesson is in the EXAMIA
-              learning process.
+              Your dashboard now acts as the front door. When your lesson is ready,
+              you simply click Join Lesson.
             </p>
           </div>
         </section>
@@ -124,8 +134,8 @@ function StudentDashboardContent() {
             <p className="sectionKicker">Find your lesson</p>
             <h2>Enter your Lesson ID</h2>
             <p className="sectionText">
-              If admin sent you a dashboard link, the lesson may load
-              automatically. You can also paste your Lesson ID below.
+              If your dashboard link includes a Lesson ID, EXAMIA loads it automatically.
+              You can also paste the ID below.
             </p>
           </div>
 
@@ -173,8 +183,8 @@ function StudentDashboardContent() {
             <p className="sectionKicker">No lesson loaded</p>
             <h2>Start with your Lesson ID</h2>
             <p>
-              After you load a lesson, this dashboard will show teacher
-              assignment, readiness, scheduled time, and completion history.
+              After the lesson loads, this dashboard shows teacher assignment,
+              payment status, room readiness, scheduled time, and completion history.
             </p>
           </section>
         )}
@@ -267,12 +277,6 @@ function StudentDashboardContent() {
           font-size: clamp(28px, 5vw, 42px);
           line-height: 1;
           letter-spacing: -0.05em;
-        }
-
-        h3 {
-          margin: 0;
-          font-size: 24px;
-          letter-spacing: -0.03em;
         }
 
         .heroText,
@@ -466,6 +470,10 @@ function StudentDashboardContent() {
           background: linear-gradient(135deg, #dc2626, #7f1d1d);
         }
 
+        .header-purple {
+          background: linear-gradient(135deg, #7c3aed, #4c1d95);
+        }
+
         .problemBox {
           border-radius: 22px;
           padding: 16px;
@@ -584,7 +592,7 @@ function ActiveLessonPanel({
         <Detail label="Subject" value={displaySubject(lesson)} />
         <Detail label="Grade / Level" value={lesson.grade_level || 'Not provided'} />
         <Detail label="Preferred Time" value={lesson.preferred_time || 'Not provided'} />
-        <Detail label="Scheduled Time" value={lesson.scheduled_time || 'Not scheduled'} />
+        <Detail label="Scheduled Time" value={formatDate(lesson.scheduled_time, 'Not scheduled')} />
         <Detail label="Assigned Teacher" value={lesson.assigned_teacher || 'Not assigned'} />
         <Detail label="Teacher Status" value={lesson.teacher_status || 'Not offered yet'} />
         <Detail label="Created At" value={formatDate(lesson.created_at)} />
@@ -594,7 +602,7 @@ function ActiveLessonPanel({
 
       {readiness.ready && (
         <button className="roomButton" onClick={() => openLessonRoom(lesson.id)}>
-          Open Lesson Room
+          Join Lesson
         </button>
       )}
     </section>
@@ -608,8 +616,8 @@ function CompletedLessonHistory({ lesson }: { lesson: LessonRequest }) {
         <p className="sectionKicker">Completed lesson history</p>
         <h2>Lesson Completed</h2>
         <p>
-          This lesson is now closed. The room is no longer open for normal
-          learning activity, but your learning record remains available here.
+          This lesson is now closed. The room is no longer open for normal learning
+          activity, but your learning record remains available here.
         </p>
       </div>
 
@@ -621,7 +629,7 @@ function CompletedLessonHistory({ lesson }: { lesson: LessonRequest }) {
         <Detail label="Grade / Level" value={lesson.grade_level || 'Not provided'} />
         <Detail label="Teacher" value={lesson.assigned_teacher || 'Not assigned'} />
         <Detail label="Preferred Time" value={lesson.preferred_time || 'Not provided'} />
-        <Detail label="Scheduled Time" value={lesson.scheduled_time || 'Not scheduled'} />
+        <Detail label="Scheduled Time" value={formatDate(lesson.scheduled_time, 'Not scheduled')} />
         <Detail label="Created At" value={formatDate(lesson.created_at)} />
         <Detail label="Started At" value={formatDate(effectiveStartedAt(lesson))} />
         <Detail label="Completed At" value={formatDate(effectiveCompletedAt(lesson))} />
@@ -630,8 +638,7 @@ function CompletedLessonHistory({ lesson }: { lesson: LessonRequest }) {
       </div>
 
       <div className="completedNotice">
-        This completed lesson is locked and kept as part of your learning
-        history.
+        This completed lesson is locked and kept as part of your learning history.
       </div>
     </section>
   )
@@ -683,19 +690,17 @@ function Detail({ label, value }: { label: string; value: string }) {
 }
 
 function displaySubject(lesson: LessonRequest) {
-  if (lesson.subject === 'Other' && lesson.custom_subject) {
-    return lesson.custom_subject
-  }
-
+  if (lesson.subject === 'Other' && lesson.custom_subject) return lesson.custom_subject
+  if (lesson.subject === 'Other' && lesson.subject_other) return lesson.subject_other
   return lesson.subject || 'Not provided'
 }
 
-function formatDate(value: string | null) {
-  if (!value) return 'Not recorded'
+function formatDate(value: string | null | undefined, fallback = 'Not recorded') {
+  if (!value) return fallback
 
   const date = new Date(value)
 
-  if (Number.isNaN(date.getTime())) return 'Not recorded'
+  if (Number.isNaN(date.getTime())) return fallback
 
   return date.toLocaleString()
 }
@@ -752,70 +757,51 @@ function getReadiness(lesson: LessonRequest | null): {
     return {
       ready: false,
       title: 'Lesson completed',
-      message:
-        'This lesson has been completed and the room is now closed for normal use.',
+      message: 'This lesson has been completed and the room is now closed for normal use.',
       tone: 'green',
     }
   }
 
-  const paid = lesson.status === 'PAID'
-  const teacherStatus = lesson.teacher_status || 'PENDING'
+  if (lesson.status === 'ACTIVE') {
+    return {
+      ready: true,
+      title: 'Lesson is active',
+      message: 'Your lesson is already active. Click Join Lesson to enter the room.',
+      tone: 'green',
+    }
+  }
 
-  if (paid && teacherStatus === 'ACCEPTED') {
+  if (lesson.status === 'PAID') {
     return {
       ready: true,
       title: 'Your lesson room is ready',
-      message:
-        'Your teacher has accepted this lesson. You can now open the lesson room.',
+      message: 'Your lesson is paid and ready. Click Join Lesson to enter the room.',
       tone: 'green',
     }
   }
 
-  if (paid && teacherStatus === 'OFFERED') {
-    return {
-      ready: false,
-      title: 'Waiting for teacher acceptance',
-      message:
-        'Your lesson has been offered to a teacher. The room will open after the teacher accepts.',
-      tone: 'blue',
-    }
-  }
-
-  if (teacherStatus === 'DECLINED') {
+  if (lesson.teacher_status === 'DECLINED') {
     return {
       ready: false,
       title: 'Teacher reassignment needed',
-      message:
-        'The teacher declined this lesson. Admin needs to assign another teacher.',
+      message: 'The teacher declined this lesson. Admin needs to assign another teacher.',
       tone: 'red',
     }
   }
 
-  if (!paid && lesson.status === 'MATCHED') {
+  if (lesson.status === 'MATCHED') {
     return {
       ready: false,
       title: 'Teacher matched, payment pending',
-      message:
-        'A teacher has been matched. The lesson room opens after payment and teacher acceptance.',
+      message: 'A teacher has been matched. The lesson room opens after payment.',
       tone: 'purple',
-    }
-  }
-
-  if (!paid) {
-    return {
-      ready: false,
-      title: 'Lesson not ready yet',
-      message:
-        'This lesson is not marked as paid yet. The room opens after payment and teacher acceptance.',
-      tone: 'amber',
     }
   }
 
   return {
     ready: false,
-    title: 'Waiting for teacher assignment',
-    message:
-      'Your lesson is paid, but teacher confirmation is still pending.',
-    tone: 'blue',
+    title: 'Lesson not ready yet',
+    message: 'This lesson is not marked as paid or active yet.',
+    tone: 'amber',
   }
 }
