@@ -88,6 +88,10 @@ export default function LessonRoom({
   const [callActive, setCallActive] = useState(false)
   const [incomingCall, setIncomingCall] = useState<any | null>(null)
 
+  const [timerSeconds, setTimerSeconds] = useState(30 * 60)
+  const [timerRunning, setTimerRunning] = useState(false)
+  const [completingLesson, setCompletingLesson] = useState(false)
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
@@ -107,6 +111,24 @@ export default function LessonRoom({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  useEffect(() => {
+    if (!timerRunning) return
+
+    const timer = window.setInterval(() => {
+      setTimerSeconds((current) => {
+        if (current <= 1) {
+          window.clearInterval(timer)
+          setTimerRunning(false)
+          return 0
+        }
+
+        return current - 1
+      })
+    }, 1000)
+
+    return () => window.clearInterval(timer)
+  }, [timerRunning])
 
   async function loadLesson() {
     const { data, error } = await supabase
@@ -195,6 +217,59 @@ export default function LessonRoom({
     }
 
     setNewMessage('')
+  }
+
+  async function markLessonCompleted() {
+    const confirmed = window.confirm(
+      'Mark this lesson as COMPLETED? The room will lock after refresh.'
+    )
+
+    if (!confirmed) return
+
+    setCompletingLesson(true)
+
+    const { error } = await supabase
+      .from('lesson_requests')
+      .update({ status: 'COMPLETED' })
+      .eq('id', resolvedParams.id)
+
+    if (error) {
+      console.error(error)
+      alert('Could not mark lesson as completed.')
+      setCompletingLesson(false)
+      return
+    }
+
+    setTimerRunning(false)
+    setRequest((current) =>
+      current ? { ...current, status: 'COMPLETED' } : current
+    )
+    setMessage('Lesson marked as completed.')
+    setCompletingLesson(false)
+  }
+
+  function setThirtyMinuteTimer() {
+    setTimerRunning(false)
+    setTimerSeconds(30 * 60)
+  }
+
+  function setOneHourTimer() {
+    setTimerRunning(false)
+    setTimerSeconds(60 * 60)
+  }
+
+  function resetTimer() {
+    setTimerRunning(false)
+    setTimerSeconds(30 * 60)
+  }
+
+  function formatTimer(seconds: number) {
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = seconds % 60
+
+    return `${String(minutes).padStart(2, '0')}:${String(
+      remainingSeconds
+    ).padStart(2, '0')}`
   }
 
   async function uploadFile(event: React.ChangeEvent<HTMLInputElement>) {
@@ -742,8 +817,8 @@ export default function LessonRoom({
             <p className="eyebrow">EXAMIA CONTROLLED LESSON SPACE</p>
             <h1>Lesson Room</h1>
             <p className="heroText">
-              A guided learning room for chat, files, voice explanations, and
-              live audio without moving learners to WhatsApp or phone numbers.
+              A guided learning room for chat, files, voice explanations, live
+              audio, timed sessions, and clean lesson completion.
             </p>
           </div>
 
@@ -755,7 +830,21 @@ export default function LessonRoom({
 
         {message && <p className="statusMessage">{message}</p>}
 
-        {request && request.status !== 'PAID' && (
+        {request && request.status === 'COMPLETED' && (
+          <section className="card narrow completedCard">
+            <p className="sectionKicker">Lesson closed</p>
+            <h2>Lesson Completed</h2>
+            <p className="muted">
+              This lesson has been marked as completed. The teaching room is now
+              closed for normal use.
+            </p>
+            <p className="lockedStatus">
+              Current status: <strong>{request.status}</strong>
+            </p>
+          </section>
+        )}
+
+        {request && request.status !== 'PAID' && request.status !== 'COMPLETED' && (
           <section className="card narrow lockedCard">
             <p className="sectionKicker">Access control</p>
             <h2>Lesson Locked</h2>
@@ -822,6 +911,58 @@ export default function LessonRoom({
                   />
                   <Info label="You entered as" value={`${userName} (${userRole})`} />
                 </div>
+              </section>
+
+              <section className="card timerCard">
+                <div className="cardHeader">
+                  <div>
+                    <p className="sectionKicker">Session control</p>
+                    <h2>Lesson Timer</h2>
+                  </div>
+                  <span className={timerSeconds === 0 ? 'timerDone' : 'timerPill'}>
+                    {timerSeconds === 0 ? 'Time Done' : 'Active Timer'}
+                  </span>
+                </div>
+
+                <div className="timerDisplay">{formatTimer(timerSeconds)}</div>
+
+                <div className="timerButtons">
+                  <button className="secondaryBtn" onClick={setThirtyMinuteTimer}>
+                    30 Minutes
+                  </button>
+
+                  <button className="secondaryBtn" onClick={setOneHourTimer}>
+                    1 Hour
+                  </button>
+
+                  <button
+                    className="successBtn"
+                    onClick={() => setTimerRunning(true)}
+                    disabled={timerSeconds === 0 || timerRunning}
+                  >
+                    Start
+                  </button>
+
+                  <button
+                    className="secondaryBtn"
+                    onClick={() => setTimerRunning(false)}
+                    disabled={!timerRunning}
+                  >
+                    Pause
+                  </button>
+
+                  <button className="secondaryBtn" onClick={resetTimer}>
+                    Reset
+                  </button>
+                </div>
+
+                <button
+                  className="completeBtn"
+                  onClick={markLessonCompleted}
+                  disabled={completingLesson}
+                >
+                  {completingLesson ? 'Completing Lesson...' : 'Mark Lesson Completed'}
+                </button>
               </section>
 
               <section className="card flowCard">
@@ -1117,10 +1258,6 @@ export default function LessonRoom({
           letter-spacing: -0.02em;
         }
 
-        p {
-          color: inherit;
-        }
-
         .heroText {
           margin: 12px 0 0;
           color: #dbeafe;
@@ -1196,8 +1333,14 @@ export default function LessonRoom({
         }
 
         .entryCard,
-        .lockedCard {
+        .lockedCard,
+        .completedCard {
           margin-top: 10px;
+        }
+
+        .completedCard {
+          border-color: rgba(34, 197, 94, 0.42);
+          background: linear-gradient(135deg, rgba(22, 163, 74, 0.2), rgba(15, 23, 42, 0.92));
         }
 
         .lockedStatus {
@@ -1223,7 +1366,9 @@ export default function LessonRoom({
 
         .paidBadge,
         .modePill,
-        .countBadge {
+        .countBadge,
+        .timerPill,
+        .timerDone {
           flex: 0 0 auto;
           border-radius: 999px;
           padding: 6px 10px;
@@ -1235,6 +1380,18 @@ export default function LessonRoom({
           background: rgba(34, 197, 94, 0.18);
           color: #bbf7d0;
           border: 1px solid rgba(34, 197, 94, 0.4);
+        }
+
+        .timerPill {
+          background: rgba(96, 165, 250, 0.16);
+          color: #bfdbfe;
+          border: 1px solid rgba(96, 165, 250, 0.32);
+        }
+
+        .timerDone {
+          background: rgba(245, 158, 11, 0.18);
+          color: #fde68a;
+          border: 1px solid rgba(245, 158, 11, 0.38);
         }
 
         .chatPill {
@@ -1277,6 +1434,42 @@ export default function LessonRoom({
           font-size: 14px;
           line-height: 1.45;
           word-break: break-word;
+        }
+
+        .timerCard {
+          background:
+            linear-gradient(135deg, rgba(20, 184, 166, 0.14), rgba(15, 23, 42, 0.92));
+        }
+
+        .timerDisplay {
+          margin: 18px 0;
+          font-size: clamp(46px, 16vw, 78px);
+          line-height: 1;
+          font-weight: 900;
+          letter-spacing: -0.06em;
+          color: #ffffff;
+          text-align: center;
+        }
+
+        .timerButtons {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+          gap: 10px;
+          margin-bottom: 12px;
+        }
+
+        .completeBtn {
+          width: 100%;
+          border: none;
+          border-radius: 16px;
+          padding: 15px 16px;
+          color: #ffffff;
+          font-weight: 900;
+          font-size: 15px;
+          cursor: pointer;
+          min-height: 52px;
+          background: linear-gradient(135deg, #f97316, #dc2626);
+          box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
         }
 
         .flowCard {
