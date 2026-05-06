@@ -64,15 +64,13 @@ type LessonAudioNote = {
   created_at: string
 }
 
-type LessonAudioSignal = {
-  id: string
+type AudioSignal = {
   lesson_id: string
   call_id: string
-  signal_type: 'offer' | 'answer' | 'candidate' | 'end'
+  signal_type: 'offer' | 'answer' | 'candidate' | 'end' | 'decline'
   sender_name: string
   sender_role: string
   payload: any
-  created_at: string
 }
 
 type PresenceUser = {
@@ -113,11 +111,14 @@ export default function LessonRoomPage({ params }: PageProps) {
   const [callActive, setCallActive] = useState(false)
   const [callStatus, setCallStatus] = useState('Not connected')
   const [muted, setMuted] = useState(false)
+  const [incomingCall, setIncomingCall] = useState<AudioSignal | null>(null)
 
   const localStreamRef = useRef<MediaStream | null>(null)
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null)
   const peerRef = useRef<RTCPeerConnection | null>(null)
   const callIdRef = useRef<string>('')
+  const signalChannelRef = useRef<any>(null)
+  const queuedCandidatesRef = useRef<any[]>([])
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
 
@@ -262,27 +263,28 @@ export default function LessonRoomPage({ params }: PageProps) {
       )
       .subscribe()
 
-    const signalChannel = supabase
-      .channel(`lesson-audio-signals-${id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'lesson_audio_signals',
-          filter: `lesson_id=eq.${id}`,
-        },
-        async (payload) => {
-          await handleIncomingSignal(payload.new as LessonAudioSignal)
-        }
-      )
-      .subscribe()
-
     return () => {
       roomChannel.unsubscribe()
-      signalChannel.unsubscribe()
     }
-  }, [entered, id, name, role])
+  }, [entered, id])
+
+  useEffect(() => {
+    if (!entered || !name) return
+
+    const signalChannel = supabase
+      .channel(`lesson-audio-call-${id}`)
+      .on('broadcast', { event: 'audio_signal' }, async ({ payload }) => {
+        await handleIncomingSignal(payload as AudioSignal)
+      })
+      .subscribe()
+
+    signalChannelRef.current = signalChannel
+
+    return () => {
+      signalChannel.unsubscribe()
+      signalChannelRef.current = null
+    }
+  }, [entered, id, name, role, isActive])
 
   async function loadRoom() {
     setLoading(true)
@@ -533,7 +535,10 @@ export default function LessonRoomPage({ params }: PageProps) {
     if (!canUseLiveTools) return
 
     try {
+      await endLiveAudio(false)
+
       callIdRef.current = `${id}-${Date.now()}`
+      queuedCandidatesRef.current = []
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       localStreamRef.current = stream
@@ -546,75 +551,128 @@ export default function LessonRoomPage({ params }: PageProps) {
 
       const offer = await peer.createOffer()
       await peer.setLocalDescription(offer)
+
       await sendSignal('offer', offer)
 
       setCallActive(true)
       setCallStatus('Calling...')
+      setSystemNote('Audio call started. Waiting for the other participant to accept.')
     } catch {
       setSystemNote('Could not start live audio. Check microphone permissions.')
     }
   }
 
-  async function handleIncomingSignal(signal: LessonAudioSignal) {
+  async function acceptIncomingCall() {
+    if (!incomingCall || !canUseLiveTools) return
+
+    try {
+      await endLiveAudio(false)
+
+      callIdRef.current = incomingCall.call_id
+      queuedCandidatesRef.current = []
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      localStreamRef.current = stream
+
+      const peer = createPeerConnection()
+
+      stream.getTracks().forEach((track) => {
+        peer.addTrack(track, stream)
+      })
+
+      await peer.setRemoteDescription(new RTCSessionDescription(incomingCall.payload))
+
+      const answer = await peer.createAnswer()
+      await peer.setLocalDescription(answer)
+
+      await sendSignal('answer', answer)
+
+      for (const candidate of queuedCandidatesRef.current) {
+        try {
+          await peer.addIceCandidate(new RTCIceCandidate(candidate))
+        } catch {
+          // Candidate may fail safely during negotiation.
+        }
+      }
+
+      queuedCandidatesRef.current = []
+      setIncomingCall(null)
+      setCallActive(true)
+      setCallStatus('Connecting...')
+      setSystemNote('Audio call accepted.')
+    } catch {
+      setSystemNote('Incoming audio call could not be answered.')
+    }
+  }
+
+  async function declineIncomingCall() {
+    if (!incomingCall) return
+
+    await sendSignal('decline', { declined: true })
+
+    setIncomingCall(null)
+    setSystemNote('Audio call declined.')
+  }
+
+  async function handleIncomingSignal(signal: AudioSignal) {
     if (!entered) return
     if (!isActive) return
-    if (signal.sender_name === name && signal.sender_role === role) return
     if (signal.lesson_id !== id) return
-
-    if (!callIdRef.current) {
-      callIdRef.current = signal.call_id
-    }
+    if (signal.sender_name === name && signal.sender_role === role) return
 
     if (signal.signal_type === 'offer') {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-        localStreamRef.current = stream
-
-        const peer = createPeerConnection()
-
-        stream.getTracks().forEach((track) => {
-          peer.addTrack(track, stream)
-        })
-
-        await peer.setRemoteDescription(new RTCSessionDescription(signal.payload))
-
-        const answer = await peer.createAnswer()
-        await peer.setLocalDescription(answer)
-        await sendSignal('answer', answer)
-
-        setCallActive(true)
-        setCallStatus('Connected')
-      } catch {
-        setSystemNote('Incoming audio call could not be answered.')
-      }
+      setIncomingCall(signal)
+      setSystemNote(`${signal.sender_name} is calling. Accept or decline the live audio call.`)
+      return
     }
 
     if (signal.signal_type === 'answer' && peerRef.current) {
       await peerRef.current.setRemoteDescription(new RTCSessionDescription(signal.payload))
       setCallStatus('Connected')
+      setSystemNote('Audio call connected.')
+      return
     }
 
-    if (signal.signal_type === 'candidate' && peerRef.current) {
-      try {
-        await peerRef.current.addIceCandidate(new RTCIceCandidate(signal.payload))
-      } catch {
-        // Candidate can safely fail during early negotiation.
+    if (signal.signal_type === 'candidate') {
+      if (peerRef.current) {
+        try {
+          await peerRef.current.addIceCandidate(new RTCIceCandidate(signal.payload))
+        } catch {
+          // Candidate may fail safely during negotiation.
+        }
+      } else {
+        queuedCandidatesRef.current.push(signal.payload)
       }
+
+      return
+    }
+
+    if (signal.signal_type === 'decline') {
+      await endLiveAudio(false)
+      setSystemNote('The audio call was declined.')
+      return
     }
 
     if (signal.signal_type === 'end') {
-      endLiveAudio(false)
+      await endLiveAudio(false)
+      setSystemNote('The audio call ended.')
     }
   }
 
-  async function sendSignal(signalType: LessonAudioSignal['signal_type'], payload: any) {
-    await supabase.from('lesson_audio_signals').insert({
+  async function sendSignal(signalType: AudioSignal['signal_type'], payload: any) {
+    const signal: AudioSignal = {
       lesson_id: id,
       call_id: callIdRef.current || `${id}-${Date.now()}`,
       signal_type: signalType,
       sender_name: name,
       sender_role: role,
       payload,
+    }
+
+    await signalChannelRef.current?.send({
+      type: 'broadcast',
+      event: 'audio_signal',
+      payload: signal,
     })
   }
 
@@ -634,6 +692,8 @@ export default function LessonRoomPage({ params }: PageProps) {
     }
 
     callIdRef.current = ''
+    queuedCandidatesRef.current = []
+    setIncomingCall(null)
     setCallActive(false)
     setCallStatus('Not connected')
     setMuted(false)
@@ -859,6 +919,31 @@ export default function LessonRoomPage({ params }: PageProps) {
           )}
         </header>
 
+        {incomingCall && (
+          <div className="mb-6 rounded-[2rem] border border-cyan-300/20 bg-cyan-400/10 p-6 shadow-xl">
+            <h2 className="text-2xl font-bold text-cyan-100">Incoming Audio Call</h2>
+            <p className="mt-2 text-cyan-50">
+              {incomingCall.sender_name} ({incomingCall.sender_role}) is calling.
+            </p>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <button
+                onClick={acceptIncomingCall}
+                className="rounded-2xl bg-emerald-300 px-4 py-3 font-bold text-slate-950"
+              >
+                Accept Call
+              </button>
+
+              <button
+                onClick={declineIncomingCall}
+                className="rounded-2xl bg-rose-300 px-4 py-3 font-bold text-slate-950"
+              >
+                Decline Call
+              </button>
+            </div>
+          </div>
+        )}
+
         {isPaid && (
           <div className="mb-6 rounded-[2rem] border border-blue-300/20 bg-blue-400/10 p-6 shadow-xl">
             <h2 className="text-2xl font-bold text-blue-100">Waiting / Preparation Mode</h2>
@@ -893,15 +978,6 @@ export default function LessonRoomPage({ params }: PageProps) {
                 Completed at: {formatDate(lesson.completed_at)}
               </p>
             </div>
-          </div>
-        )}
-
-        {!canEnterRoom && (
-          <div className="mb-6 rounded-[2rem] border border-red-300/20 bg-red-500/10 p-6 shadow-xl">
-            <h2 className="text-2xl font-bold text-red-100">Room Locked</h2>
-            <p className="mt-2 text-red-50">
-              This lesson room opens only when the lesson is PAID or ACTIVE.
-            </p>
           </div>
         )}
 
@@ -1057,126 +1133,12 @@ export default function LessonRoomPage({ params }: PageProps) {
                       : 'Voice notes unlock when the lesson is ACTIVE.'}
               </p>
             </div>
-          </div>
-        </section>
 
-        <section className="grid gap-6 lg:grid-cols-5">
-          <div className="lg:col-span-3 rounded-[2rem] border border-white/10 bg-white/[0.05] p-5 shadow-2xl">
-            <div className="mb-4">
-              <h2 className="text-xl font-bold">Lesson Chat</h2>
-              <p className="text-sm text-slate-400">
-                Shared conversation between student, teacher, and admin.
-              </p>
-            </div>
-
-            <div className="h-[430px] overflow-y-auto rounded-2xl bg-slate-950/70 p-4">
-              {messages.length === 0 ? (
-                <p className="text-sm text-slate-400">No messages yet.</p>
-              ) : (
-                <div className="space-y-3">
-                  {messages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className="rounded-2xl border border-white/10 bg-white/[0.05] p-3"
-                    >
-                      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-                        <p className="font-semibold text-cyan-100">{msg.sender}</p>
-                        <p className="text-xs text-slate-500">{formatDate(msg.created_at)}</p>
-                      </div>
-
-                      <p className="text-slate-100">{msg.message}</p>
-                    </div>
-                  ))}
-
-                  <div ref={messagesEndRef} />
-                </div>
-              )}
-            </div>
-
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-              <input
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') sendMessage()
-                }}
-                disabled={!canChat}
-                placeholder={canChat ? 'Type your message...' : 'Chat is locked'}
-                className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-cyan-300 disabled:opacity-50"
-              />
-
-              <button
-                onClick={sendMessage}
-                disabled={!canChat || !message.trim()}
-                className="rounded-2xl bg-cyan-300 px-6 py-3 font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Send
-              </button>
-            </div>
-          </div>
-
-          <div className="lg:col-span-2 space-y-6">
-            <div className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-5 shadow-2xl">
-              <h2 className="text-xl font-bold">Files</h2>
-              <p className="mt-1 text-sm text-slate-400">Upload and download learning materials.</p>
-
-              <div className="mt-4 space-y-3">
-                <input
-                  type="file"
-                  disabled={!canUseLiveTools}
-                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                  className="w-full rounded-2xl border border-white/10 bg-slate-900 p-3 text-sm text-slate-200 disabled:opacity-50"
-                />
-
-                <button
-                  onClick={uploadFile}
-                  disabled={!canUseLiveTools || !selectedFile || uploadingFile}
-                  className="w-full rounded-2xl bg-cyan-300 px-4 py-3 font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {uploadingFile ? 'Uploading...' : 'Upload File'}
-                </button>
-
-                {!canUseLiveTools && (
-                  <p className="rounded-2xl bg-slate-950/60 p-4 text-sm text-slate-400">
-                    File upload unlocks when the lesson is ACTIVE.
-                  </p>
-                )}
-              </div>
-
-              <div className="mt-5 space-y-3">
-                {files.length === 0 ? (
-                  <p className="rounded-2xl bg-slate-950/60 p-4 text-sm text-slate-400">
-                    No files uploaded yet.
-                  </p>
-                ) : (
-                  files.map((file) => (
-                    <div
-                      key={file.id}
-                      className="rounded-2xl border border-white/10 bg-slate-950/60 p-4"
-                    >
-                      <p className="font-semibold">{file.file_name}</p>
-
-                      <p className="mt-1 text-xs text-slate-400">
-                        {formatSize(file.file_size)} · {file.uploaded_by_name} ({file.uploaded_by_role})
-                      </p>
-
-                      <button
-                        onClick={() => downloadFile(file)}
-                        className="mt-3 rounded-xl bg-white px-3 py-2 text-sm font-bold text-slate-950"
-                      >
-                        Download
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            <div className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-5 shadow-2xl">
-              <h2 className="text-xl font-bold">Audio Notes</h2>
+            <div className="mt-6 border-t border-white/10 pt-5">
+              <h3 className="text-lg font-bold">Audio Notes</h3>
               <p className="mt-1 text-sm text-slate-400">Replay recorded explanations.</p>
 
-              <div className="mt-5 space-y-3">
+              <div className="mt-4 space-y-3">
                 {audioNotes.length === 0 ? (
                   <p className="rounded-2xl bg-slate-950/60 p-4 text-sm text-slate-400">
                     No audio notes yet.
@@ -1206,6 +1168,116 @@ export default function LessonRoomPage({ params }: PageProps) {
             </div>
           </div>
         </section>
+
+        <section className="mb-6 rounded-[2rem] border border-white/10 bg-white/[0.05] p-5 shadow-2xl">
+          <div className="mb-4">
+            <h2 className="text-xl font-bold">Lesson Chat</h2>
+            <p className="text-sm text-slate-400">
+              Shared conversation between student, teacher, and admin.
+            </p>
+          </div>
+
+          <div className="h-[430px] overflow-y-auto rounded-2xl bg-slate-950/70 p-4">
+            {messages.length === 0 ? (
+              <p className="text-sm text-slate-400">No messages yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className="rounded-2xl border border-white/10 bg-white/[0.05] p-3"
+                  >
+                    <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                      <p className="font-semibold text-cyan-100">{msg.sender}</p>
+                      <p className="text-xs text-slate-500">{formatDate(msg.created_at)}</p>
+                    </div>
+
+                    <p className="text-slate-100">{msg.message}</p>
+                  </div>
+                ))}
+
+                <div ref={messagesEndRef} />
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+            <input
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') sendMessage()
+              }}
+              disabled={!canChat}
+              placeholder={canChat ? 'Type your message...' : 'Chat is locked'}
+              className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-cyan-300 disabled:opacity-50"
+            />
+
+            <button
+              onClick={sendMessage}
+              disabled={!canChat || !message.trim()}
+              className="rounded-2xl bg-cyan-300 px-6 py-3 font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Send
+            </button>
+          </div>
+        </section>
+
+        <section className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-5 shadow-2xl">
+          <h2 className="text-xl font-bold">Files</h2>
+          <p className="mt-1 text-sm text-slate-400">Upload and download learning materials.</p>
+
+          <div className="mt-4 space-y-3">
+            <input
+              type="file"
+              disabled={!canUseLiveTools}
+              onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+              className="w-full rounded-2xl border border-white/10 bg-slate-900 p-3 text-sm text-slate-200 disabled:opacity-50"
+            />
+
+            <button
+              onClick={uploadFile}
+              disabled={!canUseLiveTools || !selectedFile || uploadingFile}
+              className="w-full rounded-2xl bg-cyan-300 px-4 py-3 font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {uploadingFile ? 'Uploading...' : 'Upload File'}
+            </button>
+
+            {!canUseLiveTools && (
+              <p className="rounded-2xl bg-slate-950/60 p-4 text-sm text-slate-400">
+                File upload unlocks when the lesson is ACTIVE.
+              </p>
+            )}
+          </div>
+
+          <div className="mt-5 space-y-3">
+            {files.length === 0 ? (
+              <p className="rounded-2xl bg-slate-950/60 p-4 text-sm text-slate-400">
+                No files uploaded yet.
+              </p>
+            ) : (
+              files.map((file) => (
+                <div
+                  key={file.id}
+                  className="rounded-2xl border border-white/10 bg-slate-950/60 p-4"
+                >
+                  <p className="font-semibold">{file.file_name}</p>
+
+                  <p className="mt-1 text-xs text-slate-400">
+                    {formatSize(file.file_size)} · {file.uploaded_by_name} ({file.uploaded_by_role})
+                  </p>
+
+                  <button
+                    onClick={() => downloadFile(file)}
+                    className="mt-3 rounded-xl bg-white px-3 py-2 text-sm font-bold text-slate-950"
+                  >
+                    Download
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
       </section>
     </main>
   )
@@ -1226,13 +1298,9 @@ function Panel({
         {title}
       </p>
 
-      <p className="mt-3 text-lg font-bold text-white break-words">
-        {value}
-      </p>
+      <p className="mt-3 text-lg font-bold text-white break-words">{value}</p>
 
-      <p className="mt-2 text-sm text-slate-400">
-        {note}
-      </p>
+      <p className="mt-2 text-sm text-slate-400">{note}</p>
     </div>
   )
 }
