@@ -45,7 +45,7 @@ export default function AdminTeachersPage() {
 
   async function loadTeachers() {
     setLoading(true)
-    setMessage('Loading teacher pool...')
+    setMessage('Loading teacher records...')
 
     const { data, error } = await supabase
       .from('teacher_profiles')
@@ -94,9 +94,8 @@ export default function AdminTeachersPage() {
             <p className="eyebrow">EXAMIA TEACHER GOVERNANCE</p>
             <h1>Teacher Pool Approval</h1>
             <p className="heroText">
-              Review teacher profiles, approve qualified teachers, and protect
-              the learning platform by keeping the active teaching pool clean,
-              visible, and controlled.
+              Review teacher applications, control who enters the active teaching
+              pool, and keep teacher records visible for safe lesson matching.
             </p>
           </div>
 
@@ -104,11 +103,11 @@ export default function AdminTeachersPage() {
             <Link href="/admin" className="quickLink blueLink">
               Admin Command Center
             </Link>
-            <Link href="/admin/assign" className="quickLink purpleLink">
-              Assignment Backup
-            </Link>
             <Link href="/teacher" className="quickLink greenLink">
               Teacher Signup
+            </Link>
+            <Link href="/admin/assign" className="quickLink purpleLink">
+              Assignment Backup
             </Link>
             <button className="quickButton" onClick={loadTeachers}>
               Refresh Teachers
@@ -117,9 +116,9 @@ export default function AdminTeachersPage() {
         </header>
 
         <section className="statsGrid">
-          <StatCard label="Total Teachers" value={teachers.length} tone="blue" />
-          <StatCard label="Pending Review" value={pendingTeachers.length} tone="amber" />
-          <StatCard label="Approved Pool" value={approvedTeachers.length} tone="green" />
+          <StatCard label="Total Profiles" value={teachers.length} tone="blue" />
+          <StatCard label="Pending" value={pendingTeachers.length} tone="amber" />
+          <StatCard label="Approved" value={approvedTeachers.length} tone="green" />
           <StatCard label="Suspended" value={suspendedTeachers.length} tone="red" />
         </section>
 
@@ -131,44 +130,49 @@ export default function AdminTeachersPage() {
           </section>
         ) : (
           <>
-            <TeacherSection
-              title="Pending Teachers"
-              kicker="Needs admin review"
-              description="These teachers are waiting for approval before they can receive lesson offers."
+            <DecisionSection
+              title="Pending Teacher Approval"
+              kicker="Action needed"
+              description="These teachers are not yet active. Review them and decide whether they should enter the approved teaching pool."
+              tone="amber"
               teachers={pendingTeachers}
-              sectionTone="amber"
+              emptyText="No teachers are waiting for approval."
               savingId={savingId}
-              primaryActionLabel="Approve Teacher"
+              primaryLabel="Approve Teacher"
               primaryAction={(id) => updateTeacherStatus(id, 'APPROVED')}
-              secondaryActionLabel="Suspend"
+              secondaryLabel="Suspend"
               secondaryAction={(id) => updateTeacherStatus(id, 'SUSPENDED')}
             />
 
-            <TeacherSection
-              title="Approved Teachers"
-              kicker="Active teaching pool"
-              description="These teachers are visible for lesson matching and can receive lesson offers."
+            <DecisionSection
+              title="Approved Teacher Pool"
+              kicker="Ready for matching"
+              description="These teachers are approved and can receive lesson offers from the Admin Command Center."
+              tone="green"
               teachers={approvedTeachers}
-              sectionTone="green"
+              emptyText="No approved teachers yet."
               savingId={savingId}
-              primaryActionLabel="Suspend"
+              primaryLabel="Suspend Teacher"
               primaryAction={(id) => updateTeacherStatus(id, 'SUSPENDED')}
-              secondaryActionLabel="Return to Pending"
+              secondaryLabel="Return to Pending"
               secondaryAction={(id) => updateTeacherStatus(id, 'PENDING')}
             />
 
-            <TeacherSection
+            <DecisionSection
               title="Suspended Teachers"
               kicker="Blocked from matching"
-              description="These teachers are not part of the active pool until reviewed again."
+              description="These teachers are not available for lesson matching unless restored by admin."
+              tone="red"
               teachers={suspendedTeachers}
-              sectionTone="red"
+              emptyText="No suspended teachers."
               savingId={savingId}
-              primaryActionLabel="Approve Again"
+              primaryLabel="Approve Again"
               primaryAction={(id) => updateTeacherStatus(id, 'APPROVED')}
-              secondaryActionLabel="Return to Pending"
+              secondaryLabel="Return to Pending"
               secondaryAction={(id) => updateTeacherStatus(id, 'PENDING')}
             />
+
+            <ProfileRecords teachers={teachers} />
           </>
         )}
       </div>
@@ -198,7 +202,8 @@ export default function AdminTeachersPage() {
         }
 
         .eyebrow,
-        .sectionKicker {
+        .sectionKicker,
+        .miniLabel {
           margin: 0 0 8px;
           color: #93c5fd;
           font-size: 11px;
@@ -216,13 +221,13 @@ export default function AdminTeachersPage() {
 
         h2 {
           margin: 0;
-          font-size: 30px;
+          font-size: 29px;
           letter-spacing: -0.04em;
         }
 
         h3 {
           margin: 0;
-          font-size: 25px;
+          font-size: 22px;
           letter-spacing: -0.03em;
         }
 
@@ -280,8 +285,9 @@ export default function AdminTeachersPage() {
 
         .statCard,
         .panel,
-        .teacherCard {
-          background: rgba(15, 23, 42, 0.9);
+        .teacherCard,
+        .profileCard {
+          background: rgba(15, 23, 42, 0.92);
           border: 1px solid rgba(148, 163, 184, 0.24);
           border-radius: 26px;
           box-shadow: 0 22px 60px rgba(0, 0, 0, 0.28);
@@ -379,19 +385,25 @@ export default function AdminTeachersPage() {
           background: linear-gradient(135deg, #dc2626, #7f1d1d);
         }
 
-        .teacherList {
+        .section-blue {
+          background: linear-gradient(135deg, #2563eb, #1e3a8a);
+        }
+
+        .decisionList,
+        .profileList {
           display: grid;
-          gap: 16px;
+          gap: 14px;
         }
 
         .teacherCard {
           padding: 16px;
           background:
-            linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(15, 23, 42, 0.94)),
-            rgba(15, 23, 42, 0.9);
+            linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(15, 23, 42, 0.96)),
+            rgba(15, 23, 42, 0.92);
         }
 
-        .teacherTop {
+        .teacherTop,
+        .profileTop {
           display: grid;
           gap: 12px;
           margin-bottom: 14px;
@@ -399,7 +411,8 @@ export default function AdminTeachersPage() {
           border-bottom: 1px solid rgba(148, 163, 184, 0.18);
         }
 
-        .teacherEmail {
+        .teacherEmail,
+        .profileEmail {
           margin: 6px 0 0;
           color: #bfdbfe;
           word-break: break-word;
@@ -430,7 +443,8 @@ export default function AdminTeachersPage() {
           color: #ffffff;
         }
 
-        .detailsGrid {
+        .quickInfoGrid,
+        .profileGrid {
           display: grid;
           grid-template-columns: 1fr;
           gap: 10px;
@@ -460,30 +474,6 @@ export default function AdminTeachersPage() {
           color: #f8fafc;
           line-height: 1.45;
           word-break: break-word;
-        }
-
-        .bioBox {
-          border-radius: 20px;
-          padding: 15px;
-          margin-bottom: 14px;
-          background: linear-gradient(135deg, rgba(124, 58, 237, 0.35), rgba(37, 99, 235, 0.22));
-          border: 1px solid rgba(196, 181, 253, 0.24);
-        }
-
-        .bioBox span {
-          display: block;
-          color: #ddd6fe;
-          font-size: 12px;
-          font-weight: 900;
-          margin-bottom: 8px;
-          text-transform: uppercase;
-          letter-spacing: 0.1em;
-        }
-
-        .bioBox p {
-          margin: 0;
-          color: #ffffff;
-          line-height: 1.6;
         }
 
         .buttonRow {
@@ -531,6 +521,37 @@ export default function AdminTeachersPage() {
           margin: 0;
         }
 
+        .profileCard {
+          padding: 16px;
+          background:
+            linear-gradient(135deg, rgba(124, 58, 237, 0.18), rgba(15, 23, 42, 0.96)),
+            rgba(15, 23, 42, 0.92);
+        }
+
+        .bioBox {
+          border-radius: 20px;
+          padding: 15px;
+          margin-top: 10px;
+          background: linear-gradient(135deg, rgba(124, 58, 237, 0.35), rgba(37, 99, 235, 0.22));
+          border: 1px solid rgba(196, 181, 253, 0.24);
+        }
+
+        .bioBox span {
+          display: block;
+          color: #ddd6fe;
+          font-size: 12px;
+          font-weight: 900;
+          margin-bottom: 8px;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+        }
+
+        .bioBox p {
+          margin: 0;
+          color: #ffffff;
+          line-height: 1.6;
+        }
+
         @media (min-width: 760px) {
           .adminPage {
             padding: 28px;
@@ -545,12 +566,17 @@ export default function AdminTeachersPage() {
             grid-template-columns: repeat(4, 1fr);
           }
 
-          .teacherTop {
+          .teacherTop,
+          .profileTop {
             grid-template-columns: 1fr auto;
             align-items: flex-start;
           }
 
-          .detailsGrid {
+          .quickInfoGrid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+          }
+
+          .profileGrid {
             grid-template-columns: repeat(3, minmax(0, 1fr));
           }
 
@@ -580,45 +606,48 @@ function StatCard({
   )
 }
 
-function TeacherSection({
+function DecisionSection({
   title,
   kicker,
   description,
+  tone,
   teachers,
-  sectionTone,
+  emptyText,
   savingId,
-  primaryActionLabel,
+  primaryLabel,
   primaryAction,
-  secondaryActionLabel,
+  secondaryLabel,
   secondaryAction,
 }: {
   title: string
   kicker: string
   description: string
+  tone: 'amber' | 'green' | 'red'
   teachers: TeacherProfile[]
-  sectionTone: 'amber' | 'green' | 'red'
+  emptyText: string
   savingId: string | null
-  primaryActionLabel: string
+  primaryLabel: string
   primaryAction: (id: string) => void
-  secondaryActionLabel: string
+  secondaryLabel: string
   secondaryAction: (id: string) => void
 }) {
   return (
     <section className="panel">
-      <div className={`sectionHeader section-${sectionTone}`}>
+      <div className={`sectionHeader section-${tone}`}>
         <p className="sectionKicker">{kicker}</p>
         <h2>{title}</h2>
         <p>{description}</p>
       </div>
 
       {teachers.length === 0 ? (
-        <p className="empty">No teachers in this section.</p>
+        <p className="empty">{emptyText}</p>
       ) : (
-        <div className="teacherList">
+        <div className="decisionList">
           {teachers.map((teacher) => (
             <article className="teacherCard" key={teacher.id}>
               <div className="teacherTop">
                 <div>
+                  <p className="miniLabel">Teacher decision record</p>
                   <h3>{teacher.full_name || 'Unnamed Teacher'}</h3>
                   <p className="teacherEmail">{teacher.email || 'No email provided'}</p>
                 </div>
@@ -628,21 +657,10 @@ function TeacherSection({
                 </span>
               </div>
 
-              <div className="detailsGrid">
+              <div className="quickInfoGrid">
                 <Detail label="Subjects" value={formatList(teacher.subjects)} />
                 <Detail label="Grade Levels" value={formatList(teacher.grade_levels)} />
-                <Detail label="Province" value={teacher.province || 'Not provided'} />
-                <Detail label="Languages" value={formatList(teacher.spoken_languages)} />
-                <Detail
-                  label="Hourly Rate"
-                  value={teacher.hourly_rate ? `$${teacher.hourly_rate}` : 'Not provided'}
-                />
-                <Detail label="Submitted At" value={formatDateTime(teacher.created_at)} />
-              </div>
-
-              <div className="bioBox">
-                <span>Teaching strength</span>
-                <p>{teacher.bio || 'No bio provided.'}</p>
+                <Detail label="Hourly Rate" value={formatMoney(teacher.hourly_rate)} />
               </div>
 
               <div className="buttonRow">
@@ -651,7 +669,7 @@ function TeacherSection({
                   onClick={() => primaryAction(teacher.id)}
                   disabled={savingId === teacher.id}
                 >
-                  {savingId === teacher.id ? 'Updating...' : primaryActionLabel}
+                  {savingId === teacher.id ? 'Updating...' : primaryLabel}
                 </button>
 
                 <button
@@ -659,8 +677,59 @@ function TeacherSection({
                   onClick={() => secondaryAction(teacher.id)}
                   disabled={savingId === teacher.id}
                 >
-                  {secondaryActionLabel}
+                  {secondaryLabel}
                 </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function ProfileRecords({ teachers }: { teachers: TeacherProfile[] }) {
+  return (
+    <section className="panel">
+      <div className="sectionHeader section-blue">
+        <p className="sectionKicker">Full teacher records</p>
+        <h2>Teacher Profile Records</h2>
+        <p>
+          This section is for reading teacher details clearly. Approval decisions
+          are made in the sections above.
+        </p>
+      </div>
+
+      {teachers.length === 0 ? (
+        <p className="empty">No teacher profiles found.</p>
+      ) : (
+        <div className="profileList">
+          {teachers.map((teacher) => (
+            <article className="profileCard" key={teacher.id}>
+              <div className="profileTop">
+                <div>
+                  <p className="miniLabel">Teacher profile</p>
+                  <h3>{teacher.full_name || 'Unnamed Teacher'}</h3>
+                  <p className="profileEmail">{teacher.email || 'No email provided'}</p>
+                </div>
+
+                <span className={`statusBadge status-${teacher.status}`}>
+                  {teacher.status || 'UNKNOWN'}
+                </span>
+              </div>
+
+              <div className="profileGrid">
+                <Detail label="Subjects" value={formatList(teacher.subjects)} />
+                <Detail label="Grade Levels" value={formatList(teacher.grade_levels)} />
+                <Detail label="Province" value={teacher.province || 'Not provided'} />
+                <Detail label="Languages" value={formatList(teacher.spoken_languages)} />
+                <Detail label="Hourly Rate" value={formatMoney(teacher.hourly_rate)} />
+                <Detail label="Submitted At" value={formatDateTime(teacher.created_at)} />
+              </div>
+
+              <div className="bioBox">
+                <span>Teaching strength</span>
+                <p>{teacher.bio || 'No bio provided.'}</p>
               </div>
             </article>
           ))}
@@ -682,6 +751,11 @@ function Detail({ label, value }: { label: string; value: string }) {
 function formatList(value: string[] | null) {
   if (!value || value.length === 0) return 'Not provided'
   return value.join(', ')
+}
+
+function formatMoney(value: number | null) {
+  if (!value) return 'Not provided'
+  return `$${value}`
 }
 
 function formatDateTime(value: string | null) {
