@@ -1,20 +1,23 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Dispatch, SetStateAction, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '../../lib/supabase'
 
 const APP_URL = 'https://examia-ten.vercel.app'
 
+type LessonStatus = 'NEW' | 'MATCHED' | 'PAID' | 'ACTIVE' | 'COMPLETED' | string
+
 type LessonRequest = {
   id: string
   subject: string
-  custom_subject: string | null
+  custom_subject?: string | null
+  subject_other?: string | null
   grade_level: string | null
   problem: string
   preferred_time: string | null
   scheduled_time: string | null
-  status: string
+  status: LessonStatus
   assigned_teacher: string | null
   teacher_id: string | null
   teacher_status: string | null
@@ -55,8 +58,8 @@ export default function AdminPage() {
     [requests]
   )
 
-  const activeRequests = useMemo(
-    () => requests.filter((item) => item.status === 'PAID'),
+  const paidActiveRequests = useMemo(
+    () => requests.filter((item) => item.status === 'PAID' || item.status === 'ACTIVE'),
     [requests]
   )
 
@@ -65,15 +68,16 @@ export default function AdminPage() {
     [requests]
   )
 
-  const summary = useMemo(() => {
-    return {
+  const summary = useMemo(
+    () => ({
       total: requests.length,
       new: newRequests.length,
       matched: matchedRequests.length,
-      paid: activeRequests.length,
+      paidActive: paidActiveRequests.length,
       completed: completedRequests.length,
-    }
-  }, [requests, newRequests, matchedRequests, activeRequests, completedRequests])
+    }),
+    [requests, newRequests, matchedRequests, paidActiveRequests, completedRequests]
+  )
 
   async function loadAdminData() {
     setMessage('Loading admin command center...')
@@ -118,10 +122,8 @@ export default function AdminPage() {
   }
 
   function displaySubject(request: LessonRequest) {
-    if (request.subject === 'Other' && request.custom_subject) {
-      return request.custom_subject
-    }
-
+    if (request.subject === 'Other' && request.custom_subject) return request.custom_subject
+    if (request.subject === 'Other' && request.subject_other) return request.subject_other
     return request.subject || 'Not provided'
   }
 
@@ -139,9 +141,14 @@ export default function AdminPage() {
     return `${teacher.full_name} — ${subjects} — ${levels}`
   }
 
-  function formatDateTime(value: string | null) {
-    if (!value) return 'Not recorded'
-    return new Date(value).toLocaleString()
+  function formatDateTime(value: string | null | undefined, fallback = 'Not recorded') {
+    if (!value) return fallback
+
+    const date = new Date(value)
+
+    if (Number.isNaN(date.getTime())) return fallback
+
+    return date.toLocaleString()
   }
 
   function effectiveStartedAt(request: LessonRequest) {
@@ -216,7 +223,7 @@ export default function AdminPage() {
     setSavingId(null)
   }
 
-  async function updateStatus(request: LessonRequest, newStatus: string) {
+  async function updateStatus(request: LessonRequest, newStatus: LessonStatus) {
     setStatusSavingId(request.id)
 
     const now = new Date().toISOString()
@@ -225,13 +232,13 @@ export default function AdminPage() {
       status: newStatus,
     }
 
-    if (newStatus === 'PAID' && !request.started_at) {
+    if (newStatus === 'ACTIVE' && !request.started_at) {
       updateData.started_at = now
     }
 
     if (newStatus === 'COMPLETED') {
       if (!request.started_at) {
-        updateData.started_at = request.created_at || now
+        updateData.started_at = now
       }
 
       if (!request.completed_at) {
@@ -268,9 +275,9 @@ export default function AdminPage() {
             <p className="eyebrow">EXAMIA ADMIN COMMAND CENTER</p>
             <h1>Admin Command Center</h1>
             <p className="heroText">
-              Control the full lesson lifecycle from one place: requests,
-              teacher assignment, payment activation, live lesson access, and
-              completed lesson history.
+              Control the full lesson lifecycle from one place: requests, teacher
+              assignment, payment activation, live lesson access, and completed
+              lesson history.
             </p>
           </div>
 
@@ -294,7 +301,7 @@ export default function AdminPage() {
           <CommandTile label="Total Lessons" value={summary.total} tone="blue" />
           <CommandTile label="New Requests" value={summary.new} tone="amber" />
           <CommandTile label="Matched" value={summary.matched} tone="purple" />
-          <CommandTile label="Paid / Active" value={summary.paid} tone="green" />
+          <CommandTile label="Paid / Active" value={summary.paidActive} tone="green" />
           <CommandTile label="Completed" value={summary.completed} tone="red" />
         </section>
 
@@ -353,10 +360,10 @@ export default function AdminPage() {
         <OperationalSection
           kicker="Queue 3"
           title="Paid / Active Lessons"
-          description="These lessons are active. The lesson room can be opened and the lesson can be completed after teaching."
+          description="These lessons are paid or active. Admin can open the room, mark active, or complete the lesson after teaching."
           tone="green"
-          requests={activeRequests}
-          emptyText="No active paid lessons right now."
+          requests={paidActiveRequests}
+          emptyText="No paid or active lessons right now."
           teachers={teachers}
           selectedTeachers={selectedTeachers}
           timeInputs={timeInputs}
@@ -664,6 +671,11 @@ export default function AdminPage() {
           color: #052e16;
         }
 
+        .status-ACTIVE {
+          background: #14b8a6;
+          color: #042f2e;
+        }
+
         .status-COMPLETED {
           background: #ef4444;
           color: #ffffff;
@@ -893,11 +905,11 @@ function OperationalSection({
   statusSavingId: string | null
   displaySubject: (request: LessonRequest) => string
   teacherLabel: (teacher: TeacherProfile) => string
-  formatDateTime: (value: string | null) => string
-  setSelectedTeachers: React.Dispatch<React.SetStateAction<Record<string, string>>>
-  setTimeInputs: React.Dispatch<React.SetStateAction<Record<string, string>>>
+  formatDateTime: (value: string | null | undefined, fallback?: string) => string
+  setSelectedTeachers: Dispatch<SetStateAction<Record<string, string>>>
+  setTimeInputs: Dispatch<SetStateAction<Record<string, string>>>
   saveAssignment: (request: LessonRequest) => void
-  updateStatus: (request: LessonRequest, newStatus: string) => void
+  updateStatus: (request: LessonRequest, newStatus: LessonStatus) => void
   copyLink: (link: string, label: string) => void
 }) {
   return (
@@ -934,10 +946,11 @@ function OperationalSection({
                   <Info label="Grade / Level" value={request.grade_level || 'Not provided'} />
                   <Info label="Problem" value={request.problem || 'Not provided'} />
                   <Info label="Preferred Time" value={request.preferred_time || 'Not provided'} />
-                  <Info label="Scheduled Time" value={request.scheduled_time || 'Not scheduled'} />
+                  <Info label="Scheduled Time" value={formatDateTime(request.scheduled_time, 'Not scheduled')} />
                   <Info label="Assigned Teacher" value={request.assigned_teacher || 'Not assigned'} />
                   <Info label="Teacher Status" value={request.teacher_status || 'Not offered yet'} />
                   <Info label="Created At" value={formatDateTime(request.created_at)} />
+                  <Info label="Started At" value={formatDateTime(request.started_at)} />
                   <Info label="Lesson ID" value={request.id} />
                 </div>
 
@@ -996,10 +1009,17 @@ function OperationalSection({
                   />
 
                   <ActionButton
-                    label="Mark PAID / Start"
+                    label="Mark PAID"
                     color="#16a34a"
                     disabled={statusSavingId === request.id}
                     onClick={() => updateStatus(request, 'PAID')}
+                  />
+
+                  <ActionButton
+                    label="Mark ACTIVE / Start"
+                    color="#14b8a6"
+                    disabled={statusSavingId === request.id}
+                    onClick={() => updateStatus(request, 'ACTIVE')}
                   />
 
                   <ActionButton
@@ -1020,9 +1040,7 @@ function OperationalSection({
                     label="Copy Student Dashboard"
                     color="#0891b2"
                     disabled={false}
-                    onClick={() =>
-                      copyLink(studentDashboardLink, 'Student dashboard link')
-                    }
+                    onClick={() => copyLink(studentDashboardLink, 'Student dashboard link')}
                   />
                 </div>
 
@@ -1055,7 +1073,7 @@ function CompletedHistorySection({
 }: {
   requests: LessonRequest[]
   displaySubject: (request: LessonRequest) => string
-  formatDateTime: (value: string | null) => string
+  formatDateTime: (value: string | null | undefined, fallback?: string) => string
   effectiveStartedAt: (request: LessonRequest) => string | null
   effectiveCompletedAt: (request: LessonRequest) => string | null
   calculateDuration: (request: LessonRequest) => string
@@ -1088,9 +1106,7 @@ function CompletedHistorySection({
                     <h3>{displaySubject(request)}</h3>
                   </div>
 
-                  <span className="statusBadge status-COMPLETED">
-                    COMPLETED
-                  </span>
+                  <span className="statusBadge status-COMPLETED">COMPLETED</span>
                 </div>
 
                 <div className="infoGrid">
@@ -1107,8 +1123,8 @@ function CompletedHistorySection({
                 </div>
 
                 <div className="completedNotice">
-                  This lesson is completed and locked. No assignment or status
-                  action is shown here because this is now a historical record.
+                  This lesson is completed and locked. No assignment or status action
+                  is shown here because this is now a historical record.
                 </div>
 
                 <div className="historyActions">
@@ -1123,9 +1139,7 @@ function CompletedHistorySection({
                     label="Copy Student Dashboard"
                     color="#0891b2"
                     disabled={false}
-                    onClick={() =>
-                      copyLink(studentDashboardLink, 'Student dashboard link')
-                    }
+                    onClick={() => copyLink(studentDashboardLink, 'Student dashboard link')}
                   />
 
                   <a href={lessonRoomLink} target="_blank" rel="noreferrer">
