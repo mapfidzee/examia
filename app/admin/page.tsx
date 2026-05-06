@@ -45,15 +45,35 @@ export default function AdminPage() {
     loadAdminData()
   }, [])
 
+  const newRequests = useMemo(
+    () => requests.filter((item) => item.status === 'NEW'),
+    [requests]
+  )
+
+  const matchedRequests = useMemo(
+    () => requests.filter((item) => item.status === 'MATCHED'),
+    [requests]
+  )
+
+  const activeRequests = useMemo(
+    () => requests.filter((item) => item.status === 'PAID'),
+    [requests]
+  )
+
+  const completedRequests = useMemo(
+    () => requests.filter((item) => item.status === 'COMPLETED'),
+    [requests]
+  )
+
   const summary = useMemo(() => {
     return {
       total: requests.length,
-      new: requests.filter((item) => item.status === 'NEW').length,
-      matched: requests.filter((item) => item.status === 'MATCHED').length,
-      paid: requests.filter((item) => item.status === 'PAID').length,
-      completed: requests.filter((item) => item.status === 'COMPLETED').length,
+      new: newRequests.length,
+      matched: matchedRequests.length,
+      paid: activeRequests.length,
+      completed: completedRequests.length,
     }
-  }, [requests])
+  }, [requests, newRequests, matchedRequests, activeRequests, completedRequests])
 
   async function loadAdminData() {
     setMessage('Loading admin command center...')
@@ -124,7 +144,22 @@ export default function AdminPage() {
     return new Date(value).toLocaleString()
   }
 
-  function calculateDuration(startedAt: string | null, completedAt: string | null) {
+  function effectiveStartedAt(request: LessonRequest) {
+    if (request.started_at) return request.started_at
+    if (request.status === 'COMPLETED') return request.created_at
+    return null
+  }
+
+  function effectiveCompletedAt(request: LessonRequest) {
+    if (request.completed_at) return request.completed_at
+    if (request.status === 'COMPLETED') return request.created_at
+    return null
+  }
+
+  function calculateDuration(request: LessonRequest) {
+    const startedAt = effectiveStartedAt(request)
+    const completedAt = effectiveCompletedAt(request)
+
     if (!startedAt || !completedAt) return 'Not available'
 
     const start = new Date(startedAt).getTime()
@@ -184,16 +219,24 @@ export default function AdminPage() {
   async function updateStatus(request: LessonRequest, newStatus: string) {
     setStatusSavingId(request.id)
 
+    const now = new Date().toISOString()
+
     const updateData: Record<string, string | null> = {
       status: newStatus,
     }
 
     if (newStatus === 'PAID' && !request.started_at) {
-      updateData.started_at = new Date().toISOString()
+      updateData.started_at = now
     }
 
-    if (newStatus === 'COMPLETED' && !request.completed_at) {
-      updateData.completed_at = new Date().toISOString()
+    if (newStatus === 'COMPLETED') {
+      if (!request.started_at) {
+        updateData.started_at = request.created_at || now
+      }
+
+      if (!request.completed_at) {
+        updateData.completed_at = now
+      }
     }
 
     const { error } = await supabase
@@ -220,223 +263,134 @@ export default function AdminPage() {
   return (
     <main className="adminPage">
       <div className="pageShell">
-        <header className="hero">
-          <div>
+        <section className="frontDoorHero">
+          <div className="heroContent">
             <p className="eyebrow">EXAMIA ADMIN COMMAND CENTER</p>
             <h1>Admin Command Center</h1>
             <p className="heroText">
-              Manage the full lesson lifecycle from one place: requests,
-              teacher assignment, payment status, lesson room access, and
+              Control the full lesson lifecycle from one place: requests,
+              teacher assignment, payment activation, live lesson access, and
               completed lesson history.
             </p>
           </div>
 
           <div className="quickLinks">
-            <Link href="/admin/teachers" className="quickLink">
-              Teacher Approval
+            <Link href="/admin/teachers" className="quickLink blueLink">
+              Teacher Governance
             </Link>
-            <Link href="/request" className="quickLink">
+            <Link href="/request" className="quickLink greenLink">
               Student Request
             </Link>
-            <Link href="/student-dashboard" className="quickLink">
+            <Link href="/student-dashboard" className="quickLink purpleLink">
               Student Dashboard
             </Link>
-            <Link href="/teacher-dashboard" className="quickLink">
+            <Link href="/teacher-dashboard" className="quickLink orangeLink">
               Teacher Dashboard
             </Link>
           </div>
-        </header>
+        </section>
 
-        <section className="statsGrid">
-          <StatCard label="Total Lessons" value={summary.total} />
-          <StatCard label="New" value={summary.new} />
-          <StatCard label="Matched" value={summary.matched} />
-          <StatCard label="Paid / Active" value={summary.paid} />
-          <StatCard label="Completed" value={summary.completed} />
+        <section className="commandTiles">
+          <CommandTile label="Total Lessons" value={summary.total} tone="blue" />
+          <CommandTile label="New Requests" value={summary.new} tone="amber" />
+          <CommandTile label="Matched" value={summary.matched} tone="purple" />
+          <CommandTile label="Paid / Active" value={summary.paid} tone="green" />
+          <CommandTile label="Completed" value={summary.completed} tone="red" />
         </section>
 
         {message && <p className="message">{message}</p>}
 
-        <section className="panel">
-          <div className="panelHeader">
-            <div>
-              <p className="sectionKicker">Lesson control</p>
-              <h2>All Lesson Requests</h2>
-            </div>
+        <div className="refreshRow">
+          <button className="refreshBtn" onClick={loadAdminData}>
+            Refresh Admin Command Center
+          </button>
+        </div>
 
-            <button className="refreshBtn" onClick={loadAdminData}>
-              Refresh
-            </button>
-          </div>
+        <OperationalSection
+          kicker="Queue 1"
+          title="New Requests"
+          description="These lesson requests need teacher assignment and scheduling."
+          tone="amber"
+          requests={newRequests}
+          emptyText="No new lesson requests right now."
+          teachers={teachers}
+          selectedTeachers={selectedTeachers}
+          timeInputs={timeInputs}
+          savingId={savingId}
+          statusSavingId={statusSavingId}
+          displaySubject={displaySubject}
+          teacherLabel={teacherLabel}
+          formatDateTime={formatDateTime}
+          setSelectedTeachers={setSelectedTeachers}
+          setTimeInputs={setTimeInputs}
+          saveAssignment={saveAssignment}
+          updateStatus={updateStatus}
+          copyLink={copyLink}
+        />
 
-          {requests.length === 0 && !message && (
-            <p className="emptyText">No lesson requests found yet.</p>
-          )}
+        <OperationalSection
+          kicker="Queue 2"
+          title="Matched / Offered Lessons"
+          description="These lessons have been matched or offered and may be waiting for teacher response, payment, or final activation."
+          tone="purple"
+          requests={matchedRequests}
+          emptyText="No matched lessons waiting right now."
+          teachers={teachers}
+          selectedTeachers={selectedTeachers}
+          timeInputs={timeInputs}
+          savingId={savingId}
+          statusSavingId={statusSavingId}
+          displaySubject={displaySubject}
+          teacherLabel={teacherLabel}
+          formatDateTime={formatDateTime}
+          setSelectedTeachers={setSelectedTeachers}
+          setTimeInputs={setTimeInputs}
+          saveAssignment={saveAssignment}
+          updateStatus={updateStatus}
+          copyLink={copyLink}
+        />
 
-          <div className="lessonList">
-            {requests.map((request) => {
-              const lessonRoomLink = `${APP_URL}/lesson/${request.id}`
-              const studentDashboardLink = `${APP_URL}/student-dashboard?lessonId=${request.id}`
+        <OperationalSection
+          kicker="Queue 3"
+          title="Paid / Active Lessons"
+          description="These lessons are active. The lesson room can be opened and the lesson can be completed after teaching."
+          tone="green"
+          requests={activeRequests}
+          emptyText="No active paid lessons right now."
+          teachers={teachers}
+          selectedTeachers={selectedTeachers}
+          timeInputs={timeInputs}
+          savingId={savingId}
+          statusSavingId={statusSavingId}
+          displaySubject={displaySubject}
+          teacherLabel={teacherLabel}
+          formatDateTime={formatDateTime}
+          setSelectedTeachers={setSelectedTeachers}
+          setTimeInputs={setTimeInputs}
+          saveAssignment={saveAssignment}
+          updateStatus={updateStatus}
+          copyLink={copyLink}
+        />
 
-              return (
-                <article className="lessonCard" key={request.id}>
-                  <div className="lessonTop">
-                    <div>
-                      <p className="smallLabel">Lesson Request</p>
-                      <h3>{displaySubject(request)}</h3>
-                    </div>
-
-                    <span className={`statusBadge status-${request.status}`}>
-                      {request.status || 'UNKNOWN'}
-                    </span>
-                  </div>
-
-                  <div className="infoGrid">
-                    <Info label="Subject" value={displaySubject(request)} />
-                    <Info label="Grade / Level" value={request.grade_level || 'Not provided'} />
-                    <Info label="Problem" value={request.problem || 'Not provided'} />
-                    <Info label="Preferred Time" value={request.preferred_time || 'Not provided'} />
-                    <Info label="Scheduled Time" value={request.scheduled_time || 'Not scheduled'} />
-                    <Info label="Assigned Teacher" value={request.assigned_teacher || 'Not assigned'} />
-                    <Info label="Teacher Status" value={request.teacher_status || 'Not offered yet'} />
-                    <Info label="Created At" value={formatDateTime(request.created_at)} />
-                    <Info label="Started At" value={formatDateTime(request.started_at)} />
-                    <Info label="Completed At" value={formatDateTime(request.completed_at)} />
-                    <Info
-                      label="Duration"
-                      value={calculateDuration(request.started_at, request.completed_at)}
-                    />
-                    <Info label="Lesson ID" value={request.id} />
-                  </div>
-
-                  {request.status !== 'COMPLETED' && (
-                    <div className="assignmentBox">
-                      <label>
-                        Select approved teacher
-                        <select
-                          value={selectedTeachers[request.id] || ''}
-                          onChange={(event) =>
-                            setSelectedTeachers((prev) => ({
-                              ...prev,
-                              [request.id]: event.target.value,
-                            }))
-                          }
-                        >
-                          <option value="">Select approved teacher</option>
-
-                          {teachers.map((teacher) => (
-                            <option key={teacher.id} value={teacher.id}>
-                              {teacherLabel(teacher)}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-
-                      <label>
-                        Scheduled time
-                        <input
-                          type="text"
-                          placeholder="Example: Saturday 10am"
-                          value={timeInputs[request.id] || ''}
-                          onChange={(event) =>
-                            setTimeInputs((prev) => ({
-                              ...prev,
-                              [request.id]: event.target.value,
-                            }))
-                          }
-                        />
-                      </label>
-
-                      <button
-                        className="primaryBtn"
-                        onClick={() => saveAssignment(request)}
-                        disabled={savingId === request.id}
-                      >
-                        {savingId === request.id
-                          ? 'Saving...'
-                          : 'Offer Lesson to Teacher'}
-                      </button>
-                    </div>
-                  )}
-
-                  {request.status === 'COMPLETED' && (
-                    <div className="completedNotice">
-                      This lesson is completed and locked. It remains visible here
-                      for admin history and record tracking.
-                    </div>
-                  )}
-
-                  <div className="actionsGrid">
-                    <ActionButton
-                      label="Mark NEW"
-                      color="#475569"
-                      disabled={statusSavingId === request.id}
-                      onClick={() => updateStatus(request, 'NEW')}
-                    />
-
-                    <ActionButton
-                      label="Mark MATCHED"
-                      color="#2563eb"
-                      disabled={statusSavingId === request.id}
-                      onClick={() => updateStatus(request, 'MATCHED')}
-                    />
-
-                    <ActionButton
-                      label="Mark PAID / Start"
-                      color="#16a34a"
-                      disabled={statusSavingId === request.id}
-                      onClick={() => updateStatus(request, 'PAID')}
-                    />
-
-                    <ActionButton
-                      label="Mark COMPLETED"
-                      color="#dc2626"
-                      disabled={statusSavingId === request.id}
-                      onClick={() => updateStatus(request, 'COMPLETED')}
-                    />
-
-                    <ActionButton
-                      label="Copy Lesson Room"
-                      color="#7c3aed"
-                      disabled={false}
-                      onClick={() => copyLink(lessonRoomLink, 'Lesson room link')}
-                    />
-
-                    <ActionButton
-                      label="Copy Student Dashboard"
-                      color="#0891b2"
-                      disabled={false}
-                      onClick={() =>
-                        copyLink(studentDashboardLink, 'Student dashboard link')
-                      }
-                    />
-                  </div>
-
-                  <div className="directLinks">
-                    <a href={lessonRoomLink} target="_blank" rel="noreferrer">
-                      Open Lesson Room
-                    </a>
-                    <a
-                      href={studentDashboardLink}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Open Student Dashboard
-                    </a>
-                  </div>
-                </article>
-              )
-            })}
-          </div>
-        </section>
+        <CompletedHistorySection
+          requests={completedRequests}
+          displaySubject={displaySubject}
+          formatDateTime={formatDateTime}
+          effectiveStartedAt={effectiveStartedAt}
+          effectiveCompletedAt={effectiveCompletedAt}
+          calculateDuration={calculateDuration}
+          copyLink={copyLink}
+        />
       </div>
 
-      <style jsx>{`
+      <style jsx global>{`
         .adminPage {
           min-height: 100vh;
           background:
-            radial-gradient(circle at top left, rgba(37, 99, 235, 0.3), transparent 28%),
-            linear-gradient(180deg, #020617 0%, #07111f 48%, #020617 100%);
+            radial-gradient(circle at top left, rgba(37, 99, 235, 0.32), transparent 30%),
+            radial-gradient(circle at top right, rgba(20, 184, 166, 0.18), transparent 28%),
+            radial-gradient(circle at bottom, rgba(168, 85, 247, 0.14), transparent 34%),
+            linear-gradient(180deg, #020617 0%, #07111f 50%, #020617 100%);
           color: #ffffff;
           padding: 18px;
         }
@@ -446,16 +400,34 @@ export default function AdminPage() {
           margin: 0 auto;
         }
 
-        .hero {
+        .frontDoorHero {
           display: grid;
           gap: 18px;
-          margin-bottom: 22px;
-          padding-top: 10px;
+          margin-bottom: 18px;
+          padding-top: 8px;
+        }
+
+        .heroContent,
+        .sectionShell,
+        .lessonCard,
+        .historyCard,
+        .commandTile {
+          border: 1px solid rgba(148, 163, 184, 0.24);
+          border-radius: 28px;
+          background: rgba(15, 23, 42, 0.92);
+          box-shadow: 0 22px 60px rgba(0, 0, 0, 0.28);
+        }
+
+        .heroContent {
+          padding: 22px;
+          background:
+            linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(15, 23, 42, 0.94)),
+            rgba(15, 23, 42, 0.92);
         }
 
         .eyebrow,
         .sectionKicker,
-        .smallLabel {
+        .miniLabel {
           margin: 0 0 8px;
           color: #93c5fd;
           font-size: 11px;
@@ -466,29 +438,30 @@ export default function AdminPage() {
 
         h1 {
           margin: 0;
-          font-size: clamp(36px, 9vw, 64px);
-          line-height: 0.95;
-          letter-spacing: -0.06em;
+          font-size: clamp(42px, 10vw, 76px);
+          line-height: 0.9;
+          letter-spacing: -0.07em;
         }
 
         h2 {
           margin: 0;
-          font-size: 28px;
-          letter-spacing: -0.04em;
+          font-size: clamp(28px, 5vw, 42px);
+          line-height: 1;
+          letter-spacing: -0.05em;
         }
 
         h3 {
           margin: 0;
-          font-size: 25px;
-          letter-spacing: -0.04em;
+          font-size: 24px;
+          letter-spacing: -0.03em;
         }
 
         .heroText {
           max-width: 780px;
-          margin: 14px 0 0;
+          margin: 16px 0 0;
           color: #dbeafe;
           line-height: 1.6;
-          font-size: 15px;
+          font-size: 16px;
         }
 
         .quickLinks {
@@ -500,47 +473,91 @@ export default function AdminPage() {
         .quickLink {
           text-decoration: none;
           color: #ffffff;
-          background: rgba(15, 23, 42, 0.86);
-          border: 1px solid rgba(148, 163, 184, 0.25);
-          padding: 13px 15px;
-          border-radius: 16px;
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          padding: 15px 16px;
+          border-radius: 18px;
           font-weight: 900;
           text-align: center;
+          box-shadow: 0 14px 32px rgba(0, 0, 0, 0.24);
         }
 
-        .statsGrid {
+        .blueLink {
+          background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        }
+
+        .greenLink {
+          background: linear-gradient(135deg, #16a34a, #15803d);
+        }
+
+        .purpleLink {
+          background: linear-gradient(135deg, #7c3aed, #6d28d9);
+        }
+
+        .orangeLink {
+          background: linear-gradient(135deg, #f97316, #ea580c);
+        }
+
+        .commandTiles {
           display: grid;
           grid-template-columns: 1fr;
           gap: 12px;
           margin-bottom: 18px;
         }
 
-        .statCard,
-        .panel,
-        .lessonCard {
-          background: rgba(15, 23, 42, 0.9);
-          border: 1px solid rgba(148, 163, 184, 0.24);
-          border-radius: 24px;
-          box-shadow: 0 22px 60px rgba(0, 0, 0, 0.28);
-        }
-
-        .statCard {
+        .commandTile {
           padding: 18px;
+          position: relative;
+          overflow: hidden;
+          min-height: 120px;
         }
 
-        .statLabel {
+        .commandTile::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          opacity: 0.3;
+          pointer-events: none;
+        }
+
+        .tile-blue::before {
+          background: linear-gradient(135deg, #2563eb, transparent);
+        }
+
+        .tile-amber::before {
+          background: linear-gradient(135deg, #f59e0b, transparent);
+        }
+
+        .tile-purple::before {
+          background: linear-gradient(135deg, #7c3aed, transparent);
+        }
+
+        .tile-green::before {
+          background: linear-gradient(135deg, #16a34a, transparent);
+        }
+
+        .tile-red::before {
+          background: linear-gradient(135deg, #dc2626, transparent);
+        }
+
+        .tileLabel,
+        .tileValue {
+          position: relative;
+          z-index: 1;
+        }
+
+        .tileLabel {
           margin: 0;
-          color: #bfdbfe;
+          color: #dbeafe;
           font-size: 12px;
           font-weight: 900;
           text-transform: uppercase;
           letter-spacing: 0.12em;
         }
 
-        .statValue {
+        .tileValue {
           display: block;
-          margin-top: 8px;
-          font-size: 38px;
+          margin-top: 10px;
+          font-size: 44px;
           line-height: 1;
           font-weight: 900;
         }
@@ -549,89 +566,121 @@ export default function AdminPage() {
           background: rgba(37, 99, 235, 0.18);
           color: #dbeafe;
           padding: 14px;
-          border-radius: 16px;
+          border-radius: 18px;
           border: 1px solid rgba(147, 197, 253, 0.28);
+          margin-bottom: 18px;
         }
 
-        .panel {
-          padding: 16px;
-        }
-
-        .panelHeader {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 12px;
-          margin-bottom: 16px;
+        .refreshRow {
+          display: grid;
+          margin-bottom: 18px;
         }
 
         .refreshBtn {
           border: none;
-          border-radius: 14px;
-          padding: 12px 14px;
+          border-radius: 18px;
+          padding: 15px 16px;
           background: #ffffff;
           color: #0f172a;
           font-weight: 900;
           cursor: pointer;
+          min-height: 52px;
         }
 
-        .lessonList {
+        .sectionShell {
+          padding: 16px;
+          margin-bottom: 20px;
+        }
+
+        .sectionHeader {
+          border-radius: 24px;
+          padding: 18px;
+          margin-bottom: 16px;
+          border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        .sectionHeader p {
+          margin: 9px 0 0;
+          color: #ffffff;
+          line-height: 1.55;
+        }
+
+        .header-amber {
+          background: linear-gradient(135deg, #d97706, #92400e);
+        }
+
+        .header-purple {
+          background: linear-gradient(135deg, #7c3aed, #4c1d95);
+        }
+
+        .header-green {
+          background: linear-gradient(135deg, #16a34a, #065f46);
+        }
+
+        .header-red {
+          background: linear-gradient(135deg, #dc2626, #7f1d1d);
+        }
+
+        .lessonList,
+        .historyList {
           display: grid;
-          gap: 16px;
+          gap: 14px;
         }
 
-        .lessonCard {
+        .lessonCard,
+        .historyCard {
           padding: 16px;
         }
 
         .lessonTop {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
+          display: grid;
+          gap: 12px;
+          padding-bottom: 14px;
           margin-bottom: 14px;
+          border-bottom: 1px solid rgba(148, 163, 184, 0.18);
         }
 
         .statusBadge {
           width: fit-content;
           border-radius: 999px;
-          padding: 7px 12px;
+          padding: 8px 13px;
+          border: 1px solid rgba(255, 255, 255, 0.18);
           font-size: 12px;
           font-weight: 900;
-          border: 1px solid rgba(148, 163, 184, 0.28);
-          background: rgba(30, 41, 59, 0.9);
-          color: #e2e8f0;
         }
 
         .status-NEW {
-          background: rgba(71, 85, 105, 0.35);
+          background: #f59e0b;
+          color: #111827;
         }
 
         .status-MATCHED {
-          background: rgba(37, 99, 235, 0.25);
-          color: #bfdbfe;
+          background: #7c3aed;
+          color: #ffffff;
         }
 
         .status-PAID {
-          background: rgba(22, 163, 74, 0.22);
-          color: #bbf7d0;
+          background: #22c55e;
+          color: #052e16;
         }
 
         .status-COMPLETED {
-          background: rgba(220, 38, 38, 0.2);
-          color: #fecaca;
+          background: #ef4444;
+          color: #ffffff;
         }
 
         .infoGrid {
           display: grid;
           grid-template-columns: 1fr;
           gap: 10px;
+          margin-bottom: 14px;
         }
 
         .infoItem {
           background: rgba(2, 6, 23, 0.72);
-          border: 1px solid rgba(148, 163, 184, 0.16);
-          border-radius: 16px;
-          padding: 12px;
+          border: 1px solid rgba(148, 163, 184, 0.18);
+          border-radius: 18px;
+          padding: 13px;
           min-width: 0;
         }
 
@@ -655,9 +704,9 @@ export default function AdminPage() {
           gap: 10px;
           margin-top: 14px;
           padding: 14px;
-          border-radius: 18px;
-          background: rgba(30, 41, 59, 0.62);
-          border: 1px solid rgba(148, 163, 184, 0.16);
+          border-radius: 20px;
+          background: rgba(30, 41, 59, 0.68);
+          border: 1px solid rgba(148, 163, 184, 0.18);
         }
 
         label {
@@ -672,7 +721,7 @@ export default function AdminPage() {
           box-sizing: border-box;
           margin-top: 7px;
           border: 1px solid #475569;
-          border-radius: 14px;
+          border-radius: 15px;
           padding: 13px;
           background: #ffffff;
           color: #0f172a;
@@ -680,14 +729,15 @@ export default function AdminPage() {
         }
 
         .primaryBtn,
-        .actionsGrid button {
+        .actionBtn {
           border: none;
-          border-radius: 14px;
-          padding: 13px;
+          border-radius: 16px;
+          padding: 15px 16px;
           color: #ffffff;
           font-weight: 900;
           cursor: pointer;
-          min-height: 48px;
+          min-height: 52px;
+          width: 100%;
         }
 
         .primaryBtn {
@@ -699,18 +749,8 @@ export default function AdminPage() {
           cursor: not-allowed;
         }
 
-        .completedNotice {
-          margin-top: 14px;
-          padding: 14px;
-          border-radius: 16px;
-          background: rgba(22, 163, 74, 0.16);
-          border: 1px solid rgba(34, 197, 94, 0.32);
-          color: #bbf7d0;
-          font-weight: 800;
-          line-height: 1.45;
-        }
-
-        .actionsGrid {
+        .actionsGrid,
+        .historyActions {
           display: grid;
           grid-template-columns: 1fr;
           gap: 10px;
@@ -724,19 +764,36 @@ export default function AdminPage() {
           margin-top: 12px;
         }
 
-        .directLinks a {
+        .directLinks a,
+        .historyActions a {
           color: #dbeafe;
           text-decoration: none;
           border: 1px solid rgba(147, 197, 253, 0.28);
           background: rgba(37, 99, 235, 0.14);
-          border-radius: 14px;
-          padding: 12px;
+          border-radius: 16px;
+          padding: 13px;
           text-align: center;
           font-weight: 900;
         }
 
-        .emptyText {
-          color: #cbd5e1;
+        .completedNotice {
+          margin-top: 14px;
+          padding: 14px;
+          border-radius: 18px;
+          background: rgba(220, 38, 38, 0.16);
+          border: 1px solid rgba(248, 113, 113, 0.32);
+          color: #fecaca;
+          font-weight: 800;
+          line-height: 1.45;
+        }
+
+        .emptyBox {
+          color: #e2e8f0;
+          background: rgba(2, 6, 23, 0.65);
+          padding: 17px;
+          border-radius: 18px;
+          border: 1px dashed rgba(148, 163, 184, 0.34);
+          margin: 0;
         }
 
         @media (min-width: 760px) {
@@ -744,19 +801,22 @@ export default function AdminPage() {
             padding: 28px;
           }
 
-          .hero {
-            grid-template-columns: 1fr 260px;
+          .frontDoorHero {
+            grid-template-columns: minmax(0, 1.5fr) 270px;
             align-items: start;
           }
 
-          .statsGrid {
-            grid-template-columns: repeat(5, 1fr);
+          .heroContent {
+            padding: 26px;
+          }
+
+          .commandTiles {
+            grid-template-columns: repeat(5, minmax(0, 1fr));
           }
 
           .lessonTop {
-            flex-direction: row;
-            justify-content: space-between;
-            align-items: flex-start;
+            grid-template-columns: 1fr auto;
+            align-items: start;
           }
 
           .infoGrid {
@@ -769,11 +829,12 @@ export default function AdminPage() {
           }
 
           .actionsGrid {
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(3, minmax(0, 1fr));
           }
 
+          .historyActions,
           .directLinks {
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(2, minmax(0, 1fr));
           }
         }
       `}</style>
@@ -781,12 +842,306 @@ export default function AdminPage() {
   )
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
+function CommandTile({
+  label,
+  value,
+  tone,
+}: {
+  label: string
+  value: number
+  tone: 'blue' | 'amber' | 'purple' | 'green' | 'red'
+}) {
   return (
-    <div className="statCard">
-      <p className="statLabel">{label}</p>
-      <strong className="statValue">{value}</strong>
-    </div>
+    <article className={`commandTile tile-${tone}`}>
+      <p className="tileLabel">{label}</p>
+      <strong className="tileValue">{value}</strong>
+    </article>
+  )
+}
+
+function OperationalSection({
+  kicker,
+  title,
+  description,
+  tone,
+  requests,
+  emptyText,
+  teachers,
+  selectedTeachers,
+  timeInputs,
+  savingId,
+  statusSavingId,
+  displaySubject,
+  teacherLabel,
+  formatDateTime,
+  setSelectedTeachers,
+  setTimeInputs,
+  saveAssignment,
+  updateStatus,
+  copyLink,
+}: {
+  kicker: string
+  title: string
+  description: string
+  tone: 'amber' | 'purple' | 'green'
+  requests: LessonRequest[]
+  emptyText: string
+  teachers: TeacherProfile[]
+  selectedTeachers: Record<string, string>
+  timeInputs: Record<string, string>
+  savingId: string | null
+  statusSavingId: string | null
+  displaySubject: (request: LessonRequest) => string
+  teacherLabel: (teacher: TeacherProfile) => string
+  formatDateTime: (value: string | null) => string
+  setSelectedTeachers: React.Dispatch<React.SetStateAction<Record<string, string>>>
+  setTimeInputs: React.Dispatch<React.SetStateAction<Record<string, string>>>
+  saveAssignment: (request: LessonRequest) => void
+  updateStatus: (request: LessonRequest, newStatus: string) => void
+  copyLink: (link: string, label: string) => void
+}) {
+  return (
+    <section className="sectionShell">
+      <div className={`sectionHeader header-${tone}`}>
+        <p className="sectionKicker">{kicker}</p>
+        <h2>{title}</h2>
+        <p>{description}</p>
+      </div>
+
+      {requests.length === 0 ? (
+        <p className="emptyBox">{emptyText}</p>
+      ) : (
+        <div className="lessonList">
+          {requests.map((request) => {
+            const lessonRoomLink = `${APP_URL}/lesson/${request.id}`
+            const studentDashboardLink = `${APP_URL}/student-dashboard?lessonId=${request.id}`
+
+            return (
+              <article className="lessonCard" key={request.id}>
+                <div className="lessonTop">
+                  <div>
+                    <p className="miniLabel">Operational lesson record</p>
+                    <h3>{displaySubject(request)}</h3>
+                  </div>
+
+                  <span className={`statusBadge status-${request.status}`}>
+                    {request.status || 'UNKNOWN'}
+                  </span>
+                </div>
+
+                <div className="infoGrid">
+                  <Info label="Subject" value={displaySubject(request)} />
+                  <Info label="Grade / Level" value={request.grade_level || 'Not provided'} />
+                  <Info label="Problem" value={request.problem || 'Not provided'} />
+                  <Info label="Preferred Time" value={request.preferred_time || 'Not provided'} />
+                  <Info label="Scheduled Time" value={request.scheduled_time || 'Not scheduled'} />
+                  <Info label="Assigned Teacher" value={request.assigned_teacher || 'Not assigned'} />
+                  <Info label="Teacher Status" value={request.teacher_status || 'Not offered yet'} />
+                  <Info label="Created At" value={formatDateTime(request.created_at)} />
+                  <Info label="Lesson ID" value={request.id} />
+                </div>
+
+                <div className="assignmentBox">
+                  <label>
+                    Select approved teacher
+                    <select
+                      value={selectedTeachers[request.id] || ''}
+                      onChange={(event) =>
+                        setSelectedTeachers((prev) => ({
+                          ...prev,
+                          [request.id]: event.target.value,
+                        }))
+                      }
+                    >
+                      <option value="">Select approved teacher</option>
+
+                      {teachers.map((teacher) => (
+                        <option key={teacher.id} value={teacher.id}>
+                          {teacherLabel(teacher)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    Scheduled time
+                    <input
+                      type="text"
+                      placeholder="Example: Saturday 10am"
+                      value={timeInputs[request.id] || ''}
+                      onChange={(event) =>
+                        setTimeInputs((prev) => ({
+                          ...prev,
+                          [request.id]: event.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+
+                  <button
+                    className="primaryBtn"
+                    onClick={() => saveAssignment(request)}
+                    disabled={savingId === request.id}
+                  >
+                    {savingId === request.id ? 'Saving...' : 'Offer Lesson'}
+                  </button>
+                </div>
+
+                <div className="actionsGrid">
+                  <ActionButton
+                    label="Mark MATCHED"
+                    color="#7c3aed"
+                    disabled={statusSavingId === request.id}
+                    onClick={() => updateStatus(request, 'MATCHED')}
+                  />
+
+                  <ActionButton
+                    label="Mark PAID / Start"
+                    color="#16a34a"
+                    disabled={statusSavingId === request.id}
+                    onClick={() => updateStatus(request, 'PAID')}
+                  />
+
+                  <ActionButton
+                    label="Mark COMPLETED"
+                    color="#dc2626"
+                    disabled={statusSavingId === request.id}
+                    onClick={() => updateStatus(request, 'COMPLETED')}
+                  />
+
+                  <ActionButton
+                    label="Copy Lesson Room"
+                    color="#2563eb"
+                    disabled={false}
+                    onClick={() => copyLink(lessonRoomLink, 'Lesson room link')}
+                  />
+
+                  <ActionButton
+                    label="Copy Student Dashboard"
+                    color="#0891b2"
+                    disabled={false}
+                    onClick={() =>
+                      copyLink(studentDashboardLink, 'Student dashboard link')
+                    }
+                  />
+                </div>
+
+                <div className="directLinks">
+                  <a href={lessonRoomLink} target="_blank" rel="noreferrer">
+                    Open Lesson Room
+                  </a>
+
+                  <a href={studentDashboardLink} target="_blank" rel="noreferrer">
+                    Open Student Dashboard
+                  </a>
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function CompletedHistorySection({
+  requests,
+  displaySubject,
+  formatDateTime,
+  effectiveStartedAt,
+  effectiveCompletedAt,
+  calculateDuration,
+  copyLink,
+}: {
+  requests: LessonRequest[]
+  displaySubject: (request: LessonRequest) => string
+  formatDateTime: (value: string | null) => string
+  effectiveStartedAt: (request: LessonRequest) => string | null
+  effectiveCompletedAt: (request: LessonRequest) => string | null
+  calculateDuration: (request: LessonRequest) => string
+  copyLink: (link: string, label: string) => void
+}) {
+  return (
+    <section className="sectionShell">
+      <div className="sectionHeader header-red">
+        <p className="sectionKicker">Locked records</p>
+        <h2>Completed Lesson History</h2>
+        <p>
+          These lessons are closed. They remain visible for history, tracking,
+          payment justification, and future progress records.
+        </p>
+      </div>
+
+      {requests.length === 0 ? (
+        <p className="emptyBox">No completed lessons yet.</p>
+      ) : (
+        <div className="historyList">
+          {requests.map((request) => {
+            const lessonRoomLink = `${APP_URL}/lesson/${request.id}`
+            const studentDashboardLink = `${APP_URL}/student-dashboard?lessonId=${request.id}`
+
+            return (
+              <article className="historyCard" key={request.id}>
+                <div className="lessonTop">
+                  <div>
+                    <p className="miniLabel">Completed lesson record</p>
+                    <h3>{displaySubject(request)}</h3>
+                  </div>
+
+                  <span className="statusBadge status-COMPLETED">
+                    COMPLETED
+                  </span>
+                </div>
+
+                <div className="infoGrid">
+                  <Info label="Subject" value={displaySubject(request)} />
+                  <Info label="Grade / Level" value={request.grade_level || 'Not provided'} />
+                  <Info label="Problem" value={request.problem || 'Not provided'} />
+                  <Info label="Assigned Teacher" value={request.assigned_teacher || 'Not assigned'} />
+                  <Info label="Teacher Status" value={request.teacher_status || 'Not offered yet'} />
+                  <Info label="Created At" value={formatDateTime(request.created_at)} />
+                  <Info label="Started At" value={formatDateTime(effectiveStartedAt(request))} />
+                  <Info label="Completed At" value={formatDateTime(effectiveCompletedAt(request))} />
+                  <Info label="Duration" value={calculateDuration(request)} />
+                  <Info label="Lesson ID" value={request.id} />
+                </div>
+
+                <div className="completedNotice">
+                  This lesson is completed and locked. No assignment or status
+                  action is shown here because this is now a historical record.
+                </div>
+
+                <div className="historyActions">
+                  <ActionButton
+                    label="Copy Lesson Room"
+                    color="#2563eb"
+                    disabled={false}
+                    onClick={() => copyLink(lessonRoomLink, 'Lesson room link')}
+                  />
+
+                  <ActionButton
+                    label="Copy Student Dashboard"
+                    color="#0891b2"
+                    disabled={false}
+                    onClick={() =>
+                      copyLink(studentDashboardLink, 'Student dashboard link')
+                    }
+                  />
+
+                  <a href={lessonRoomLink} target="_blank" rel="noreferrer">
+                    Open Lesson Room
+                  </a>
+
+                  <a href={studentDashboardLink} target="_blank" rel="noreferrer">
+                    Open Student Dashboard
+                  </a>
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      )}
+    </section>
   )
 }
 
@@ -812,6 +1167,7 @@ function ActionButton({
 }) {
   return (
     <button
+      className="actionBtn"
       disabled={disabled}
       onClick={onClick}
       style={{ background: color }}
