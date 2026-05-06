@@ -17,6 +17,7 @@ type LessonRequest = {
   teacher_id: string | null
   teacher_status: string | null
   created_at: string | null
+  completed_at: string | null
 }
 
 const styles = {
@@ -27,11 +28,7 @@ const styles = {
     padding: '72px 22px 140px',
     fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
   },
-  wrap: {
-    width: '100%',
-    maxWidth: '1120px',
-    margin: '0 auto',
-  },
+  wrap: { width: '100%', maxWidth: '1120px', margin: '0 auto' },
   eyebrow: {
     margin: '0 0 10px',
     color: '#dbeafe',
@@ -194,6 +191,7 @@ function StudentDashboardContent() {
   }
 
   const readiness = getReadiness(lesson)
+  const isCompleted = lesson?.status === 'COMPLETED'
 
   return (
     <main style={styles.page}>
@@ -203,15 +201,15 @@ function StudentDashboardContent() {
             <p style={styles.eyebrow}>EXAMIA STUDENT DASHBOARD</p>
             <h1 style={styles.h1}>My Lesson Status</h1>
             <p style={{ ...styles.text, maxWidth: '760px' }}>
-              Check your lesson progress, teacher assignment, grade level, and
-              room readiness in one place.
+              Check lesson progress, teacher assignment, grade level, room readiness,
+              and completed lesson history in one place.
             </p>
           </div>
 
           <div style={{ ...styles.card, padding: '24px', display: 'grid', gap: '14px' }}>
-            <MiniStat label="Student Flow" value="Request → Match → Learn" />
+            <MiniStat label="Student Flow" value="Request → Match → Learn → Complete" />
             <MiniStat label="Room Access" value="PAID + ACCEPTED only" />
-            <MiniStat label="System" value="Controlled Lesson Tracking" />
+            <MiniStat label="History" value="Closed lessons stay traceable" />
           </div>
         </header>
 
@@ -250,72 +248,85 @@ function StudentDashboardContent() {
                 marginBottom: '28px',
               }}
             >
-              <StatusCard title="Payment / Lesson" value={lesson.status || 'Not set'} color="#60a5fa" />
-              <StatusCard title="Teacher Status" value={lesson.teacher_status || 'PENDING'} color={readiness.color} />
+              <StatusCard title="Payment / Lesson" value={lesson.status || 'Not set'} color={readiness.color} />
+              <StatusCard title="Teacher Status" value={lesson.teacher_status || 'PENDING'} color="#60a5fa" />
               <StatusCard title="Assigned Teacher" value={lesson.assigned_teacher || 'Not assigned'} color="#22c55e" />
             </section>
 
-            <section style={{ ...styles.panel, borderTop: `5px solid ${readiness.color}` }}>
-              <div style={{ marginBottom: '22px' }}>
-                <p style={styles.eyebrow}>Lesson readiness</p>
-                <h2 style={styles.h2}>{readiness.title}</h2>
-                <p style={{ color: '#dbeafe', lineHeight: 1.62, marginTop: '10px' }}>
-                  {readiness.message}
-                </p>
-              </div>
+            {isCompleted ? (
+              <CompletedLessonHistory lesson={lesson} />
+            ) : (
+              <section style={{ ...styles.panel, borderTop: `5px solid ${readiness.color}` }}>
+                <div style={{ marginBottom: '22px' }}>
+                  <p style={styles.eyebrow}>Lesson readiness</p>
+                  <h2 style={styles.h2}>{readiness.title}</h2>
+                  <p style={{ color: '#dbeafe', lineHeight: 1.62, marginTop: '10px' }}>
+                    {readiness.message}
+                  </p>
+                </div>
 
-              <div
-                style={{
-                  background: '#1d4ed8',
-                  borderRadius: '18px',
-                  padding: '18px',
-                  marginBottom: '16px',
-                }}
-              >
-                <span
+                <ProblemBlock problem={lesson.problem || 'Not provided'} />
+
+                <div
                   style={{
-                    display: 'block',
-                    color: '#bfdbfe',
-                    fontSize: '12px',
-                    fontWeight: 900,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
-                    marginBottom: '8px',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                    gap: '12px',
+                    marginBottom: readiness.ready ? '16px' : 0,
                   }}
                 >
-                  Student problem
-                </span>
+                  <Detail label="Subject" value={displaySubject(lesson)} />
+                  <Detail label="Grade / Level" value={lesson.grade_level || 'Not provided'} />
+                  <Detail label="Preferred Time" value={lesson.preferred_time || 'Not provided'} />
+                  <Detail label="Scheduled Time" value={lesson.scheduled_time || 'Not scheduled'} />
+                  <Detail label="Lesson ID" value={lesson.id} />
+                </div>
 
-                <p style={{ margin: 0, lineHeight: 1.6, color: '#ffffff' }}>
-                  {lesson.problem || 'Not provided'}
-                </p>
-              </div>
-
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                  gap: '12px',
-                  marginBottom: readiness.ready ? '16px' : 0,
-                }}
-              >
-                <Detail label="Subject" value={displaySubject(lesson)} />
-                <Detail label="Grade / Level" value={lesson.grade_level || 'Not provided'} />
-                <Detail label="Preferred Time" value={lesson.preferred_time || 'Not provided'} />
-                <Detail label="Scheduled Time" value={lesson.scheduled_time || 'Not scheduled'} />
-                <Detail label="Lesson ID" value={lesson.id} />
-              </div>
-
-              {readiness.ready && (
-                <button style={styles.greenButton} onClick={() => openLessonRoom(lesson.id)}>
-                  Open Lesson Room
-                </button>
-              )}
-            </section>
+                {readiness.ready && (
+                  <button style={styles.greenButton} onClick={() => openLessonRoom(lesson.id)}>
+                    Open Lesson Room
+                  </button>
+                )}
+              </section>
+            )}
           </>
         )}
       </div>
     </main>
+  )
+}
+
+function CompletedLessonHistory({ lesson }: { lesson: LessonRequest }) {
+  return (
+    <section style={{ ...styles.panel, borderTop: '5px solid #22c55e' }}>
+      <div style={{ marginBottom: '22px' }}>
+        <p style={styles.eyebrow}>Completed lessons history</p>
+        <h2 style={styles.h2}>Lesson Completed</h2>
+        <p style={{ color: '#dbeafe', lineHeight: 1.62, marginTop: '10px' }}>
+          This lesson has been closed. The teaching room is no longer open for normal use,
+          but the lesson record remains available for tracking.
+        </p>
+      </div>
+
+      <ProblemBlock problem={lesson.problem || 'Not provided'} />
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: '12px',
+        }}
+      >
+        <Detail label="Status" value="COMPLETED" />
+        <Detail label="Subject" value={displaySubject(lesson)} />
+        <Detail label="Grade / Level" value={lesson.grade_level || 'Not provided'} />
+        <Detail label="Teacher" value={lesson.assigned_teacher || 'Not assigned'} />
+        <Detail label="Preferred Time" value={lesson.preferred_time || 'Not provided'} />
+        <Detail label="Scheduled Time" value={lesson.scheduled_time || 'Not scheduled'} />
+        <Detail label="Completed At" value={formatDate(lesson.completed_at)} />
+        <Detail label="Lesson ID" value={lesson.id} />
+      </div>
+    </section>
   )
 }
 
@@ -329,12 +340,53 @@ function LoadingFallback() {
   )
 }
 
+function ProblemBlock({ problem }: { problem: string }) {
+  return (
+    <div
+      style={{
+        background: '#1d4ed8',
+        borderRadius: '18px',
+        padding: '18px',
+        marginBottom: '16px',
+      }}
+    >
+      <span
+        style={{
+          display: 'block',
+          color: '#bfdbfe',
+          fontSize: '12px',
+          fontWeight: 900,
+          textTransform: 'uppercase',
+          letterSpacing: '0.1em',
+          marginBottom: '8px',
+        }}
+      >
+        Student problem
+      </span>
+
+      <p style={{ margin: 0, lineHeight: 1.6, color: '#ffffff' }}>
+        {problem}
+      </p>
+    </div>
+  )
+}
+
 function displaySubject(lesson: LessonRequest) {
   if (lesson.subject === 'Other' && lesson.custom_subject) {
     return lesson.custom_subject
   }
 
   return lesson.subject || 'Not provided'
+}
+
+function formatDate(value: string | null) {
+  if (!value) return 'Not recorded'
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) return 'Not recorded'
+
+  return date.toLocaleString()
 }
 
 function getReadiness(lesson: LessonRequest | null) {
@@ -344,6 +396,16 @@ function getReadiness(lesson: LessonRequest | null) {
       title: 'Lesson not loaded',
       message: 'Enter your lesson ID to check your lesson status.',
       color: '#60a5fa',
+    }
+  }
+
+  if (lesson.status === 'COMPLETED') {
+    return {
+      ready: false,
+      title: 'Lesson completed',
+      message:
+        'This lesson has been completed and the room is now closed for normal use.',
+      color: '#22c55e',
     }
   }
 
