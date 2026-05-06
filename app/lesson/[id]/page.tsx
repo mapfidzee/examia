@@ -1,36 +1,21 @@
 'use client'
 
-import { use, useEffect, useMemo, useRef, useState } from 'react'
+import { use, useEffect, useRef, useState, type ReactNode } from 'react'
 import { supabase } from '../../../lib/supabase'
 
 type PageProps = {
   params: Promise<{ id: string }>
 }
 
-type LessonStatus =
-  | 'NEW'
-  | 'MATCHED'
-  | 'PAID'
-  | 'ACTIVE'
-  | 'COMPLETED'
-  | 'CANCELLED'
-  | 'FAILED'
-  | string
-
 type LessonRequest = {
   id: string
   subject: string
-  subject_other?: string | null
-  grade_level?: string | null
+  level: string | null
   problem: string
   preferred_time: string
   scheduled_time: string | null
-  status: LessonStatus
+  status: string
   assigned_teacher: string | null
-  student_name?: string | null
-  created_at?: string
-  started_at?: string | null
-  completed_at?: string | null
 }
 
 type LessonMessage = {
@@ -64,23 +49,26 @@ type LessonAudioNote = {
   created_at: string
 }
 
-type AudioSignal = {
+type LessonAudioSignal = {
+  id: string
   lesson_id: string
   call_id: string
-  signal_type: 'offer' | 'answer' | 'candidate' | 'end' | 'decline'
   sender_name: string
   sender_role: string
+  signal_type: 'offer' | 'answer' | 'candidate' | 'decline' | 'end'
   payload: any
+  created_at: string
 }
 
-type PresenceUser = {
-  name: string
-  role: string
-  online_at: string
-}
-
-const BUCKET_FILES = 'lesson-files'
-const BUCKET_AUDIO = 'lesson-audio'
+type CallState =
+  | 'idle'
+  | 'calling'
+  | 'incoming'
+  | 'connecting'
+  | 'connected'
+  | 'declined'
+  | 'ended'
+  | 'failed'
 
 export default function LessonRoomPage({ params }: PageProps) {
   const { id } = use(params)
@@ -89,120 +77,108 @@ export default function LessonRoomPage({ params }: PageProps) {
   const [messages, setMessages] = useState<LessonMessage[]>([])
   const [files, setFiles] = useState<LessonFile[]>([])
   const [audioNotes, setAudioNotes] = useState<LessonAudioNote[]>([])
-  const [presenceUsers, setPresenceUsers] = useState<PresenceUser[]>([])
+  const [onlineUsers, setOnlineUsers] = useState<any[]>([])
 
   const [name, setName] = useState('')
   const [role, setRole] = useState<'student' | 'teacher' | 'admin'>('student')
   const [entered, setEntered] = useState(false)
 
   const [message, setMessage] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [busy, setBusy] = useState(false)
-  const [systemNote, setSystemNote] = useState('')
-
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploadingFile, setUploadingFile] = useState(false)
-
   const [recording, setRecording] = useState(false)
-  const [uploadingAudio, setUploadingAudio] = useState(false)
+
+  const [callState, setCallState] = useState<CallState>('idle')
+  const [incomingCall, setIncomingCall] = useState<LessonAudioSignal | null>(null)
+  const [currentCallId, setCurrentCallId] = useState<string | null>(null)
+  const [remoteCaller, setRemoteCaller] = useState<string | null>(null)
+  const [audioError, setAudioError] = useState<string | null>(null)
+
+  const [wakeLockSupported, setWakeLockSupported] = useState(false)
+  const [wakeLockActive, setWakeLockActive] = useState(false)
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
 
-  const [callActive, setCallActive] = useState(false)
-  const [callStatus, setCallStatus] = useState('Not connected')
-  const [muted, setMuted] = useState(false)
-  const [incomingCall, setIncomingCall] = useState<AudioSignal | null>(null)
-
+  const peerRef = useRef<RTCPeerConnection | null>(null)
   const localStreamRef = useRef<MediaStream | null>(null)
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null)
-  const peerRef = useRef<RTCPeerConnection | null>(null)
-  const callIdRef = useRef<string>('')
-  const signalChannelRef = useRef<any>(null)
-  const queuedCandidatesRef = useRef<any[]>([])
+  const processedSignalsRef = useRef<Set<string>>(new Set())
+  const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([])
+  const wakeLockRef = useRef<any>(null)
 
-  const messagesEndRef = useRef<HTMLDivElement | null>(null)
+  const callStateRef = useRef<CallState>('idle')
+  const currentCallIdRef = useRef<string | null>(null)
+  const incomingCallRef = useRef<LessonAudioSignal | null>(null)
 
-  const lessonStatus = lesson?.status || 'NEW'
+  const isPaid = lesson?.status === 'PAID'
+  const isActive = lesson?.status === 'ACTIVE'
+  const isClosed =
+    lesson?.status === 'COMPLETED' ||
+    lesson?.status === 'CANCELLED' ||
+    lesson?.status === 'FAILED'
 
-  const isPaid = lessonStatus === 'PAID'
-  const isActive = lessonStatus === 'ACTIVE'
-  const isCompleted = lessonStatus === 'COMPLETED'
-  const isCancelled = lessonStatus === 'CANCELLED'
-  const isFailed = lessonStatus === 'FAILED'
-  const isLocked = isCompleted || isCancelled || isFailed
-
-  const canEnterRoom = lessonStatus === 'PAID' || lessonStatus === 'ACTIVE' || isLocked
-  const canChat = entered && (isPaid || isActive) && !isLocked
-  const canUseLiveTools = entered && isActive && !isLocked
-
-  const sessionLabel = useMemo(() => {
-    if (isPaid) return 'Waiting / Preparation'
-    if (isActive) return 'Live Session Active'
-    if (isCompleted) return 'Completed'
-    if (isCancelled) return 'Cancelled'
-    if (isFailed) return 'Failed'
-    return 'Locked Until Paid'
-  }, [isPaid, isActive, isCompleted, isCancelled, isFailed])
-
-  const displaySubject = useMemo(() => {
-    if (!lesson) return ''
-    if (lesson.subject === 'Other' && lesson.subject_other) return lesson.subject_other
-    return lesson.subject
-  }, [lesson])
+  const liveToolsEnabled = isActive
+  const prepMode = isPaid
 
   useEffect(() => {
-    loadRoom()
+    callStateRef.current = callState
+  }, [callState])
+
+  useEffect(() => {
+    currentCallIdRef.current = currentCallId
+  }, [currentCallId])
+
+  useEffect(() => {
+    incomingCallRef.current = incomingCall
+  }, [incomingCall])
+
+  useEffect(() => {
+    loadEverything()
   }, [id])
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    setWakeLockSupported('wakeLock' in navigator)
+
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible' && wakeLockActive) {
+        await requestWakeLock()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [wakeLockActive])
 
   useEffect(() => {
     if (!entered || !name) return
 
-    const presenceChannel = supabase.channel(`presence-lesson-${id}`, {
+    const channel = supabase.channel(`lesson-room-${id}`, {
       config: {
-        presence: {
-          key: `${role}-${name}`,
-        },
+        presence: { key: `${name}-${role}` },
       },
     })
 
-    presenceChannel
+    channel
       .on('presence', { event: 'sync' }, () => {
-        const state = presenceChannel.presenceState()
-
-        const users = Object.values(state)
-          .flat()
-          .map((entry: any) => ({
-            name: entry.name,
-            role: entry.role,
-            online_at: entry.online_at,
-          }))
-
-        setPresenceUsers(users)
+        const state = channel.presenceState()
+        const users = Object.values(state).flat()
+        setOnlineUsers(users)
       })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await presenceChannel.track({
-            name,
-            role,
-            online_at: new Date().toISOString(),
-          })
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'lesson_requests',
+          filter: `id=eq.${id}`,
+        },
+        payload => {
+          setLesson(payload.new as LessonRequest)
         }
-      })
-
-    return () => {
-      presenceChannel.unsubscribe()
-    }
-  }, [entered, name, role, id])
-
-  useEffect(() => {
-    if (!entered) return
-
-    const roomChannel = supabase
-      .channel(`lesson-room-${id}`)
+      )
       .on(
         'postgres_changes',
         {
@@ -211,8 +187,8 @@ export default function LessonRoomPage({ params }: PageProps) {
           table: 'lesson_messages',
           filter: `lesson_request_id=eq.${id}`,
         },
-        (payload) => {
-          setMessages((current) => [...current, payload.new as LessonMessage])
+        payload => {
+          setMessages(prev => [...prev, payload.new as LessonMessage])
         }
       )
       .on(
@@ -223,8 +199,8 @@ export default function LessonRoomPage({ params }: PageProps) {
           table: 'lesson_files',
           filter: `lesson_id=eq.${id}`,
         },
-        (payload) => {
-          setFiles((current) => [payload.new as LessonFile, ...current])
+        payload => {
+          setFiles(prev => [payload.new as LessonFile, ...prev])
         }
       )
       .on(
@@ -235,74 +211,45 @@ export default function LessonRoomPage({ params }: PageProps) {
           table: 'lesson_audio_notes',
           filter: `lesson_id=eq.${id}`,
         },
-        (payload) => {
-          setAudioNotes((current) => [payload.new as LessonAudioNote, ...current])
+        payload => {
+          setAudioNotes(prev => [payload.new as LessonAudioNote, ...prev])
         }
       )
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: 'INSERT',
           schema: 'public',
-          table: 'lesson_requests',
-          filter: `id=eq.${id}`,
+          table: 'lesson_audio_signals',
+          filter: `lesson_id=eq.${id}`,
         },
-        async (payload) => {
-          const updatedLesson = payload.new as LessonRequest
-          setLesson(updatedLesson)
-
-          if (
-            updatedLesson.status === 'COMPLETED' ||
-            updatedLesson.status === 'CANCELLED' ||
-            updatedLesson.status === 'FAILED' ||
-            updatedLesson.status === 'PAID'
-          ) {
-            await endLiveAudio(false)
-          }
+        async payload => {
+          await handleAudioSignal(payload.new as LessonAudioSignal)
         }
       )
-      .subscribe()
-
-    return () => {
-      roomChannel.unsubscribe()
-    }
-  }, [entered, id])
-
-  useEffect(() => {
-    if (!entered || !name) return
-
-    const signalChannel = supabase
-      .channel(`lesson-audio-call-${id}`)
-      .on('broadcast', { event: 'audio_signal' }, async ({ payload }) => {
-        await handleIncomingSignal(payload as AudioSignal)
+      .subscribe(async status => {
+        if (status === 'SUBSCRIBED') {
+          await channel.track({
+            name,
+            role,
+            online_at: new Date().toISOString(),
+          })
+        }
       })
-      .subscribe()
-
-    signalChannelRef.current = signalChannel
 
     return () => {
-      signalChannel.unsubscribe()
-      signalChannelRef.current = null
+      supabase.removeChannel(channel)
     }
-  }, [entered, id, name, role, isActive])
+  }, [entered, name, role, id])
 
-  async function loadRoom() {
-    setLoading(true)
-    setSystemNote('')
-
-    const { data: lessonData, error: lessonError } = await supabase
+  async function loadEverything() {
+    const { data: lessonData } = await supabase
       .from('lesson_requests')
       .select('*')
       .eq('id', id)
       .single()
 
-    if (lessonError) {
-      setSystemNote('Lesson not found or could not be loaded.')
-      setLoading(false)
-      return
-    }
-
-    setLesson(lessonData)
+    if (lessonData) setLesson(lessonData)
 
     const { data: messageData } = await supabase
       .from('lesson_messages')
@@ -310,11 +257,15 @@ export default function LessonRoomPage({ params }: PageProps) {
       .eq('lesson_request_id', id)
       .order('created_at', { ascending: true })
 
+    setMessages(messageData || [])
+
     const { data: fileData } = await supabase
       .from('lesson_files')
       .select('*')
       .eq('lesson_id', id)
       .order('created_at', { ascending: false })
+
+    setFiles(fileData || [])
 
     const { data: audioData } = await supabase
       .from('lesson_audio_notes')
@@ -322,985 +273,907 @@ export default function LessonRoomPage({ params }: PageProps) {
       .eq('lesson_id', id)
       .order('created_at', { ascending: false })
 
-    setMessages(messageData || [])
-    setFiles(fileData || [])
     setAudioNotes(audioData || [])
-    setLoading(false)
   }
 
-  function enterRoom() {
-    if (!name.trim()) {
-      setSystemNote('Please enter your name before joining the lesson room.')
-      return
-    }
-
+  async function enterRoom() {
+    if (!name.trim()) return
     setEntered(true)
-    setSystemNote('')
   }
 
   async function sendMessage() {
-    if (!message.trim() || !canChat) return
+    if (!message.trim() || !name.trim() || isClosed) return
 
-    const text = message.trim()
-    setMessage('')
-
-    const { error } = await supabase.from('lesson_messages').insert({
+    await supabase.from('lesson_messages').insert({
       lesson_request_id: id,
       sender: `${name} (${role})`,
-      message: text,
+      message,
     })
 
-    if (error) {
-      setSystemNote('Message could not be sent.')
-      setMessage(text)
-    }
+    setMessage('')
   }
 
-  async function uploadFile() {
-    if (!selectedFile || !canUseLiveTools) return
+  async function markActive() {
+    await supabase
+      .from('lesson_requests')
+      .update({ status: 'ACTIVE' })
+      .eq('id', id)
+  }
 
-    if (selectedFile.size > 10 * 1024 * 1024) {
-      setSystemNote('File too large. Maximum file size is 10MB.')
+  async function completeLesson() {
+    await endCall()
+
+    await supabase
+      .from('lesson_requests')
+      .update({ status: 'COMPLETED' })
+      .eq('id', id)
+  }
+
+  async function uploadFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !name || isClosed) return
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File too large. Maximum size is 10MB.')
       return
     }
 
     setUploadingFile(true)
-    setSystemNote('')
 
-    const safeName = selectedFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '_')
-    const path = `${id}/${Date.now()}-${safeName}`
+    const filePath = `${id}/${Date.now()}-${file.name}`
 
     const { error: uploadError } = await supabase.storage
-      .from(BUCKET_FILES)
-      .upload(path, selectedFile)
+      .from('lesson-files')
+      .upload(filePath, file)
 
-    if (uploadError) {
-      setSystemNote('File upload failed.')
-      setUploadingFile(false)
-      return
+    if (!uploadError) {
+      await supabase.from('lesson_files').insert({
+        lesson_id: id,
+        file_name: file.name,
+        file_path: filePath,
+        file_size: file.size,
+        file_type: file.type,
+        uploaded_by_name: name,
+        uploaded_by_role: role,
+      })
     }
 
-    const { error: insertError } = await supabase.from('lesson_files').insert({
-      lesson_id: id,
-      file_name: selectedFile.name,
-      file_path: path,
-      file_size: selectedFile.size,
-      file_type: selectedFile.type || 'unknown',
-      uploaded_by_name: name,
-      uploaded_by_role: role,
-    })
-
-    if (insertError) {
-      setSystemNote('File uploaded, but record could not be saved.')
-    }
-
-    setSelectedFile(null)
     setUploadingFile(false)
+    e.target.value = ''
   }
 
   async function downloadFile(file: LessonFile) {
     const { data, error } = await supabase.storage
-      .from(BUCKET_FILES)
+      .from('lesson-files')
       .createSignedUrl(file.file_path, 60)
 
-    if (error || !data?.signedUrl) {
-      setSystemNote('Could not create download link.')
-      return
+    if (!error && data?.signedUrl) {
+      window.open(data.signedUrl, '_blank')
     }
-
-    window.open(data.signedUrl, '_blank')
   }
 
   async function startRecording() {
-    if (!canUseLiveTools) return
+    if (isClosed) return
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      audioChunksRef.current = []
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    const recorder = new MediaRecorder(stream)
 
-      const recorder = new MediaRecorder(stream)
-      mediaRecorderRef.current = recorder
+    audioChunksRef.current = []
 
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data)
-        }
-      }
-
-      recorder.onstop = async () => {
-        stream.getTracks().forEach((track) => track.stop())
-        await uploadRecordedAudio()
-      }
-
-      recorder.start()
-      setRecording(true)
-      setSystemNote('Recording started.')
-    } catch {
-      setSystemNote('Microphone permission was denied or unavailable.')
+    recorder.ondataavailable = event => {
+      audioChunksRef.current.push(event.data)
     }
+
+    recorder.onstop = async () => {
+      const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+
+      if (blob.size > 5 * 1024 * 1024) {
+        alert('Audio note too large. Keep it short.')
+        return
+      }
+
+      const audioName = `voice-note-${Date.now()}.webm`
+      const audioPath = `${id}/${audioName}`
+
+      const { error } = await supabase.storage
+        .from('lesson-audio')
+        .upload(audioPath, blob)
+
+      if (!error) {
+        await supabase.from('lesson_audio_notes').insert({
+          lesson_id: id,
+          audio_name: audioName,
+          audio_path: audioPath,
+          audio_size: blob.size,
+          uploaded_by_name: name,
+          uploaded_by_role: role,
+        })
+      }
+
+      stream.getTracks().forEach(track => track.stop())
+    }
+
+    mediaRecorderRef.current = recorder
+    recorder.start()
+    setRecording(true)
   }
 
   function stopRecording() {
-    if (!mediaRecorderRef.current) return
-
-    mediaRecorderRef.current.stop()
+    mediaRecorderRef.current?.stop()
     setRecording(false)
-    setSystemNote('Recording stopped. Uploading audio note...')
   }
 
-  async function uploadRecordedAudio() {
-    setUploadingAudio(true)
-
-    const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
-
-    if (blob.size > 5 * 1024 * 1024) {
-      setSystemNote('Audio note is too large. Keep voice notes short for low-data learning.')
-      setUploadingAudio(false)
-      return
-    }
-
-    const fileName = `audio-note-${Date.now()}.webm`
-    const path = `${id}/${fileName}`
-
-    const { error: uploadError } = await supabase.storage
-      .from(BUCKET_AUDIO)
-      .upload(path, blob, {
-        contentType: 'audio/webm',
-      })
-
-    if (uploadError) {
-      setSystemNote('Audio upload failed.')
-      setUploadingAudio(false)
-      return
-    }
-
-    const { error: insertError } = await supabase.from('lesson_audio_notes').insert({
-      lesson_id: id,
-      audio_name: fileName,
-      audio_path: path,
-      audio_size: blob.size,
-      uploaded_by_name: name,
-      uploaded_by_role: role,
-    })
-
-    if (insertError) {
-      setSystemNote('Audio uploaded, but record could not be saved.')
-    } else {
-      setSystemNote('Audio note uploaded.')
-    }
-
-    setUploadingAudio(false)
-  }
-
-  async function playAudio(note: LessonAudioNote) {
+  async function playAudioNote(note: LessonAudioNote) {
     const { data, error } = await supabase.storage
-      .from(BUCKET_AUDIO)
+      .from('lesson-audio')
       .createSignedUrl(note.audio_path, 60)
 
-    if (error || !data?.signedUrl) {
-      setSystemNote('Could not open audio note.')
-      return
+    if (!error && data?.signedUrl) {
+      const audio = new Audio(data.signedUrl)
+      audio.play()
     }
-
-    const audio = new Audio(data.signedUrl)
-    audio.play()
   }
 
-  function createPeerConnection() {
+  async function requestWakeLock() {
+    try {
+      if (!('wakeLock' in navigator)) {
+        setWakeLockSupported(false)
+        return
+      }
+
+      wakeLockRef.current = await (navigator as any).wakeLock.request('screen')
+      setWakeLockActive(true)
+
+      wakeLockRef.current.addEventListener('release', () => {
+        setWakeLockActive(false)
+      })
+    } catch {
+      setWakeLockActive(false)
+    }
+  }
+
+  async function releaseWakeLock() {
+    try {
+      if (wakeLockRef.current) {
+        await wakeLockRef.current.release()
+        wakeLockRef.current = null
+      }
+    } catch {
+      // Ignore wake lock release errors.
+    }
+
+    setWakeLockActive(false)
+  }
+
+  function createPeerConnection(callId: string) {
     const peer = new RTCPeerConnection({
       iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
     })
 
-    peer.onicecandidate = async (event) => {
-      if (event.candidate && callIdRef.current) {
-        await sendSignal('candidate', event.candidate)
+    peer.onicecandidate = async event => {
+      if (event.candidate) {
+        await insertSignal(callId, 'candidate', event.candidate)
       }
     }
 
-    peer.ontrack = (event) => {
+    peer.ontrack = event => {
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = event.streams[0]
+        remoteAudioRef.current.play().catch(() => {
+          // Browser may require user interaction; Accept Call counts as interaction on mobile.
+        })
       }
+
+      setAudioError(null)
+      setCallState('connected')
     }
 
     peer.onconnectionstatechange = () => {
-      setCallStatus(peer.connectionState)
+      if (
+        peer.connectionState === 'connected' ||
+        peer.iceConnectionState === 'connected'
+      ) {
+        setAudioError(null)
+        setCallState('connected')
+      }
+
+      if (peer.connectionState === 'failed') {
+        setAudioError('Audio connection failed. End the call and start again.')
+        setCallState('failed')
+      }
+
+      if (
+        peer.connectionState === 'disconnected' ||
+        peer.connectionState === 'closed'
+      ) {
+        if (callStateRef.current !== 'ended') {
+          setCallState('ended')
+        }
+      }
     }
 
     peerRef.current = peer
     return peer
   }
 
-  async function startLiveAudio() {
-    if (!canUseLiveTools) return
+  async function getLocalAudioStream() {
+    if (localStreamRef.current) return localStreamRef.current
 
     try {
-      await endLiveAudio(false)
-
-      callIdRef.current = `${id}-${Date.now()}`
-      queuedCandidatesRef.current = []
-
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      localStreamRef.current = stream
-
-      const peer = createPeerConnection()
-
-      stream.getTracks().forEach((track) => {
-        peer.addTrack(track, stream)
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: false,
       })
 
-      const offer = await peer.createOffer()
-      await peer.setLocalDescription(offer)
-
-      await sendSignal('offer', offer)
-
-      setCallActive(true)
-      setCallStatus('Calling...')
-      setSystemNote('Audio call started. Waiting for the other participant to accept.')
+      localStreamRef.current = stream
+      setAudioError(null)
+      return stream
     } catch {
-      setSystemNote('Could not start live audio. Check microphone permissions.')
+      setAudioError(
+        'Microphone access failed. On phone, allow microphone permission and keep the browser tab open.'
+      )
+      throw new Error('Microphone access failed')
     }
   }
 
-  async function acceptIncomingCall() {
-    if (!incomingCall || !canUseLiveTools) return
+  async function addLocalTracks(peer: RTCPeerConnection) {
+    const stream = await getLocalAudioStream()
+
+    stream.getTracks().forEach(track => {
+      peer.addTrack(track, stream)
+    })
+  }
+
+  async function flushPendingCandidates() {
+    if (!peerRef.current) return
+    if (!peerRef.current.remoteDescription) return
+
+    const queued = [...pendingCandidatesRef.current]
+    pendingCandidatesRef.current = []
+
+    for (const candidate of queued) {
+      try {
+        await peerRef.current.addIceCandidate(new RTCIceCandidate(candidate))
+      } catch {
+        // Ignore unusable stale candidates.
+      }
+    }
+  }
+
+  async function insertSignal(
+    callId: string,
+    signalType: LessonAudioSignal['signal_type'],
+    payload: any
+  ) {
+    const { error } = await supabase.from('lesson_audio_signals').insert({
+      lesson_id: id,
+      call_id: callId,
+      sender_name: name,
+      sender_role: role,
+      signal_type: signalType,
+      payload,
+    })
+
+    if (error) {
+      setAudioError(`Signal failed: ${error.message}`)
+    }
+  }
+
+  async function startCall() {
+    if (!liveToolsEnabled || !name) return
+
+    setAudioError(null)
+    await requestWakeLock()
+
+    cleanupCall(false)
+
+    const callId =
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random()}`
+
+    setCurrentCallId(callId)
+    currentCallIdRef.current = callId
+
+    setCallState('calling')
+    callStateRef.current = 'calling'
 
     try {
-      await endLiveAudio(false)
+      const peer = createPeerConnection(callId)
+      await addLocalTracks(peer)
 
-      callIdRef.current = incomingCall.call_id
-      queuedCandidatesRef.current = []
-
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      localStreamRef.current = stream
-
-      const peer = createPeerConnection()
-
-      stream.getTracks().forEach((track) => {
-        peer.addTrack(track, stream)
+      const offer = await peer.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: false,
       })
 
-      await peer.setRemoteDescription(new RTCSessionDescription(incomingCall.payload))
+      await peer.setLocalDescription(offer)
+      await insertSignal(callId, 'offer', offer)
+    } catch {
+      setCallState('failed')
+      callStateRef.current = 'failed'
+    }
+  }
+
+  async function acceptCall() {
+    const call = incomingCallRef.current || incomingCall
+    if (!call) return
+
+    setAudioError(null)
+    await requestWakeLock()
+
+    setCallState('connecting')
+    callStateRef.current = 'connecting'
+
+    setCurrentCallId(call.call_id)
+    currentCallIdRef.current = call.call_id
+
+    setRemoteCaller(call.sender_name)
+
+    try {
+      const peer = createPeerConnection(call.call_id)
+      await addLocalTracks(peer)
+
+      await peer.setRemoteDescription(new RTCSessionDescription(call.payload))
+      await flushPendingCandidates()
 
       const answer = await peer.createAnswer()
       await peer.setLocalDescription(answer)
 
-      await sendSignal('answer', answer)
+      await insertSignal(call.call_id, 'answer', answer)
 
-      for (const candidate of queuedCandidatesRef.current) {
-        try {
-          await peer.addIceCandidate(new RTCIceCandidate(candidate))
-        } catch {
-          // Candidate may fail safely during negotiation.
-        }
-      }
-
-      queuedCandidatesRef.current = []
       setIncomingCall(null)
-      setCallActive(true)
-      setCallStatus('Connecting...')
-      setSystemNote('Audio call accepted.')
+      incomingCallRef.current = null
     } catch {
-      setSystemNote('Incoming audio call could not be answered.')
+      setAudioError('Could not accept the call. Check microphone permission and try again.')
+      setCallState('failed')
+      callStateRef.current = 'failed'
     }
   }
 
-  async function declineIncomingCall() {
-    if (!incomingCall) return
+  async function declineCall() {
+    const call = incomingCallRef.current || incomingCall
+    if (!call) return
 
-    await sendSignal('decline', { declined: true })
+    await insertSignal(call.call_id, 'decline', {
+      reason: 'Call declined',
+    })
 
     setIncomingCall(null)
-    setSystemNote('Audio call declined.')
+    incomingCallRef.current = null
+    setCallState('idle')
+    callStateRef.current = 'idle'
   }
 
-  async function handleIncomingSignal(signal: AudioSignal) {
-    if (!entered) return
-    if (!isActive) return
-    if (signal.lesson_id !== id) return
-    if (signal.sender_name === name && signal.sender_role === role) return
-
-    if (signal.signal_type === 'offer') {
-      setIncomingCall(signal)
-      setSystemNote(`${signal.sender_name} is calling. Accept or decline the live audio call.`)
-      return
+  async function endCall() {
+    if (currentCallIdRef.current) {
+      await insertSignal(currentCallIdRef.current, 'end', {
+        reason: 'Call ended',
+      })
     }
 
-    if (signal.signal_type === 'answer' && peerRef.current) {
-      await peerRef.current.setRemoteDescription(new RTCSessionDescription(signal.payload))
-      setCallStatus('Connected')
-      setSystemNote('Audio call connected.')
-      return
-    }
-
-    if (signal.signal_type === 'candidate') {
-      if (peerRef.current) {
-        try {
-          await peerRef.current.addIceCandidate(new RTCIceCandidate(signal.payload))
-        } catch {
-          // Candidate may fail safely during negotiation.
-        }
-      } else {
-        queuedCandidatesRef.current.push(signal.payload)
-      }
-
-      return
-    }
-
-    if (signal.signal_type === 'decline') {
-      await endLiveAudio(false)
-      setSystemNote('The audio call was declined.')
-      return
-    }
-
-    if (signal.signal_type === 'end') {
-      await endLiveAudio(false)
-      setSystemNote('The audio call ended.')
-    }
+    cleanupCall(true)
+    await releaseWakeLock()
   }
 
-  async function sendSignal(signalType: AudioSignal['signal_type'], payload: any) {
-    const signal: AudioSignal = {
-      lesson_id: id,
-      call_id: callIdRef.current || `${id}-${Date.now()}`,
-      signal_type: signalType,
-      sender_name: name,
-      sender_role: role,
-      payload,
-    }
-
-    await signalChannelRef.current?.send({
-      type: 'broadcast',
-      event: 'audio_signal',
-      payload: signal,
-    })
-  }
-
-  async function endLiveAudio(sendEndSignal = true) {
-    if (sendEndSignal && callIdRef.current) {
-      await sendSignal('end', { ended: true })
-    }
-
-    localStreamRef.current?.getTracks().forEach((track) => track.stop())
-    localStreamRef.current = null
-
+  function cleanupCall(updateState: boolean) {
     peerRef.current?.close()
     peerRef.current = null
+
+    localStreamRef.current?.getTracks().forEach(track => track.stop())
+    localStreamRef.current = null
+
+    pendingCandidatesRef.current = []
 
     if (remoteAudioRef.current) {
       remoteAudioRef.current.srcObject = null
     }
 
-    callIdRef.current = ''
-    queuedCandidatesRef.current = []
     setIncomingCall(null)
-    setCallActive(false)
-    setCallStatus('Not connected')
-    setMuted(false)
+    incomingCallRef.current = null
+
+    setCurrentCallId(null)
+    currentCallIdRef.current = null
+
+    setRemoteCaller(null)
+
+    if (updateState) {
+      setCallState('ended')
+      callStateRef.current = 'ended'
+    }
   }
 
-  function toggleMute() {
-    const stream = localStreamRef.current
-    if (!stream) return
+  async function handleAudioSignal(signal: LessonAudioSignal) {
+    if (processedSignalsRef.current.has(signal.id)) return
+    processedSignalsRef.current.add(signal.id)
 
-    stream.getAudioTracks().forEach((track) => {
-      track.enabled = muted
-    })
+    if (signal.sender_name === name && signal.sender_role === role) return
 
-    setMuted(!muted)
-  }
+    if (signal.signal_type === 'offer') {
+      if (
+        callStateRef.current === 'idle' ||
+        callStateRef.current === 'ended' ||
+        callStateRef.current === 'declined' ||
+        callStateRef.current === 'failed'
+      ) {
+        setIncomingCall(signal)
+        incomingCallRef.current = signal
 
-  async function markLessonStarted() {
-    if (!lesson || busy || isLocked) return
+        setCurrentCallId(signal.call_id)
+        currentCallIdRef.current = signal.call_id
 
-    setBusy(true)
+        setRemoteCaller(signal.sender_name)
 
-    const { error } = await supabase
-      .from('lesson_requests')
-      .update({
-        status: 'ACTIVE',
-        started_at: lesson.started_at || new Date().toISOString(),
-      })
-      .eq('id', id)
-
-    if (error) {
-      setSystemNote('Could not start lesson.')
-    } else {
-      setSystemNote('Lesson is now ACTIVE. Live teaching tools are enabled.')
+        setCallState('incoming')
+        callStateRef.current = 'incoming'
+      }
+      return
     }
 
-    setBusy(false)
-  }
-
-  async function completeLesson() {
-    if (!lesson || busy || isLocked) return
-
-    setBusy(true)
-
-    const { error } = await supabase
-      .from('lesson_requests')
-      .update({
-        status: 'COMPLETED',
-        started_at: lesson.started_at || new Date().toISOString(),
-        completed_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-
-    if (error) {
-      setSystemNote('Could not complete lesson.')
-    } else {
-      await endLiveAudio(false)
-      setSystemNote('Lesson completed. The room is now closed.')
+    if (!currentCallIdRef.current || signal.call_id !== currentCallIdRef.current) {
+      return
     }
 
-    setBusy(false)
-  }
+    if (signal.signal_type === 'answer') {
+      if (peerRef.current) {
+        try {
+          setCallState('connecting')
+          callStateRef.current = 'connecting'
 
-  function formatDate(value?: string | null, fallback = 'Not set') {
-    if (!value) return fallback
+          await peerRef.current.setRemoteDescription(
+            new RTCSessionDescription(signal.payload)
+          )
 
-    const date = new Date(value)
-
-    if (Number.isNaN(date.getTime())) {
-      return fallback
+          await flushPendingCandidates()
+        } catch {
+          setAudioError('Could not complete audio answer handshake.')
+          setCallState('failed')
+          callStateRef.current = 'failed'
+        }
+      }
+      return
     }
 
-    return date.toLocaleString()
-  }
+    if (signal.signal_type === 'candidate') {
+      if (!signal.payload) return
 
-  function formatSize(bytes: number) {
-    if (bytes < 1024) return `${bytes} B`
-    if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  }
+      if (!peerRef.current || !peerRef.current.remoteDescription) {
+        pendingCandidatesRef.current.push(signal.payload)
+        return
+      }
 
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6">
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl">
-          <p className="text-sm text-slate-300">Loading controlled lesson space...</p>
-        </div>
-      </main>
-    )
-  }
+      try {
+        await peerRef.current.addIceCandidate(new RTCIceCandidate(signal.payload))
+      } catch {
+        // Ignore candidate errors from stale/mobile network changes.
+      }
+      return
+    }
 
-  if (!lesson) {
-    return (
-      <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6">
-        <div className="max-w-md rounded-3xl border border-red-400/20 bg-red-500/10 p-8 shadow-2xl">
-          <h1 className="text-2xl font-bold">Lesson not found</h1>
-          <p className="mt-3 text-sm text-red-100">{systemNote}</p>
-        </div>
-      </main>
-    )
+    if (signal.signal_type === 'decline') {
+      cleanupCall(false)
+      setCallState('declined')
+      callStateRef.current = 'declined'
+      await releaseWakeLock()
+      return
+    }
+
+    if (signal.signal_type === 'end') {
+      cleanupCall(true)
+      await releaseWakeLock()
+    }
   }
 
   if (!entered) {
     return (
-      <main className="min-h-screen bg-slate-950 text-white p-4 sm:p-6">
-        <section className="mx-auto max-w-3xl pt-10">
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-6 sm:p-8 shadow-2xl backdrop-blur">
-            <div className="mb-6">
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-300">
-                EXAMIA Controlled Lesson Space
-              </p>
+      <main className="min-h-screen bg-slate-950 text-white p-4">
+        <div className="max-w-xl mx-auto mt-10 bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <h1 className="text-2xl font-bold">EXAMIA Lesson Room</h1>
+          <p className="text-slate-300 mt-2">
+            Enter your name and role to join this controlled learning room.
+          </p>
 
-              <h1 className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight">
-                Join Lesson Room
-              </h1>
+          <input
+            className="w-full mt-6 p-3 rounded-xl bg-slate-800 border border-slate-700"
+            placeholder="Your name"
+            value={name}
+            onChange={e => setName(e.target.value)}
+          />
 
-              <p className="mt-3 text-slate-300">
-                Enter your name and role to open the guided learning room.
-              </p>
-            </div>
+          <select
+            className="w-full mt-3 p-3 rounded-xl bg-slate-800 border border-slate-700"
+            value={role}
+            onChange={e => setRole(e.target.value as any)}
+          >
+            <option value="student">Student</option>
+            <option value="teacher">Teacher</option>
+            <option value="admin">Admin</option>
+          </select>
 
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4">
-                <p className="text-xs text-slate-400">Subject</p>
-                <p className="mt-1 font-semibold">{displaySubject}</p>
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4">
-                <p className="text-xs text-slate-400">Level</p>
-                <p className="mt-1 font-semibold">{lesson.grade_level || 'Not provided'}</p>
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4">
-                <p className="text-xs text-slate-400">Status</p>
-                <p className="mt-1 font-semibold">{lesson.status}</p>
-              </div>
-            </div>
-
-            {!canEnterRoom && (
-              <div className="mt-5 rounded-2xl border border-red-300/20 bg-red-500/10 p-4 text-sm text-red-100">
-                This room is not open yet. The lesson must be marked PAID or ACTIVE before normal entry.
-              </div>
-            )}
-
-            <div className="mt-6 space-y-4">
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
-                className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-cyan-300"
-              />
-
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value as 'student' | 'teacher' | 'admin')}
-                className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-cyan-300"
-              >
-                <option value="student">Student</option>
-                <option value="teacher">Teacher</option>
-                <option value="admin">Admin</option>
-              </select>
-
-              {systemNote && (
-                <p className="rounded-2xl border border-amber-300/20 bg-amber-400/10 p-3 text-sm text-amber-100">
-                  {systemNote}
-                </p>
-              )}
-
-              <button
-                onClick={enterRoom}
-                disabled={!canEnterRoom}
-                className="w-full rounded-2xl bg-cyan-300 px-5 py-3 font-bold text-slate-950 shadow-lg shadow-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Enter Lesson Room
-              </button>
-            </div>
-          </div>
-        </section>
+          <button
+            onClick={enterRoom}
+            className="w-full mt-5 bg-blue-600 hover:bg-blue-700 rounded-xl p-3 font-semibold"
+          >
+            Enter Lesson Room
+          </button>
+        </div>
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
-      <audio ref={remoteAudioRef} autoPlay />
-
-      <section className="mx-auto max-w-7xl p-4 sm:p-6">
-        <header className="mb-6 rounded-[2rem] border border-white/10 bg-gradient-to-br from-white/[0.08] to-white/[0.03] p-5 sm:p-7 shadow-2xl backdrop-blur">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-300">
-                EXAMIA Controlled Lesson Space
-              </p>
-
-              <h1 className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight">
-                Lesson Room
-              </h1>
-
-              <p className="mt-3 max-w-3xl text-slate-300">
-                A governed learning room for preparation, live teaching, files,
-                voice explanations, audio support, and locked lesson completion.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <span className="rounded-full border border-cyan-300/30 bg-cyan-300/10 px-4 py-2 text-sm text-cyan-100">
-                {lesson.status}
-              </span>
-
-              <span className="rounded-full border border-emerald-300/30 bg-emerald-300/10 px-4 py-2 text-sm text-emerald-100">
-                {sessionLabel}
-              </span>
-
-              <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200">
-                {presenceUsers.length} online
-              </span>
-            </div>
-          </div>
-
-          {systemNote && (
-            <div className="mt-5 rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4 text-sm text-amber-100">
-              {systemNote}
-            </div>
-          )}
-        </header>
-
-        {incomingCall && (
-          <div className="mb-6 rounded-[2rem] border border-cyan-300/20 bg-cyan-400/10 p-6 shadow-xl">
-            <h2 className="text-2xl font-bold text-cyan-100">Incoming Audio Call</h2>
-            <p className="mt-2 text-cyan-50">
-              {incomingCall.sender_name} ({incomingCall.sender_role}) is calling.
+    <main className="min-h-screen bg-slate-950 text-white p-4">
+      {callState === 'incoming' && (
+        <div className="fixed inset-x-0 top-0 z-50 border-b border-blue-500 bg-blue-950 p-4 shadow-2xl">
+          <div className="mx-auto max-w-5xl">
+            <p className="text-sm font-semibold text-blue-200">
+              Incoming Audio Call
             </p>
+            <h2 className="mt-1 text-xl font-bold">
+              {remoteCaller || 'Someone'} is calling.
+            </h2>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="mt-3 flex gap-3">
               <button
-                onClick={acceptIncomingCall}
-                className="rounded-2xl bg-emerald-300 px-4 py-3 font-bold text-slate-950"
+                onClick={acceptCall}
+                className="rounded-xl bg-green-600 px-5 py-3 font-semibold hover:bg-green-700"
               >
                 Accept Call
               </button>
 
               <button
-                onClick={declineIncomingCall}
-                className="rounded-2xl bg-rose-300 px-4 py-3 font-bold text-slate-950"
+                onClick={declineCall}
+                className="rounded-xl bg-red-600 px-5 py-3 font-semibold hover:bg-red-700"
               >
                 Decline Call
               </button>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {isPaid && (
-          <div className="mb-6 rounded-[2rem] border border-blue-300/20 bg-blue-400/10 p-6 shadow-xl">
-            <h2 className="text-2xl font-bold text-blue-100">Waiting / Preparation Mode</h2>
-            <p className="mt-2 text-blue-50">
-              Chat and presence are available. Live audio, uploads, and voice recording unlock only when the lesson becomes ACTIVE.
-            </p>
+      <div className="max-w-5xl mx-auto space-y-5 pt-2">
+        <header className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+          <p className="text-sm text-blue-300 font-semibold">
+            EXAMIA CONTROLLED LESSON SPACE
+          </p>
+          <h1 className="text-2xl font-bold mt-1">Lesson Room</h1>
+          <p className="text-slate-300 mt-2">
+            A governed learning room for preparation, live teaching, files,
+            voice explanations, audio support, and locked lesson completion.
+          </p>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-sm">
+              Status: {lesson?.status || 'Loading'}
+            </span>
+            <span className="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-sm">
+              {onlineUsers.length} online
+            </span>
+            <span className="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-sm">
+              {callStateText(callState)}
+            </span>
+            {prepMode && (
+              <span className="px-3 py-1 rounded-full bg-yellow-900/50 border border-yellow-700 text-sm">
+                Preparation Mode
+              </span>
+            )}
+            {isActive && (
+              <span className="px-3 py-1 rounded-full bg-green-900/50 border border-green-700 text-sm">
+                Live Session Active
+              </span>
+            )}
+            {isClosed && (
+              <span className="px-3 py-1 rounded-full bg-red-900/50 border border-red-700 text-sm">
+                Lesson Locked
+              </span>
+            )}
           </div>
-        )}
+        </header>
 
-        {isActive && (
-          <div className="mb-6 rounded-[2rem] border border-emerald-300/20 bg-emerald-400/10 p-6 shadow-xl">
-            <h2 className="text-2xl font-bold text-emerald-100">Live Session Active</h2>
-            <p className="mt-2 text-emerald-50">
-              The session is active. Live audio, files, and voice notes are enabled.
-            </p>
-          </div>
-        )}
-
-        {isLocked && (
-          <div className="mb-6 rounded-[2rem] border border-red-300/20 bg-red-500/10 p-6 shadow-xl">
-            <h2 className="text-2xl font-bold text-red-100">Lesson {lesson.status}</h2>
-            <p className="mt-2 text-red-50">
-              This lesson is closed for normal activity. History remains visible, but live tools are locked.
-            </p>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <p className="rounded-2xl bg-slate-950/40 p-3 text-sm">
-                Started at: {formatDate(lesson.started_at)}
-              </p>
-
-              <p className="rounded-2xl bg-slate-950/40 p-3 text-sm">
-                Completed at: {formatDate(lesson.completed_at)}
-              </p>
-            </div>
-          </div>
-        )}
-
-        <section className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <Panel title="Subject" value={displaySubject} note={lesson.grade_level || 'Level not provided'} />
-          <Panel title="Teacher" value={lesson.assigned_teacher || 'Not assigned'} note="Assigned learning support" />
-          <Panel title="Preferred Time" value={lesson.preferred_time || 'Not provided'} note="Student requested time" />
-          <Panel title="Scheduled Time" value={formatDate(lesson.scheduled_time, 'Not scheduled')} note="Confirmed lesson time" />
+        <section className="grid md:grid-cols-2 gap-4">
+          <Info label="Subject" value={lesson?.subject} />
+          <Info label="Level" value={lesson?.level || 'Not set'} />
+          <Info label="Teacher" value={lesson?.assigned_teacher || 'Not assigned'} />
+          <Info label="Preferred Time" value={lesson?.preferred_time} />
+          <Info label="Scheduled Time" value={lesson?.scheduled_time || 'Not scheduled'} />
+          <Info label="Learning Problem" value={lesson?.problem} />
         </section>
 
-        <section className="mb-6 grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2 rounded-[2rem] border border-white/10 bg-white/[0.05] p-5 shadow-2xl">
-            <div className="mb-4">
-              <h2 className="text-xl font-bold">Learning Problem</h2>
-              <p className="text-sm text-slate-400">The core issue this lesson is solving.</p>
-            </div>
+        <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+          <h2 className="text-xl font-bold">Live Presence</h2>
+          <p className="text-slate-400 text-sm mt-1">
+            Who is currently inside the room.
+          </p>
 
-            <p className="rounded-2xl bg-slate-950/60 p-4 text-slate-100 leading-relaxed">
-              {lesson.problem}
-            </p>
-          </div>
-
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-5 shadow-2xl">
-            <h2 className="text-xl font-bold">Live Presence</h2>
-            <p className="mt-1 text-sm text-slate-400">Who is currently inside the room.</p>
-
-            <div className="mt-4 space-y-3">
-              {presenceUsers.length === 0 ? (
-                <p className="rounded-2xl bg-slate-950/60 p-4 text-sm text-slate-400">
-                  No active users detected.
-                </p>
-              ) : (
-                presenceUsers.map((user, index) => (
-                  <div
-                    key={`${user.name}-${user.role}-${index}`}
-                    className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/60 p-3"
-                  >
-                    <span className="h-3 w-3 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/40" />
-
-                    <div>
-                      <p className="font-semibold">{user.name}</p>
-                      <p className="text-xs uppercase tracking-wide text-slate-400">{user.role}</p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </section>
-
-        <section className="mb-6 grid gap-6 lg:grid-cols-3">
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-5 shadow-2xl">
-            <h2 className="text-xl font-bold">Lesson Control</h2>
-            <p className="mt-1 text-sm text-slate-400">Start, monitor, and close the session.</p>
-
-            <div className="mt-4 space-y-3">
-              <button
-                onClick={markLessonStarted}
-                disabled={busy || isLocked || isActive}
-                className="w-full rounded-2xl bg-emerald-300 px-4 py-3 font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
+          <div className="mt-4 flex flex-wrap gap-2">
+            {onlineUsers.map((user, index) => (
+              <span
+                key={index}
+                className="px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-sm"
               >
-                Mark Lesson Active
+                {user.name} — {user.role}
+              </span>
+            ))}
+          </div>
+        </section>
+
+        <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+          <h2 className="text-xl font-bold">Lesson Control</h2>
+          <p className="text-slate-400 text-sm mt-1">
+            Start, monitor, and close the session.
+          </p>
+
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              onClick={markActive}
+              disabled={isClosed || isActive}
+              className="bg-green-600 disabled:bg-slate-700 hover:bg-green-700 rounded-xl px-4 py-3 font-semibold"
+            >
+              Mark Lesson Active
+            </button>
+
+            <button
+              onClick={completeLesson}
+              disabled={isClosed}
+              className="bg-red-600 disabled:bg-slate-700 hover:bg-red-700 rounded-xl px-4 py-3 font-semibold"
+            >
+              Complete Lesson
+            </button>
+          </div>
+        </section>
+
+        <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+          <h2 className="text-xl font-bold">Live Audio</h2>
+          <p className="text-slate-400 text-sm mt-1">
+            Low-data real-time voice support.
+          </p>
+
+          <div className="mt-4 rounded-xl border border-yellow-700 bg-yellow-900/30 p-4">
+            <p className="font-semibold text-yellow-100">
+              Phone audio instruction
+            </p>
+            <p className="mt-1 text-sm text-yellow-100/80">
+              Keep the phone screen awake during live audio. If the screen sleeps,
+              mobile browsers may weaken or stop the connection.
+            </p>
+
+            <div className="mt-3 flex flex-wrap gap-3">
+              <button
+                onClick={requestWakeLock}
+                disabled={!wakeLockSupported || wakeLockActive}
+                className="rounded-xl bg-yellow-600 px-4 py-2 font-semibold hover:bg-yellow-700 disabled:bg-slate-700"
+              >
+                {wakeLockActive ? 'Screen Awake Active' : 'Keep Screen Awake'}
               </button>
 
               <button
-                onClick={completeLesson}
-                disabled={busy || isLocked}
-                className="w-full rounded-2xl bg-rose-300 px-4 py-3 font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
+                onClick={releaseWakeLock}
+                disabled={!wakeLockActive}
+                className="rounded-xl bg-slate-700 px-4 py-2 font-semibold hover:bg-slate-600 disabled:bg-slate-800"
               >
-                Complete Lesson
+                Release
               </button>
-
-              <div className="rounded-2xl bg-slate-950/60 p-4 text-sm text-slate-300">
-                <p>Started: {formatDate(lesson.started_at)}</p>
-                <p className="mt-1">Completed: {formatDate(lesson.completed_at)}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-5 shadow-2xl">
-            <h2 className="text-xl font-bold">Live Audio</h2>
-            <p className="mt-1 text-sm text-slate-400">Low-data real-time voice support.</p>
-
-            <div className="mt-4 rounded-2xl bg-slate-950/60 p-4">
-              <p className="text-sm text-slate-400">Connection</p>
-              <p className="mt-1 text-lg font-bold">{callStatus}</p>
             </div>
 
-            <div className="mt-4 grid gap-3">
-              {!callActive ? (
-                <button
-                  onClick={startLiveAudio}
-                  disabled={!canUseLiveTools}
-                  className="rounded-2xl bg-cyan-300 px-4 py-3 font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Start Live Audio
-                </button>
-              ) : (
-                <>
-                  <button
-                    onClick={toggleMute}
-                    className="rounded-2xl bg-white px-4 py-3 font-bold text-slate-950"
-                  >
-                    {muted ? 'Unmute' : 'Mute'}
-                  </button>
-
-                  <button
-                    onClick={() => endLiveAudio(true)}
-                    className="rounded-2xl bg-rose-300 px-4 py-3 font-bold text-slate-950"
-                  >
-                    End Live Audio
-                  </button>
-                </>
-              )}
-
-              {!canUseLiveTools && (
-                <p className="rounded-2xl bg-slate-950/60 p-4 text-sm text-slate-400">
-                  Live audio unlocks when the lesson status is ACTIVE.
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-5 shadow-2xl">
-            <h2 className="text-xl font-bold">Voice Notes</h2>
-            <p className="mt-1 text-sm text-slate-400">Record short explanations for replay.</p>
-
-            <div className="mt-4 grid gap-3">
-              {!recording ? (
-                <button
-                  onClick={startRecording}
-                  disabled={!canUseLiveTools || uploadingAudio}
-                  className="rounded-2xl bg-violet-300 px-4 py-3 font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Record Voice Note
-                </button>
-              ) : (
-                <button
-                  onClick={stopRecording}
-                  className="rounded-2xl bg-amber-300 px-4 py-3 font-bold text-slate-950"
-                >
-                  Stop Recording
-                </button>
-              )}
-
-              <p className="rounded-2xl bg-slate-950/60 p-4 text-sm text-slate-300">
-                {uploadingAudio
-                  ? 'Uploading audio note...'
-                  : recording
-                    ? 'Recording now...'
-                    : canUseLiveTools
-                      ? 'Ready for short audio explanations.'
-                      : 'Voice notes unlock when the lesson is ACTIVE.'}
+            {!wakeLockSupported && (
+              <p className="mt-2 text-sm text-red-200">
+                This browser may not support screen wake lock. Keep the phone screen on manually.
               </p>
-            </div>
-
-            <div className="mt-6 border-t border-white/10 pt-5">
-              <h3 className="text-lg font-bold">Audio Notes</h3>
-              <p className="mt-1 text-sm text-slate-400">Replay recorded explanations.</p>
-
-              <div className="mt-4 space-y-3">
-                {audioNotes.length === 0 ? (
-                  <p className="rounded-2xl bg-slate-950/60 p-4 text-sm text-slate-400">
-                    No audio notes yet.
-                  </p>
-                ) : (
-                  audioNotes.map((note) => (
-                    <div
-                      key={note.id}
-                      className="rounded-2xl border border-white/10 bg-slate-950/60 p-4"
-                    >
-                      <p className="font-semibold">{note.audio_name}</p>
-
-                      <p className="mt-1 text-xs text-slate-400">
-                        {formatSize(note.audio_size)} · {note.uploaded_by_name} ({note.uploaded_by_role})
-                      </p>
-
-                      <button
-                        onClick={() => playAudio(note)}
-                        className="mt-3 rounded-xl bg-white px-3 py-2 text-sm font-bold text-slate-950"
-                      >
-                        Play
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="mb-6 rounded-[2rem] border border-white/10 bg-white/[0.05] p-5 shadow-2xl">
-          <div className="mb-4">
-            <h2 className="text-xl font-bold">Lesson Chat</h2>
-            <p className="text-sm text-slate-400">
-              Shared conversation between student, teacher, and admin.
-            </p>
-          </div>
-
-          <div className="h-[430px] overflow-y-auto rounded-2xl bg-slate-950/70 p-4">
-            {messages.length === 0 ? (
-              <p className="text-sm text-slate-400">No messages yet.</p>
-            ) : (
-              <div className="space-y-3">
-                {messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className="rounded-2xl border border-white/10 bg-white/[0.05] p-3"
-                  >
-                    <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-                      <p className="font-semibold text-cyan-100">{msg.sender}</p>
-                      <p className="text-xs text-slate-500">{formatDate(msg.created_at)}</p>
-                    </div>
-
-                    <p className="text-slate-100">{msg.message}</p>
-                  </div>
-                ))}
-
-                <div ref={messagesEndRef} />
-              </div>
             )}
           </div>
 
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-4 p-4 rounded-xl bg-slate-800 border border-slate-700">
+            <p className="font-semibold">Connection</p>
+            <p className="text-slate-300 mt-1">{callStateText(callState)}</p>
+
+            {audioError && (
+              <p className="mt-2 rounded-lg bg-red-950 p-3 text-sm text-red-100">
+                {audioError}
+              </p>
+            )}
+          </div>
+
+          {callState === 'incoming' && (
+            <div className="mt-4 p-4 rounded-xl bg-blue-950 border border-blue-700">
+              <h3 className="font-bold">Incoming Audio Call</h3>
+              <p className="text-blue-100 mt-1">
+                {remoteCaller} is calling.
+              </p>
+
+              <div className="mt-4 flex gap-3">
+                <button
+                  onClick={acceptCall}
+                  className="bg-green-600 hover:bg-green-700 rounded-xl px-4 py-3 font-semibold"
+                >
+                  Accept Call
+                </button>
+
+                <button
+                  onClick={declineCall}
+                  className="bg-red-600 hover:bg-red-700 rounded-xl px-4 py-3 font-semibold"
+                >
+                  Decline Call
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              onClick={startCall}
+              disabled={
+                !liveToolsEnabled ||
+                callState === 'calling' ||
+                callState === 'incoming' ||
+                callState === 'connecting' ||
+                callState === 'connected'
+              }
+              className="bg-blue-600 disabled:bg-slate-700 hover:bg-blue-700 rounded-xl px-4 py-3 font-semibold"
+            >
+              Start Live Audio
+            </button>
+
+            <button
+              onClick={endCall}
+              disabled={callState === 'idle' || callState === 'ended'}
+              className="bg-red-600 disabled:bg-slate-700 hover:bg-red-700 rounded-xl px-4 py-3 font-semibold"
+            >
+              End Call
+            </button>
+          </div>
+
+          <audio ref={remoteAudioRef} autoPlay playsInline />
+        </section>
+
+        <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+          <h2 className="text-xl font-bold">Lesson Chat</h2>
+
+          <div className="mt-4 h-80 overflow-y-auto space-y-3 bg-slate-950 border border-slate-800 rounded-xl p-4">
+            {messages.map(msg => (
+              <div key={msg.id} className="bg-slate-800 rounded-xl p-3">
+                <p className="text-sm text-blue-300 font-semibold">
+                  {msg.sender}
+                </p>
+                <p className="mt-1">{msg.message}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 flex gap-2">
             <input
+              className="flex-1 p-3 rounded-xl bg-slate-800 border border-slate-700"
+              placeholder={isClosed ? 'Lesson is locked' : 'Type a lesson message...'}
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') sendMessage()
-              }}
-              disabled={!canChat}
-              placeholder={canChat ? 'Type your message...' : 'Chat is locked'}
-              className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-cyan-300 disabled:opacity-50"
+              onChange={e => setMessage(e.target.value)}
+              disabled={isClosed}
             />
 
             <button
               onClick={sendMessage}
-              disabled={!canChat || !message.trim()}
-              className="rounded-2xl bg-cyan-300 px-6 py-3 font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={isClosed}
+              className="bg-blue-600 disabled:bg-slate-700 hover:bg-blue-700 rounded-xl px-5 font-semibold"
             >
               Send
             </button>
           </div>
         </section>
 
-        <section className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-5 shadow-2xl">
+        <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
           <h2 className="text-xl font-bold">Files</h2>
-          <p className="mt-1 text-sm text-slate-400">Upload and download learning materials.</p>
+          <p className="text-slate-400 text-sm mt-1">
+            Upload and download learning materials.
+          </p>
+
+          <input
+            type="file"
+            disabled={isClosed}
+            onChange={uploadFile}
+            className="mt-4 block w-full text-sm"
+          />
+
+          {uploadingFile && (
+            <p className="text-blue-300 mt-2">Uploading file...</p>
+          )}
 
           <div className="mt-4 space-y-3">
-            <input
-              type="file"
-              disabled={!canUseLiveTools}
-              onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-              className="w-full rounded-2xl border border-white/10 bg-slate-900 p-3 text-sm text-slate-200 disabled:opacity-50"
-            />
-
-            <button
-              onClick={uploadFile}
-              disabled={!canUseLiveTools || !selectedFile || uploadingFile}
-              className="w-full rounded-2xl bg-cyan-300 px-4 py-3 font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {uploadingFile ? 'Uploading...' : 'Upload File'}
-            </button>
-
-            {!canUseLiveTools && (
-              <p className="rounded-2xl bg-slate-950/60 p-4 text-sm text-slate-400">
-                File upload unlocks when the lesson is ACTIVE.
-              </p>
-            )}
-          </div>
-
-          <div className="mt-5 space-y-3">
-            {files.length === 0 ? (
-              <p className="rounded-2xl bg-slate-950/60 p-4 text-sm text-slate-400">
-                No files uploaded yet.
-              </p>
-            ) : (
-              files.map((file) => (
-                <div
-                  key={file.id}
-                  className="rounded-2xl border border-white/10 bg-slate-950/60 p-4"
-                >
+            {files.map(file => (
+              <div
+                key={file.id}
+                className="flex justify-between items-center gap-3 bg-slate-800 border border-slate-700 rounded-xl p-3"
+              >
+                <div>
                   <p className="font-semibold">{file.file_name}</p>
-
-                  <p className="mt-1 text-xs text-slate-400">
-                    {formatSize(file.file_size)} · {file.uploaded_by_name} ({file.uploaded_by_role})
+                  <p className="text-sm text-slate-400">
+                    Uploaded by {file.uploaded_by_name} ({file.uploaded_by_role})
                   </p>
-
-                  <button
-                    onClick={() => downloadFile(file)}
-                    className="mt-3 rounded-xl bg-white px-3 py-2 text-sm font-bold text-slate-950"
-                  >
-                    Download
-                  </button>
                 </div>
-              ))
+
+                <button
+                  onClick={() => downloadFile(file)}
+                  className="bg-slate-700 hover:bg-slate-600 rounded-xl px-4 py-2"
+                >
+                  Download
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+          <h2 className="text-xl font-bold">Voice Notes</h2>
+          <p className="text-slate-400 text-sm mt-1">
+            Record short explanations for low-data learning.
+          </p>
+
+          <div className="mt-4 flex gap-3">
+            {!recording ? (
+              <button
+                onClick={startRecording}
+                disabled={isClosed}
+                className="bg-purple-600 disabled:bg-slate-700 hover:bg-purple-700 rounded-xl px-4 py-3 font-semibold"
+              >
+                Record Voice Note
+              </button>
+            ) : (
+              <button
+                onClick={stopRecording}
+                className="bg-red-600 hover:bg-red-700 rounded-xl px-4 py-3 font-semibold"
+              >
+                Stop Recording
+              </button>
             )}
           </div>
         </section>
-      </section>
+
+        <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+          <h2 className="text-xl font-bold">Audio Notes</h2>
+
+          <div className="mt-4 space-y-3">
+            {audioNotes.map(note => (
+              <div
+                key={note.id}
+                className="flex justify-between items-center gap-3 bg-slate-800 border border-slate-700 rounded-xl p-3"
+              >
+                <div>
+                  <p className="font-semibold">{note.audio_name}</p>
+                  <p className="text-sm text-slate-400">
+                    Recorded by {note.uploaded_by_name} ({note.uploaded_by_role})
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => playAudioNote(note)}
+                  className="bg-slate-700 hover:bg-slate-600 rounded-xl px-4 py-2"
+                >
+                  Play
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
     </main>
   )
 }
 
-function Panel({
-  title,
-  value,
-  note,
-}: {
-  title: string
-  value: string
-  note: string
-}) {
+function Info({ label, value }: { label: string; value: any }) {
   return (
-    <div className="rounded-[1.7rem] border border-white/10 bg-white/[0.05] p-5 shadow-xl backdrop-blur">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-        {title}
-      </p>
-
-      <p className="mt-3 text-lg font-bold text-white break-words">{value}</p>
-
-      <p className="mt-2 text-sm text-slate-400">{note}</p>
+    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+      <p className="text-slate-400 text-sm">{label}</p>
+      <p className="font-semibold mt-1">{value || 'Not set'}</p>
     </div>
   )
+}
+
+function callStateText(callState: CallState) {
+  if (callState === 'idle') return 'Not connected'
+  if (callState === 'calling') return 'Calling...'
+  if (callState === 'incoming') return 'Incoming call'
+  if (callState === 'connecting') return 'Connecting...'
+  if (callState === 'connected') return 'Connected'
+  if (callState === 'declined') return 'Call declined'
+  if (callState === 'ended') return 'Call ended'
+  if (callState === 'failed') return 'Connection failed'
+  return 'Not connected'
 }
