@@ -1,6 +1,7 @@
 'use client'
 
 import { use, useEffect, useRef, useState } from 'react'
+import type { ChangeEvent } from 'react'
 import { supabase } from '../../../lib/supabase'
 
 type LessonRequest = {
@@ -82,10 +83,14 @@ export default function LessonRoom({
   const [uploading, setUploading] = useState(false)
 
   const [isRecording, setIsRecording] = useState(false)
-  const [recordingMessage, setRecordingMessage] = useState('Voice explanation is ready.')
+  const [recordingMessage, setRecordingMessage] = useState(
+    'Voice explanation is ready.'
+  )
   const [uploadingAudio, setUploadingAudio] = useState(false)
 
-  const [liveAudioStatus, setLiveAudioStatus] = useState('Live audio call is ready.')
+  const [liveAudioStatus, setLiveAudioStatus] = useState(
+    'Live audio call is ready.'
+  )
   const [callActive, setCallActive] = useState(false)
   const [incomingCall, setIncomingCall] = useState<any | null>(null)
 
@@ -134,7 +139,10 @@ export default function LessonRoom({
     return () => window.clearInterval(timer)
   }, [timerRunning])
 
-  function calculatePresenceState(studentPresent: boolean, teacherPresent: boolean) {
+  function calculatePresenceState(
+    studentPresent: boolean,
+    teacherPresent: boolean
+  ) {
     if (studentPresent && teacherPresent) {
       return {
         live_status: 'LIVE',
@@ -165,36 +173,43 @@ export default function LessonRoom({
   async function updatePresence(role: string, present: boolean) {
     if (!role) return
 
-    const currentStudentPresent =
-      role === 'Student' ? present : Boolean(request?.student_present)
+    const { data: latestLesson, error: loadError } = await supabase
+      .from('lesson_requests')
+      .select('student_present, teacher_present, status')
+      .eq('id', resolvedParams.id)
+      .single()
 
-    const currentTeacherPresent =
-      role === 'Teacher' ? present : Boolean(request?.teacher_present)
+    if (loadError || !latestLesson) {
+      console.error(loadError)
+      return
+    }
+
+    if (latestLesson.status === 'COMPLETED') return
+
+    const nextStudentPresent =
+      role === 'Student' ? present : Boolean(latestLesson.student_present)
+
+    const nextTeacherPresent =
+      role === 'Teacher' ? present : Boolean(latestLesson.teacher_present)
 
     const calculated = calculatePresenceState(
-      currentStudentPresent,
-      currentTeacherPresent
+      nextStudentPresent,
+      nextTeacherPresent
     )
-
-    const updateData: Record<string, boolean | string> = {
-      ...calculated,
-    }
-
-    if (role === 'Student') {
-      updateData.student_present = present
-    }
-
-    if (role === 'Teacher') {
-      updateData.teacher_present = present
-    }
 
     const { error } = await supabase
       .from('lesson_requests')
-      .update(updateData)
+      .update({
+        student_present: nextStudentPresent,
+        teacher_present: nextTeacherPresent,
+        live_status: calculated.live_status,
+        lesson_state: calculated.lesson_state,
+      })
       .eq('id', resolvedParams.id)
 
     if (error) {
       console.error(error)
+      alert('Could not update live presence.')
     }
   }
 
@@ -202,6 +217,7 @@ export default function LessonRoom({
     if (!enteredRef.current) return
 
     const role = enteredRoleRef.current
+
     enteredRef.current = false
     enteredRoleRef.current = ''
 
@@ -221,7 +237,7 @@ export default function LessonRoom({
       window.removeEventListener('beforeunload', handleBeforeUnload)
       resetPresenceOnExit()
     }
-  }, [mounted, resolvedParams.id, request])
+  }, [mounted, resolvedParams.id])
 
   async function loadLesson() {
     const { data, error } = await supabase
@@ -400,7 +416,9 @@ export default function LessonRoom({
   function formatTimer(seconds: number) {
     const minutes = Math.floor(seconds / 60)
     const remainingSeconds = seconds % 60
-    return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`
+    return `${String(minutes).padStart(2, '0')}:${String(
+      remainingSeconds
+    ).padStart(2, '0')}`
   }
 
   function formatDateTime(value: string | null) {
@@ -408,7 +426,7 @@ export default function LessonRoom({
     return new Date(value).toLocaleString()
   }
 
-  async function uploadFile(event: React.ChangeEvent<HTMLInputElement>) {
+  async function uploadFile(event: ChangeEvent<HTMLInputElement>) {
     const selectedFile = event.target.files?.[0]
     if (!selectedFile) return
 
@@ -482,7 +500,10 @@ export default function LessonRoom({
       }
 
       recorder.onstop = async () => {
-        const recordedBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        const recordedBlob = new Blob(audioChunksRef.current, {
+          type: 'audio/webm',
+        })
+
         stream.getTracks().forEach((track) => track.stop())
 
         const maximumAudioSize = 5 * 1024 * 1024
@@ -520,7 +541,9 @@ export default function LessonRoom({
 
     const { error: uploadError } = await supabase.storage
       .from('lesson-audio')
-      .upload(audioPath, audioBlob, { contentType: 'audio/webm' })
+      .upload(audioPath, audioBlob, {
+        contentType: 'audio/webm',
+      })
 
     if (uploadError) {
       console.error(uploadError)
@@ -530,14 +553,16 @@ export default function LessonRoom({
       return
     }
 
-    const { error: databaseError } = await supabase.from('lesson_audio_notes').insert({
-      lesson_id: resolvedParams.id,
-      audio_name: audioName,
-      audio_path: audioPath,
-      audio_size: audioBlob.size,
-      uploaded_by_name: userName,
-      uploaded_by_role: userRole,
-    })
+    const { error: databaseError } = await supabase
+      .from('lesson_audio_notes')
+      .insert({
+        lesson_id: resolvedParams.id,
+        audio_name: audioName,
+        audio_path: audioPath,
+        audio_size: audioBlob.size,
+        uploaded_by_name: userName,
+        uploaded_by_role: userRole,
+      })
 
     if (databaseError) {
       console.error(databaseError)
@@ -587,7 +612,9 @@ export default function LessonRoom({
 
     for (const candidate of candidates) {
       try {
-        await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate))
+        await peerConnectionRef.current.addIceCandidate(
+          new RTCIceCandidate(candidate)
+        )
       } catch (error) {
         console.error(error)
       }
@@ -620,7 +647,9 @@ export default function LessonRoom({
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = remoteStream
         remoteAudioRef.current.play().catch(() => {
-          setLiveAudioStatus('Remote audio is ready. Tap the audio player if needed.')
+          setLiveAudioStatus(
+            'Remote audio is ready. Tap the audio player if needed.'
+          )
         })
       }
 
@@ -704,7 +733,9 @@ export default function LessonRoom({
         peerConnection.addTrack(track, localStream)
       })
 
-      await peerConnection.setRemoteDescription(new RTCSessionDescription(incomingCall.offer))
+      await peerConnection.setRemoteDescription(
+        new RTCSessionDescription(incomingCall.offer)
+      )
 
       remoteDescriptionReadyRef.current = true
       await addBufferedCandidates()
@@ -776,7 +807,9 @@ export default function LessonRoom({
     if (signal.signal_type === 'end') {
       if (signalData.callId !== currentCallIdRef.current) return
       closeLiveAudio(false)
-      setLiveAudioStatus(`${signal.sender_name || 'The other person'} ended the call.`)
+      setLiveAudioStatus(
+        `${signal.sender_name || 'The other person'} ended the call.`
+      )
     }
   }
 
