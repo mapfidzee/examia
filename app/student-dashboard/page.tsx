@@ -17,105 +17,8 @@ type LessonRequest = {
   teacher_id: string | null
   teacher_status: string | null
   created_at: string | null
+  started_at: string | null
   completed_at: string | null
-}
-
-const styles = {
-  page: {
-    minHeight: '100vh',
-    background: 'linear-gradient(135deg, #062b6f 0%, #0b3b8f 50%, #031b45 100%)',
-    color: '#ffffff',
-    padding: '72px 22px 140px',
-    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
-  },
-  wrap: { width: '100%', maxWidth: '1120px', margin: '0 auto' },
-  eyebrow: {
-    margin: '0 0 10px',
-    color: '#dbeafe',
-    fontSize: '12px',
-    fontWeight: 900,
-    letterSpacing: '0.14em',
-    textTransform: 'uppercase' as const,
-  },
-  h1: {
-    margin: 0,
-    color: '#ffffff',
-    fontSize: 'clamp(44px, 9vw, 76px)',
-    lineHeight: 0.92,
-    letterSpacing: '-0.07em',
-    fontWeight: 900,
-  },
-  h2: {
-    margin: 0,
-    color: '#ffffff',
-    fontSize: '30px',
-    letterSpacing: '-0.04em',
-    fontWeight: 900,
-  },
-  text: {
-    color: '#dbeafe',
-    fontSize: '18px',
-    lineHeight: 1.68,
-    marginTop: '18px',
-  },
-  card: {
-    background: '#0f172a',
-    color: '#ffffff',
-    border: '1px solid rgba(255,255,255,0.16)',
-    borderRadius: '26px',
-    boxShadow: '0 24px 70px rgba(0,0,0,0.36)',
-  },
-  input: {
-    width: '100%',
-    boxSizing: 'border-box' as const,
-    border: 'none',
-    borderRadius: '18px',
-    padding: '18px',
-    fontSize: '16px',
-    color: '#0f172a',
-    background: '#ffffff',
-    outline: 'none',
-  },
-  whiteButton: {
-    width: '100%',
-    border: 'none',
-    borderRadius: '18px',
-    padding: '18px',
-    fontSize: '15px',
-    fontWeight: 900,
-    cursor: 'pointer',
-    background: '#ffffff',
-    color: '#07327a',
-  },
-  greenButton: {
-    width: '100%',
-    border: 'none',
-    borderRadius: '18px',
-    padding: '18px',
-    fontSize: '16px',
-    fontWeight: 900,
-    cursor: 'pointer',
-    background: '#22c55e',
-    color: '#052e16',
-  },
-  panel: {
-    background: '#0f172a',
-    color: '#ffffff',
-    border: '1px solid rgba(255,255,255,0.16)',
-    borderRadius: '26px',
-    boxShadow: '0 24px 70px rgba(0,0,0,0.36)',
-    padding: '28px',
-    marginBottom: '28px',
-  },
-  message: {
-    background: 'rgba(96,165,250,0.16)',
-    color: '#dbeafe',
-    padding: '16px 18px',
-    borderRadius: '18px',
-    fontWeight: 900,
-    marginBottom: '24px',
-    border: '1px solid rgba(96,165,250,0.24)',
-  },
 }
 
 export default function StudentDashboardPage() {
@@ -191,140 +94,544 @@ function StudentDashboardContent() {
   }
 
   const readiness = getReadiness(lesson)
-  const isCompleted = lesson?.status === 'COMPLETED'
 
   return (
-    <main style={styles.page}>
-      <div style={styles.wrap}>
-        <header style={{ display: 'grid', gap: '24px', marginBottom: '34px' }}>
-          <div>
-            <p style={styles.eyebrow}>EXAMIA STUDENT DASHBOARD</p>
-            <h1 style={styles.h1}>My Lesson Status</h1>
-            <p style={{ ...styles.text, maxWidth: '760px' }}>
-              Check lesson progress, teacher assignment, grade level, room readiness,
-              and completed lesson history in one place.
+    <main className="studentPage">
+      <div className="pageShell">
+        <section className="frontDoorHero">
+          <div className="heroContent">
+            <p className="eyebrow">EXAMIA STUDENT DASHBOARD</p>
+            <h1>My Lesson Journey</h1>
+            <p className="heroText">
+              Track your lesson from request to teacher assignment, active lesson
+              room, and completed history. Your lesson record stays visible so
+              learning does not disappear after the session ends.
             </p>
           </div>
 
-          <div style={{ ...styles.card, padding: '24px', display: 'grid', gap: '14px' }}>
-            <MiniStat label="Student Flow" value="Request → Match → Learn → Complete" />
-            <MiniStat label="Room Access" value="PAID + ACCEPTED only" />
-            <MiniStat label="History" value="Closed lessons stay traceable" />
+          <div className="heroPanel">
+            <p className="panelKicker">Student flow</p>
+            <h2>Request. Match. Learn. Complete.</h2>
+            <p>
+              Enter your Lesson ID to see where your lesson is in the EXAMIA
+              learning process.
+            </p>
           </div>
-        </header>
+        </section>
 
-        <section style={{ ...styles.panel, display: 'grid', gap: '22px' }}>
+        <section className="lookupPanel">
           <div>
-            <p style={styles.eyebrow}>Find your lesson</p>
-            <h2 style={styles.h2}>Enter your Lesson ID</h2>
-            <p style={{ color: '#dbeafe', lineHeight: 1.6, marginTop: '12px' }}>
-              If you came from the request page, your lesson will load automatically.
+            <p className="sectionKicker">Find your lesson</p>
+            <h2>Enter your Lesson ID</h2>
+            <p className="sectionText">
+              If admin sent you a dashboard link, the lesson may load
+              automatically. You can also paste your Lesson ID below.
             </p>
           </div>
 
-          <div style={{ display: 'grid', gap: '14px' }}>
+          <div className="lookupGrid">
             <input
               value={lessonId}
               onChange={(event) => setLessonId(event.target.value)}
               placeholder="Paste your lesson ID here"
-              style={styles.input}
+              className="input"
             />
 
-            <button onClick={loadLesson} disabled={loading} style={styles.whiteButton}>
+            <button onClick={loadLesson} disabled={loading} className="loadButton">
               {loading ? 'Loading lesson...' : 'Load My Lesson'}
             </button>
           </div>
         </section>
 
-        {message && <p style={styles.message}>{message}</p>}
+        {message && <p className="message">{message}</p>}
 
-        {lesson && (
-          <>
-            <section
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                gap: '14px',
-                marginBottom: '28px',
-              }}
-            >
-              <StatusCard title="Payment / Lesson" value={lesson.status || 'Not set'} color={readiness.color} />
-              <StatusCard title="Teacher Status" value={lesson.teacher_status || 'PENDING'} color="#60a5fa" />
-              <StatusCard title="Assigned Teacher" value={lesson.assigned_teacher || 'Not assigned'} color="#22c55e" />
-            </section>
+        <section className="statusTiles">
+          <StatusTile
+            label="Lesson Status"
+            value={lesson?.status || 'Not loaded'}
+            tone={readiness.tone}
+          />
+          <StatusTile
+            label="Teacher Status"
+            value={lesson?.teacher_status || 'Not loaded'}
+            tone="blue"
+          />
+          <StatusTile
+            label="Teacher"
+            value={lesson?.assigned_teacher || 'Not assigned'}
+            tone="green"
+          />
+          <StatusTile
+            label="Room Access"
+            value={readiness.ready ? 'Ready' : 'Not ready'}
+            tone={readiness.ready ? 'green' : 'amber'}
+          />
+        </section>
 
-            {isCompleted ? (
-              <CompletedLessonHistory lesson={lesson} />
-            ) : (
-              <section style={{ ...styles.panel, borderTop: `5px solid ${readiness.color}` }}>
-                <div style={{ marginBottom: '22px' }}>
-                  <p style={styles.eyebrow}>Lesson readiness</p>
-                  <h2 style={styles.h2}>{readiness.title}</h2>
-                  <p style={{ color: '#dbeafe', lineHeight: 1.62, marginTop: '10px' }}>
-                    {readiness.message}
-                  </p>
-                </div>
+        {!lesson && (
+          <section className="emptyState">
+            <p className="sectionKicker">No lesson loaded</p>
+            <h2>Start with your Lesson ID</h2>
+            <p>
+              After you load a lesson, this dashboard will show teacher
+              assignment, readiness, scheduled time, and completion history.
+            </p>
+          </section>
+        )}
 
-                <ProblemBlock problem={lesson.problem || 'Not provided'} />
+        {lesson && lesson.status !== 'COMPLETED' && (
+          <ActiveLessonPanel
+            lesson={lesson}
+            readiness={readiness}
+            openLessonRoom={openLessonRoom}
+          />
+        )}
 
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                    gap: '12px',
-                    marginBottom: readiness.ready ? '16px' : 0,
-                  }}
-                >
-                  <Detail label="Subject" value={displaySubject(lesson)} />
-                  <Detail label="Grade / Level" value={lesson.grade_level || 'Not provided'} />
-                  <Detail label="Preferred Time" value={lesson.preferred_time || 'Not provided'} />
-                  <Detail label="Scheduled Time" value={lesson.scheduled_time || 'Not scheduled'} />
-                  <Detail label="Lesson ID" value={lesson.id} />
-                </div>
-
-                {readiness.ready && (
-                  <button style={styles.greenButton} onClick={() => openLessonRoom(lesson.id)}>
-                    Open Lesson Room
-                  </button>
-                )}
-              </section>
-            )}
-          </>
+        {lesson && lesson.status === 'COMPLETED' && (
+          <CompletedLessonHistory lesson={lesson} />
         )}
       </div>
+
+      <style jsx global>{`
+        .studentPage {
+          min-height: 100vh;
+          background:
+            radial-gradient(circle at top left, rgba(37, 99, 235, 0.34), transparent 30%),
+            radial-gradient(circle at top right, rgba(20, 184, 166, 0.18), transparent 28%),
+            radial-gradient(circle at bottom, rgba(168, 85, 247, 0.14), transparent 34%),
+            linear-gradient(180deg, #020617 0%, #07111f 50%, #020617 100%);
+          color: #ffffff;
+          padding: 18px;
+        }
+
+        .pageShell {
+          max-width: 1120px;
+          margin: 0 auto;
+        }
+
+        .frontDoorHero {
+          display: grid;
+          gap: 18px;
+          margin-bottom: 18px;
+          padding-top: 8px;
+        }
+
+        .heroContent,
+        .heroPanel,
+        .lookupPanel,
+        .statusTile,
+        .lessonPanel,
+        .historyPanel,
+        .emptyState {
+          border: 1px solid rgba(148, 163, 184, 0.24);
+          border-radius: 28px;
+          background: rgba(15, 23, 42, 0.92);
+          box-shadow: 0 22px 60px rgba(0, 0, 0, 0.28);
+        }
+
+        .heroContent {
+          padding: 22px;
+          background:
+            linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(15, 23, 42, 0.94)),
+            rgba(15, 23, 42, 0.92);
+        }
+
+        .heroPanel {
+          padding: 20px;
+          background:
+            linear-gradient(135deg, rgba(20, 184, 166, 0.2), rgba(15, 23, 42, 0.94)),
+            rgba(15, 23, 42, 0.92);
+        }
+
+        .eyebrow,
+        .sectionKicker,
+        .panelKicker,
+        .miniLabel {
+          margin: 0 0 8px;
+          color: #93c5fd;
+          font-size: 11px;
+          font-weight: 900;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+        }
+
+        h1 {
+          margin: 0;
+          font-size: clamp(42px, 10vw, 76px);
+          line-height: 0.9;
+          letter-spacing: -0.07em;
+        }
+
+        h2 {
+          margin: 0;
+          font-size: clamp(28px, 5vw, 42px);
+          line-height: 1;
+          letter-spacing: -0.05em;
+        }
+
+        h3 {
+          margin: 0;
+          font-size: 24px;
+          letter-spacing: -0.03em;
+        }
+
+        .heroText,
+        .sectionText,
+        .heroPanel p:not(.panelKicker),
+        .emptyState p {
+          color: #dbeafe;
+          line-height: 1.6;
+          font-size: 15px;
+        }
+
+        .heroText {
+          max-width: 760px;
+          margin: 16px 0 0;
+          font-size: 16px;
+        }
+
+        .heroPanel p:not(.panelKicker) {
+          margin: 14px 0 0;
+        }
+
+        .lookupPanel {
+          padding: 18px;
+          margin-bottom: 18px;
+        }
+
+        .sectionText {
+          margin: 12px 0 0;
+        }
+
+        .lookupGrid {
+          display: grid;
+          gap: 12px;
+          margin-top: 16px;
+        }
+
+        .input {
+          width: 100%;
+          box-sizing: border-box;
+          border: 1px solid #475569;
+          border-radius: 18px;
+          padding: 16px;
+          font-size: 16px;
+          color: #0f172a;
+          background: #ffffff;
+          outline: none;
+        }
+
+        .loadButton,
+        .roomButton {
+          border: none;
+          border-radius: 18px;
+          padding: 16px;
+          color: #ffffff;
+          font-size: 15px;
+          font-weight: 900;
+          cursor: pointer;
+          min-height: 54px;
+          width: 100%;
+        }
+
+        .loadButton {
+          background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        }
+
+        .roomButton {
+          background: linear-gradient(135deg, #16a34a, #15803d);
+          margin-top: 16px;
+        }
+
+        button:disabled {
+          opacity: 0.55;
+          cursor: not-allowed;
+        }
+
+        .message {
+          background: rgba(37, 99, 235, 0.18);
+          color: #dbeafe;
+          padding: 14px;
+          border-radius: 18px;
+          border: 1px solid rgba(147, 197, 253, 0.28);
+          margin-bottom: 18px;
+        }
+
+        .statusTiles {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 12px;
+          margin-bottom: 18px;
+        }
+
+        .statusTile {
+          padding: 18px;
+          position: relative;
+          overflow: hidden;
+          min-height: 118px;
+        }
+
+        .statusTile::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          opacity: 0.3;
+          pointer-events: none;
+        }
+
+        .tile-blue::before {
+          background: linear-gradient(135deg, #2563eb, transparent);
+        }
+
+        .tile-amber::before {
+          background: linear-gradient(135deg, #f59e0b, transparent);
+        }
+
+        .tile-green::before {
+          background: linear-gradient(135deg, #16a34a, transparent);
+        }
+
+        .tile-red::before {
+          background: linear-gradient(135deg, #dc2626, transparent);
+        }
+
+        .tile-purple::before {
+          background: linear-gradient(135deg, #7c3aed, transparent);
+        }
+
+        .tileLabel,
+        .tileValue {
+          position: relative;
+          z-index: 1;
+        }
+
+        .tileLabel {
+          margin: 0;
+          color: #dbeafe;
+          font-size: 12px;
+          font-weight: 900;
+          text-transform: uppercase;
+          letter-spacing: 0.12em;
+        }
+
+        .tileValue {
+          display: block;
+          margin-top: 10px;
+          font-size: 24px;
+          line-height: 1.15;
+          font-weight: 900;
+          word-break: break-word;
+        }
+
+        .emptyState {
+          padding: 20px;
+        }
+
+        .emptyState p {
+          margin: 14px 0 0;
+        }
+
+        .lessonPanel,
+        .historyPanel {
+          padding: 16px;
+          margin-bottom: 20px;
+        }
+
+        .sectionHeader {
+          border-radius: 24px;
+          padding: 18px;
+          margin-bottom: 16px;
+          border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        .sectionHeader p {
+          margin: 9px 0 0;
+          color: #ffffff;
+          line-height: 1.55;
+        }
+
+        .header-amber {
+          background: linear-gradient(135deg, #d97706, #92400e);
+        }
+
+        .header-blue {
+          background: linear-gradient(135deg, #2563eb, #1e3a8a);
+        }
+
+        .header-green {
+          background: linear-gradient(135deg, #16a34a, #065f46);
+        }
+
+        .header-red {
+          background: linear-gradient(135deg, #dc2626, #7f1d1d);
+        }
+
+        .problemBox {
+          border-radius: 22px;
+          padding: 16px;
+          margin-bottom: 16px;
+          background:
+            linear-gradient(135deg, rgba(37, 99, 235, 0.28), rgba(15, 23, 42, 0.92)),
+            rgba(15, 23, 42, 0.92);
+          border: 1px solid rgba(147, 197, 253, 0.22);
+        }
+
+        .problemBox p {
+          margin: 0;
+          color: #ffffff;
+          line-height: 1.6;
+        }
+
+        .detailsGrid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 10px;
+        }
+
+        .detailBox {
+          background: rgba(2, 6, 23, 0.72);
+          border: 1px solid rgba(148, 163, 184, 0.18);
+          border-radius: 18px;
+          padding: 13px;
+          min-width: 0;
+        }
+
+        .detailBox span {
+          display: block;
+          color: #93c5fd;
+          font-size: 12px;
+          font-weight: 900;
+          margin-bottom: 6px;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+        }
+
+        .detailBox p {
+          margin: 0;
+          color: #ffffff;
+          line-height: 1.45;
+          word-break: break-word;
+        }
+
+        .completedNotice {
+          margin-top: 16px;
+          padding: 14px;
+          border-radius: 18px;
+          background: rgba(22, 163, 74, 0.16);
+          border: 1px solid rgba(34, 197, 94, 0.32);
+          color: #bbf7d0;
+          font-weight: 800;
+          line-height: 1.45;
+        }
+
+        @media (min-width: 760px) {
+          .studentPage {
+            padding: 28px;
+          }
+
+          .frontDoorHero {
+            grid-template-columns: minmax(0, 1.5fr) minmax(300px, 0.8fr);
+            align-items: stretch;
+          }
+
+          .heroContent,
+          .heroPanel {
+            padding: 26px;
+          }
+
+          .lookupPanel {
+            padding: 22px;
+          }
+
+          .lookupGrid {
+            grid-template-columns: minmax(0, 1fr) 220px;
+            align-items: center;
+          }
+
+          .statusTiles {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+          }
+
+          .detailsGrid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+          }
+        }
+      `}</style>
     </main>
+  )
+}
+
+function ActiveLessonPanel({
+  lesson,
+  readiness,
+  openLessonRoom,
+}: {
+  lesson: LessonRequest
+  readiness: ReturnType<typeof getReadiness>
+  openLessonRoom: (id: string) => void
+}) {
+  return (
+    <section className="lessonPanel">
+      <div className={`sectionHeader header-${readiness.tone}`}>
+        <p className="sectionKicker">Current lesson status</p>
+        <h2>{readiness.title}</h2>
+        <p>{readiness.message}</p>
+      </div>
+
+      <ProblemBlock problem={lesson.problem || 'Not provided'} />
+
+      <div className="detailsGrid">
+        <Detail label="Subject" value={displaySubject(lesson)} />
+        <Detail label="Grade / Level" value={lesson.grade_level || 'Not provided'} />
+        <Detail label="Preferred Time" value={lesson.preferred_time || 'Not provided'} />
+        <Detail label="Scheduled Time" value={lesson.scheduled_time || 'Not scheduled'} />
+        <Detail label="Assigned Teacher" value={lesson.assigned_teacher || 'Not assigned'} />
+        <Detail label="Teacher Status" value={lesson.teacher_status || 'Not offered yet'} />
+        <Detail label="Created At" value={formatDate(lesson.created_at)} />
+        <Detail label="Started At" value={formatDate(lesson.started_at)} />
+        <Detail label="Lesson ID" value={lesson.id} />
+      </div>
+
+      {readiness.ready && (
+        <button className="roomButton" onClick={() => openLessonRoom(lesson.id)}>
+          Open Lesson Room
+        </button>
+      )}
+    </section>
   )
 }
 
 function CompletedLessonHistory({ lesson }: { lesson: LessonRequest }) {
   return (
-    <section style={{ ...styles.panel, borderTop: '5px solid #22c55e' }}>
-      <div style={{ marginBottom: '22px' }}>
-        <p style={styles.eyebrow}>Completed lessons history</p>
-        <h2 style={styles.h2}>Lesson Completed</h2>
-        <p style={{ color: '#dbeafe', lineHeight: 1.62, marginTop: '10px' }}>
-          This lesson has been closed. The teaching room is no longer open for normal use,
-          but the lesson record remains available for tracking.
+    <section className="historyPanel">
+      <div className="sectionHeader header-green">
+        <p className="sectionKicker">Completed lesson history</p>
+        <h2>Lesson Completed</h2>
+        <p>
+          This lesson is now closed. The room is no longer open for normal
+          learning activity, but your learning record remains available here.
         </p>
       </div>
 
       <ProblemBlock problem={lesson.problem || 'Not provided'} />
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '12px',
-        }}
-      >
+      <div className="detailsGrid">
         <Detail label="Status" value="COMPLETED" />
         <Detail label="Subject" value={displaySubject(lesson)} />
         <Detail label="Grade / Level" value={lesson.grade_level || 'Not provided'} />
         <Detail label="Teacher" value={lesson.assigned_teacher || 'Not assigned'} />
         <Detail label="Preferred Time" value={lesson.preferred_time || 'Not provided'} />
         <Detail label="Scheduled Time" value={lesson.scheduled_time || 'Not scheduled'} />
-        <Detail label="Completed At" value={formatDate(lesson.completed_at)} />
+        <Detail label="Created At" value={formatDate(lesson.created_at)} />
+        <Detail label="Started At" value={formatDate(effectiveStartedAt(lesson))} />
+        <Detail label="Completed At" value={formatDate(effectiveCompletedAt(lesson))} />
+        <Detail label="Duration" value={calculateDuration(lesson)} />
         <Detail label="Lesson ID" value={lesson.id} />
+      </div>
+
+      <div className="completedNotice">
+        This completed lesson is locked and kept as part of your learning
+        history.
       </div>
     </section>
   )
@@ -332,9 +639,9 @@ function CompletedLessonHistory({ lesson }: { lesson: LessonRequest }) {
 
 function LoadingFallback() {
   return (
-    <main style={styles.page}>
-      <div style={styles.wrap}>
-        <p style={styles.message}>Loading student dashboard...</p>
+    <main className="studentPage">
+      <div className="pageShell">
+        <p className="message">Loading student dashboard...</p>
       </div>
     </main>
   )
@@ -342,31 +649,35 @@ function LoadingFallback() {
 
 function ProblemBlock({ problem }: { problem: string }) {
   return (
-    <div
-      style={{
-        background: '#1d4ed8',
-        borderRadius: '18px',
-        padding: '18px',
-        marginBottom: '16px',
-      }}
-    >
-      <span
-        style={{
-          display: 'block',
-          color: '#bfdbfe',
-          fontSize: '12px',
-          fontWeight: 900,
-          textTransform: 'uppercase',
-          letterSpacing: '0.1em',
-          marginBottom: '8px',
-        }}
-      >
-        Student problem
-      </span>
+    <div className="problemBox">
+      <span className="miniLabel">Student problem</span>
+      <p>{problem}</p>
+    </div>
+  )
+}
 
-      <p style={{ margin: 0, lineHeight: 1.6, color: '#ffffff' }}>
-        {problem}
-      </p>
+function StatusTile({
+  label,
+  value,
+  tone,
+}: {
+  label: string
+  value: string
+  tone: 'blue' | 'amber' | 'green' | 'red' | 'purple'
+}) {
+  return (
+    <article className={`statusTile tile-${tone}`}>
+      <p className="tileLabel">{label}</p>
+      <strong className="tileValue">{value}</strong>
+    </article>
+  )
+}
+
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="detailBox">
+      <span>{label}</span>
+      <p>{value}</p>
     </div>
   )
 }
@@ -389,13 +700,51 @@ function formatDate(value: string | null) {
   return date.toLocaleString()
 }
 
-function getReadiness(lesson: LessonRequest | null) {
+function effectiveStartedAt(lesson: LessonRequest) {
+  if (lesson.started_at) return lesson.started_at
+  if (lesson.status === 'COMPLETED') return lesson.created_at
+  return null
+}
+
+function effectiveCompletedAt(lesson: LessonRequest) {
+  if (lesson.completed_at) return lesson.completed_at
+  if (lesson.status === 'COMPLETED') return lesson.created_at
+  return null
+}
+
+function calculateDuration(lesson: LessonRequest) {
+  const startedAt = effectiveStartedAt(lesson)
+  const completedAt = effectiveCompletedAt(lesson)
+
+  if (!startedAt || !completedAt) return 'Not available'
+
+  const start = new Date(startedAt).getTime()
+  const end = new Date(completedAt).getTime()
+
+  if (Number.isNaN(start) || Number.isNaN(end) || end < start) {
+    return 'Not available'
+  }
+
+  const totalMinutes = Math.round((end - start) / 60000)
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+
+  if (hours === 0) return `${minutes} min`
+  return `${hours} hr ${minutes} min`
+}
+
+function getReadiness(lesson: LessonRequest | null): {
+  ready: boolean
+  title: string
+  message: string
+  tone: 'blue' | 'amber' | 'green' | 'red' | 'purple'
+} {
   if (!lesson) {
     return {
       ready: false,
       title: 'Lesson not loaded',
       message: 'Enter your lesson ID to check your lesson status.',
-      color: '#60a5fa',
+      tone: 'blue',
     }
   }
 
@@ -405,7 +754,7 @@ function getReadiness(lesson: LessonRequest | null) {
       title: 'Lesson completed',
       message:
         'This lesson has been completed and the room is now closed for normal use.',
-      color: '#22c55e',
+      tone: 'green',
     }
   }
 
@@ -418,7 +767,7 @@ function getReadiness(lesson: LessonRequest | null) {
       title: 'Your lesson room is ready',
       message:
         'Your teacher has accepted this lesson. You can now open the lesson room.',
-      color: '#22c55e',
+      tone: 'green',
     }
   }
 
@@ -428,7 +777,7 @@ function getReadiness(lesson: LessonRequest | null) {
       title: 'Waiting for teacher acceptance',
       message:
         'Your lesson has been offered to a teacher. The room will open after the teacher accepts.',
-      color: '#60a5fa',
+      tone: 'blue',
     }
   }
 
@@ -438,7 +787,17 @@ function getReadiness(lesson: LessonRequest | null) {
       title: 'Teacher reassignment needed',
       message:
         'The teacher declined this lesson. Admin needs to assign another teacher.',
-      color: '#ef4444',
+      tone: 'red',
+    }
+  }
+
+  if (!paid && lesson.status === 'MATCHED') {
+    return {
+      ready: false,
+      title: 'Teacher matched, payment pending',
+      message:
+        'A teacher has been matched. The lesson room opens after payment and teacher acceptance.',
+      tone: 'purple',
     }
   }
 
@@ -448,7 +807,7 @@ function getReadiness(lesson: LessonRequest | null) {
       title: 'Lesson not ready yet',
       message:
         'This lesson is not marked as paid yet. The room opens after payment and teacher acceptance.',
-      color: '#f59e0b',
+      tone: 'amber',
     }
   }
 
@@ -457,99 +816,6 @@ function getReadiness(lesson: LessonRequest | null) {
     title: 'Waiting for teacher assignment',
     message:
       'Your lesson is paid, but teacher confirmation is still pending.',
-    color: '#60a5fa',
+    tone: 'blue',
   }
-}
-
-function MiniStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div
-      style={{
-        background: '#1e293b',
-        borderRadius: '18px',
-        padding: '16px',
-        border: '1px solid rgba(255,255,255,0.1)',
-      }}
-    >
-      <span
-        style={{
-          display: 'block',
-          color: '#93c5fd',
-          fontSize: '11px',
-          fontWeight: 900,
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase',
-          marginBottom: '8px',
-        }}
-      >
-        {label}
-      </span>
-
-      <strong style={{ color: '#ffffff', fontSize: '18px' }}>{value}</strong>
-    </div>
-  )
-}
-
-function StatusCard({
-  title,
-  value,
-  color,
-}: {
-  title: string
-  value: string
-  color: string
-}) {
-  return (
-    <div style={{ ...styles.card, padding: '24px', borderTop: `5px solid ${color}` }}>
-      <p
-        style={{
-          margin: 0,
-          color: '#bfdbfe',
-          fontWeight: 900,
-          fontSize: '13px',
-          textTransform: 'uppercase',
-          letterSpacing: '0.12em',
-        }}
-      >
-        {title}
-      </p>
-
-      <strong
-        style={{
-          display: 'block',
-          marginTop: '8px',
-          fontSize: '24px',
-          lineHeight: 1.15,
-          color: '#ffffff',
-          wordBreak: 'break-word',
-        }}
-      >
-        {value}
-      </strong>
-    </div>
-  )
-}
-
-function Detail({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ background: '#1e293b', borderRadius: '16px', padding: '15px' }}>
-      <span
-        style={{
-          display: 'block',
-          color: '#bfdbfe',
-          fontSize: '12px',
-          fontWeight: 900,
-          textTransform: 'uppercase',
-          letterSpacing: '0.1em',
-          marginBottom: '8px',
-        }}
-      >
-        {label}
-      </span>
-
-      <p style={{ margin: 0, lineHeight: 1.6, color: '#ffffff', wordBreak: 'break-word' }}>
-        {value}
-      </p>
-    </div>
-  )
 }
