@@ -101,13 +101,13 @@ export default function AdminTeachersPage() {
           </div>
 
           <div className="quickLinks">
-            <Link href="/admin" className="quickLink">
+            <Link href="/admin" className="quickLink blueLink">
               Admin Command Center
             </Link>
-            <Link href="/admin/assign" className="quickLink">
+            <Link href="/admin/assign" className="quickLink purpleLink">
               Assignment Backup
             </Link>
-            <Link href="/teacher" className="quickLink">
+            <Link href="/teacher" className="quickLink greenLink">
               Teacher Signup
             </Link>
             <button className="quickButton" onClick={loadTeachers}>
@@ -177,8 +177,9 @@ export default function AdminTeachersPage() {
         .adminPage {
           min-height: 100vh;
           background:
-            radial-gradient(circle at top left, rgba(37, 99, 235, 0.32), transparent 28%),
-            radial-gradient(circle at top right, rgba(20, 184, 166, 0.16), transparent 26%),
+            radial-gradient(circle at top left, rgba(37, 99, 235, 0.34), transparent 30%),
+            radial-gradient(circle at top right, rgba(20, 184, 166, 0.2), transparent 28%),
+            radial-gradient(circle at bottom, rgba(168, 85, 247, 0.16), transparent 34%),
             linear-gradient(180deg, #020617 0%, #07111f 48%, #020617 100%);
           color: #ffffff;
           padding: 18px;
@@ -215,13 +216,13 @@ export default function AdminTeachersPage() {
 
         h2 {
           margin: 0;
-          font-size: 28px;
+          font-size: 30px;
           letter-spacing: -0.04em;
         }
 
         h3 {
           margin: 0;
-          font-size: 24px;
+          font-size: 25px;
           letter-spacing: -0.03em;
         }
 
@@ -243,17 +244,30 @@ export default function AdminTeachersPage() {
         .quickButton {
           text-decoration: none;
           color: #ffffff;
-          background: rgba(15, 23, 42, 0.86);
-          border: 1px solid rgba(148, 163, 184, 0.25);
+          border: 1px solid rgba(255, 255, 255, 0.18);
           padding: 13px 15px;
           border-radius: 16px;
           font-weight: 900;
           text-align: center;
           cursor: pointer;
           font-size: 14px;
+          box-shadow: 0 14px 32px rgba(0, 0, 0, 0.24);
+        }
+
+        .blueLink {
+          background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        }
+
+        .purpleLink {
+          background: linear-gradient(135deg, #7c3aed, #6d28d9);
+        }
+
+        .greenLink {
+          background: linear-gradient(135deg, #16a34a, #15803d);
         }
 
         .quickButton {
+          background: linear-gradient(135deg, #f97316, #ea580c);
           font-family: inherit;
         }
 
@@ -269,7 +283,7 @@ export default function AdminTeachersPage() {
         .teacherCard {
           background: rgba(15, 23, 42, 0.9);
           border: 1px solid rgba(148, 163, 184, 0.24);
-          border-radius: 24px;
+          border-radius: 26px;
           box-shadow: 0 22px 60px rgba(0, 0, 0, 0.28);
         }
 
@@ -283,7 +297,7 @@ export default function AdminTeachersPage() {
           content: '';
           position: absolute;
           inset: 0;
-          opacity: 0.18;
+          opacity: 0.3;
           pointer-events: none;
         }
 
@@ -311,7 +325,7 @@ export default function AdminTeachersPage() {
 
         .statLabel {
           margin: 0;
-          color: #bfdbfe;
+          color: #dbeafe;
           font-size: 12px;
           font-weight: 900;
           text-transform: uppercase;
@@ -321,7 +335,7 @@ export default function AdminTeachersPage() {
         .statValue {
           display: block;
           margin-top: 8px;
-          font-size: 38px;
+          font-size: 40px;
           line-height: 1;
           font-weight: 900;
         }
@@ -336,32 +350,33 @@ export default function AdminTeachersPage() {
 
         .panel {
           padding: 16px;
-          margin-bottom: 18px;
+          margin-bottom: 20px;
         }
 
         .sectionHeader {
-          border-radius: 20px;
-          padding: 16px;
+          border-radius: 24px;
+          padding: 18px;
           margin-bottom: 16px;
-          border: 1px solid rgba(148, 163, 184, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
         }
 
         .sectionHeader p {
           margin: 8px 0 0;
-          color: #dbeafe;
+          color: #ffffff;
           line-height: 1.55;
         }
 
         .section-amber {
-          background: linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(15, 23, 42, 0.86));
+          background: linear-gradient(135deg, #d97706, #92400e);
         }
 
         .section-green {
-          background: linear-gradient(135deg, rgba(22, 163, 74, 0.2), rgba(15, 23, 42, 0.86));
+          background: linear-gradient(135deg, #16a34a, #065f46);
         }
 
         .section-red {
-          background: linear-gradient(135deg, rgba(220, 38, 38, 0.18), rgba(15, 23, 42, 0.86));
+          background: linear-gradient(135deg, #dc2626, #7f1d1d);
         }
 
         .teacherList {
@@ -371,12 +386,17 @@ export default function AdminTeachersPage() {
 
         .teacherCard {
           padding: 16px;
+          background:
+            linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(15, 23, 42, 0.94)),
+            rgba(15, 23, 42, 0.9);
         }
 
         .teacherTop {
           display: grid;
           gap: 12px;
           margin-bottom: 14px;
+          padding-bottom: 14px;
+          border-bottom: 1px solid rgba(148, 163, 184, 0.18);
         }
 
         .teacherEmail {
@@ -389,25 +409,25 @@ export default function AdminTeachersPage() {
         .statusBadge {
           width: fit-content;
           border-radius: 999px;
-          padding: 7px 12px;
-          border: 1px solid rgba(148, 163, 184, 0.28);
+          padding: 8px 13px;
+          border: 1px solid rgba(255, 255, 255, 0.18);
           font-size: 12px;
           font-weight: 900;
         }
 
         .status-PENDING {
-          background: rgba(245, 158, 11, 0.18);
-          color: #fde68a;
+          background: #f59e0b;
+          color: #111827;
         }
 
         .status-APPROVED {
-          background: rgba(22, 163, 74, 0.18);
-          color: #bbf7d0;
+          background: #22c55e;
+          color: #052e16;
         }
 
         .status-SUSPENDED {
-          background: rgba(220, 38, 38, 0.18);
-          color: #fecaca;
+          background: #ef4444;
+          color: #ffffff;
         }
 
         .detailsGrid {
@@ -419,9 +439,9 @@ export default function AdminTeachersPage() {
 
         .detailBox {
           background: rgba(2, 6, 23, 0.72);
-          border: 1px solid rgba(148, 163, 184, 0.16);
-          border-radius: 16px;
-          padding: 12px;
+          border: 1px solid rgba(148, 163, 184, 0.18);
+          border-radius: 18px;
+          padding: 13px;
           min-width: 0;
         }
 
@@ -443,16 +463,16 @@ export default function AdminTeachersPage() {
         }
 
         .bioBox {
-          border-radius: 18px;
-          padding: 14px;
+          border-radius: 20px;
+          padding: 15px;
           margin-bottom: 14px;
-          background: rgba(37, 99, 235, 0.18);
-          border: 1px solid rgba(147, 197, 253, 0.22);
+          background: linear-gradient(135deg, rgba(124, 58, 237, 0.35), rgba(37, 99, 235, 0.22));
+          border: 1px solid rgba(196, 181, 253, 0.24);
         }
 
         .bioBox span {
           display: block;
-          color: #bfdbfe;
+          color: #ddd6fe;
           font-size: 12px;
           font-weight: 900;
           margin-bottom: 8px;
@@ -469,17 +489,17 @@ export default function AdminTeachersPage() {
         .buttonRow {
           display: grid;
           grid-template-columns: 1fr;
-          gap: 10px;
+          gap: 12px;
         }
 
         button {
           border: none;
-          border-radius: 15px;
-          padding: 14px 16px;
+          border-radius: 16px;
+          padding: 15px 16px;
           font-size: 15px;
           font-weight: 900;
           cursor: pointer;
-          min-height: 50px;
+          min-height: 52px;
         }
 
         button:disabled {
@@ -488,21 +508,21 @@ export default function AdminTeachersPage() {
         }
 
         .primaryBtn {
-          background: linear-gradient(135deg, #2563eb, #1d4ed8);
+          background: linear-gradient(135deg, #22c55e, #15803d);
           color: #ffffff;
         }
 
         .secondaryBtn {
-          background: linear-gradient(135deg, #475569, #334155);
+          background: linear-gradient(135deg, #64748b, #334155);
           color: #ffffff;
         }
 
         .empty {
-          color: #cbd5e1;
-          background: rgba(2, 6, 23, 0.6);
+          color: #e2e8f0;
+          background: rgba(2, 6, 23, 0.65);
           padding: 16px;
           border-radius: 18px;
-          border: 1px solid rgba(148, 163, 184, 0.16);
+          border: 1px dashed rgba(148, 163, 184, 0.34);
           margin: 0;
         }
 
@@ -517,7 +537,7 @@ export default function AdminTeachersPage() {
           }
 
           .hero {
-            grid-template-columns: 1fr 260px;
+            grid-template-columns: 1fr 270px;
             align-items: start;
           }
 
