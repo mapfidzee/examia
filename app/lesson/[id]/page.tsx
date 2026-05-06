@@ -103,6 +103,7 @@ export default function LessonRoomPage({ params }: PageProps) {
   const [callActive, setCallActive] = useState(false)
   const [callStatus, setCallStatus] = useState('Not connected')
   const [muted, setMuted] = useState(false)
+
   const localStreamRef = useRef<MediaStream | null>(null)
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null)
   const peerRef = useRef<RTCPeerConnection | null>(null)
@@ -111,7 +112,11 @@ export default function LessonRoomPage({ params }: PageProps) {
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
 
   const isCompleted = lesson?.status === 'COMPLETED'
-  const isPaid = lesson?.status === 'PAID' || lesson?.status === 'ACTIVE' || lesson?.status === 'COMPLETED'
+  const isPaid =
+    lesson?.status === 'PAID' ||
+    lesson?.status === 'ACTIVE' ||
+    lesson?.status === 'COMPLETED'
+
   const canUseRoom = entered && isPaid && !isCompleted
 
   const displaySubject = useMemo(() => {
@@ -142,6 +147,7 @@ export default function LessonRoomPage({ params }: PageProps) {
     presenceChannel
       .on('presence', { event: 'sync' }, () => {
         const state = presenceChannel.presenceState()
+
         const users = Object.values(state)
           .flat()
           .map((entry: any) => ({
@@ -149,6 +155,7 @@ export default function LessonRoomPage({ params }: PageProps) {
             role: entry.role,
             online_at: entry.online_at,
           }))
+
         setPresenceUsers(users)
       })
       .subscribe(async (status) => {
@@ -379,7 +386,9 @@ export default function LessonRoomPage({ params }: PageProps) {
       mediaRecorderRef.current = recorder
 
       recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) audioChunksRef.current.push(event.data)
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data)
+        }
       }
 
       recorder.onstop = async () => {
@@ -397,6 +406,7 @@ export default function LessonRoomPage({ params }: PageProps) {
 
   function stopRecording() {
     if (!mediaRecorderRef.current) return
+
     mediaRecorderRef.current.stop()
     setRecording(false)
     setSystemNote('Recording stopped. Uploading audio note...')
@@ -490,15 +500,18 @@ export default function LessonRoomPage({ params }: PageProps) {
 
     try {
       callIdRef.current = `${id}-${Date.now()}`
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       localStreamRef.current = stream
 
       const peer = createPeerConnection()
-      stream.getTracks().forEach((track) => peer.addTrack(track, stream))
+
+      stream.getTracks().forEach((track) => {
+        peer.addTrack(track, stream)
+      })
 
       const offer = await peer.createOffer()
       await peer.setLocalDescription(offer)
-
       await sendSignal('offer', offer)
 
       setCallActive(true)
@@ -513,7 +526,9 @@ export default function LessonRoomPage({ params }: PageProps) {
     if (signal.sender_name === name && signal.sender_role === role) return
     if (signal.lesson_id !== id) return
 
-    if (!callIdRef.current) callIdRef.current = signal.call_id
+    if (!callIdRef.current) {
+      callIdRef.current = signal.call_id
+    }
 
     if (signal.signal_type === 'offer') {
       try {
@@ -521,12 +536,15 @@ export default function LessonRoomPage({ params }: PageProps) {
         localStreamRef.current = stream
 
         const peer = createPeerConnection()
-        stream.getTracks().forEach((track) => peer.addTrack(track, stream))
+
+        stream.getTracks().forEach((track) => {
+          peer.addTrack(track, stream)
+        })
 
         await peer.setRemoteDescription(new RTCSessionDescription(signal.payload))
+
         const answer = await peer.createAnswer()
         await peer.setLocalDescription(answer)
-
         await sendSignal('answer', answer)
 
         setCallActive(true)
@@ -610,7 +628,10 @@ export default function LessonRoomPage({ params }: PageProps) {
       })
       .eq('id', id)
 
-    if (error) setSystemNote('Could not start lesson.')
+    if (error) {
+      setSystemNote('Could not start lesson.')
+    }
+
     setBusy(false)
   }
 
@@ -639,7 +660,14 @@ export default function LessonRoomPage({ params }: PageProps) {
 
   function formatDate(value?: string | null) {
     if (!value) return 'Not set'
-    return new Date(value).toLocaleString()
+
+    const date = new Date(value)
+
+    if (Number.isNaN(date.getTime())) {
+      return 'Not scheduled'
+    }
+
+    return date.toLocaleString()
   }
 
   function formatSize(bytes: number) {
@@ -678,9 +706,11 @@ export default function LessonRoomPage({ params }: PageProps) {
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-300">
                 EXAMIA Controlled Lesson Space
               </p>
+
               <h1 className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight">
                 Join Lesson Room
               </h1>
+
               <p className="mt-3 text-slate-300">
                 Enter your name and role to open the guided learning room.
               </p>
@@ -691,10 +721,12 @@ export default function LessonRoomPage({ params }: PageProps) {
                 <p className="text-xs text-slate-400">Subject</p>
                 <p className="mt-1 font-semibold">{displaySubject}</p>
               </div>
+
               <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4">
                 <p className="text-xs text-slate-400">Level</p>
                 <p className="mt-1 font-semibold">{lesson.grade_level || 'Not provided'}</p>
               </div>
+
               <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4">
                 <p className="text-xs text-slate-400">Status</p>
                 <p className="mt-1 font-semibold">{lesson.status}</p>
@@ -711,7 +743,7 @@ export default function LessonRoomPage({ params }: PageProps) {
 
               <select
                 value={role}
-                onChange={(e) => setRole(e.target.value as any)}
+                onChange={(e) => setRole(e.target.value as 'student' | 'teacher' | 'admin')}
                 className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-cyan-300"
               >
                 <option value="student">Student</option>
@@ -749,9 +781,11 @@ export default function LessonRoomPage({ params }: PageProps) {
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-300">
                 EXAMIA Controlled Lesson Space
               </p>
+
               <h1 className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight">
                 Lesson Room
               </h1>
+
               <p className="mt-3 max-w-3xl text-slate-300">
                 A guided learning room for chat, files, voice explanations, live audio,
                 timed sessions, and clean lesson completion.
@@ -762,6 +796,7 @@ export default function LessonRoomPage({ params }: PageProps) {
               <span className="rounded-full border border-cyan-300/30 bg-cyan-300/10 px-4 py-2 text-sm text-cyan-100">
                 {lesson.status}
               </span>
+
               <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200">
                 {presenceUsers.length} online
               </span>
@@ -778,13 +813,16 @@ export default function LessonRoomPage({ params }: PageProps) {
         {isCompleted && (
           <div className="mb-6 rounded-[2rem] border border-emerald-300/20 bg-emerald-400/10 p-6 shadow-xl">
             <h2 className="text-2xl font-bold text-emerald-100">Lesson Completed</h2>
+
             <p className="mt-2 text-emerald-50">
               This lesson has been marked as completed. The teaching room is now closed for normal use.
             </p>
+
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <p className="rounded-2xl bg-slate-950/40 p-3 text-sm">
                 Started at: {formatDate(lesson.started_at)}
               </p>
+
               <p className="rounded-2xl bg-slate-950/40 p-3 text-sm">
                 Completed at: {formatDate(lesson.completed_at)}
               </p>
@@ -795,6 +833,7 @@ export default function LessonRoomPage({ params }: PageProps) {
         {!isPaid && (
           <div className="mb-6 rounded-[2rem] border border-red-300/20 bg-red-500/10 p-6 shadow-xl">
             <h2 className="text-2xl font-bold text-red-100">Payment Gate Active</h2>
+
             <p className="mt-2 text-red-50">
               This lesson room is visible, but normal interaction is locked until the lesson status becomes PAID or ACTIVE.
             </p>
@@ -810,12 +849,11 @@ export default function LessonRoomPage({ params }: PageProps) {
 
         <section className="mb-6 grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 rounded-[2rem] border border-white/10 bg-white/[0.05] p-5 shadow-2xl">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-xl font-bold">Learning Problem</h2>
-                <p className="text-sm text-slate-400">The core issue this lesson is solving.</p>
-              </div>
+            <div className="mb-4">
+              <h2 className="text-xl font-bold">Learning Problem</h2>
+              <p className="text-sm text-slate-400">The core issue this lesson is solving.</p>
             </div>
+
             <p className="rounded-2xl bg-slate-950/60 p-4 text-slate-100 leading-relaxed">
               {lesson.problem}
             </p>
@@ -837,6 +875,7 @@ export default function LessonRoomPage({ params }: PageProps) {
                     className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/60 p-3"
                   >
                     <span className="h-3 w-3 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/40" />
+
                     <div>
                       <p className="font-semibold">{user.name}</p>
                       <p className="text-xs uppercase tracking-wide text-slate-400">{user.role}</p>
@@ -903,6 +942,7 @@ export default function LessonRoomPage({ params }: PageProps) {
                   >
                     {muted ? 'Unmute' : 'Mute'}
                   </button>
+
                   <button
                     onClick={() => endLiveAudio(true)}
                     className="rounded-2xl bg-rose-300 px-4 py-3 font-bold text-slate-950"
@@ -951,7 +991,9 @@ export default function LessonRoomPage({ params }: PageProps) {
           <div className="lg:col-span-3 rounded-[2rem] border border-white/10 bg-white/[0.05] p-5 shadow-2xl">
             <div className="mb-4">
               <h2 className="text-xl font-bold">Lesson Chat</h2>
-              <p className="text-sm text-slate-400">Shared conversation between student, teacher, and admin.</p>
+              <p className="text-sm text-slate-400">
+                Shared conversation between student, teacher, and admin.
+              </p>
             </div>
 
             <div className="h-[430px] overflow-y-auto rounded-2xl bg-slate-950/70 p-4">
@@ -960,14 +1002,19 @@ export default function LessonRoomPage({ params }: PageProps) {
               ) : (
                 <div className="space-y-3">
                   {messages.map((msg) => (
-                    <div key={msg.id} className="rounded-2xl border border-white/10 bg-white/[0.05] p-3">
+                    <div
+                      key={msg.id}
+                      className="rounded-2xl border border-white/10 bg-white/[0.05] p-3"
+                    >
                       <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
                         <p className="font-semibold text-cyan-100">{msg.sender}</p>
                         <p className="text-xs text-slate-500">{formatDate(msg.created_at)}</p>
                       </div>
+
                       <p className="text-slate-100">{msg.message}</p>
                     </div>
                   ))}
+
                   <div ref={messagesEndRef} />
                 </div>
               )}
@@ -984,6 +1031,7 @@ export default function LessonRoomPage({ params }: PageProps) {
                 placeholder={canUseRoom ? 'Type your message...' : 'Room is locked'}
                 className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-cyan-300 disabled:opacity-50"
               />
+
               <button
                 onClick={sendMessage}
                 disabled={!canUseRoom || !message.trim()}
@@ -1023,11 +1071,16 @@ export default function LessonRoomPage({ params }: PageProps) {
                   </p>
                 ) : (
                   files.map((file) => (
-                    <div key={file.id} className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                    <div
+                      key={file.id}
+                      className="rounded-2xl border border-white/10 bg-slate-950/60 p-4"
+                    >
                       <p className="font-semibold">{file.file_name}</p>
+
                       <p className="mt-1 text-xs text-slate-400">
                         {formatSize(file.file_size)} · {file.uploaded_by_name} ({file.uploaded_by_role})
                       </p>
+
                       <button
                         onClick={() => downloadFile(file)}
                         className="mt-3 rounded-xl bg-white px-3 py-2 text-sm font-bold text-slate-950"
@@ -1051,11 +1104,16 @@ export default function LessonRoomPage({ params }: PageProps) {
                   </p>
                 ) : (
                   audioNotes.map((note) => (
-                    <div key={note.id} className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                    <div
+                      key={note.id}
+                      className="rounded-2xl border border-white/10 bg-slate-950/60 p-4"
+                    >
                       <p className="font-semibold">{note.audio_name}</p>
+
                       <p className="mt-1 text-xs text-slate-400">
                         {formatSize(note.audio_size)} · {note.uploaded_by_name} ({note.uploaded_by_role})
                       </p>
+
                       <button
                         onClick={() => playAudio(note)}
                         className="mt-3 rounded-xl bg-white px-3 py-2 text-sm font-bold text-slate-950"
@@ -1085,9 +1143,17 @@ function Panel({
 }) {
   return (
     <div className="rounded-[1.7rem] border border-white/10 bg-white/[0.05] p-5 shadow-xl backdrop-blur">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{title}</p>
-      <p className="mt-3 text-lg font-bold text-white break-words">{value}</p>
-      <p className="mt-2 text-sm text-slate-400">{note}</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+        {title}
+      </p>
+
+      <p className="mt-3 text-lg font-bold text-white break-words">
+        {value}
+      </p>
+
+      <p className="mt-2 text-sm text-slate-400">
+        {note}
+      </p>
     </div>
   )
 }
