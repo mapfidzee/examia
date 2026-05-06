@@ -13,6 +13,10 @@ type LessonRequest = {
   assigned_teacher: string | null
   started_at: string | null
   completed_at: string | null
+  live_status: string | null
+  student_present: boolean | null
+  teacher_present: boolean | null
+  lesson_state: string | null
 }
 
 type LessonMessage = {
@@ -101,6 +105,9 @@ export default function LessonRoom({
   const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([])
   const remoteDescriptionReadyRef = useRef(false)
 
+  const enteredRef = useRef(false)
+  const enteredRoleRef = useRef('')
+
   useEffect(() => {
     setMounted(true)
   }, [])
@@ -126,6 +133,95 @@ export default function LessonRoom({
 
     return () => window.clearInterval(timer)
   }, [timerRunning])
+
+  function calculatePresenceState(studentPresent: boolean, teacherPresent: boolean) {
+    if (studentPresent && teacherPresent) {
+      return {
+        live_status: 'LIVE',
+        lesson_state: 'LIVE',
+      }
+    }
+
+    if (studentPresent) {
+      return {
+        live_status: 'STUDENT_ONLINE',
+        lesson_state: 'STUDENT_PRESENT',
+      }
+    }
+
+    if (teacherPresent) {
+      return {
+        live_status: 'TEACHER_ONLINE',
+        lesson_state: 'TEACHER_PRESENT',
+      }
+    }
+
+    return {
+      live_status: 'OFFLINE',
+      lesson_state: 'WAITING',
+    }
+  }
+
+  async function updatePresence(role: string, present: boolean) {
+    if (!role) return
+
+    const currentStudentPresent =
+      role === 'Student' ? present : Boolean(request?.student_present)
+
+    const currentTeacherPresent =
+      role === 'Teacher' ? present : Boolean(request?.teacher_present)
+
+    const calculated = calculatePresenceState(
+      currentStudentPresent,
+      currentTeacherPresent
+    )
+
+    const updateData: Record<string, boolean | string> = {
+      ...calculated,
+    }
+
+    if (role === 'Student') {
+      updateData.student_present = present
+    }
+
+    if (role === 'Teacher') {
+      updateData.teacher_present = present
+    }
+
+    const { error } = await supabase
+      .from('lesson_requests')
+      .update(updateData)
+      .eq('id', resolvedParams.id)
+
+    if (error) {
+      console.error(error)
+    }
+  }
+
+  async function resetPresenceOnExit() {
+    if (!enteredRef.current) return
+
+    const role = enteredRoleRef.current
+    enteredRef.current = false
+    enteredRoleRef.current = ''
+
+    await updatePresence(role, false)
+  }
+
+  useEffect(() => {
+    if (!mounted) return
+
+    const handleBeforeUnload = () => {
+      resetPresenceOnExit()
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      resetPresenceOnExit()
+    }
+  }, [mounted, resolvedParams.id, request])
 
   async function loadLesson() {
     const { data, error } = await supabase
@@ -201,6 +297,11 @@ export default function LessonRoom({
       )
     }
 
+    enteredRef.current = true
+    enteredRoleRef.current = userRole
+
+    await updatePresence(userRole, true)
+
     setHasEntered(true)
   }
 
@@ -243,6 +344,10 @@ export default function LessonRoom({
       .update({
         status: 'COMPLETED',
         completed_at: completedAt,
+        live_status: 'COMPLETED',
+        lesson_state: 'COMPLETED',
+        student_present: false,
+        teacher_present: false,
       })
       .eq('id', resolvedParams.id)
 
@@ -253,6 +358,9 @@ export default function LessonRoom({
       return
     }
 
+    enteredRef.current = false
+    enteredRoleRef.current = ''
+
     setTimerRunning(false)
     closeLiveAudio(false)
 
@@ -262,6 +370,10 @@ export default function LessonRoom({
             ...current,
             status: 'COMPLETED',
             completed_at: completedAt,
+            live_status: 'COMPLETED',
+            lesson_state: 'COMPLETED',
+            student_present: false,
+            teacher_present: false,
           }
         : current
     )
@@ -722,6 +834,22 @@ export default function LessonRoom({
     loadFiles()
     loadAudioNotes()
 
+    const requestChannel = supabase
+      .channel(`lesson-room-request-${resolvedParams.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'lesson_requests',
+          filter: `id=eq.${resolvedParams.id}`,
+        },
+        (payload) => {
+          setRequest(payload.new as LessonRequest)
+        }
+      )
+      .subscribe()
+
     const messageChannel = supabase
       .channel(`lesson-room-messages-${resolvedParams.id}`)
       .on(
@@ -787,6 +915,7 @@ export default function LessonRoom({
       .subscribe()
 
     return () => {
+      supabase.removeChannel(requestChannel)
       supabase.removeChannel(messageChannel)
       supabase.removeChannel(fileChannel)
       supabase.removeChannel(audioChannel)
@@ -802,21 +931,23 @@ export default function LessonRoom({
       <div className="pageShell">
         <header className="hero">
           <div>
-            <p className="eyebrow">EXAMIA CONTROLLED LESSON SPACE</p>
+            <p className="eyebrow">EXAMIA LIVE LESSON ENGINE</p>
             <h1>Lesson Room</h1>
             <p className="heroText">
               A guided learning room for chat, files, voice explanations, live
-              audio, timed sessions, and clean lesson completion.
+              audio, timed sessions, presence tracking, and clean lesson completion.
             </p>
           </div>
 
           <div className="heroBadge">
             <span className="heroBadgeDot" />
-            Phase 2 Active
+            Live Engine Active
           </div>
         </header>
 
         {message && <p className="statusMessage">{message}</p>}
+
+        {request && <PresenceBanner request={request} />}
 
         {request && request.status === 'COMPLETED' && (
           <section className="card narrow completedCard">
@@ -898,6 +1029,8 @@ export default function LessonRoom({
                   <Info label="Teacher" value={request.assigned_teacher || 'Not assigned'} />
                   <Info label="Scheduled" value={request.scheduled_time || 'Not scheduled'} />
                   <Info label="Started At" value={formatDateTime(request.started_at)} />
+                  <Info label="Live Status" value={request.live_status || 'OFFLINE'} />
+                  <Info label="Lesson State" value={request.lesson_state || 'WAITING'} />
                   <Info label="You entered as" value={`${userName} (${userRole})`} />
                 </div>
               </section>
@@ -1026,6 +1159,18 @@ export default function LessonRoom({
             </div>
 
             <aside className="sideColumn">
+              <section className="modeCard liveMode">
+                <div className="modeHeader">
+                  <div className="modeIcon liveIcon">●</div>
+                  <div>
+                    <p className="sectionKicker">Presence mode</p>
+                    <h2>Live Presence</h2>
+                  </div>
+                </div>
+
+                <PresenceMiniPanel request={request} />
+              </section>
+
               <section className="modeCard liveMode">
                 <div className="modeHeader">
                   <div className="modeIcon liveIcon">☎</div>
@@ -1257,6 +1402,69 @@ export default function LessonRoom({
         .heroBadgeDot {
           width: 9px;
           height: 9px;
+          border-radius: 999px;
+          background: #22c55e;
+          box-shadow: 0 0 18px rgba(34, 197, 94, 0.95);
+        }
+
+        .presenceBanner {
+          border: 1px solid rgba(148, 163, 184, 0.24);
+          border-radius: 24px;
+          background:
+            linear-gradient(135deg, rgba(34, 197, 94, 0.16), rgba(15, 23, 42, 0.92)),
+            rgba(15, 23, 42, 0.9);
+          padding: 16px;
+          margin-bottom: 16px;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.26);
+        }
+
+        .presenceGrid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 10px;
+          margin-top: 12px;
+        }
+
+        .presenceTile {
+          border: 1px solid rgba(148, 163, 184, 0.18);
+          border-radius: 18px;
+          background: rgba(2, 6, 23, 0.58);
+          padding: 12px;
+        }
+
+        .presenceLabel {
+          margin: 0 0 5px;
+          color: #bfdbfe;
+          font-size: 12px;
+          font-weight: 900;
+        }
+
+        .presenceValue {
+          margin: 0;
+          color: #ffffff;
+          font-weight: 900;
+        }
+
+        .onlineText {
+          color: #86efac;
+        }
+
+        .offlineText {
+          color: #cbd5e1;
+        }
+
+        .livePulse {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          margin-top: 12px;
+          color: #bbf7d0;
+          font-weight: 900;
+        }
+
+        .pulseDot {
+          width: 10px;
+          height: 10px;
           border-radius: 999px;
           background: #22c55e;
           box-shadow: 0 0 18px rgba(34, 197, 94, 0.95);
@@ -1825,6 +2033,10 @@ export default function LessonRoom({
             align-items: start;
           }
 
+          .presenceGrid {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+          }
+
           .infoGrid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
@@ -1850,6 +2062,76 @@ export default function LessonRoom({
         }
       `}</style>
     </main>
+  )
+}
+
+function PresenceBanner({ request }: { request: LessonRequest }) {
+  const studentOnline = Boolean(request.student_present)
+  const teacherOnline = Boolean(request.teacher_present)
+  const isLive = studentOnline && teacherOnline
+
+  return (
+    <section className="presenceBanner">
+      <p className="sectionKicker">Live session state</p>
+      <h2>{isLive ? 'LIVE SESSION ACTIVE' : request.lesson_state || 'WAITING'}</h2>
+
+      {isLive && (
+        <div className="livePulse">
+          <span className="pulseDot" />
+          Teacher and student are both inside the room.
+        </div>
+      )}
+
+      <div className="presenceGrid">
+        <div className="presenceTile">
+          <p className="presenceLabel">Student</p>
+          <p className={studentOnline ? 'presenceValue onlineText' : 'presenceValue offlineText'}>
+            {studentOnline ? 'Online' : 'Offline'}
+          </p>
+        </div>
+
+        <div className="presenceTile">
+          <p className="presenceLabel">Teacher</p>
+          <p className={teacherOnline ? 'presenceValue onlineText' : 'presenceValue offlineText'}>
+            {teacherOnline ? 'Online' : 'Offline'}
+          </p>
+        </div>
+
+        <div className="presenceTile">
+          <p className="presenceLabel">Live Status</p>
+          <p className="presenceValue">{request.live_status || 'OFFLINE'}</p>
+        </div>
+
+        <div className="presenceTile">
+          <p className="presenceLabel">Lesson State</p>
+          <p className="presenceValue">{request.lesson_state || 'WAITING'}</p>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function PresenceMiniPanel({ request }: { request: LessonRequest }) {
+  return (
+    <>
+      <div className="statusBox">
+        <span className={request.student_present ? 'statusDot activeDot' : 'statusDot'} />
+        <p className={request.student_present ? 'greenText' : 'muted'}>
+          Student {request.student_present ? 'online' : 'offline'}
+        </p>
+      </div>
+
+      <div className="statusBox">
+        <span className={request.teacher_present ? 'statusDot activeDot' : 'statusDot'} />
+        <p className={request.teacher_present ? 'greenText' : 'muted'}>
+          Teacher {request.teacher_present ? 'online' : 'offline'}
+        </p>
+      </div>
+
+      <p className="modeText">
+        Current state: <strong>{request.lesson_state || 'WAITING'}</strong>
+      </p>
+    </>
   )
 }
 
