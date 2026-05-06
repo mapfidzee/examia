@@ -7,10 +7,12 @@ type LessonRequest = {
   id: string
   subject: string
   problem: string
-  preferred_time: string
+  preferred_time: string | null
   scheduled_time: string | null
   status: string
   assigned_teacher: string | null
+  started_at: string | null
+  completed_at: string | null
 }
 
 type LessonMessage = {
@@ -62,7 +64,6 @@ export default function LessonRoom({
   const resolvedParams = use(params)
 
   const [mounted, setMounted] = useState(false)
-
   const [request, setRequest] = useState<LessonRequest | null>(null)
   const [messages, setMessages] = useState<LessonMessage[]>([])
   const [files, setFiles] = useState<LessonFile[]>([])
@@ -77,14 +78,10 @@ export default function LessonRoom({
   const [uploading, setUploading] = useState(false)
 
   const [isRecording, setIsRecording] = useState(false)
-  const [recordingMessage, setRecordingMessage] = useState(
-    'Voice explanation is ready.'
-  )
+  const [recordingMessage, setRecordingMessage] = useState('Voice explanation is ready.')
   const [uploadingAudio, setUploadingAudio] = useState(false)
 
-  const [liveAudioStatus, setLiveAudioStatus] = useState(
-    'Live audio call is ready.'
-  )
+  const [liveAudioStatus, setLiveAudioStatus] = useState('Live audio call is ready.')
   const [callActive, setCallActive] = useState(false)
   const [incomingCall, setIncomingCall] = useState<any | null>(null)
 
@@ -137,7 +134,7 @@ export default function LessonRoom({
       .eq('id', resolvedParams.id)
       .single()
 
-    if (error) {
+    if (error || !data) {
       console.error(error)
       setMessage('Lesson room not found.')
       return
@@ -154,12 +151,7 @@ export default function LessonRoom({
       .eq('lesson_request_id', resolvedParams.id)
       .order('created_at', { ascending: true })
 
-    if (error) {
-      console.error(error)
-      return
-    }
-
-    setMessages(data || [])
+    if (!error) setMessages(data || [])
   }
 
   async function loadFiles() {
@@ -169,12 +161,7 @@ export default function LessonRoom({
       .eq('lesson_id', resolvedParams.id)
       .order('created_at', { ascending: false })
 
-    if (error) {
-      console.error(error)
-      return
-    }
-
-    setFiles(data || [])
+    if (!error) setFiles(data || [])
   }
 
   async function loadAudioNotes() {
@@ -184,18 +171,34 @@ export default function LessonRoom({
       .eq('lesson_id', resolvedParams.id)
       .order('created_at', { ascending: false })
 
-    if (error) {
-      console.error(error)
-      return
-    }
-
-    setAudioNotes(data || [])
+    if (!error) setAudioNotes(data || [])
   }
 
-  function enterRoom() {
+  async function enterRoom() {
     if (!userName.trim()) {
       alert('Please enter your name.')
       return
+    }
+
+    if (!request) return
+
+    if (!request.started_at) {
+      const startedAt = new Date().toISOString()
+
+      const { error } = await supabase
+        .from('lesson_requests')
+        .update({ started_at: startedAt })
+        .eq('id', resolvedParams.id)
+
+      if (error) {
+        console.error(error)
+        alert('Could not record lesson start time.')
+        return
+      }
+
+      setRequest((current) =>
+        current ? { ...current, started_at: startedAt } : current
+      )
     }
 
     setHasEntered(true)
@@ -220,17 +223,27 @@ export default function LessonRoom({
   }
 
   async function markLessonCompleted() {
+    if (userRole !== 'Teacher') {
+      alert('Only the teacher should mark the lesson as completed.')
+      return
+    }
+
     const confirmed = window.confirm(
-      'Mark this lesson as COMPLETED? The room will lock after refresh.'
+      'Mark this lesson as COMPLETED? The room will close for normal teaching.'
     )
 
     if (!confirmed) return
 
     setCompletingLesson(true)
 
+    const completedAt = new Date().toISOString()
+
     const { error } = await supabase
       .from('lesson_requests')
-      .update({ status: 'COMPLETED' })
+      .update({
+        status: 'COMPLETED',
+        completed_at: completedAt,
+      })
       .eq('id', resolvedParams.id)
 
     if (error) {
@@ -241,9 +254,18 @@ export default function LessonRoom({
     }
 
     setTimerRunning(false)
+    closeLiveAudio(false)
+
     setRequest((current) =>
-      current ? { ...current, status: 'COMPLETED' } : current
+      current
+        ? {
+            ...current,
+            status: 'COMPLETED',
+            completed_at: completedAt,
+          }
+        : current
     )
+
     setMessage('Lesson marked as completed.')
     setCompletingLesson(false)
   }
@@ -266,10 +288,12 @@ export default function LessonRoom({
   function formatTimer(seconds: number) {
     const minutes = Math.floor(seconds / 60)
     const remainingSeconds = seconds % 60
+    return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`
+  }
 
-    return `${String(minutes).padStart(2, '0')}:${String(
-      remainingSeconds
-    ).padStart(2, '0')}`
+  function formatDateTime(value: string | null) {
+    if (!value) return 'Not recorded'
+    return new Date(value).toLocaleString()
   }
 
   async function uploadFile(event: React.ChangeEvent<HTMLInputElement>) {
@@ -336,23 +360,17 @@ export default function LessonRoom({
   async function startRecording() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-
       audioChunksRef.current = []
 
       const recorder = new MediaRecorder(stream)
       mediaRecorderRef.current = recorder
 
       recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data)
-        }
+        if (event.data.size > 0) audioChunksRef.current.push(event.data)
       }
 
       recorder.onstop = async () => {
-        const recordedBlob = new Blob(audioChunksRef.current, {
-          type: 'audio/webm',
-        })
-
+        const recordedBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
         stream.getTracks().forEach((track) => track.stop())
 
         const maximumAudioSize = 5 * 1024 * 1024
@@ -377,7 +395,6 @@ export default function LessonRoom({
 
   function stopAndSendRecording() {
     if (!mediaRecorderRef.current) return
-
     setIsRecording(false)
     setRecordingMessage('Sending voice explanation...')
     mediaRecorderRef.current.stop()
@@ -391,9 +408,7 @@ export default function LessonRoom({
 
     const { error: uploadError } = await supabase.storage
       .from('lesson-audio')
-      .upload(audioPath, audioBlob, {
-        contentType: 'audio/webm',
-      })
+      .upload(audioPath, audioBlob, { contentType: 'audio/webm' })
 
     if (uploadError) {
       console.error(uploadError)
@@ -403,16 +418,14 @@ export default function LessonRoom({
       return
     }
 
-    const { error: databaseError } = await supabase
-      .from('lesson_audio_notes')
-      .insert({
-        lesson_id: resolvedParams.id,
-        audio_name: audioName,
-        audio_path: audioPath,
-        audio_size: audioBlob.size,
-        uploaded_by_name: userName,
-        uploaded_by_role: userRole,
-      })
+    const { error: databaseError } = await supabase.from('lesson_audio_notes').insert({
+      lesson_id: resolvedParams.id,
+      audio_name: audioName,
+      audio_path: audioPath,
+      audio_size: audioBlob.size,
+      uploaded_by_name: userName,
+      uploaded_by_role: userRole,
+    })
 
     if (databaseError) {
       console.error(databaseError)
@@ -462,9 +475,7 @@ export default function LessonRoom({
 
     for (const candidate of candidates) {
       try {
-        await peerConnectionRef.current.addIceCandidate(
-          new RTCIceCandidate(candidate)
-        )
+        await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate))
       } catch (error) {
         console.error(error)
       }
@@ -497,9 +508,7 @@ export default function LessonRoom({
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = remoteStream
         remoteAudioRef.current.play().catch(() => {
-          setLiveAudioStatus(
-            'Remote audio is ready. Tap the audio player if needed.'
-          )
+          setLiveAudioStatus('Remote audio is ready. Tap the audio player if needed.')
         })
       }
 
@@ -550,10 +559,7 @@ export default function LessonRoom({
       const offer = await peerConnection.createOffer()
       await peerConnection.setLocalDescription(offer)
 
-      await sendLiveSignal('offer', {
-        callId,
-        offer,
-      })
+      await sendLiveSignal('offer', { callId, offer })
 
       setCallActive(true)
       setLiveAudioStatus('Calling... ask the other person to accept.')
@@ -586,9 +592,7 @@ export default function LessonRoom({
         peerConnection.addTrack(track, localStream)
       })
 
-      await peerConnection.setRemoteDescription(
-        new RTCSessionDescription(incomingCall.offer)
-      )
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(incomingCall.offer))
 
       remoteDescriptionReadyRef.current = true
       await addBufferedCandidates()
@@ -596,10 +600,7 @@ export default function LessonRoom({
       const answer = await peerConnection.createAnswer()
       await peerConnection.setLocalDescription(answer)
 
-      await sendLiveSignal('answer', {
-        callId,
-        answer,
-      })
+      await sendLiveSignal('answer', { callId, answer })
 
       setIncomingCall(null)
       setCallActive(true)
@@ -613,10 +614,7 @@ export default function LessonRoom({
 
   async function handleLiveAudioSignal(signal: LessonAudioSignal) {
     if (!hasEntered) return
-
-    if (signal.sender_name === userName && signal.sender_role === userRole) {
-      return
-    }
+    if (signal.sender_name === userName && signal.sender_role === userRole) return
 
     const signalData = signal.signal_data
 
@@ -625,7 +623,6 @@ export default function LessonRoom({
         callId: signalData.callId,
         offer: signalData.offer,
       })
-
       setLiveAudioStatus(`${signal.sender_name} is calling.`)
       return
     }
@@ -666,11 +663,8 @@ export default function LessonRoom({
 
     if (signal.signal_type === 'end') {
       if (signalData.callId !== currentCallIdRef.current) return
-
       closeLiveAudio(false)
-      setLiveAudioStatus(
-        `${signal.sender_name || 'The other person'} ended the call.`
-      )
+      setLiveAudioStatus(`${signal.sender_name || 'The other person'} ended the call.`)
     }
   }
 
@@ -717,7 +711,6 @@ export default function LessonRoom({
     const sizeInMb = sizeInKb / 1024
 
     if (sizeInMb >= 1) return `${sizeInMb.toFixed(1)} MB`
-
     return `${sizeInKb.toFixed(1)} KB`
   }
 
@@ -772,10 +765,7 @@ export default function LessonRoom({
           filter: `lesson_id=eq.${resolvedParams.id}`,
         },
         (payload) => {
-          setAudioNotes((current) => [
-            payload.new as LessonAudioNote,
-            ...current,
-          ])
+          setAudioNotes((current) => [payload.new as LessonAudioNote, ...current])
         }
       )
       .subscribe()
@@ -805,9 +795,7 @@ export default function LessonRoom({
     }
   }, [mounted, resolvedParams.id, hasEntered, userName, userRole])
 
-  if (!mounted) {
-    return null
-  }
+  if (!mounted) return null
 
   return (
     <main className="examia-page">
@@ -837,6 +825,12 @@ export default function LessonRoom({
             <p className="muted">
               This lesson has been marked as completed. The teaching room is now
               closed for normal use.
+            </p>
+            <p className="lockedStatus">
+              Started at: <strong>{formatDateTime(request.started_at)}</strong>
+            </p>
+            <p className="lockedStatus">
+              Completed at: <strong>{formatDateTime(request.completed_at)}</strong>
             </p>
             <p className="lockedStatus">
               Current status: <strong>{request.status}</strong>
@@ -901,14 +895,9 @@ export default function LessonRoom({
 
                 <div className="infoGrid">
                   <Info label="Problem" value={request.problem} />
-                  <Info
-                    label="Teacher"
-                    value={request.assigned_teacher || 'Not assigned'}
-                  />
-                  <Info
-                    label="Scheduled"
-                    value={request.scheduled_time || 'Not scheduled'}
-                  />
+                  <Info label="Teacher" value={request.assigned_teacher || 'Not assigned'} />
+                  <Info label="Scheduled" value={request.scheduled_time || 'Not scheduled'} />
+                  <Info label="Started At" value={formatDateTime(request.started_at)} />
                   <Info label="You entered as" value={`${userName} (${userRole})`} />
                 </div>
               </section>
@@ -956,13 +945,19 @@ export default function LessonRoom({
                   </button>
                 </div>
 
-                <button
-                  className="completeBtn"
-                  onClick={markLessonCompleted}
-                  disabled={completingLesson}
-                >
-                  {completingLesson ? 'Completing Lesson...' : 'Mark Lesson Completed'}
-                </button>
+                {userRole === 'Teacher' ? (
+                  <button
+                    className="completeBtn"
+                    onClick={markLessonCompleted}
+                    disabled={completingLesson}
+                  >
+                    {completingLesson ? 'Completing Lesson...' : 'Mark Lesson Completed'}
+                  </button>
+                ) : (
+                  <p className="teacherOnlyNote">
+                    Only the teacher can mark this lesson as completed.
+                  </p>
+                )}
               </section>
 
               <section className="card flowCard">
@@ -1004,11 +999,7 @@ export default function LessonRoom({
                     return (
                       <div
                         key={msg.id}
-                        className={
-                          isTeacher
-                            ? 'bubble teacherBubble'
-                            : 'bubble studentBubble'
-                        }
+                        className={isTeacher ? 'bubble teacherBubble' : 'bubble studentBubble'}
                       >
                         <p className="sender">{msg.sender}</p>
                         <p className="bubbleText">{msg.message}</p>
@@ -1055,12 +1046,7 @@ export default function LessonRoom({
                   </p>
                 </div>
 
-                <audio
-                  ref={remoteAudioRef}
-                  controls
-                  autoPlay
-                  className="audioPlayer"
-                />
+                <audio ref={remoteAudioRef} controls autoPlay className="audioPlayer" />
 
                 {incomingCall && !callActive && (
                   <button className="successBtn" onClick={acceptLiveAudioCall}>
@@ -1102,11 +1088,7 @@ export default function LessonRoom({
                 </div>
 
                 {!isRecording && (
-                  <button
-                    className="voiceBtn"
-                    onClick={startRecording}
-                    disabled={uploadingAudio}
-                  >
+                  <button className="voiceBtn" onClick={startRecording} disabled={uploadingAudio}>
                     {uploadingAudio ? 'Sending...' : 'Start Recording'}
                   </button>
                 )}
@@ -1156,12 +1138,7 @@ export default function LessonRoom({
                 </p>
 
                 <label className="uploadBox">
-                  <input
-                    type="file"
-                    onChange={uploadFile}
-                    disabled={uploading}
-                    hidden
-                  />
+                  <input type="file" onChange={uploadFile} disabled={uploading} hidden />
                   <span>{uploading ? 'Uploading file...' : 'Tap to upload file'}</span>
                   <small>Maximum file size: 10MB</small>
                 </label>
@@ -1184,10 +1161,7 @@ export default function LessonRoom({
                         <p className="fileName">{file.file_name}</p>
                         <p className="smallMuted">{formatFileSize(file.file_size)}</p>
 
-                        <button
-                          className="secondaryBtn"
-                          onClick={() => downloadFile(file)}
-                        >
+                        <button className="secondaryBtn" onClick={() => downloadFile(file)}>
                           Open / Download
                         </button>
                       </div>
@@ -1346,6 +1320,7 @@ export default function LessonRoom({
         .lockedStatus {
           color: #ffffff;
           margin-bottom: 0;
+          line-height: 1.5;
         }
 
         .lessonOverview {
@@ -1470,6 +1445,17 @@ export default function LessonRoom({
           min-height: 52px;
           background: linear-gradient(135deg, #f97316, #dc2626);
           box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+        }
+
+        .teacherOnlyNote {
+          margin: 0;
+          color: #fde68a;
+          background: rgba(245, 158, 11, 0.12);
+          border: 1px solid rgba(245, 158, 11, 0.25);
+          border-radius: 16px;
+          padding: 14px;
+          font-weight: 800;
+          line-height: 1.45;
         }
 
         .flowCard {
