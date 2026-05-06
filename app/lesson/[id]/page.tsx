@@ -1441,108 +1441,103 @@ export default function LessonRoom({
         }
 
         .presenceBanner {
-          border: 1px solid rgba(34, 197, 94, 0.34);
-          border-radius: 28px;
+          border: 1px solid rgba(34, 197, 94, 0.32);
+          border-radius: 30px;
           background:
-            radial-gradient(circle at top left, rgba(34, 197, 94, 0.24), transparent 35%),
-            linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.92));
+            radial-gradient(circle at top left, rgba(34, 197, 94, 0.24), transparent 34%),
+            linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.94));
           padding: 18px;
           margin-bottom: 16px;
-          box-shadow: 0 22px 70px rgba(0, 0, 0, 0.32);
+          box-shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
         }
 
-        .presenceHeader {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
+        .presenceCommand {
+          display: grid;
+          grid-template-columns: 1fr;
           gap: 14px;
-          flex-wrap: wrap;
+        }
+
+        .presenceMainPanel {
+          border-radius: 24px;
+          padding: 18px;
+          background:
+            linear-gradient(135deg, rgba(34, 197, 94, 0.16), rgba(37, 99, 235, 0.1)),
+            rgba(2, 6, 23, 0.58);
+          border: 1px solid rgba(148, 163, 184, 0.18);
         }
 
         .presenceSummary {
-          margin: 8px 0 0;
+          margin: 10px 0 14px;
           color: #dbeafe;
           font-size: 14px;
-          line-height: 1.5;
+          line-height: 1.55;
+          max-width: 720px;
         }
 
-        .presenceStatePill {
+        .presenceStatusPill {
+          width: fit-content;
           display: inline-flex;
           align-items: center;
           gap: 8px;
           border-radius: 999px;
-          padding: 9px 12px;
-          border: 1px solid rgba(34, 197, 94, 0.32);
+          padding: 10px 13px;
           background: rgba(34, 197, 94, 0.12);
+          border: 1px solid rgba(34, 197, 94, 0.28);
           color: #bbf7d0;
           font-size: 12px;
           font-weight: 900;
-          white-space: nowrap;
         }
 
-        .presenceGrid {
+        .presenceTileGrid {
           display: grid;
           grid-template-columns: 1fr;
           gap: 12px;
-          margin-top: 16px;
         }
 
         .presenceTile {
           display: grid;
-          grid-template-columns: 48px 1fr;
+          grid-template-columns: 46px 1fr;
           gap: 12px;
           align-items: center;
           border-radius: 22px;
-          padding: 15px;
-          min-height: 78px;
+          padding: 14px;
+          min-height: 76px;
+          background: rgba(15, 23, 42, 0.74);
           border: 1px solid rgba(148, 163, 184, 0.2);
-          background: rgba(2, 6, 23, 0.68);
+        }
+
+        .activePresenceTile {
+          background:
+            linear-gradient(135deg, rgba(34, 197, 94, 0.22), rgba(15, 23, 42, 0.88));
+          border-color: rgba(34, 197, 94, 0.42);
         }
 
         .presenceIcon {
-          width: 48px;
-          height: 48px;
-          border-radius: 18px;
+          width: 46px;
+          height: 46px;
+          border-radius: 17px;
           display: grid;
           place-items: center;
-          font-size: 21px;
-          background: rgba(15, 23, 42, 0.95);
+          font-size: 20px;
+          background: rgba(2, 6, 23, 0.86);
         }
 
         .presenceLabel {
           margin: 0 0 5px;
           color: #bfdbfe;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 900;
-          letter-spacing: 0.1em;
+          letter-spacing: 0.12em;
           text-transform: uppercase;
         }
 
         .presenceValue {
           margin: 0;
           color: #ffffff;
-          font-size: 21px;
+          font-size: 19px;
           font-weight: 900;
-          line-height: 1.1;
+          line-height: 1.12;
           word-break: break-word;
-        }
-
-        .presence-online {
-          background: linear-gradient(135deg, rgba(34, 197, 94, 0.24), rgba(15, 23, 42, 0.92));
-          border-color: rgba(34, 197, 94, 0.42);
-        }
-
-        .presence-offline {
-          background: linear-gradient(135deg, rgba(100, 116, 139, 0.22), rgba(15, 23, 42, 0.92));
-        }
-
-        .presence-live {
-          background: linear-gradient(135deg, rgba(20, 184, 166, 0.28), rgba(37, 99, 235, 0.2));
-          border-color: rgba(45, 212, 191, 0.42);
-        }
-
-        .presence-neutral {
-          background: linear-gradient(135deg, rgba(59, 130, 246, 0.18), rgba(15, 23, 42, 0.92));
         }
 
         .onlineText {
@@ -1553,25 +1548,21 @@ export default function LessonRoom({
           color: #cbd5e1;
         }
 
-        .livePulse {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          margin-top: 12px;
-          color: #bbf7d0;
-          font-weight: 900;
-          background: rgba(34, 197, 94, 0.12);
-          border: 1px solid rgba(34, 197, 94, 0.28);
-          padding: 10px 12px;
-          border-radius: 999px;
-        }
-
-        .pulseDot {
+        .pulseDot,
+        .softDot {
           width: 10px;
           height: 10px;
           border-radius: 999px;
+          flex: 0 0 auto;
+        }
+
+        .pulseDot {
           background: #22c55e;
           box-shadow: 0 0 18px rgba(34, 197, 94, 0.95);
+        }
+
+        .softDot {
+          background: #94a3b8;
         }
 
         .statusMessage {
@@ -2137,13 +2128,17 @@ export default function LessonRoom({
             align-items: start;
           }
 
-          .presenceGrid {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+          .presenceCommand {
+            grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.4fr);
+            align-items: stretch;
           }
 
-          .presenceTile {
-            grid-template-columns: 1fr;
-            align-items: start;
+          .presenceTileGrid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .presenceMainPanel {
+            min-height: 100%;
           }
 
           .infoGrid {
@@ -2169,6 +2164,21 @@ export default function LessonRoom({
             position: static;
           }
         }
+
+        @media (min-width: 1100px) {
+          .presenceCommand {
+            grid-template-columns: minmax(320px, 0.85fr) minmax(0, 1.55fr);
+          }
+
+          .presenceTileGrid {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+          }
+
+          .presenceTile {
+            grid-template-columns: 1fr;
+            align-items: start;
+          }
+        }
       `}</style>
     </main>
   )
@@ -2181,68 +2191,78 @@ function PresenceBanner({ request }: { request: LessonRequest }) {
 
   return (
     <section className="presenceBanner">
-      <div className="presenceHeader">
-        <div>
+      <div className="presenceCommand">
+        <div className="presenceMainPanel">
           <p className="sectionKicker">Live session state</p>
           <h2>{isLive ? 'LIVE SESSION ACTIVE' : request.lesson_state || 'WAITING'}</h2>
+
           <p className="presenceSummary">
             {isLive
-              ? 'Teacher and student are both inside the room.'
-              : 'The room is watching who is present and waiting for the next person to enter.'}
+              ? 'Teacher and student are both inside the room. The live lesson is active.'
+              : 'The room is monitoring who is present and preparing the lesson space.'}
           </p>
-        </div>
 
-        <div className="presenceStatePill">
-          <span className="pulseDot" />
-          {request.live_status || 'OFFLINE'}
-        </div>
-      </div>
-
-      {isLive && (
-        <div className="livePulse">
-          <span className="pulseDot" />
-          Teacher and student are both inside the room.
-        </div>
-      )}
-
-      <div className="presenceGrid">
-        <div className={`presenceTile ${studentOnline ? 'presence-online' : 'presence-offline'}`}>
-          <div className="presenceIcon">🎓</div>
-          <div>
-            <p className="presenceLabel">Student</p>
-            <p className={studentOnline ? 'presenceValue onlineText' : 'presenceValue offlineText'}>
-              {studentOnline ? 'Online' : 'Offline'}
-            </p>
+          <div className="presenceStatusPill">
+            <span className={isLive ? 'pulseDot' : 'softDot'} />
+            {request.live_status || 'OFFLINE'}
           </div>
         </div>
 
-        <div className={`presenceTile ${teacherOnline ? 'presence-online' : 'presence-offline'}`}>
-          <div className="presenceIcon">🧑‍🏫</div>
-          <div>
-            <p className="presenceLabel">Teacher</p>
-            <p className={teacherOnline ? 'presenceValue onlineText' : 'presenceValue offlineText'}>
-              {teacherOnline ? 'Online' : 'Offline'}
-            </p>
-          </div>
-        </div>
+        <div className="presenceTileGrid">
+          <PresenceTile
+            icon="🎓"
+            label="Student"
+            value={studentOnline ? 'Online' : 'Offline'}
+            active={studentOnline}
+          />
 
-        <div className={`presenceTile ${isLive ? 'presence-live' : 'presence-neutral'}`}>
-          <div className="presenceIcon">●</div>
-          <div>
-            <p className="presenceLabel">Live Status</p>
-            <p className="presenceValue">{request.live_status || 'OFFLINE'}</p>
-          </div>
-        </div>
+          <PresenceTile
+            icon="🧑‍🏫"
+            label="Teacher"
+            value={teacherOnline ? 'Online' : 'Offline'}
+            active={teacherOnline}
+          />
 
-        <div className={`presenceTile ${isLive ? 'presence-live' : 'presence-neutral'}`}>
-          <div className="presenceIcon">↻</div>
-          <div>
-            <p className="presenceLabel">Lesson State</p>
-            <p className="presenceValue">{request.lesson_state || 'WAITING'}</p>
-          </div>
+          <PresenceTile
+            icon="●"
+            label="Live Status"
+            value={request.live_status || 'OFFLINE'}
+            active={isLive}
+          />
+
+          <PresenceTile
+            icon="↻"
+            label="Lesson State"
+            value={request.lesson_state || 'WAITING'}
+            active={isLive}
+          />
         </div>
       </div>
     </section>
+  )
+}
+
+function PresenceTile({
+  icon,
+  label,
+  value,
+  active,
+}: {
+  icon: string
+  label: string
+  value: string
+  active: boolean
+}) {
+  return (
+    <div className={active ? 'presenceTile activePresenceTile' : 'presenceTile'}>
+      <div className="presenceIcon">{icon}</div>
+      <div>
+        <p className="presenceLabel">{label}</p>
+        <p className={active ? 'presenceValue onlineText' : 'presenceValue offlineText'}>
+          {value}
+        </p>
+      </div>
+    </div>
   )
 }
 
