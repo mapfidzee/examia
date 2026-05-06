@@ -45,7 +45,7 @@ export default function AdminTeachersPage() {
 
   async function loadTeachers() {
     setLoading(true)
-    setMessage('Loading teacher records...')
+    setMessage('Loading teacher governance center...')
 
     const { data, error } = await supabase
       .from('teacher_profiles')
@@ -87,53 +87,82 @@ export default function AdminTeachersPage() {
   }
 
   return (
-    <main className="adminPage">
+    <main className="teacherGovernancePage">
       <div className="pageShell">
-        <header className="hero">
-          <div>
+        <section className="frontDoorHero">
+          <div className="heroContent">
             <p className="eyebrow">EXAMIA TEACHER GOVERNANCE</p>
-            <h1>Teacher Pool Approval</h1>
+            <h1>Teacher Governance Center</h1>
             <p className="heroText">
-              Review teacher applications, control who enters the active teaching
-              pool, and keep teacher records visible for safe lesson matching.
+              Approve teachers, protect the learning pool, and keep lesson
+              matching safe. This page controls who can receive student lesson
+              offers inside EXAMIA.
+            </p>
+
+            <div className="heroActions">
+              <Link href="/admin" className="heroButton primaryHeroButton">
+                Admin Command Center
+              </Link>
+
+              <Link href="/teacher" className="heroButton successHeroButton">
+                Teacher Signup
+              </Link>
+
+              <button className="heroButton refreshHeroButton" onClick={loadTeachers}>
+                Refresh Teachers
+              </button>
+            </div>
+          </div>
+
+          <div className="heroPanel">
+            <p className="panelKicker">Governance focus</p>
+            <h2>Clean teacher pool. Clear approval flow.</h2>
+            <p>
+              Pending teachers wait for review. Approved teachers can receive
+              lesson offers. Suspended teachers stay blocked until restored.
             </p>
           </div>
+        </section>
 
-          <div className="quickLinks">
-            <Link href="/admin" className="quickLink blueLink">
-              Admin Command Center
-            </Link>
-            <Link href="/teacher" className="quickLink greenLink">
-              Teacher Signup
-            </Link>
-            <Link href="/admin/assign" className="quickLink purpleLink">
-              Assignment Backup
-            </Link>
-            <button className="quickButton" onClick={loadTeachers}>
-              Refresh Teachers
-            </button>
-          </div>
-        </header>
-
-        <section className="statsGrid">
-          <StatCard label="Total Profiles" value={teachers.length} tone="blue" />
-          <StatCard label="Pending" value={pendingTeachers.length} tone="amber" />
-          <StatCard label="Approved" value={approvedTeachers.length} tone="green" />
-          <StatCard label="Suspended" value={suspendedTeachers.length} tone="red" />
+        <section className="commandTiles">
+          <CommandTile
+            label="Pending Approval"
+            value={pendingTeachers.length}
+            description="Teachers waiting for admin decision"
+            tone="amber"
+          />
+          <CommandTile
+            label="Approved Pool"
+            value={approvedTeachers.length}
+            description="Teachers ready for lesson matching"
+            tone="green"
+          />
+          <CommandTile
+            label="Suspended"
+            value={suspendedTeachers.length}
+            description="Teachers blocked from matching"
+            tone="red"
+          />
+          <CommandTile
+            label="Total Profiles"
+            value={teachers.length}
+            description="All teacher records in the system"
+            tone="blue"
+          />
         </section>
 
         {message && <p className="message">{message}</p>}
 
         {loading ? (
-          <section className="panel">
+          <section className="sectionShell">
             <p className="emptyText">Loading teacher profiles...</p>
           </section>
         ) : (
           <>
-            <DecisionSection
-              title="Pending Teacher Approval"
-              kicker="Action needed"
-              description="These teachers are not yet active. Review them and decide whether they should enter the approved teaching pool."
+            <TeacherDecisionSection
+              kicker="Step 1"
+              title="Pending Approval"
+              description="Review these teacher applications before they enter the active teaching pool."
               tone="amber"
               teachers={pendingTeachers}
               emptyText="No teachers are waiting for approval."
@@ -144,10 +173,10 @@ export default function AdminTeachersPage() {
               secondaryAction={(id) => updateTeacherStatus(id, 'SUSPENDED')}
             />
 
-            <DecisionSection
+            <TeacherDecisionSection
+              kicker="Step 2"
               title="Approved Teacher Pool"
-              kicker="Ready for matching"
-              description="These teachers are approved and can receive lesson offers from the Admin Command Center."
+              description="These teachers are active and can receive lesson offers from the Admin Command Center."
               tone="green"
               teachers={approvedTeachers}
               emptyText="No approved teachers yet."
@@ -158,10 +187,10 @@ export default function AdminTeachersPage() {
               secondaryAction={(id) => updateTeacherStatus(id, 'PENDING')}
             />
 
-            <DecisionSection
+            <TeacherDecisionSection
+              kicker="Step 3"
               title="Suspended Teachers"
-              kicker="Blocked from matching"
-              description="These teachers are not available for lesson matching unless restored by admin."
+              description="These teachers are blocked from lesson matching until admin restores them."
               tone="red"
               teachers={suspendedTeachers}
               emptyText="No suspended teachers."
@@ -172,19 +201,19 @@ export default function AdminTeachersPage() {
               secondaryAction={(id) => updateTeacherStatus(id, 'PENDING')}
             />
 
-            <ProfileRecords teachers={teachers} />
+            <TeacherProfileRecords teachers={teachers} />
           </>
         )}
       </div>
 
       <style jsx global>{`
-        .adminPage {
+        .teacherGovernancePage {
           min-height: 100vh;
           background:
             radial-gradient(circle at top left, rgba(37, 99, 235, 0.34), transparent 30%),
             radial-gradient(circle at top right, rgba(20, 184, 166, 0.2), transparent 28%),
-            radial-gradient(circle at bottom, rgba(168, 85, 247, 0.16), transparent 34%),
-            linear-gradient(180deg, #020617 0%, #07111f 48%, #020617 100%);
+            radial-gradient(circle at bottom, rgba(168, 85, 247, 0.18), transparent 34%),
+            linear-gradient(180deg, #020617 0%, #07111f 50%, #020617 100%);
           color: #ffffff;
           padding: 18px;
         }
@@ -194,16 +223,43 @@ export default function AdminTeachersPage() {
           margin: 0 auto;
         }
 
-        .hero {
+        .frontDoorHero {
           display: grid;
           gap: 18px;
-          margin-bottom: 22px;
-          padding-top: 10px;
+          margin-bottom: 18px;
+          padding-top: 8px;
+        }
+
+        .heroContent,
+        .heroPanel,
+        .commandTile,
+        .sectionShell,
+        .teacherDecisionCard,
+        .teacherProfileCard {
+          border: 1px solid rgba(148, 163, 184, 0.24);
+          border-radius: 28px;
+          background: rgba(15, 23, 42, 0.9);
+          box-shadow: 0 22px 60px rgba(0, 0, 0, 0.28);
+        }
+
+        .heroContent {
+          padding: 22px;
+          background:
+            linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(15, 23, 42, 0.94)),
+            rgba(15, 23, 42, 0.9);
+        }
+
+        .heroPanel {
+          padding: 20px;
+          background:
+            linear-gradient(135deg, rgba(20, 184, 166, 0.2), rgba(15, 23, 42, 0.94)),
+            rgba(15, 23, 42, 0.9);
         }
 
         .eyebrow,
         .sectionKicker,
-        .miniLabel {
+        .miniLabel,
+        .panelKicker {
           margin: 0 0 8px;
           color: #93c5fd;
           font-size: 11px;
@@ -214,147 +270,152 @@ export default function AdminTeachersPage() {
 
         h1 {
           margin: 0;
-          font-size: clamp(36px, 9vw, 64px);
-          line-height: 0.95;
-          letter-spacing: -0.06em;
+          max-width: 760px;
+          font-size: clamp(42px, 10vw, 76px);
+          line-height: 0.9;
+          letter-spacing: -0.07em;
         }
 
         h2 {
           margin: 0;
-          font-size: 29px;
-          letter-spacing: -0.04em;
+          font-size: clamp(28px, 5vw, 42px);
+          line-height: 1;
+          letter-spacing: -0.05em;
         }
 
         h3 {
           margin: 0;
-          font-size: 22px;
+          font-size: 23px;
           letter-spacing: -0.03em;
         }
 
         .heroText {
-          max-width: 780px;
-          margin: 14px 0 0;
+          max-width: 760px;
+          margin: 16px 0 0;
           color: #dbeafe;
           line-height: 1.6;
-          font-size: 15px;
+          font-size: 16px;
         }
 
-        .quickLinks {
+        .heroPanel p:not(.panelKicker) {
+          color: #dbeafe;
+          line-height: 1.6;
+          margin: 14px 0 0;
+        }
+
+        .heroActions {
           display: grid;
           grid-template-columns: 1fr;
           gap: 10px;
+          margin-top: 20px;
         }
 
-        .quickLink,
-        .quickButton {
+        .heroButton {
           text-decoration: none;
+          border: none;
+          border-radius: 18px;
+          padding: 15px 16px;
           color: #ffffff;
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          padding: 13px 15px;
-          border-radius: 16px;
+          font-size: 15px;
           font-weight: 900;
           text-align: center;
           cursor: pointer;
-          font-size: 14px;
+          min-height: 52px;
           box-shadow: 0 14px 32px rgba(0, 0, 0, 0.24);
         }
 
-        .blueLink {
+        .primaryHeroButton {
           background: linear-gradient(135deg, #2563eb, #1d4ed8);
         }
 
-        .purpleLink {
-          background: linear-gradient(135deg, #7c3aed, #6d28d9);
-        }
-
-        .greenLink {
+        .successHeroButton {
           background: linear-gradient(135deg, #16a34a, #15803d);
         }
 
-        .quickButton {
+        .refreshHeroButton {
           background: linear-gradient(135deg, #f97316, #ea580c);
           font-family: inherit;
         }
 
-        .statsGrid {
+        .commandTiles {
           display: grid;
           grid-template-columns: 1fr;
           gap: 12px;
           margin-bottom: 18px;
         }
 
-        .statCard,
-        .panel,
-        .teacherCard,
-        .profileCard {
-          background: rgba(15, 23, 42, 0.92);
-          border: 1px solid rgba(148, 163, 184, 0.24);
-          border-radius: 26px;
-          box-shadow: 0 22px 60px rgba(0, 0, 0, 0.28);
-        }
-
-        .statCard {
+        .commandTile {
           padding: 18px;
           position: relative;
           overflow: hidden;
+          min-height: 128px;
         }
 
-        .statCard::before {
+        .commandTile::before {
           content: '';
           position: absolute;
           inset: 0;
-          opacity: 0.3;
+          opacity: 0.28;
           pointer-events: none;
         }
 
-        .stat-blue::before {
-          background: linear-gradient(135deg, #2563eb, transparent);
-        }
-
-        .stat-amber::before {
+        .tile-amber::before {
           background: linear-gradient(135deg, #f59e0b, transparent);
         }
 
-        .stat-green::before {
+        .tile-green::before {
           background: linear-gradient(135deg, #16a34a, transparent);
         }
 
-        .stat-red::before {
+        .tile-red::before {
           background: linear-gradient(135deg, #dc2626, transparent);
         }
 
-        .statLabel,
-        .statValue {
+        .tile-blue::before {
+          background: linear-gradient(135deg, #2563eb, transparent);
+        }
+
+        .tileLabel,
+        .tileValue,
+        .tileDescription {
           position: relative;
           z-index: 1;
         }
 
-        .statLabel {
+        .tileLabel {
           margin: 0;
           color: #dbeafe;
           font-size: 12px;
           font-weight: 900;
-          text-transform: uppercase;
           letter-spacing: 0.12em;
+          text-transform: uppercase;
         }
 
-        .statValue {
+        .tileValue {
           display: block;
           margin-top: 8px;
-          font-size: 40px;
+          font-size: 46px;
           line-height: 1;
           font-weight: 900;
+        }
+
+        .tileDescription {
+          margin: 10px 0 0;
+          color: #e2e8f0;
+          line-height: 1.45;
+          font-size: 14px;
         }
 
         .message {
           background: rgba(37, 99, 235, 0.18);
           color: #dbeafe;
           padding: 14px;
-          border-radius: 16px;
+          border-radius: 18px;
           border: 1px solid rgba(147, 197, 253, 0.28);
+          margin-bottom: 18px;
         }
 
-        .panel {
+        .sectionShell {
           padding: 16px;
           margin-bottom: 20px;
         }
@@ -364,41 +425,40 @@ export default function AdminTeachersPage() {
           padding: 18px;
           margin-bottom: 16px;
           border: 1px solid rgba(255, 255, 255, 0.18);
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
         }
 
         .sectionHeader p {
-          margin: 8px 0 0;
+          margin: 9px 0 0;
           color: #ffffff;
           line-height: 1.55;
         }
 
-        .section-amber {
+        .header-amber {
           background: linear-gradient(135deg, #d97706, #92400e);
         }
 
-        .section-green {
+        .header-green {
           background: linear-gradient(135deg, #16a34a, #065f46);
         }
 
-        .section-red {
+        .header-red {
           background: linear-gradient(135deg, #dc2626, #7f1d1d);
         }
 
-        .section-blue {
+        .header-blue {
           background: linear-gradient(135deg, #2563eb, #1e3a8a);
         }
 
-        .decisionList,
-        .profileList {
+        .teacherDecisionList,
+        .teacherProfileList {
           display: grid;
           gap: 14px;
         }
 
-        .teacherCard {
+        .teacherDecisionCard {
           padding: 16px;
           background:
-            linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(15, 23, 42, 0.96)),
+            linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(15, 23, 42, 0.96)),
             rgba(15, 23, 42, 0.92);
         }
 
@@ -406,8 +466,8 @@ export default function AdminTeachersPage() {
         .profileTop {
           display: grid;
           gap: 12px;
-          margin-bottom: 14px;
           padding-bottom: 14px;
+          margin-bottom: 14px;
           border-bottom: 1px solid rgba(148, 163, 184, 0.18);
         }
 
@@ -443,8 +503,8 @@ export default function AdminTeachersPage() {
           color: #ffffff;
         }
 
-        .quickInfoGrid,
-        .profileGrid {
+        .decisionInfoGrid,
+        .profileInfoGrid {
           display: grid;
           grid-template-columns: 1fr;
           gap: 10px;
@@ -471,7 +531,7 @@ export default function AdminTeachersPage() {
 
         .detailBox p {
           margin: 0;
-          color: #f8fafc;
+          color: #ffffff;
           line-height: 1.45;
           word-break: break-word;
         }
@@ -482,35 +542,37 @@ export default function AdminTeachersPage() {
           gap: 12px;
         }
 
-        button {
+        .primaryBtn,
+        .secondaryBtn {
           border: none;
-          border-radius: 16px;
+          border-radius: 17px;
           padding: 15px 16px;
+          color: #ffffff;
           font-size: 15px;
           font-weight: 900;
           cursor: pointer;
-          min-height: 52px;
-        }
-
-        button:disabled {
-          opacity: 0.55;
-          cursor: not-allowed;
+          min-height: 54px;
+          width: 100%;
         }
 
         .primaryBtn {
           background: linear-gradient(135deg, #22c55e, #15803d);
-          color: #ffffff;
         }
 
         .secondaryBtn {
           background: linear-gradient(135deg, #64748b, #334155);
-          color: #ffffff;
         }
 
-        .empty {
+        .primaryBtn:disabled,
+        .secondaryBtn:disabled {
+          opacity: 0.55;
+          cursor: not-allowed;
+        }
+
+        .emptyBox {
           color: #e2e8f0;
           background: rgba(2, 6, 23, 0.65);
-          padding: 16px;
+          padding: 17px;
           border-radius: 18px;
           border: 1px dashed rgba(148, 163, 184, 0.34);
           margin: 0;
@@ -521,7 +583,7 @@ export default function AdminTeachersPage() {
           margin: 0;
         }
 
-        .profileCard {
+        .teacherProfileCard {
           padding: 16px;
           background:
             linear-gradient(135deg, rgba(124, 58, 237, 0.18), rgba(15, 23, 42, 0.96)),
@@ -553,27 +615,36 @@ export default function AdminTeachersPage() {
         }
 
         @media (min-width: 760px) {
-          .adminPage {
+          .teacherGovernancePage {
             padding: 28px;
           }
 
-          .hero {
-            grid-template-columns: 1fr 270px;
-            align-items: start;
+          .frontDoorHero {
+            grid-template-columns: minmax(0, 1.5fr) minmax(300px, 0.8fr);
+            align-items: stretch;
           }
 
-          .statsGrid {
-            grid-template-columns: repeat(4, 1fr);
+          .heroContent,
+          .heroPanel {
+            padding: 26px;
+          }
+
+          .heroActions {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+          }
+
+          .commandTiles {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
           }
 
           .teacherTop,
           .profileTop {
             grid-template-columns: 1fr auto;
-            align-items: flex-start;
+            align-items: start;
           }
 
-          .quickInfoGrid,
-          .profileGrid {
+          .decisionInfoGrid,
+          .profileInfoGrid {
             grid-template-columns: repeat(3, minmax(0, 1fr));
           }
 
@@ -586,26 +657,29 @@ export default function AdminTeachersPage() {
   )
 }
 
-function StatCard({
+function CommandTile({
   label,
   value,
+  description,
   tone,
 }: {
   label: string
   value: number
-  tone: 'blue' | 'amber' | 'green' | 'red'
+  description: string
+  tone: 'amber' | 'green' | 'red' | 'blue'
 }) {
   return (
-    <div className={`statCard stat-${tone}`}>
-      <p className="statLabel">{label}</p>
-      <strong className="statValue">{value}</strong>
-    </div>
+    <article className={`commandTile tile-${tone}`}>
+      <p className="tileLabel">{label}</p>
+      <strong className="tileValue">{value}</strong>
+      <p className="tileDescription">{description}</p>
+    </article>
   )
 }
 
-function DecisionSection({
-  title,
+function TeacherDecisionSection({
   kicker,
+  title,
   description,
   tone,
   teachers,
@@ -616,8 +690,8 @@ function DecisionSection({
   secondaryLabel,
   secondaryAction,
 }: {
-  title: string
   kicker: string
+  title: string
   description: string
   tone: 'amber' | 'green' | 'red'
   teachers: TeacherProfile[]
@@ -629,19 +703,19 @@ function DecisionSection({
   secondaryAction: (id: string) => void
 }) {
   return (
-    <section className="panel">
-      <div className={`sectionHeader section-${tone}`}>
+    <section className="sectionShell">
+      <div className={`sectionHeader header-${tone}`}>
         <p className="sectionKicker">{kicker}</p>
         <h2>{title}</h2>
         <p>{description}</p>
       </div>
 
       {teachers.length === 0 ? (
-        <p className="empty">{emptyText}</p>
+        <p className="emptyBox">{emptyText}</p>
       ) : (
-        <div className="decisionList">
+        <div className="teacherDecisionList">
           {teachers.map((teacher) => (
-            <article className="teacherCard" key={teacher.id}>
+            <article className="teacherDecisionCard" key={teacher.id}>
               <div className="teacherTop">
                 <div>
                   <p className="miniLabel">Teacher decision record</p>
@@ -656,7 +730,7 @@ function DecisionSection({
                 </span>
               </div>
 
-              <div className="quickInfoGrid">
+              <div className="decisionInfoGrid">
                 <Detail label="Subjects" value={formatList(teacher.subjects)} />
                 <Detail label="Grade Levels" value={formatList(teacher.grade_levels)} />
                 <Detail label="Hourly Rate" value={formatMoney(teacher.hourly_rate)} />
@@ -687,24 +761,24 @@ function DecisionSection({
   )
 }
 
-function ProfileRecords({ teachers }: { teachers: TeacherProfile[] }) {
+function TeacherProfileRecords({ teachers }: { teachers: TeacherProfile[] }) {
   return (
-    <section className="panel">
-      <div className="sectionHeader section-blue">
-        <p className="sectionKicker">Full teacher records</p>
-        <h2>Teacher Profile Records</h2>
+    <section className="sectionShell">
+      <div className="sectionHeader header-blue">
+        <p className="sectionKicker">Reference records</p>
+        <h2>Full Teacher Profile Records</h2>
         <p>
-          This section is for reading teacher details clearly. Approval decisions
-          are made in the sections above.
+          Use this section to read the full teacher profile clearly. Approval
+          decisions are handled in the decision sections above.
         </p>
       </div>
 
       {teachers.length === 0 ? (
-        <p className="empty">No teacher profiles found.</p>
+        <p className="emptyBox">No teacher profiles found.</p>
       ) : (
-        <div className="profileList">
+        <div className="teacherProfileList">
           {teachers.map((teacher) => (
-            <article className="profileCard" key={teacher.id}>
+            <article className="teacherProfileCard" key={teacher.id}>
               <div className="profileTop">
                 <div>
                   <p className="miniLabel">Teacher profile</p>
@@ -719,7 +793,7 @@ function ProfileRecords({ teachers }: { teachers: TeacherProfile[] }) {
                 </span>
               </div>
 
-              <div className="profileGrid">
+              <div className="profileInfoGrid">
                 <Detail label="Subjects" value={formatList(teacher.subjects)} />
                 <Detail label="Grade Levels" value={formatList(teacher.grade_levels)} />
                 <Detail label="Province" value={teacher.province || 'Not provided'} />
