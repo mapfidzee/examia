@@ -103,6 +103,10 @@ export default function LessonRoomPage({ params }: PageProps) {
   const processedSignalsRef = useRef<Set<string>>(new Set())
   const wakeLockRef = useRef<any>(null)
 
+  const callStateRef = useRef<CallState>('idle')
+  const currentCallIdRef = useRef<string | null>(null)
+  const incomingCallRef = useRef<LessonAudioSignal | null>(null)
+
   const isPaid = lesson?.status === 'PAID'
   const isActive = lesson?.status === 'ACTIVE'
   const isClosed =
@@ -112,6 +116,18 @@ export default function LessonRoomPage({ params }: PageProps) {
 
   const liveToolsEnabled = isActive
   const prepMode = isPaid
+
+  useEffect(() => {
+    callStateRef.current = callState
+  }, [callState])
+
+  useEffect(() => {
+    currentCallIdRef.current = currentCallId
+  }, [currentCallId])
+
+  useEffect(() => {
+    incomingCallRef.current = incomingCall
+  }, [incomingCall])
 
   useEffect(() => {
     loadEverything()
@@ -132,6 +148,20 @@ export default function LessonRoomPage({ params }: PageProps) {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [wakeLockActive])
+
+  useEffect(() => {
+    if (!entered || !name) return
+
+    const interval = window.setInterval(async () => {
+      await scanForRecentIncomingOffer()
+    }, 2500)
+
+    scanForRecentIncomingOffer()
+
+    return () => {
+      window.clearInterval(interval)
+    }
+  }, [entered, name, role, id])
 
   async function loadEverything() {
     const { data: lessonData } = await supabase
@@ -249,6 +279,8 @@ export default function LessonRoomPage({ params }: PageProps) {
             role,
             online_at: new Date().toISOString(),
           })
+
+          await scanForRecentIncomingOffer()
         }
       })
 
@@ -256,6 +288,60 @@ export default function LessonRoomPage({ params }: PageProps) {
       supabase.removeChannel(channel)
     }
   }, [entered, name, role, id])
+
+  async function scanForRecentIncomingOffer() {
+    if (!entered || !name) return
+
+    const state = callStateRef.current
+
+    if (
+      state !== 'idle' &&
+      state !== 'ended' &&
+      state !== 'declined'
+    ) {
+      return
+    }
+
+    if (incomingCallRef.current) return
+
+    const recentCutoff = new Date(Date.now() - 90 * 1000).toISOString()
+
+    const { data, error } = await supabase
+      .from('lesson_audio_signals')
+      .select('*')
+      .eq('lesson_id', id)
+      .eq('signal_type', 'offer')
+      .gte('created_at', recentCutoff)
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    if (error || !data || data.length === 0) return
+
+    const offer = data.find(signal => {
+      return !(
+        signal.sender_name === name &&
+        signal.sender_role === role
+      )
+    }) as LessonAudioSignal | undefined
+
+    if (!offer) return
+
+    const { data: closingSignals } = await supabase
+      .from('lesson_audio_signals')
+      .select('*')
+      .eq('lesson_id', id)
+      .eq('call_id', offer.call_id)
+      .in('signal_type', ['answer', 'decline', 'end'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    if (closingSignals && closingSignals.length > 0) return
+
+    setIncomingCall(offer)
+    setCurrentCallId(offer.call_id)
+    setRemoteCaller(offer.sender_name)
+    setCallState('incoming')
+  }
 
   async function enterRoom() {
     if (!name.trim()) return
@@ -457,7 +543,7 @@ export default function LessonRoomPage({ params }: PageProps) {
         peer.connectionState === 'disconnected' ||
         peer.connectionState === 'closed'
       ) {
-        if (callState !== 'ended') setCallState('ended')
+        if (callStateRef.current !== 'ended') setCallState('ended')
       }
     }
 
@@ -552,8 +638,8 @@ export default function LessonRoomPage({ params }: PageProps) {
   }
 
   async function endCall() {
-    if (currentCallId) {
-      await insertSignal(currentCallId, 'end', {
+    if (currentCallIdRef.current) {
+      await insertSignal(currentCallIdRef.current, 'end', {
         reason: 'Call ended',
       })
     }
@@ -586,7 +672,11 @@ export default function LessonRoomPage({ params }: PageProps) {
     if (signal.sender_name === name && signal.sender_role === role) return
 
     if (signal.signal_type === 'offer') {
-      if (callState === 'idle' || callState === 'ended' || callState === 'declined') {
+      if (
+        callStateRef.current === 'idle' ||
+        callStateRef.current === 'ended' ||
+        callStateRef.current === 'declined'
+      ) {
         setIncomingCall(signal)
         setCurrentCallId(signal.call_id)
         setRemoteCaller(signal.sender_name)
@@ -595,7 +685,7 @@ export default function LessonRoomPage({ params }: PageProps) {
       return
     }
 
-    if (!currentCallId || signal.call_id !== currentCallId) return
+    if (!currentCallIdRef.current || signal.call_id !== currentCallIdRef.current) return
 
     if (signal.signal_type === 'answer') {
       if (peerRef.current) {
@@ -834,6 +924,7 @@ export default function LessonRoomPage({ params }: PageProps) {
                   disabled={
                     !liveToolsEnabled ||
                     callState === 'calling' ||
+                    callState === 'incoming' ||
                     callState === 'connecting' ||
                     callState === 'connected'
                   }
