@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 
-type LessonRequest = {
+type SupportRequest = {
   id: string
   subject: string
   custom_subject?: string | null
@@ -22,21 +22,21 @@ type LessonRequest = {
   completed_at: string | null
 }
 
-export default function StudentDashboardPage() {
+export default function BeneficiaryDashboardPage() {
   return (
     <Suspense fallback={<LoadingFallback />}>
-      <StudentDashboardContent />
+      <BeneficiaryDashboardContent />
     </Suspense>
   )
 }
 
-function StudentDashboardContent() {
+function BeneficiaryDashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
   const [mounted, setMounted] = useState(false)
-  const [lessonId, setLessonId] = useState('')
-  const [lesson, setLesson] = useState<LessonRequest | null>(null)
+  const [requestId, setRequestId] = useState('')
+  const [request, setRequest] = useState<SupportRequest | null>(null)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
@@ -47,31 +47,31 @@ function StudentDashboardContent() {
   useEffect(() => {
     if (!mounted) return
 
-    const lessonIdFromUrl = searchParams.get('lessonId')
-    const savedLessonId =
+    const requestIdFromUrl = searchParams.get('lessonId') || searchParams.get('requestId')
+    const savedRequestId =
       typeof window !== 'undefined' ? localStorage.getItem('examia_student_lesson_id') : null
 
-    const targetLessonId = lessonIdFromUrl || savedLessonId
+    const targetRequestId = requestIdFromUrl || savedRequestId
 
-    if (targetLessonId) {
-      setLessonId(targetLessonId)
-      loadLessonById(targetLessonId)
+    if (targetRequestId) {
+      setRequestId(targetRequestId)
+      loadRequestById(targetRequestId)
     }
   }, [mounted, searchParams])
 
   if (!mounted) return null
 
-  async function loadLessonById(id: string) {
+  async function loadRequestById(id: string) {
     const cleanId = id.trim()
 
     if (!cleanId) {
-      alert('Please enter your lesson ID.')
+      alert('Please enter your Request ID.')
       return
     }
 
     setLoading(true)
-    setMessage('Loading lesson status...')
-    setLesson(null)
+    setMessage('Loading support request status...')
+    setRequest(null)
 
     const { data, error } = await supabase
       .from('lesson_requests')
@@ -81,13 +81,13 @@ function StudentDashboardContent() {
 
     if (error || !data) {
       console.error(error)
-      alert('Lesson not found. Please check the lesson ID.')
+      alert('Request not found. Please check the Request ID.')
       setMessage('')
       setLoading(false)
       return
     }
 
-    setLesson(data)
+    setRequest(data)
     setMessage('')
     setLoading(false)
 
@@ -96,59 +96,60 @@ function StudentDashboardContent() {
     }
   }
 
-  async function loadLesson() {
-    await loadLessonById(lessonId)
+  async function loadRequest() {
+    await loadRequestById(requestId)
   }
 
-  function openLessonRoom(id: string) {
+  function openSupportRoom(id: string) {
     router.push(`/lesson/${id}`)
   }
 
-  const readiness = getReadiness(lesson)
+  const readiness = getReadiness(request)
 
   return (
-    <main className="studentPage">
+    <main className="beneficiaryPage">
       <div className="pageShell">
         <section className="frontDoorHero">
           <div className="heroContent">
-            <p className="eyebrow">EXAMIA STUDENT DASHBOARD</p>
-            <h1>My Lesson Journey</h1>
+            <p className="eyebrow">EXAMIA BENEFICIARY DASHBOARD</p>
+            <h1>My Support Journey</h1>
             <p className="heroText">
-              Track your lesson from request to teacher assignment, room access,
-              active learning, and completed history.
+              Track your request from need intake to responder routing,
+              controlled support room access, active support, and completion
+              evidence.
             </p>
           </div>
 
           <div className="heroPanel">
-            <p className="panelKicker">Student flow</p>
-            <h2>Request. Match. Learn. Complete.</h2>
+            <p className="panelKicker">Beneficiary visibility layer</p>
+            <h2>Request. Route. Support. Complete.</h2>
             <p>
-              Your dashboard now acts as the front door. When your lesson is ready,
-              you simply click Join Lesson.
+              This dashboard gives the beneficiary a simple front door. When the
+              support room is ready, the next step becomes clear.
             </p>
           </div>
         </section>
 
         <section className="lookupPanel">
           <div>
-            <p className="sectionKicker">Find your lesson</p>
-            <h2>Enter your Lesson ID</h2>
+            <p className="sectionKicker">Find your request</p>
+            <h2>Enter your Request ID</h2>
             <p className="sectionText">
-              If your dashboard link includes a Lesson ID, EXAMIA loads it automatically.
-              You can also paste the ID below.
+              If your dashboard link includes a Request ID, EXAMIA loads it
+              automatically. You can also paste the ID below.
             </p>
           </div>
 
           <div className="lookupGrid">
             <input
-              value={lessonId}
-              onChange={(event) => setLessonId(event.target.value)}
-              placeholder="Paste your lesson ID here"
+              value={requestId}
+              onChange={(event) => setRequestId(event.target.value)}
+              placeholder="Paste your Request ID here"
               className="input"
             />
 
-            <button onClick={loadLesson} disabled={loading} className="loadButton">
-              {loading ? 'Loading lesson...' : 'Load My Lesson'}
+            <button onClick={loadRequest} disabled={loading} className="loadButton">
+              {loading ? 'Loading request...' : 'Load My Request'}
             </button>
           </div>
         </section>
@@ -157,18 +158,18 @@ function StudentDashboardContent() {
 
         <section className="statusTiles">
           <StatusTile
-            label="Lesson Status"
-            value={lesson?.status || 'Not loaded'}
+            label="Request Status"
+            value={request?.status || 'Not loaded'}
             tone={readiness.tone}
           />
           <StatusTile
-            label="Teacher Status"
-            value={lesson?.teacher_status || 'Not loaded'}
+            label="Responder Status"
+            value={request?.teacher_status || 'Not loaded'}
             tone="blue"
           />
           <StatusTile
-            label="Teacher"
-            value={lesson?.assigned_teacher || 'Not assigned'}
+            label="Responder"
+            value={request?.assigned_teacher || 'Not assigned'}
             tone="green"
           />
           <StatusTile
@@ -178,32 +179,33 @@ function StudentDashboardContent() {
           />
         </section>
 
-        {!lesson && (
+        {!request && (
           <section className="emptyState">
-            <p className="sectionKicker">No lesson loaded</p>
-            <h2>Start with your Lesson ID</h2>
+            <p className="sectionKicker">No request loaded</p>
+            <h2>Start with your Request ID</h2>
             <p>
-              After the lesson loads, this dashboard shows teacher assignment,
-              payment status, room readiness, scheduled time, and completion history.
+              After the request loads, this dashboard shows responder routing,
+              readiness status, controlled room access, scheduled time, and
+              completion evidence.
             </p>
           </section>
         )}
 
-        {lesson && lesson.status !== 'COMPLETED' && (
-          <ActiveLessonPanel
-            lesson={lesson}
+        {request && request.status !== 'COMPLETED' && (
+          <ActiveSupportPanel
+            request={request}
             readiness={readiness}
-            openLessonRoom={openLessonRoom}
+            openSupportRoom={openSupportRoom}
           />
         )}
 
-        {lesson && lesson.status === 'COMPLETED' && (
-          <CompletedLessonHistory lesson={lesson} />
+        {request && request.status === 'COMPLETED' && (
+          <CompletionEvidencePanel request={request} />
         )}
       </div>
 
       <style jsx global>{`
-        .studentPage {
+        .beneficiaryPage {
           min-height: 100vh;
           background:
             radial-gradient(circle at top left, rgba(37, 99, 235, 0.34), transparent 30%),
@@ -230,8 +232,8 @@ function StudentDashboardContent() {
         .heroPanel,
         .lookupPanel,
         .statusTile,
-        .lessonPanel,
-        .historyPanel,
+        .supportPanel,
+        .evidencePanel,
         .emptyState {
           border: 1px solid rgba(148, 163, 184, 0.24);
           border-radius: 28px;
@@ -435,8 +437,8 @@ function StudentDashboardContent() {
           margin: 14px 0 0;
         }
 
-        .lessonPanel,
-        .historyPanel {
+        .supportPanel,
+        .evidencePanel {
           padding: 16px;
           margin-bottom: 20px;
         }
@@ -474,7 +476,7 @@ function StudentDashboardContent() {
           background: linear-gradient(135deg, #7c3aed, #4c1d95);
         }
 
-        .problemBox {
+        .needBox {
           border-radius: 22px;
           padding: 16px;
           margin-bottom: 16px;
@@ -484,7 +486,7 @@ function StudentDashboardContent() {
           border: 1px solid rgba(147, 197, 253, 0.22);
         }
 
-        .problemBox p {
+        .needBox p {
           margin: 0;
           color: #ffffff;
           line-height: 1.6;
@@ -533,7 +535,7 @@ function StudentDashboardContent() {
         }
 
         @media (min-width: 760px) {
-          .studentPage {
+          .beneficiaryPage {
             padding: 28px;
           }
 
@@ -569,76 +571,76 @@ function StudentDashboardContent() {
   )
 }
 
-function ActiveLessonPanel({
-  lesson,
+function ActiveSupportPanel({
+  request,
   readiness,
-  openLessonRoom,
+  openSupportRoom,
 }: {
-  lesson: LessonRequest
+  request: SupportRequest
   readiness: ReturnType<typeof getReadiness>
-  openLessonRoom: (id: string) => void
+  openSupportRoom: (id: string) => void
 }) {
   return (
-    <section className="lessonPanel">
+    <section className="supportPanel">
       <div className={`sectionHeader header-${readiness.tone}`}>
-        <p className="sectionKicker">Current lesson status</p>
+        <p className="sectionKicker">Current support status</p>
         <h2>{readiness.title}</h2>
         <p>{readiness.message}</p>
       </div>
 
-      <ProblemBlock problem={lesson.problem || 'Not provided'} />
+      <NeedBlock need={request.problem || 'Not provided'} />
 
       <div className="detailsGrid">
-        <Detail label="Subject" value={displaySubject(lesson)} />
-        <Detail label="Grade / Level" value={lesson.grade_level || 'Not provided'} />
-        <Detail label="Preferred Time" value={lesson.preferred_time || 'Not provided'} />
-        <Detail label="Scheduled Time" value={formatDate(lesson.scheduled_time, 'Not scheduled')} />
-        <Detail label="Assigned Teacher" value={lesson.assigned_teacher || 'Not assigned'} />
-        <Detail label="Teacher Status" value={lesson.teacher_status || 'Not offered yet'} />
-        <Detail label="Created At" value={formatDate(lesson.created_at)} />
-        <Detail label="Started At" value={formatDate(lesson.started_at)} />
-        <Detail label="Lesson ID" value={lesson.id} />
+        <Detail label="Category / Topic" value={displayCategory(request)} />
+        <Detail label="Beneficiary Level" value={request.grade_level || 'Not provided'} />
+        <Detail label="Preferred Time" value={request.preferred_time || 'Not provided'} />
+        <Detail label="Scheduled Time" value={formatDate(request.scheduled_time, 'Not scheduled')} />
+        <Detail label="Assigned Responder" value={request.assigned_teacher || 'Not assigned'} />
+        <Detail label="Responder Status" value={request.teacher_status || 'Not offered yet'} />
+        <Detail label="Created At" value={formatDate(request.created_at)} />
+        <Detail label="Started At" value={formatDate(request.started_at)} />
+        <Detail label="Request ID" value={request.id} />
       </div>
 
       {readiness.ready && (
-        <button className="roomButton" onClick={() => openLessonRoom(lesson.id)}>
-          Join Lesson
+        <button className="roomButton" onClick={() => openSupportRoom(request.id)}>
+          Open Controlled Support Room
         </button>
       )}
     </section>
   )
 }
 
-function CompletedLessonHistory({ lesson }: { lesson: LessonRequest }) {
+function CompletionEvidencePanel({ request }: { request: SupportRequest }) {
   return (
-    <section className="historyPanel">
+    <section className="evidencePanel">
       <div className="sectionHeader header-green">
-        <p className="sectionKicker">Completed lesson history</p>
-        <h2>Lesson Completed</h2>
+        <p className="sectionKicker">Completion evidence</p>
+        <h2>Support Completed</h2>
         <p>
-          This lesson is now closed. The room is no longer open for normal learning
-          activity, but your learning record remains available here.
+          This support session is now closed. The room is no longer open for
+          normal activity, but the completion record remains visible here.
         </p>
       </div>
 
-      <ProblemBlock problem={lesson.problem || 'Not provided'} />
+      <NeedBlock need={request.problem || 'Not provided'} />
 
       <div className="detailsGrid">
         <Detail label="Status" value="COMPLETED" />
-        <Detail label="Subject" value={displaySubject(lesson)} />
-        <Detail label="Grade / Level" value={lesson.grade_level || 'Not provided'} />
-        <Detail label="Teacher" value={lesson.assigned_teacher || 'Not assigned'} />
-        <Detail label="Preferred Time" value={lesson.preferred_time || 'Not provided'} />
-        <Detail label="Scheduled Time" value={formatDate(lesson.scheduled_time, 'Not scheduled')} />
-        <Detail label="Created At" value={formatDate(lesson.created_at)} />
-        <Detail label="Started At" value={formatDate(effectiveStartedAt(lesson))} />
-        <Detail label="Completed At" value={formatDate(effectiveCompletedAt(lesson))} />
-        <Detail label="Duration" value={calculateDuration(lesson)} />
-        <Detail label="Lesson ID" value={lesson.id} />
+        <Detail label="Category / Topic" value={displayCategory(request)} />
+        <Detail label="Beneficiary Level" value={request.grade_level || 'Not provided'} />
+        <Detail label="Responder" value={request.assigned_teacher || 'Not assigned'} />
+        <Detail label="Preferred Time" value={request.preferred_time || 'Not provided'} />
+        <Detail label="Scheduled Time" value={formatDate(request.scheduled_time, 'Not scheduled')} />
+        <Detail label="Created At" value={formatDate(request.created_at)} />
+        <Detail label="Started At" value={formatDate(effectiveStartedAt(request))} />
+        <Detail label="Completed At" value={formatDate(effectiveCompletedAt(request))} />
+        <Detail label="Duration" value={calculateDuration(request)} />
+        <Detail label="Request ID" value={request.id} />
       </div>
 
       <div className="completedNotice">
-        This completed lesson is locked and kept as part of your learning history.
+        This completed support session is locked and kept as part of the evidence record.
       </div>
     </section>
   )
@@ -646,19 +648,19 @@ function CompletedLessonHistory({ lesson }: { lesson: LessonRequest }) {
 
 function LoadingFallback() {
   return (
-    <main className="studentPage">
+    <main className="beneficiaryPage">
       <div className="pageShell">
-        <p className="message">Loading student dashboard...</p>
+        <p className="message">Loading beneficiary dashboard...</p>
       </div>
     </main>
   )
 }
 
-function ProblemBlock({ problem }: { problem: string }) {
+function NeedBlock({ need }: { need: string }) {
   return (
-    <div className="problemBox">
-      <span className="miniLabel">Student problem</span>
-      <p>{problem}</p>
+    <div className="needBox">
+      <span className="miniLabel">Support need</span>
+      <p>{need}</p>
     </div>
   )
 }
@@ -689,10 +691,10 @@ function Detail({ label, value }: { label: string; value: string }) {
   )
 }
 
-function displaySubject(lesson: LessonRequest) {
-  if (lesson.subject === 'Other' && lesson.custom_subject) return lesson.custom_subject
-  if (lesson.subject === 'Other' && lesson.subject_other) return lesson.subject_other
-  return lesson.subject || 'Not provided'
+function displayCategory(request: SupportRequest) {
+  if (request.subject === 'Other' && request.custom_subject) return request.custom_subject
+  if (request.subject === 'Other' && request.subject_other) return request.subject_other
+  return request.subject || 'Not provided'
 }
 
 function formatDate(value: string | null | undefined, fallback = 'Not recorded') {
@@ -705,21 +707,21 @@ function formatDate(value: string | null | undefined, fallback = 'Not recorded')
   return date.toLocaleString()
 }
 
-function effectiveStartedAt(lesson: LessonRequest) {
-  if (lesson.started_at) return lesson.started_at
-  if (lesson.status === 'COMPLETED') return lesson.created_at
+function effectiveStartedAt(request: SupportRequest) {
+  if (request.started_at) return request.started_at
+  if (request.status === 'COMPLETED') return request.created_at
   return null
 }
 
-function effectiveCompletedAt(lesson: LessonRequest) {
-  if (lesson.completed_at) return lesson.completed_at
-  if (lesson.status === 'COMPLETED') return lesson.created_at
+function effectiveCompletedAt(request: SupportRequest) {
+  if (request.completed_at) return request.completed_at
+  if (request.status === 'COMPLETED') return request.created_at
   return null
 }
 
-function calculateDuration(lesson: LessonRequest) {
-  const startedAt = effectiveStartedAt(lesson)
-  const completedAt = effectiveCompletedAt(lesson)
+function calculateDuration(request: SupportRequest) {
+  const startedAt = effectiveStartedAt(request)
+  const completedAt = effectiveCompletedAt(request)
 
   if (!startedAt || !completedAt) return 'Not available'
 
@@ -738,70 +740,70 @@ function calculateDuration(lesson: LessonRequest) {
   return `${hours} hr ${minutes} min`
 }
 
-function getReadiness(lesson: LessonRequest | null): {
+function getReadiness(request: SupportRequest | null): {
   ready: boolean
   title: string
   message: string
   tone: 'blue' | 'amber' | 'green' | 'red' | 'purple'
 } {
-  if (!lesson) {
+  if (!request) {
     return {
       ready: false,
-      title: 'Lesson not loaded',
-      message: 'Enter your lesson ID to check your lesson status.',
+      title: 'Request not loaded',
+      message: 'Enter your Request ID to check the support status.',
       tone: 'blue',
     }
   }
 
-  if (lesson.status === 'COMPLETED') {
+  if (request.status === 'COMPLETED') {
     return {
       ready: false,
-      title: 'Lesson completed',
-      message: 'This lesson has been completed and the room is now closed for normal use.',
+      title: 'Support completed',
+      message: 'This support session has been completed and the room is now closed for normal use.',
       tone: 'green',
     }
   }
 
-  if (lesson.status === 'ACTIVE') {
+  if (request.status === 'ACTIVE') {
     return {
       ready: true,
-      title: 'Lesson is active',
-      message: 'Your lesson is already active. Click Join Lesson to enter the room.',
+      title: 'Support is active',
+      message: 'Your support session is already active. Open the controlled support room to continue.',
       tone: 'green',
     }
   }
 
-  if (lesson.status === 'PAID') {
+  if (request.status === 'PAID') {
     return {
       ready: true,
-      title: 'Your lesson room is ready',
-      message: 'Your lesson is paid and ready. Click Join Lesson to enter the room.',
+      title: 'Controlled support room is ready',
+      message: 'Your request is ready for support. Open the controlled support room to continue.',
       tone: 'green',
     }
   }
 
-  if (lesson.teacher_status === 'DECLINED') {
+  if (request.teacher_status === 'DECLINED') {
     return {
       ready: false,
-      title: 'Teacher reassignment needed',
-      message: 'The teacher declined this lesson. Admin needs to assign another teacher.',
+      title: 'Responder reassignment needed',
+      message: 'The responder declined this request. Admin needs to assign another approved responder.',
       tone: 'red',
     }
   }
 
-  if (lesson.status === 'MATCHED') {
+  if (request.status === 'MATCHED') {
     return {
       ready: false,
-      title: 'Teacher matched, payment pending',
-      message: 'A teacher has been matched. The lesson room opens after payment.',
+      title: 'Responder routed, readiness pending',
+      message: 'A responder has been routed to this request. The support room opens after final readiness confirmation.',
       tone: 'purple',
     }
   }
 
   return {
     ready: false,
-    title: 'Lesson not ready yet',
-    message: 'This lesson is not marked as paid or active yet.',
+    title: 'Support not ready yet',
+    message: 'This request is still waiting for routing, readiness confirmation, or activation.',
     tone: 'amber',
   }
 }
