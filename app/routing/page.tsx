@@ -55,6 +55,17 @@ const SITE_TYPES = [
 
 const OPERATING_LEVELS = ['Local', 'Ward', 'District', 'Regional', 'National']
 
+const SITE_NOTE_TEMPLATES = [
+  'This site receives beneficiary cases and coordinates first-line support.',
+  'This site supports low-bandwidth or rural beneficiaries.',
+  'This site acts as a school-based coordination point.',
+  'This site acts as an NGO/community intervention partner.',
+  'This site supports district-level escalation and monitoring.',
+  'This site supports safeguarding-aware case coordination.',
+  'This site provides regional or ministry visibility for serious cases.',
+  'Other',
+]
+
 const CASE_TYPES = [
   'Learning stabilization case',
   'Safeguarding-sensitive case',
@@ -65,19 +76,6 @@ const CASE_TYPES = [
   'District escalation case',
   'Exam-readiness risk case',
   'Continuity-of-support case',
-  'Other',
-]
-
-const ROUTING_REASONS = [
-  'Route to nearest available responder',
-  'Route through institution partner',
-  'Route through NGO/community partner',
-  'Route through district coordination',
-  'Route because safeguarding visibility is needed',
-  'Route because access constraints are limiting support',
-  'Route because continuity of support is unstable',
-  'Route because severity level requires escalation',
-  'Route for specialist domain support',
   'Other',
 ]
 
@@ -131,11 +129,22 @@ const RESPONSE_MODES = [
   'Hybrid coordination pathway',
 ]
 
+const ROUTING_REASONS = [
+  'Route to nearest available responder',
+  'Route through institution partner',
+  'Route through NGO/community partner',
+  'Route through district coordination',
+  'Route because safeguarding visibility is needed',
+  'Route because access constraints are limiting support',
+  'Route because continuity of support is unstable',
+  'Route because severity level requires escalation',
+  'Route for specialist domain support',
+  'Other',
+]
+
 const ROUTING_PRIORITIES = ['LOW', 'MODERATE', 'HIGH', 'CRITICAL']
 
-export default function StructuredRoutingIntelligencePage() {
-  const [mounted, setMounted] = useState(false)
-
+export default function RoutingPage() {
   const [institutions, setInstitutions] = useState<Institution[]>([])
   const [cases, setCases] = useState<BeneficiaryCase[]>([])
   const [responders, setResponders] = useState<Responder[]>([])
@@ -148,7 +157,8 @@ export default function StructuredRoutingIntelligencePage() {
   const [operatingLevel, setOperatingLevel] = useState('Local')
   const [contactPerson, setContactPerson] = useState('')
   const [contactEmail, setContactEmail] = useState('')
-  const [siteNotes, setSiteNotes] = useState('')
+  const [siteNotesTemplate, setSiteNotesTemplate] = useState('')
+  const [otherSiteNotes, setOtherSiteNotes] = useState('')
 
   const [selectedCaseId, setSelectedCaseId] = useState('')
   const [caseType, setCaseType] = useState('')
@@ -158,10 +168,11 @@ export default function StructuredRoutingIntelligencePage() {
   const [routingPriority, setRoutingPriority] = useState('MODERATE')
   const [routingReason, setRoutingReason] = useState('')
   const [otherRoutingReason, setOtherRoutingReason] = useState('')
-
   const [primaryConcern, setPrimaryConcern] = useState('')
   const [stabilizationObjective, setStabilizationObjective] = useState('')
-  const [constraints, setConstraints] = useState<string[]>([])
+  const [constraintOne, setConstraintOne] = useState('')
+  const [constraintTwo, setConstraintTwo] = useState('')
+  const [constraintThree, setConstraintThree] = useState('')
   const [responseMode, setResponseMode] = useState('')
   const [additionalNotes, setAdditionalNotes] = useState('')
 
@@ -169,11 +180,8 @@ export default function StructuredRoutingIntelligencePage() {
   const [message, setMessage] = useState('')
 
   useEffect(() => {
-    setMounted(true)
     loadAll()
   }, [])
-
-  if (!mounted) return null
 
   async function loadAll() {
     await Promise.all([loadInstitutions(), loadCases(), loadResponders()])
@@ -211,20 +219,16 @@ export default function StructuredRoutingIntelligencePage() {
     return siteType === 'Other' ? otherSiteType.trim() : siteType
   }
 
+  function finalSiteNotes() {
+    return siteNotesTemplate === 'Other' ? otherSiteNotes.trim() : siteNotesTemplate
+  }
+
   function finalCaseType() {
     return caseType === 'Other' ? otherCaseType.trim() : caseType
   }
 
   function finalRoutingReason() {
     return routingReason === 'Other' ? otherRoutingReason.trim() : routingReason
-  }
-
-  function toggleConstraint(item: string) {
-    setConstraints((current) =>
-      current.includes(item)
-        ? current.filter((value) => value !== item)
-        : [...current, item]
-    )
   }
 
   function selectedCase() {
@@ -239,14 +243,21 @@ export default function StructuredRoutingIntelligencePage() {
     return responders.find((item) => item.id === selectedResponderId)
   }
 
+  function selectedConstraints() {
+    return [constraintOne, constraintTwo, constraintThree].filter(Boolean)
+  }
+
   function routingSummary() {
     const currentCase = selectedCase()
-    if (!currentCase) return ''
+
+    if (!currentCase) {
+      return ''
+    }
 
     return `
 STRUCTURED ROUTING INTELLIGENCE RECORD
 
-Case:
+Beneficiary Case:
 ${currentCase.beneficiary_name} • ${currentCase.support_domain} • ${currentCase.severity_level}
 
 Case Type:
@@ -259,7 +270,7 @@ Stabilization Objective:
 ${stabilizationObjective || 'Not specified'}
 
 Operational Constraints:
-${constraints.length ? constraints.join(', ') : 'No constraints selected'}
+${selectedConstraints().length ? selectedConstraints().join(', ') : 'No operational constraints selected'}
 
 Recommended Response Mode:
 ${responseMode || 'Not specified'}
@@ -280,7 +291,7 @@ Assigned Responder:
 ${selectedResponder()?.full_name || 'No responder selected'}
 
 Governance-Safe Summary:
-This routing decision creates a structured coordination pathway for a beneficiary case requiring stabilization. The record focuses on institutional response, access barriers, continuity of support, responder availability, safeguarding visibility, and escalation needs. It does not blame the beneficiary, family, school, responder, or institution. It supports consistent action by schools, NGOs, districts, regional teams, ministries, and verified responders.
+This routing record creates a structured coordination pathway for beneficiary stabilization. It supports consistent action across schools, NGOs, community sites, district offices, regional teams, ministry partners, and verified responders. The record focuses on access, continuity, safeguarding visibility, responder availability, escalation needs, and institutional coordination. It avoids blame and unnecessary personal exposure.
 
 Additional Operational Notes:
 ${additionalNotes.trim() || 'No additional operational notes entered.'}
@@ -310,7 +321,7 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
       coordination_status: 'ACTIVE',
       contact_person: contactPerson.trim(),
       contact_email: contactEmail.trim().toLowerCase(),
-      notes: siteNotes.trim(),
+      notes: finalSiteNotes(),
     })
 
     if (error) {
@@ -327,7 +338,8 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
     setOperatingLevel('Local')
     setContactPerson('')
     setContactEmail('')
-    setSiteNotes('')
+    setSiteNotesTemplate('')
+    setOtherSiteNotes('')
 
     setMessage('Coordination site registered.')
     setLoading(false)
@@ -336,8 +348,13 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
   }
 
   async function routeCase() {
-    if (!selectedCaseId || !finalRoutingReason()) {
-      alert('Select a beneficiary case and routing reason.')
+    if (!selectedCaseId) {
+      alert('Select a beneficiary case. If no cases appear, create a beneficiary case first in the Cases page.')
+      return
+    }
+
+    if (!finalRoutingReason()) {
+      alert('Select a routing reason.')
       return
     }
 
@@ -347,8 +364,6 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
     const currentCase = selectedCase()
     const currentInstitution = selectedInstitution()
 
-    const completeRoutingNotes = routingSummary()
-
     const { error: routeError } = await supabase.from('case_routing_actions').insert({
       case_id: selectedCaseId,
       institution_id: selectedInstitutionId || null,
@@ -356,7 +371,7 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
       routing_status: selectedResponderId ? 'RESPONDER_ASSIGNED' : 'ROUTED',
       routing_priority: routingPriority,
       routing_reason: finalRoutingReason(),
-      routing_notes: completeRoutingNotes,
+      routing_notes: routingSummary(),
       routed_by: 'EXAMIA LIS Structured Routing Intelligence System',
     })
 
@@ -389,8 +404,8 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
       case_id: selectedCaseId,
       event_type: selectedResponderId ? 'RESPONDER_ASSIGNED' : 'CASE_ROUTED',
       event_summary: selectedResponderId
-        ? `Case routed and responder assigned through structured routing intelligence.`
-        : `Case routed through institutional coordination pathway.`,
+        ? 'Case routed and responder assigned through structured routing intelligence.'
+        : 'Case routed through institutional coordination pathway.',
       actor: 'EXAMIA LIS Structured Routing Intelligence System',
     })
 
@@ -404,7 +419,9 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
     setOtherRoutingReason('')
     setPrimaryConcern('')
     setStabilizationObjective('')
-    setConstraints([])
+    setConstraintOne('')
+    setConstraintTwo('')
+    setConstraintThree('')
     setResponseMode('')
     setAdditionalNotes('')
 
@@ -415,13 +432,11 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
   }
 
   const activeSites = institutions.filter((item) => item.coordination_status === 'ACTIVE').length
-
   const routedCases = cases.filter((item) =>
     ['ROUTED', 'RESPONDER_ASSIGNED', 'INTERVENTION_ACTIVE', 'STABILIZING'].includes(
       item.case_status
     )
   ).length
-
   const criticalCases = cases.filter((item) => item.severity_level === 'CRITICAL').length
   const safeguardingCases = cases.filter((item) => item.safeguarding_flag).length
   const activeResponders = responders.length
@@ -431,13 +446,10 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
       <div style={styles.container}>
         <section style={styles.hero}>
           <p style={styles.kicker}>EXAMIA LIS • STRUCTURED ROUTING INTELLIGENCE</p>
-
           <h1 style={styles.title}>Institutional Coordination + Response Routing</h1>
-
           <p style={styles.subtitle}>
-            A governed infrastructure layer for routing beneficiary stabilization cases
-            across schools, NGOs, community sites, districts, regional teams, ministries,
-            and verified responders without blame, exposure, or operational confusion.
+            Route beneficiary stabilization cases through the right coordination site,
+            responder pathway, escalation level, and governance-safe intervention record.
           </p>
         </section>
 
@@ -455,9 +467,12 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
         <section style={styles.layoutGrid}>
           <div style={styles.card}>
             <h2 style={styles.sectionTitle}>Register Coordination Site</h2>
+            <p style={styles.panelNote}>
+              Use this to register a school, NGO, district office, community site,
+              ministry partner, or support hub that can receive or coordinate cases.
+            </p>
 
             <Input label="Site Name" value={siteName} setValue={setSiteName} />
-
             <Select label="Site Type" value={siteType} setValue={setSiteType} options={SITE_TYPES} />
 
             {siteType === 'Other' && (
@@ -465,7 +480,7 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
                 label="Other Site Type"
                 value={otherSiteType}
                 setValue={setOtherSiteType}
-                placeholder="Example: rural support hub, mobile coordination unit"
+                placeholder="Example: rural support hub"
               />
             )}
 
@@ -482,23 +497,45 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
             <Input label="Contact Person" value={contactPerson} setValue={setContactPerson} />
             <Input label="Contact Email" value={contactEmail} setValue={setContactEmail} />
 
-            <label style={styles.label}>
-              Site Coordination Notes
-              <textarea
-                value={siteNotes}
-                onChange={(e) => setSiteNotes(e.target.value)}
-                placeholder="Describe the site’s coordination role. Avoid private beneficiary details."
-                style={styles.textarea}
-              />
-            </label>
+            <Select
+              label="Site Coordination Notes Template"
+              value={siteNotesTemplate}
+              setValue={setSiteNotesTemplate}
+              options={['', ...SITE_NOTE_TEMPLATES]}
+            />
+
+            {siteNotesTemplate === 'Other' && (
+              <label style={styles.label}>
+                Other Site Coordination Notes
+                <textarea
+                  value={otherSiteNotes}
+                  onChange={(e) => setOtherSiteNotes(e.target.value)}
+                  placeholder="Describe the site’s coordination role. Do not include private case details."
+                  style={styles.textarea}
+                />
+              </label>
+            )}
 
             <button onClick={createInstitution} disabled={loading} style={styles.primaryButton}>
               {loading ? 'Saving...' : 'Register Coordination Site'}
             </button>
+
+            <div style={styles.instructionsBox}>
+              <strong>Simple guide:</strong>
+              <p>
+                Register the place or partner that can help coordinate support. This may be
+                a school, NGO, district office, ministry partner, or community support site.
+                Do not enter private beneficiary information here.
+              </p>
+            </div>
           </div>
 
           <div style={styles.card}>
             <h2 style={styles.sectionTitle}>Route Beneficiary Case</h2>
+            <p style={styles.panelNote}>
+              Use this section after a beneficiary case has already been created. If the
+              dropdown is empty, go to the Cases page and create a case first.
+            </p>
 
             <label style={styles.label}>
               Beneficiary Case
@@ -507,10 +544,16 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
                 onChange={(e) => setSelectedCaseId(e.target.value)}
                 style={styles.select}
               >
-                <option value="">Select beneficiary case</option>
+                <option value="">
+                  {cases.length === 0
+                    ? 'No beneficiary cases found — create one in Cases first'
+                    : 'Select beneficiary case'}
+                </option>
+
                 {cases.map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.beneficiary_name} • {item.support_domain} • {item.severity_level}
+                    {item.beneficiary_name || 'Unnamed case'} • {item.support_domain || 'Domain'} •{' '}
+                    {item.severity_level || 'Severity'} • {item.case_status || 'Status'}
                   </option>
                 ))}
               </select>
@@ -546,24 +589,34 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
               options={['', ...STABILIZATION_OBJECTIVES]}
             />
 
-            <label style={styles.label}>
-              Operational Constraints
-              <div style={styles.multiGrid}>
-                {CONSTRAINTS.map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => toggleConstraint(item)}
-                    style={{
-                      ...styles.constraintButton,
-                      ...(constraints.includes(item) ? styles.constraintButtonActive : {}),
-                    }}
-                  >
-                    {item}
-                  </button>
-                ))}
-              </div>
-            </label>
+            <div style={styles.softBox}>
+              <strong>Operational Constraints</strong>
+              <p>
+                Select up to three visible constraints affecting coordination. Leave unused
+                fields blank.
+              </p>
+
+              <Select
+                label="Constraint 1"
+                value={constraintOne}
+                setValue={setConstraintOne}
+                options={['', ...CONSTRAINTS]}
+              />
+
+              <Select
+                label="Constraint 2"
+                value={constraintTwo}
+                setValue={setConstraintTwo}
+                options={['', ...CONSTRAINTS]}
+              />
+
+              <Select
+                label="Constraint 3"
+                value={constraintThree}
+                setValue={setConstraintThree}
+                options={['', ...CONSTRAINTS]}
+              />
+            </div>
 
             <Select
               label="Recommended Response Mode"
@@ -579,10 +632,16 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
                 onChange={(e) => setSelectedInstitutionId(e.target.value)}
                 style={styles.select}
               >
-                <option value="">No coordination site selected</option>
+                <option value="">
+                  {institutions.length === 0
+                    ? 'No coordination sites found — register one first'
+                    : 'Select site if this case needs school, NGO, district, or ministry coordination'}
+                </option>
+
                 {institutions.map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.institution_name} • {item.institution_type}
+                    {item.institution_name} • {item.institution_type} •{' '}
+                    {item.operating_level || 'Local'}
                   </option>
                 ))}
               </select>
@@ -595,10 +654,15 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
                 onChange={(e) => setSelectedResponderId(e.target.value)}
                 style={styles.select}
               >
-                <option value="">No responder selected</option>
+                <option value="">
+                  {responders.length === 0
+                    ? 'No active responders found'
+                    : 'Optional — assign active responder now'}
+                </option>
+
                 {responders.map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.full_name} • Trust {item.trust_score ?? 0}
+                    {item.full_name} • {item.region || 'No region'} • Trust {item.trust_score ?? 0}
                   </option>
                 ))}
               </select>
@@ -649,44 +713,16 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
         </section>
 
         <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Auto-Generated Governance-Safe Routing Summary</h2>
+          <h2 style={styles.sectionTitle}>Auto-Generated Routing Summary</h2>
+          <p style={styles.panelNote}>
+            This summary becomes the governance-safe intervention record for coordination,
+            escalation, responder assignment, and future review.
+          </p>
 
           <pre style={styles.summaryBox}>
             {routingSummary() ||
               'Select a beneficiary case to generate structured routing intelligence.'}
           </pre>
-        </section>
-
-        <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Coordination Sites</h2>
-
-          <div style={styles.listGrid}>
-            {institutions.map((item) => (
-              <article key={item.id} style={styles.siteCard}>
-                <div style={styles.siteHeader}>
-                  <div>
-                    <h3 style={styles.siteTitle}>{item.institution_name}</h3>
-                    <p style={styles.siteMeta}>
-                      {item.institution_type} • {item.operating_level || 'Local'}
-                    </p>
-                  </div>
-
-                  <span style={styles.statusBadge}>
-                    {item.coordination_status || 'ACTIVE'}
-                  </span>
-                </div>
-
-                <div style={styles.infoGrid}>
-                  <Info label="Region" value={item.region || 'Not provided'} />
-                  <Info label="District" value={item.district || 'Not provided'} />
-                  <Info label="Contact" value={item.contact_person || 'Not provided'} />
-                  <Info label="Email" value={item.contact_email || 'Not provided'} />
-                </div>
-
-                {item.notes && <div style={styles.notesBox}>{item.notes}</div>}
-              </article>
-            ))}
-          </div>
         </section>
       </div>
     </main>
@@ -694,22 +730,10 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
 }
 
 function priorityGuideText(priority: string) {
-  if (priority === 'LOW') {
-    return 'Support is needed, but no immediate infrastructure risk is visible.'
-  }
-
-  if (priority === 'MODERATE') {
-    return 'A visible support gap requires structured follow-up and coordination.'
-  }
-
-  if (priority === 'HIGH') {
-    return 'Continuity, access, safeguarding, or escalation pressure is present.'
-  }
-
-  if (priority === 'CRITICAL') {
-    return 'Urgent safeguarding, severe disruption, or high-level institutional escalation may be required.'
-  }
-
+  if (priority === 'LOW') return 'Support is needed, but no immediate infrastructure risk is visible.'
+  if (priority === 'MODERATE') return 'A visible support gap requires structured follow-up and coordination.'
+  if (priority === 'HIGH') return 'Continuity, access, safeguarding, or escalation pressure is present.'
+  if (priority === 'CRITICAL') return 'Urgent safeguarding, severe disruption, or high-level escalation may be required.'
   return 'Select a routing priority.'
 }
 
@@ -751,15 +775,6 @@ function Select({ label, value, setValue, options }: any) {
   )
 }
 
-function Info({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={styles.infoBox}>
-      <p style={styles.infoLabel}>{label}</p>
-      <p style={styles.infoValue}>{value}</p>
-    </div>
-  )
-}
-
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
@@ -767,30 +782,11 @@ const styles: Record<string, CSSProperties> = {
     color: 'white',
     padding: '56px 18px',
   },
-  container: {
-    maxWidth: '1240px',
-    margin: '0 auto',
-  },
-  hero: {
-    marginBottom: '32px',
-  },
-  kicker: {
-    color: '#67e8f9',
-    fontSize: '12px',
-    fontWeight: 900,
-    letterSpacing: '2px',
-  },
-  title: {
-    fontSize: 'clamp(34px, 6vw, 58px)',
-    lineHeight: 1.05,
-    margin: '12px 0',
-  },
-  subtitle: {
-    color: '#cbd5e1',
-    maxWidth: '940px',
-    lineHeight: 1.7,
-    fontSize: '18px',
-  },
+  container: { maxWidth: '1240px', margin: '0 auto' },
+  hero: { marginBottom: '32px' },
+  kicker: { color: '#67e8f9', fontSize: '12px', fontWeight: 900, letterSpacing: '2px' },
+  title: { fontSize: 'clamp(34px, 6vw, 58px)', lineHeight: 1.05, margin: '12px 0' },
+  subtitle: { color: '#cbd5e1', maxWidth: '940px', lineHeight: 1.7, fontSize: '18px' },
   metricsGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
@@ -803,15 +799,8 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: '18px',
     padding: '20px',
   },
-  metricLabel: {
-    color: '#94a3b8',
-    fontWeight: 800,
-    margin: 0,
-  },
-  metricValue: {
-    fontSize: '38px',
-    margin: '8px 0 0',
-  },
+  metricLabel: { color: '#94a3b8', fontWeight: 800, margin: 0 },
+  metricValue: { fontSize: '38px', margin: '8px 0 0' },
   message: {
     background: '#064e3b',
     color: '#bbf7d0',
@@ -834,15 +823,9 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: '28px',
     boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
   },
-  sectionTitle: {
-    fontSize: '26px',
-    margin: '0 0 18px',
-  },
-  label: {
-    display: 'block',
-    fontWeight: 800,
-    marginBottom: '16px',
-  },
+  sectionTitle: { fontSize: '26px', margin: '0 0 10px' },
+  panelNote: { color: '#cbd5e1', lineHeight: 1.6, marginBottom: '18px' },
+  label: { display: 'block', fontWeight: 800, marginBottom: '16px' },
   input: {
     width: '100%',
     marginTop: '8px',
@@ -883,6 +866,24 @@ const styles: Record<string, CSSProperties> = {
     cursor: 'pointer',
     fontSize: '16px',
   },
+  instructionsBox: {
+    marginTop: '18px',
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '16px',
+    padding: '16px',
+    color: '#dbeafe',
+    lineHeight: 1.6,
+  },
+  softBox: {
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '16px',
+    padding: '16px',
+    marginBottom: '16px',
+    color: '#dbeafe',
+    lineHeight: 1.6,
+  },
   guideBox: {
     background: '#082f49',
     border: '1px solid #0e7490',
@@ -891,27 +892,6 @@ const styles: Record<string, CSSProperties> = {
     padding: '14px',
     marginBottom: '16px',
     lineHeight: 1.5,
-  },
-  multiGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-    gap: '10px',
-    marginTop: '8px',
-  },
-  constraintButton: {
-    textAlign: 'left',
-    background: '#111827',
-    color: '#cbd5e1',
-    border: '1px solid #334155',
-    borderRadius: '12px',
-    padding: '12px',
-    cursor: 'pointer',
-    fontWeight: 800,
-  },
-  constraintButtonActive: {
-    background: '#083344',
-    border: '1px solid #67e8f9',
-    color: '#ecfeff',
   },
   summaryBox: {
     whiteSpace: 'pre-wrap',
@@ -922,70 +902,5 @@ const styles: Record<string, CSSProperties> = {
     color: '#e2e8f0',
     lineHeight: 1.6,
     minHeight: '260px',
-  },
-  listGrid: {
-    display: 'grid',
-    gap: '16px',
-  },
-  siteCard: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '18px',
-  },
-  siteHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    gap: '14px',
-    alignItems: 'flex-start',
-    flexWrap: 'wrap',
-  },
-  siteTitle: {
-    margin: 0,
-    fontSize: '22px',
-  },
-  siteMeta: {
-    color: '#93c5fd',
-    marginTop: '6px',
-  },
-  statusBadge: {
-    background: '#dcfce7',
-    color: '#166534',
-    borderRadius: '999px',
-    padding: '8px 12px',
-    fontWeight: 900,
-    fontSize: '12px',
-  },
-  infoGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
-    gap: '12px',
-    marginTop: '16px',
-  },
-  infoBox: {
-    background: '#020617',
-    border: '1px solid #1e293b',
-    borderRadius: '14px',
-    padding: '12px',
-  },
-  infoLabel: {
-    color: '#94a3b8',
-    fontSize: '12px',
-    fontWeight: 900,
-    margin: 0,
-  },
-  infoValue: {
-    color: '#f8fafc',
-    margin: '6px 0 0',
-    lineHeight: 1.4,
-  },
-  notesBox: {
-    marginTop: '14px',
-    background: '#020617',
-    border: '1px solid #1e293b',
-    borderRadius: '14px',
-    padding: '14px',
-    color: '#dbeafe',
-    lineHeight: 1.5,
   },
 }
