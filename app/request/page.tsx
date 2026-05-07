@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 
@@ -14,17 +14,74 @@ type CreatedRequest = {
   teacher_status: string | null
 }
 
+const categoryOptions: Record<string, string[]> = {
+  Education: [
+    'Mathematics',
+    'English',
+    'Science',
+    'History',
+    'Shona',
+    'Physics',
+    'Biology',
+    'Chemistry',
+    'Accounting',
+    'Economics',
+    'General Paper',
+    'Other',
+  ],
+  'Health Education / Outreach': [
+    'Health education',
+    'Community health outreach',
+    'HIV education',
+    'TB education',
+    'Maternal health education',
+    'Adolescent health education',
+    'Medication adherence education',
+    'Training support',
+    'Other',
+  ],
+  'NGO / Community Program': [
+    'Program training',
+    'Field worker support',
+    'Community mobilization',
+    'Report follow-up',
+    'Beneficiary support',
+    'Youth program support',
+    'Other',
+  ],
+  'Rural Operations': [
+    'Skills training',
+    'Agriculture support',
+    'Digital literacy',
+    'Community coordination',
+    'Livelihood support',
+    'Other',
+  ],
+  Other: ['Other'],
+}
+
 export default function RequestPage() {
   const router = useRouter()
 
+  const [supportArea, setSupportArea] = useState('Education')
   const [category, setCategory] = useState('Mathematics')
   const [otherCategory, setOtherCategory] = useState('')
-  const [gradeLevel, setGradeLevel] = useState('')
-  const [problem, setProblem] = useState('')
+  const [beneficiaryLevel, setBeneficiaryLevel] = useState('')
+  const [needDescription, setNeedDescription] = useState('')
   const [preferredTime, setPreferredTime] = useState('')
   const [message, setMessage] = useState('')
   const [createdRequest, setCreatedRequest] = useState<CreatedRequest | null>(null)
   const [loading, setLoading] = useState(false)
+
+  const availableCategories = useMemo(() => {
+    return categoryOptions[supportArea] || categoryOptions.Other
+  }, [supportArea])
+
+  function handleSupportAreaChange(value: string) {
+    setSupportArea(value)
+    setCategory(categoryOptions[value]?.[0] || 'Other')
+    setOtherCategory('')
+  }
 
   async function submitRequest(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -32,16 +89,16 @@ export default function RequestPage() {
     const finalCategory = category === 'Other' ? otherCategory.trim() : category
 
     if (!finalCategory) {
-      alert('Please enter the category or subject.')
+      alert('Please write the category, topic, or support area.')
       return
     }
 
-    if (!gradeLevel.trim()) {
-      alert('Please select the grade or level.')
+    if (!beneficiaryLevel.trim()) {
+      alert('Please select the beneficiary level.')
       return
     }
 
-    if (!problem.trim()) {
+    if (!needDescription.trim()) {
       alert('Please describe the support need.')
       return
     }
@@ -53,9 +110,9 @@ export default function RequestPage() {
     const { data, error } = await supabase
       .from('lesson_requests')
       .insert({
-        subject: finalCategory,
-        grade_level: gradeLevel,
-        problem: problem.trim(),
+        subject: `${supportArea} — ${finalCategory}`,
+        grade_level: beneficiaryLevel,
+        problem: needDescription.trim(),
         preferred_time: preferredTime.trim() || null,
         status: 'NEW',
         teacher_status: 'PENDING',
@@ -72,12 +129,13 @@ export default function RequestPage() {
 
     setCreatedRequest(data)
     setMessage(
-      'Support request created. EXAMIA will now route this need to an approved responder through the Command Center.'
+      'Support request created. EXAMIA will route this need through the Command Center to an approved responder.'
     )
+    setSupportArea('Education')
     setCategory('Mathematics')
     setOtherCategory('')
-    setGradeLevel('')
-    setProblem('')
+    setBeneficiaryLevel('')
+    setNeedDescription('')
     setPreferredTime('')
     setLoading(false)
   }
@@ -100,9 +158,9 @@ export default function RequestPage() {
           <p style={styles.eyebrow}>EXAMIA NEED INTAKE ENGINE</p>
           <h1 style={styles.h1}>Submit a Support Need</h1>
           <p style={styles.heroText}>
-            Submit a structured learning need. EXAMIA creates a Request ID
-            immediately so the beneficiary can track routing, responder
-            assignment, room readiness, and completion evidence.
+            Submit a structured need. EXAMIA creates a Request ID immediately so
+            the beneficiary can track routing, responder assignment, room
+            readiness, and completion evidence.
           </p>
         </header>
 
@@ -112,47 +170,53 @@ export default function RequestPage() {
 
           <form onSubmit={submitRequest} style={styles.form}>
             <label style={styles.label}>
-              Category / Subject
+              Support Area
+              <select
+                value={supportArea}
+                onChange={(event) => handleSupportAreaChange(event.target.value)}
+                style={styles.input}
+              >
+                <option>Education</option>
+                <option>Health Education / Outreach</option>
+                <option>NGO / Community Program</option>
+                <option>Rural Operations</option>
+                <option>Other</option>
+              </select>
+            </label>
+
+            <label style={styles.label}>
+              Category / Topic
               <select
                 value={category}
                 onChange={(event) => setCategory(event.target.value)}
                 style={styles.input}
               >
-                <option>Mathematics</option>
-                <option>English</option>
-                <option>General Paper</option>
-                <option>Science</option>
-                <option>History</option>
-                <option>Shona</option>
-                <option>Physics</option>
-                <option>Biology</option>
-                <option>Chemistry</option>
-                <option>Accounting</option>
-                <option>Economics</option>
-                <option>Other</option>
+                {availableCategories.map((item) => (
+                  <option key={item}>{item}</option>
+                ))}
               </select>
             </label>
 
             {category === 'Other' && (
               <label style={styles.label}>
-                Type Category / Subject
+                Write Category / Topic
                 <input
                   value={otherCategory}
                   onChange={(event) => setOtherCategory(event.target.value)}
-                  placeholder="Example: Commerce, Geography, Divinity"
+                  placeholder="Example: Geography, diabetes education, youth training, farming support"
                   style={styles.input}
                 />
               </label>
             )}
 
             <label style={styles.label}>
-              Grade / Level
+              Beneficiary Level
               <select
-                value={gradeLevel}
-                onChange={(event) => setGradeLevel(event.target.value)}
+                value={beneficiaryLevel}
+                onChange={(event) => setBeneficiaryLevel(event.target.value)}
                 style={styles.input}
               >
-                <option value="">Select grade or level...</option>
+                <option value="">Select level...</option>
                 <option>Grade 1</option>
                 <option>Grade 2</option>
                 <option>Grade 3</option>
@@ -170,6 +234,10 @@ export default function RequestPage() {
                 <option>A Level</option>
                 <option>College</option>
                 <option>Adult Learner</option>
+                <option>Community Member</option>
+                <option>Field Worker</option>
+                <option>Parent / Caregiver</option>
+                <option>Youth Group</option>
                 <option>Other</option>
               </select>
             </label>
@@ -177,9 +245,9 @@ export default function RequestPage() {
             <label style={styles.label}>
               What is the need?
               <textarea
-                value={problem}
-                onChange={(event) => setProblem(event.target.value)}
-                placeholder="Describe the learning difficulty, topic, question, or support need."
+                value={needDescription}
+                onChange={(event) => setNeedDescription(event.target.value)}
+                placeholder="Describe the learning difficulty, health education need, training need, community support issue, or coordination request."
                 style={styles.textarea}
               />
             </label>
