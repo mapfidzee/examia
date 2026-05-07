@@ -6,9 +6,9 @@ import { supabase } from '../../lib/supabase'
 
 const APP_URL = 'https://examia-ten.vercel.app'
 
-type LessonStatus = 'NEW' | 'MATCHED' | 'PAID' | 'ACTIVE' | 'COMPLETED' | string
+type RequestStatus = 'NEW' | 'MATCHED' | 'PAID' | 'ACTIVE' | 'COMPLETED' | string
 
-type LessonRequest = {
+type SupportRequest = {
   id: string
   subject: string
   custom_subject?: string | null
@@ -17,7 +17,7 @@ type LessonRequest = {
   problem: string
   preferred_time: string | null
   scheduled_time: string | null
-  status: LessonStatus
+  status: RequestStatus
   assigned_teacher: string | null
   teacher_id: string | null
   teacher_status: string | null
@@ -26,7 +26,7 @@ type LessonRequest = {
   completed_at: string | null
 }
 
-type TeacherProfile = {
+type ResponderProfile = {
   id: string
   full_name: string
   email: string
@@ -36,10 +36,10 @@ type TeacherProfile = {
 }
 
 export default function AdminPage() {
-  const [requests, setRequests] = useState<LessonRequest[]>([])
-  const [teachers, setTeachers] = useState<TeacherProfile[]>([])
-  const [message, setMessage] = useState('Loading admin command center...')
-  const [selectedTeachers, setSelectedTeachers] = useState<Record<string, string>>({})
+  const [requests, setRequests] = useState<SupportRequest[]>([])
+  const [responders, setResponders] = useState<ResponderProfile[]>([])
+  const [message, setMessage] = useState('Loading command center...')
+  const [selectedResponders, setSelectedResponders] = useState<Record<string, string>>({})
   const [timeInputs, setTimeInputs] = useState<Record<string, string>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
   const [statusSavingId, setStatusSavingId] = useState<string | null>(null)
@@ -53,12 +53,12 @@ export default function AdminPage() {
     [requests]
   )
 
-  const matchedRequests = useMemo(
+  const routedRequests = useMemo(
     () => requests.filter((item) => item.status === 'MATCHED'),
     [requests]
   )
 
-  const paidActiveRequests = useMemo(
+  const readyActiveRequests = useMemo(
     () => requests.filter((item) => item.status === 'PAID' || item.status === 'ACTIVE'),
     [requests]
   )
@@ -72,15 +72,15 @@ export default function AdminPage() {
     () => ({
       total: requests.length,
       new: newRequests.length,
-      matched: matchedRequests.length,
-      paidActive: paidActiveRequests.length,
+      routed: routedRequests.length,
+      readyActive: readyActiveRequests.length,
       completed: completedRequests.length,
     }),
-    [requests, newRequests, matchedRequests, paidActiveRequests, completedRequests]
+    [requests, newRequests, routedRequests, readyActiveRequests, completedRequests]
   )
 
   async function loadAdminData() {
-    setMessage('Loading admin command center...')
+    setMessage('Loading command center...')
 
     const { data: requestData, error: requestError } = await supabase
       .from('lesson_requests')
@@ -88,57 +88,57 @@ export default function AdminPage() {
       .order('created_at', { ascending: false })
 
     if (requestError) {
-      setMessage('Could not load lesson requests.')
+      setMessage('Could not load support requests.')
       console.error(requestError)
       return
     }
 
-    const { data: teacherData, error: teacherError } = await supabase
+    const { data: responderData, error: responderError } = await supabase
       .from('teacher_profiles')
       .select('*')
       .eq('status', 'APPROVED')
       .order('full_name', { ascending: true })
 
-    if (teacherError) {
-      setMessage('Could not load approved teachers.')
-      console.error(teacherError)
+    if (responderError) {
+      setMessage('Could not load approved responders.')
+      console.error(responderError)
       return
     }
 
     setRequests(requestData || [])
-    setTeachers(teacherData || [])
+    setResponders(responderData || [])
     setMessage('')
 
-    const teacherMap: Record<string, string> = {}
+    const responderMap: Record<string, string> = {}
     const timeMap: Record<string, string> = {}
 
     requestData?.forEach((request) => {
-      teacherMap[request.id] = request.teacher_id || ''
+      responderMap[request.id] = request.teacher_id || ''
       timeMap[request.id] = request.scheduled_time || ''
     })
 
-    setSelectedTeachers(teacherMap)
+    setSelectedResponders(responderMap)
     setTimeInputs(timeMap)
   }
 
-  function displaySubject(request: LessonRequest) {
+  function displayCategory(request: SupportRequest) {
     if (request.subject === 'Other' && request.custom_subject) return request.custom_subject
     if (request.subject === 'Other' && request.subject_other) return request.subject_other
     return request.subject || 'Not provided'
   }
 
-  function teacherLabel(teacher: TeacherProfile) {
+  function responderLabel(responder: ResponderProfile) {
     const subjects =
-      teacher.subjects && teacher.subjects.length > 0
-        ? teacher.subjects.join(', ')
-        : 'Subjects not listed'
+      responder.subjects && responder.subjects.length > 0
+        ? responder.subjects.join(', ')
+        : 'Areas not listed'
 
     const levels =
-      teacher.grade_levels && teacher.grade_levels.length > 0
-        ? teacher.grade_levels.join(', ')
+      responder.grade_levels && responder.grade_levels.length > 0
+        ? responder.grade_levels.join(', ')
         : 'Levels not listed'
 
-    return `${teacher.full_name} — ${subjects} — ${levels}`
+    return `${responder.full_name} — ${subjects} — ${levels}`
   }
 
   function formatDateTime(value: string | null | undefined, fallback = 'Not recorded') {
@@ -151,19 +151,19 @@ export default function AdminPage() {
     return date.toLocaleString()
   }
 
-  function effectiveStartedAt(request: LessonRequest) {
+  function effectiveStartedAt(request: SupportRequest) {
     if (request.started_at) return request.started_at
     if (request.status === 'COMPLETED') return request.created_at
     return null
   }
 
-  function effectiveCompletedAt(request: LessonRequest) {
+  function effectiveCompletedAt(request: SupportRequest) {
     if (request.completed_at) return request.completed_at
     if (request.status === 'COMPLETED') return request.created_at
     return null
   }
 
-  function calculateDuration(request: LessonRequest) {
+  function calculateDuration(request: SupportRequest) {
     const startedAt = effectiveStartedAt(request)
     const completedAt = effectiveCompletedAt(request)
 
@@ -184,19 +184,19 @@ export default function AdminPage() {
     return `${hours} hr ${minutes} min`
   }
 
-  async function saveAssignment(request: LessonRequest) {
-    const selectedTeacherId = selectedTeachers[request.id]
+  async function saveAssignment(request: SupportRequest) {
+    const selectedResponderId = selectedResponders[request.id]
     const scheduledTime = timeInputs[request.id]?.trim()
 
-    if (!selectedTeacherId) {
-      alert('Please select an approved teacher.')
+    if (!selectedResponderId) {
+      alert('Please select an approved responder.')
       return
     }
 
-    const selectedTeacher = teachers.find((teacher) => teacher.id === selectedTeacherId)
+    const selectedResponder = responders.find((responder) => responder.id === selectedResponderId)
 
-    if (!selectedTeacher) {
-      alert('Selected teacher not found.')
+    if (!selectedResponder) {
+      alert('Selected responder not found.')
       return
     }
 
@@ -205,8 +205,8 @@ export default function AdminPage() {
     const { error } = await supabase
       .from('lesson_requests')
       .update({
-        teacher_id: selectedTeacher.id,
-        assigned_teacher: selectedTeacher.full_name,
+        teacher_id: selectedResponder.id,
+        assigned_teacher: selectedResponder.full_name,
         scheduled_time: scheduledTime || null,
         teacher_status: 'OFFERED',
         status: 'MATCHED',
@@ -223,7 +223,7 @@ export default function AdminPage() {
     setSavingId(null)
   }
 
-  async function updateStatus(request: LessonRequest, newStatus: LessonStatus) {
+  async function updateStatus(request: SupportRequest, newStatus: RequestStatus) {
     setStatusSavingId(request.id)
 
     const now = new Date().toISOString()
@@ -272,63 +272,63 @@ export default function AdminPage() {
       <div className="pageShell">
         <section className="frontDoorHero">
           <div className="heroContent">
-            <p className="eyebrow">EXAMIA ADMIN COMMAND CENTER</p>
-            <h1>Admin Command Center</h1>
+            <p className="eyebrow">EXAMIA OS COMMAND CENTER</p>
+            <h1>Command Center</h1>
             <p className="heroText">
-              Control the full lesson lifecycle from one place: requests, teacher
-              assignment, payment activation, live lesson access, and completed
-              lesson history.
+              Coordinate the full support lifecycle from one place: need intake,
+              responder routing, controlled support rooms, active sessions,
+              completion evidence, and institutional visibility.
             </p>
           </div>
 
           <div className="quickLinks">
             <Link href="/admin/teachers" className="quickLink blueLink">
-              Teacher Governance
+              Responder Governance
             </Link>
             <Link href="/request" className="quickLink greenLink">
-              Student Request
+              Need Intake
             </Link>
             <Link href="/student-dashboard" className="quickLink purpleLink">
-              Student Dashboard
+              Beneficiary Dashboard
             </Link>
             <Link href="/teacher-dashboard" className="quickLink orangeLink">
-              Teacher Dashboard
+              Responder Dashboard
             </Link>
           </div>
         </section>
 
         <section className="commandTiles">
-          <CommandTile label="Total Lessons" value={summary.total} tone="blue" />
-          <CommandTile label="New Requests" value={summary.new} tone="amber" />
-          <CommandTile label="Matched" value={summary.matched} tone="purple" />
-          <CommandTile label="Paid / Active" value={summary.paidActive} tone="green" />
-          <CommandTile label="Completed" value={summary.completed} tone="red" />
+          <CommandTile label="Total Requests" value={summary.total} tone="blue" />
+          <CommandTile label="New Needs" value={summary.new} tone="amber" />
+          <CommandTile label="Routed" value={summary.routed} tone="purple" />
+          <CommandTile label="Ready / Active" value={summary.readyActive} tone="green" />
+          <CommandTile label="Completed Evidence" value={summary.completed} tone="red" />
         </section>
 
         {message && <p className="message">{message}</p>}
 
         <div className="refreshRow">
           <button className="refreshBtn" onClick={loadAdminData}>
-            Refresh Admin Command Center
+            Refresh Command Center
           </button>
         </div>
 
         <OperationalSection
           kicker="Queue 1"
-          title="New Requests"
-          description="These lesson requests need teacher assignment and scheduling."
+          title="New Needs"
+          description="These support requests need triage, responder assignment, and scheduling."
           tone="amber"
           requests={newRequests}
-          emptyText="No new lesson requests right now."
-          teachers={teachers}
-          selectedTeachers={selectedTeachers}
+          emptyText="No new support requests right now."
+          responders={responders}
+          selectedResponders={selectedResponders}
           timeInputs={timeInputs}
           savingId={savingId}
           statusSavingId={statusSavingId}
-          displaySubject={displaySubject}
-          teacherLabel={teacherLabel}
+          displayCategory={displayCategory}
+          responderLabel={responderLabel}
           formatDateTime={formatDateTime}
-          setSelectedTeachers={setSelectedTeachers}
+          setSelectedResponders={setSelectedResponders}
           setTimeInputs={setTimeInputs}
           saveAssignment={saveAssignment}
           updateStatus={updateStatus}
@@ -337,20 +337,20 @@ export default function AdminPage() {
 
         <OperationalSection
           kicker="Queue 2"
-          title="Matched / Offered Lessons"
-          description="These lessons have been matched or offered and may be waiting for teacher response, payment, or final activation."
+          title="Routed / Offered Support"
+          description="These requests have been routed or offered and may be waiting for responder confirmation, readiness, or activation."
           tone="purple"
-          requests={matchedRequests}
-          emptyText="No matched lessons waiting right now."
-          teachers={teachers}
-          selectedTeachers={selectedTeachers}
+          requests={routedRequests}
+          emptyText="No routed support requests waiting right now."
+          responders={responders}
+          selectedResponders={selectedResponders}
           timeInputs={timeInputs}
           savingId={savingId}
           statusSavingId={statusSavingId}
-          displaySubject={displaySubject}
-          teacherLabel={teacherLabel}
+          displayCategory={displayCategory}
+          responderLabel={responderLabel}
           formatDateTime={formatDateTime}
-          setSelectedTeachers={setSelectedTeachers}
+          setSelectedResponders={setSelectedResponders}
           setTimeInputs={setTimeInputs}
           saveAssignment={saveAssignment}
           updateStatus={updateStatus}
@@ -359,29 +359,29 @@ export default function AdminPage() {
 
         <OperationalSection
           kicker="Queue 3"
-          title="Paid / Active Lessons"
-          description="These lessons are paid or active. Admin can open the room, mark active, or complete the lesson after teaching."
+          title="Ready / Active Support"
+          description="These support sessions are ready or active. Admin can open the room, mark active, or complete the session after support is delivered."
           tone="green"
-          requests={paidActiveRequests}
-          emptyText="No paid or active lessons right now."
-          teachers={teachers}
-          selectedTeachers={selectedTeachers}
+          requests={readyActiveRequests}
+          emptyText="No ready or active support sessions right now."
+          responders={responders}
+          selectedResponders={selectedResponders}
           timeInputs={timeInputs}
           savingId={savingId}
           statusSavingId={statusSavingId}
-          displaySubject={displaySubject}
-          teacherLabel={teacherLabel}
+          displayCategory={displayCategory}
+          responderLabel={responderLabel}
           formatDateTime={formatDateTime}
-          setSelectedTeachers={setSelectedTeachers}
+          setSelectedResponders={setSelectedResponders}
           setTimeInputs={setTimeInputs}
           saveAssignment={saveAssignment}
           updateStatus={updateStatus}
           copyLink={copyLink}
         />
 
-        <CompletedHistorySection
+        <CompletionEvidenceSection
           requests={completedRequests}
-          displaySubject={displaySubject}
+          displayCategory={displayCategory}
           formatDateTime={formatDateTime}
           effectiveStartedAt={effectiveStartedAt}
           effectiveCompletedAt={effectiveCompletedAt}
@@ -416,8 +416,8 @@ export default function AdminPage() {
 
         .heroContent,
         .sectionShell,
-        .lessonCard,
-        .historyCard,
+        .supportCard,
+        .evidenceCard,
         .commandTile {
           border: 1px solid rgba(148, 163, 184, 0.24);
           border-radius: 28px;
@@ -628,18 +628,18 @@ export default function AdminPage() {
           background: linear-gradient(135deg, #dc2626, #7f1d1d);
         }
 
-        .lessonList,
-        .historyList {
+        .supportList,
+        .evidenceList {
           display: grid;
           gap: 14px;
         }
 
-        .lessonCard,
-        .historyCard {
+        .supportCard,
+        .evidenceCard {
           padding: 16px;
         }
 
-        .lessonTop {
+        .requestTop {
           display: grid;
           gap: 12px;
           padding-bottom: 14px;
@@ -762,7 +762,7 @@ export default function AdminPage() {
         }
 
         .actionsGrid,
-        .historyActions {
+        .evidenceActions {
           display: grid;
           grid-template-columns: 1fr;
           gap: 10px;
@@ -777,7 +777,7 @@ export default function AdminPage() {
         }
 
         .directLinks a,
-        .historyActions a {
+        .evidenceActions a {
           color: #dbeafe;
           text-decoration: none;
           border: 1px solid rgba(147, 197, 253, 0.28);
@@ -826,7 +826,7 @@ export default function AdminPage() {
             grid-template-columns: repeat(5, minmax(0, 1fr));
           }
 
-          .lessonTop {
+          .requestTop {
             grid-template-columns: 1fr auto;
             align-items: start;
           }
@@ -844,7 +844,7 @@ export default function AdminPage() {
             grid-template-columns: repeat(3, minmax(0, 1fr));
           }
 
-          .historyActions,
+          .evidenceActions,
           .directLinks {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
@@ -878,15 +878,15 @@ function OperationalSection({
   tone,
   requests,
   emptyText,
-  teachers,
-  selectedTeachers,
+  responders,
+  selectedResponders,
   timeInputs,
   savingId,
   statusSavingId,
-  displaySubject,
-  teacherLabel,
+  displayCategory,
+  responderLabel,
   formatDateTime,
-  setSelectedTeachers,
+  setSelectedResponders,
   setTimeInputs,
   saveAssignment,
   updateStatus,
@@ -896,20 +896,20 @@ function OperationalSection({
   title: string
   description: string
   tone: 'amber' | 'purple' | 'green'
-  requests: LessonRequest[]
+  requests: SupportRequest[]
   emptyText: string
-  teachers: TeacherProfile[]
-  selectedTeachers: Record<string, string>
+  responders: ResponderProfile[]
+  selectedResponders: Record<string, string>
   timeInputs: Record<string, string>
   savingId: string | null
   statusSavingId: string | null
-  displaySubject: (request: LessonRequest) => string
-  teacherLabel: (teacher: TeacherProfile) => string
+  displayCategory: (request: SupportRequest) => string
+  responderLabel: (responder: ResponderProfile) => string
   formatDateTime: (value: string | null | undefined, fallback?: string) => string
-  setSelectedTeachers: Dispatch<SetStateAction<Record<string, string>>>
+  setSelectedResponders: Dispatch<SetStateAction<Record<string, string>>>
   setTimeInputs: Dispatch<SetStateAction<Record<string, string>>>
-  saveAssignment: (request: LessonRequest) => void
-  updateStatus: (request: LessonRequest, newStatus: LessonStatus) => void
+  saveAssignment: (request: SupportRequest) => void
+  updateStatus: (request: SupportRequest, newStatus: RequestStatus) => void
   copyLink: (link: string, label: string) => void
 }) {
   return (
@@ -923,17 +923,17 @@ function OperationalSection({
       {requests.length === 0 ? (
         <p className="emptyBox">{emptyText}</p>
       ) : (
-        <div className="lessonList">
+        <div className="supportList">
           {requests.map((request) => {
-            const lessonRoomLink = `${APP_URL}/lesson/${request.id}`
-            const studentDashboardLink = `${APP_URL}/student-dashboard?lessonId=${request.id}`
+            const supportRoomLink = `${APP_URL}/lesson/${request.id}`
+            const beneficiaryDashboardLink = `${APP_URL}/student-dashboard?lessonId=${request.id}`
 
             return (
-              <article className="lessonCard" key={request.id}>
-                <div className="lessonTop">
+              <article className="supportCard" key={request.id}>
+                <div className="requestTop">
                   <div>
-                    <p className="miniLabel">Operational lesson record</p>
-                    <h3>{displaySubject(request)}</h3>
+                    <p className="miniLabel">Operational support record</p>
+                    <h3>{displayCategory(request)}</h3>
                   </div>
 
                   <span className={`statusBadge status-${request.status}`}>
@@ -942,35 +942,35 @@ function OperationalSection({
                 </div>
 
                 <div className="infoGrid">
-                  <Info label="Subject" value={displaySubject(request)} />
+                  <Info label="Category / Subject" value={displayCategory(request)} />
                   <Info label="Grade / Level" value={request.grade_level || 'Not provided'} />
-                  <Info label="Problem" value={request.problem || 'Not provided'} />
+                  <Info label="Need / Problem" value={request.problem || 'Not provided'} />
                   <Info label="Preferred Time" value={request.preferred_time || 'Not provided'} />
                   <Info label="Scheduled Time" value={formatDateTime(request.scheduled_time, 'Not scheduled')} />
-                  <Info label="Assigned Teacher" value={request.assigned_teacher || 'Not assigned'} />
-                  <Info label="Teacher Status" value={request.teacher_status || 'Not offered yet'} />
+                  <Info label="Assigned Responder" value={request.assigned_teacher || 'Not assigned'} />
+                  <Info label="Responder Status" value={request.teacher_status || 'Not offered yet'} />
                   <Info label="Created At" value={formatDateTime(request.created_at)} />
                   <Info label="Started At" value={formatDateTime(request.started_at)} />
-                  <Info label="Lesson ID" value={request.id} />
+                  <Info label="Request ID" value={request.id} />
                 </div>
 
                 <div className="assignmentBox">
                   <label>
-                    Select approved teacher
+                    Select approved responder
                     <select
-                      value={selectedTeachers[request.id] || ''}
+                      value={selectedResponders[request.id] || ''}
                       onChange={(event) =>
-                        setSelectedTeachers((prev) => ({
+                        setSelectedResponders((prev) => ({
                           ...prev,
                           [request.id]: event.target.value,
                         }))
                       }
                     >
-                      <option value="">Select approved teacher</option>
+                      <option value="">Select approved responder</option>
 
-                      {teachers.map((teacher) => (
-                        <option key={teacher.id} value={teacher.id}>
-                          {teacherLabel(teacher)}
+                      {responders.map((responder) => (
+                        <option key={responder.id} value={responder.id}>
+                          {responderLabel(responder)}
                         </option>
                       ))}
                     </select>
@@ -996,20 +996,20 @@ function OperationalSection({
                     onClick={() => saveAssignment(request)}
                     disabled={savingId === request.id}
                   >
-                    {savingId === request.id ? 'Saving...' : 'Offer Lesson'}
+                    {savingId === request.id ? 'Saving...' : 'Assign Responder'}
                   </button>
                 </div>
 
                 <div className="actionsGrid">
                   <ActionButton
-                    label="Mark MATCHED"
+                    label="Mark ROUTED"
                     color="#7c3aed"
                     disabled={statusSavingId === request.id}
                     onClick={() => updateStatus(request, 'MATCHED')}
                   />
 
                   <ActionButton
-                    label="Mark PAID"
+                    label="Mark READY"
                     color="#16a34a"
                     disabled={statusSavingId === request.id}
                     onClick={() => updateStatus(request, 'PAID')}
@@ -1030,27 +1030,27 @@ function OperationalSection({
                   />
 
                   <ActionButton
-                    label="Copy Lesson Room"
+                    label="Copy Support Room"
                     color="#2563eb"
                     disabled={false}
-                    onClick={() => copyLink(lessonRoomLink, 'Lesson room link')}
+                    onClick={() => copyLink(supportRoomLink, 'Controlled support room link')}
                   />
 
                   <ActionButton
-                    label="Copy Student Dashboard"
+                    label="Copy Beneficiary Dashboard"
                     color="#0891b2"
                     disabled={false}
-                    onClick={() => copyLink(studentDashboardLink, 'Student dashboard link')}
+                    onClick={() => copyLink(beneficiaryDashboardLink, 'Beneficiary dashboard link')}
                   />
                 </div>
 
                 <div className="directLinks">
-                  <a href={lessonRoomLink} target="_blank" rel="noreferrer">
-                    Open Lesson Room
+                  <a href={supportRoomLink} target="_blank" rel="noreferrer">
+                    Open Controlled Support Room
                   </a>
 
-                  <a href={studentDashboardLink} target="_blank" rel="noreferrer">
-                    Open Student Dashboard
+                  <a href={beneficiaryDashboardLink} target="_blank" rel="noreferrer">
+                    Open Beneficiary Dashboard
                   </a>
                 </div>
               </article>
@@ -1062,92 +1062,92 @@ function OperationalSection({
   )
 }
 
-function CompletedHistorySection({
+function CompletionEvidenceSection({
   requests,
-  displaySubject,
+  displayCategory,
   formatDateTime,
   effectiveStartedAt,
   effectiveCompletedAt,
   calculateDuration,
   copyLink,
 }: {
-  requests: LessonRequest[]
-  displaySubject: (request: LessonRequest) => string
+  requests: SupportRequest[]
+  displayCategory: (request: SupportRequest) => string
   formatDateTime: (value: string | null | undefined, fallback?: string) => string
-  effectiveStartedAt: (request: LessonRequest) => string | null
-  effectiveCompletedAt: (request: LessonRequest) => string | null
-  calculateDuration: (request: LessonRequest) => string
+  effectiveStartedAt: (request: SupportRequest) => string | null
+  effectiveCompletedAt: (request: SupportRequest) => string | null
+  calculateDuration: (request: SupportRequest) => string
   copyLink: (link: string, label: string) => void
 }) {
   return (
     <section className="sectionShell">
       <div className="sectionHeader header-red">
-        <p className="sectionKicker">Locked records</p>
-        <h2>Completed Lesson History</h2>
+        <p className="sectionKicker">Locked evidence</p>
+        <h2>Completion Evidence Log</h2>
         <p>
-          These lessons are closed. They remain visible for history, tracking,
-          payment justification, and future progress records.
+          These support sessions are closed. They remain visible for history,
+          accountability, institutional reporting, and proof of completed work.
         </p>
       </div>
 
       {requests.length === 0 ? (
-        <p className="emptyBox">No completed lessons yet.</p>
+        <p className="emptyBox">No completed support sessions yet.</p>
       ) : (
-        <div className="historyList">
+        <div className="evidenceList">
           {requests.map((request) => {
-            const lessonRoomLink = `${APP_URL}/lesson/${request.id}`
-            const studentDashboardLink = `${APP_URL}/student-dashboard?lessonId=${request.id}`
+            const supportRoomLink = `${APP_URL}/lesson/${request.id}`
+            const beneficiaryDashboardLink = `${APP_URL}/student-dashboard?lessonId=${request.id}`
 
             return (
-              <article className="historyCard" key={request.id}>
-                <div className="lessonTop">
+              <article className="evidenceCard" key={request.id}>
+                <div className="requestTop">
                   <div>
-                    <p className="miniLabel">Completed lesson record</p>
-                    <h3>{displaySubject(request)}</h3>
+                    <p className="miniLabel">Completed support record</p>
+                    <h3>{displayCategory(request)}</h3>
                   </div>
 
                   <span className="statusBadge status-COMPLETED">COMPLETED</span>
                 </div>
 
                 <div className="infoGrid">
-                  <Info label="Subject" value={displaySubject(request)} />
+                  <Info label="Category / Subject" value={displayCategory(request)} />
                   <Info label="Grade / Level" value={request.grade_level || 'Not provided'} />
-                  <Info label="Problem" value={request.problem || 'Not provided'} />
-                  <Info label="Assigned Teacher" value={request.assigned_teacher || 'Not assigned'} />
-                  <Info label="Teacher Status" value={request.teacher_status || 'Not offered yet'} />
+                  <Info label="Need / Problem" value={request.problem || 'Not provided'} />
+                  <Info label="Assigned Responder" value={request.assigned_teacher || 'Not assigned'} />
+                  <Info label="Responder Status" value={request.teacher_status || 'Not offered yet'} />
                   <Info label="Created At" value={formatDateTime(request.created_at)} />
                   <Info label="Started At" value={formatDateTime(effectiveStartedAt(request))} />
                   <Info label="Completed At" value={formatDateTime(effectiveCompletedAt(request))} />
                   <Info label="Duration" value={calculateDuration(request)} />
-                  <Info label="Lesson ID" value={request.id} />
+                  <Info label="Request ID" value={request.id} />
                 </div>
 
                 <div className="completedNotice">
-                  This lesson is completed and locked. No assignment or status action
-                  is shown here because this is now a historical record.
+                  This support session is completed and locked. No assignment or
+                  status action is shown here because this is now an evidence record.
                 </div>
 
-                <div className="historyActions">
+                <div className="evidenceActions">
                   <ActionButton
-                    label="Copy Lesson Room"
+                    label="Copy Support Room"
                     color="#2563eb"
                     disabled={false}
-                    onClick={() => copyLink(lessonRoomLink, 'Lesson room link')}
+                    onClick={() => copyLink(supportRoomLink, 'Controlled support room link')}
                   />
 
                   <ActionButton
-                    label="Copy Student Dashboard"
+                    label="Copy Beneficiary Dashboard"
                     color="#0891b2"
                     disabled={false}
-                    onClick={() => copyLink(studentDashboardLink, 'Student dashboard link')}
+                    onClick={() => copyLink(beneficiaryDashboardLink, 'Beneficiary dashboard link')}
                   />
 
-                  <a href={lessonRoomLink} target="_blank" rel="noreferrer">
-                    Open Lesson Room
+                  <a href={supportRoomLink} target="_blank" rel="noreferrer">
+                    Open Controlled Support Room
                   </a>
 
-                  <a href={studentDashboardLink} target="_blank" rel="noreferrer">
-                    Open Student Dashboard
+                  <a href={beneficiaryDashboardLink} target="_blank" rel="noreferrer">
+                    Open Beneficiary Dashboard
                   </a>
                 </div>
               </article>
