@@ -39,32 +39,53 @@ type Responder = {
   trust_score: number | null
 }
 
-const INSTITUTION_TYPES = [
-  'SCHOOL',
+const SITE_TYPES = [
+  'School',
   'NGO',
-  'COMMUNITY',
-  'DISTRICT',
-  'REGIONAL_COORDINATION',
-  'MINISTRY_PARTNER',
+  'Community learning center',
+  'Church/community group',
+  'District education office',
+  'Regional education office',
+  'Ministry partner',
+  'Private learning center',
+  'Other',
 ]
 
-const OPERATING_LEVELS = [
-  'LOCAL',
-  'WARD',
-  'DISTRICT',
-  'REGIONAL',
-  'NATIONAL',
+const OPERATING_LEVELS = ['Local', 'Ward', 'District', 'Regional', 'National']
+
+const CASE_TYPES = [
+  'Self-requested learning support',
+  'School-referred learning case',
+  'NGO-referred learning case',
+  'Parent/guardian-referred case',
+  'District-referred learning case',
+  'Exam-risk case',
+  'Safeguarding-sensitive case',
+  'Low-bandwidth support case',
+  'Other',
 ]
 
 const ROUTING_REASONS = [
-  'Severity requires coordinated intervention',
-  'Regional routing required',
-  'Institution-linked beneficiary case',
-  'Safeguarding-sensitive routing required',
-  'Responder specialization required',
-  'Low-bandwidth support coordination required',
-  'Escalated learning instability requires institutional visibility',
-  'Exam-risk intervention requires structured routing',
+  'Route to nearest available responder',
+  'Route due to exam risk',
+  'Route due to repeated learning instability',
+  'Route due to safeguarding sensitivity',
+  'Route through school/NGO partner',
+  'Route through district coordination',
+  'Route for low-bandwidth support',
+  'Route for specialist subject support',
+  'Other',
+]
+
+const SITE_NOTE_TEMPLATES = [
+  'Site supports school-based learners',
+  'Site supports community learners',
+  'Site supports rural/low-bandwidth learners',
+  'Site supports exam preparation cases',
+  'Site supports safeguarding-sensitive referrals',
+  'Site operates as district coordination point',
+  'Site operates as NGO intervention partner',
+  'Other',
 ]
 
 const ROUTING_PRIORITIES = ['LOW', 'MODERATE', 'HIGH', 'CRITICAL']
@@ -76,20 +97,25 @@ export default function InstitutionalRoutingEnginePage() {
   const [cases, setCases] = useState<BeneficiaryCase[]>([])
   const [responders, setResponders] = useState<Responder[]>([])
 
-  const [institutionName, setInstitutionName] = useState('')
-  const [institutionType, setInstitutionType] = useState('SCHOOL')
+  const [siteName, setSiteName] = useState('')
+  const [siteType, setSiteType] = useState('School')
+  const [otherSiteType, setOtherSiteType] = useState('')
   const [region, setRegion] = useState('')
   const [district, setDistrict] = useState('')
-  const [operatingLevel, setOperatingLevel] = useState('LOCAL')
+  const [operatingLevel, setOperatingLevel] = useState('Local')
   const [contactPerson, setContactPerson] = useState('')
   const [contactEmail, setContactEmail] = useState('')
-  const [institutionNotes, setInstitutionNotes] = useState('')
+  const [siteNotesTemplate, setSiteNotesTemplate] = useState('')
+  const [otherSiteNotes, setOtherSiteNotes] = useState('')
 
   const [selectedCaseId, setSelectedCaseId] = useState('')
+  const [caseType, setCaseType] = useState('')
+  const [otherCaseType, setOtherCaseType] = useState('')
   const [selectedInstitutionId, setSelectedInstitutionId] = useState('')
   const [selectedResponderId, setSelectedResponderId] = useState('')
   const [routingPriority, setRoutingPriority] = useState('MODERATE')
   const [routingReason, setRoutingReason] = useState('')
+  const [otherRoutingReason, setOtherRoutingReason] = useState('')
   const [routingNotes, setRoutingNotes] = useState('')
 
   const [loading, setLoading] = useState(false)
@@ -103,11 +129,7 @@ export default function InstitutionalRoutingEnginePage() {
   if (!mounted) return null
 
   async function loadAll() {
-    await Promise.all([
-      loadInstitutions(),
-      loadCases(),
-      loadResponders(),
-    ])
+    await Promise.all([loadInstitutions(), loadCases(), loadResponders()])
   }
 
   async function loadInstitutions() {
@@ -153,9 +175,31 @@ export default function InstitutionalRoutingEnginePage() {
     setResponders(data || [])
   }
 
+  function finalSiteType() {
+    return siteType === 'Other' ? otherSiteType.trim() : siteType
+  }
+
+  function finalSiteNotes() {
+    if (siteNotesTemplate === 'Other') return otherSiteNotes.trim()
+    return siteNotesTemplate
+  }
+
+  function finalCaseType() {
+    return caseType === 'Other' ? otherCaseType.trim() : caseType
+  }
+
+  function finalRoutingReason() {
+    return routingReason === 'Other' ? otherRoutingReason.trim() : routingReason
+  }
+
   async function createInstitution() {
-    if (!institutionName.trim()) {
-      alert('Enter institution name.')
+    if (!siteName.trim()) {
+      alert('Enter the coordination site name.')
+      return
+    }
+
+    if (!finalSiteType()) {
+      alert('Select or enter the site type.')
       return
     }
 
@@ -163,15 +207,15 @@ export default function InstitutionalRoutingEnginePage() {
     setMessage('')
 
     const { error } = await supabase.from('institutions').insert({
-      institution_name: institutionName.trim(),
-      institution_type: institutionType,
+      institution_name: siteName.trim(),
+      institution_type: finalSiteType(),
       region: region.trim(),
       district: district.trim(),
       operating_level: operatingLevel,
       coordination_status: 'ACTIVE',
       contact_person: contactPerson.trim(),
       contact_email: contactEmail.trim().toLowerCase(),
-      notes: institutionNotes.trim(),
+      notes: finalSiteNotes(),
     })
 
     if (error) {
@@ -181,24 +225,26 @@ export default function InstitutionalRoutingEnginePage() {
       return
     }
 
-    setInstitutionName('')
-    setInstitutionType('SCHOOL')
+    setSiteName('')
+    setSiteType('School')
+    setOtherSiteType('')
     setRegion('')
     setDistrict('')
-    setOperatingLevel('LOCAL')
+    setOperatingLevel('Local')
     setContactPerson('')
     setContactEmail('')
-    setInstitutionNotes('')
+    setSiteNotesTemplate('')
+    setOtherSiteNotes('')
 
-    setMessage('Institutional coordination node created.')
+    setMessage('Coordination site registered.')
     setLoading(false)
 
     await loadInstitutions()
   }
 
   async function routeCase() {
-    if (!selectedCaseId || !routingReason) {
-      alert('Select a case and routing reason.')
+    if (!selectedCaseId || !finalRoutingReason()) {
+      alert('Select a beneficiary case and routing reason.')
       return
     }
 
@@ -208,14 +254,28 @@ export default function InstitutionalRoutingEnginePage() {
     const selectedCase = cases.find((item) => item.id === selectedCaseId)
     const selectedInstitution = institutions.find((item) => item.id === selectedInstitutionId)
 
+    const completeRoutingNotes = `
+Case Type:
+${finalCaseType() || 'Not specified'}
+
+Routing Priority:
+${routingPriority}
+
+Priority Guide:
+${priorityGuideText(routingPriority)}
+
+Routing Notes:
+${routingNotes.trim() || 'No additional routing notes entered.'}
+    `.trim()
+
     const { error: routeError } = await supabase.from('case_routing_actions').insert({
       case_id: selectedCaseId,
       institution_id: selectedInstitutionId || null,
       assigned_responder_id: selectedResponderId || null,
       routing_status: selectedResponderId ? 'RESPONDER_ASSIGNED' : 'ROUTED',
       routing_priority: routingPriority,
-      routing_reason: routingReason,
-      routing_notes: routingNotes.trim(),
+      routing_reason: finalRoutingReason(),
+      routing_notes: completeRoutingNotes,
       routed_by: 'EXAMIA LIS Routing Engine',
     })
 
@@ -234,9 +294,7 @@ export default function InstitutionalRoutingEnginePage() {
         case_status: nextStatus,
         assigned_responder_id: selectedResponderId || null,
         institution_name:
-          selectedInstitution?.institution_name ||
-          selectedCase?.institution_name ||
-          null,
+          selectedInstitution?.institution_name || selectedCase?.institution_name || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', selectedCaseId)
@@ -252,27 +310,28 @@ export default function InstitutionalRoutingEnginePage() {
       case_id: selectedCaseId,
       event_type: selectedResponderId ? 'RESPONDER_ASSIGNED' : 'CASE_ROUTED',
       event_summary: selectedResponderId
-        ? 'Case routed and responder assigned through institutional routing engine'
-        : 'Case routed through institutional coordination engine',
+        ? `Case routed and responder assigned. Reason: ${finalRoutingReason()}`
+        : `Case routed to coordination site. Reason: ${finalRoutingReason()}`,
       actor: 'EXAMIA LIS Routing Engine',
     })
 
     setSelectedCaseId('')
+    setCaseType('')
+    setOtherCaseType('')
     setSelectedInstitutionId('')
     setSelectedResponderId('')
     setRoutingPriority('MODERATE')
     setRoutingReason('')
+    setOtherRoutingReason('')
     setRoutingNotes('')
 
-    setMessage('Case routing action completed and timeline updated.')
+    setMessage('Case routing completed and timeline updated.')
     setLoading(false)
 
     await loadAll()
   }
 
-  const activeInstitutions = institutions.filter(
-    (item) => item.coordination_status === 'ACTIVE'
-  ).length
+  const activeSites = institutions.filter((item) => item.coordination_status === 'ACTIVE').length
 
   const routedCases = cases.filter((item) =>
     ['ROUTED', 'RESPONDER_ASSIGNED', 'INTERVENTION_ACTIVE', 'STABILIZING'].includes(
@@ -287,20 +346,20 @@ export default function InstitutionalRoutingEnginePage() {
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.hero}>
-          <p style={styles.kicker}>EXAMIA LIS • INSTITUTIONAL ROUTING ENGINE</p>
+          <p style={styles.kicker}>EXAMIA LIS • ROUTING ENGINE</p>
 
           <h1 style={styles.title}>Institutional Coordination + Case Routing</h1>
 
           <p style={styles.subtitle}>
-            Distributed coordination infrastructure for routing beneficiary stabilization
-            cases across schools, NGOs, community nodes, district operators, regional
-            coordinators, and verified responder networks.
+            A national-level coordination system for routing beneficiary stabilization
+            cases across schools, NGOs, community sites, districts, regional teams, and
+            verified responders.
           </p>
         </section>
 
         <section style={styles.metricsGrid}>
-          <Metric label="Institutions" value={institutions.length} />
-          <Metric label="Active Nodes" value={activeInstitutions} />
+          <Metric label="Coordination Sites" value={institutions.length} />
+          <Metric label="Active Sites" value={activeSites} />
           <Metric label="Routed Cases" value={routedCases} />
           <Metric label="Critical Cases" value={criticalCases} />
           <Metric label="Active Responders" value={activeResponders} />
@@ -310,16 +369,20 @@ export default function InstitutionalRoutingEnginePage() {
 
         <section style={styles.layoutGrid}>
           <div style={styles.card}>
-            <h2 style={styles.sectionTitle}>Create Coordination Node</h2>
+            <h2 style={styles.sectionTitle}>Register Coordination Site</h2>
 
-            <Input label="Institution / Node Name" value={institutionName} setValue={setInstitutionName} />
+            <Input label="Site Name" value={siteName} setValue={setSiteName} />
 
-            <Select
-              label="Institution Type"
-              value={institutionType}
-              setValue={setInstitutionType}
-              options={INSTITUTION_TYPES}
-            />
+            <Select label="Site Type" value={siteType} setValue={setSiteType} options={SITE_TYPES} />
+
+            {siteType === 'Other' && (
+              <Input
+                label="Other Site Type"
+                value={otherSiteType}
+                setValue={setOtherSiteType}
+                placeholder="Example: Rural study group, mobile learning hub"
+              />
+            )}
 
             <Input label="Region" value={region} setValue={setRegion} />
             <Input label="District" value={district} setValue={setDistrict} />
@@ -334,18 +397,27 @@ export default function InstitutionalRoutingEnginePage() {
             <Input label="Contact Person" value={contactPerson} setValue={setContactPerson} />
             <Input label="Contact Email" value={contactEmail} setValue={setContactEmail} />
 
-            <label style={styles.label}>
-              Notes
-              <textarea
-                value={institutionNotes}
-                onChange={(e) => setInstitutionNotes(e.target.value)}
-                placeholder="Coordination scope, district notes, NGO mandate, school cluster, etc."
-                style={styles.textarea}
-              />
-            </label>
+            <Select
+              label="Site Notes Template"
+              value={siteNotesTemplate}
+              setValue={setSiteNotesTemplate}
+              options={['', ...SITE_NOTE_TEMPLATES]}
+            />
+
+            {siteNotesTemplate === 'Other' && (
+              <label style={styles.label}>
+                Other Site Notes
+                <textarea
+                  value={otherSiteNotes}
+                  onChange={(e) => setOtherSiteNotes(e.target.value)}
+                  placeholder="Describe this site's coordination role..."
+                  style={styles.textarea}
+                />
+              </label>
+            )}
 
             <button onClick={createInstitution} disabled={loading} style={styles.primaryButton}>
-              {loading ? 'Saving...' : 'Create Coordination Node'}
+              {loading ? 'Saving...' : 'Register Coordination Site'}
             </button>
           </div>
 
@@ -359,7 +431,7 @@ export default function InstitutionalRoutingEnginePage() {
                 onChange={(e) => setSelectedCaseId(e.target.value)}
                 style={styles.select}
               >
-                <option value="">Select case</option>
+                <option value="">Select beneficiary case</option>
                 {cases.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.beneficiary_name} • {item.support_domain} • {item.severity_level}
@@ -368,14 +440,30 @@ export default function InstitutionalRoutingEnginePage() {
               </select>
             </label>
 
+            <Select
+              label="Case Type"
+              value={caseType}
+              setValue={setCaseType}
+              options={['', ...CASE_TYPES]}
+            />
+
+            {caseType === 'Other' && (
+              <Input
+                label="Other Case Type"
+                value={otherCaseType}
+                setValue={setOtherCaseType}
+                placeholder="Describe referral/case type"
+              />
+            )}
+
             <label style={styles.label}>
-              Institution / Coordination Node
+              School, NGO, District, or Community Site
               <select
                 value={selectedInstitutionId}
                 onChange={(e) => setSelectedInstitutionId(e.target.value)}
                 style={styles.select}
               >
-                <option value="">No institution selected</option>
+                <option value="">No coordination site selected</option>
                 {institutions.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.institution_name} • {item.institution_type}
@@ -407,28 +495,33 @@ export default function InstitutionalRoutingEnginePage() {
               options={ROUTING_PRIORITIES}
             />
 
-            <label style={styles.label}>
-              Routing Reason
-              <select
-                value={routingReason}
-                onChange={(e) => setRoutingReason(e.target.value)}
-                style={styles.select}
-              >
-                <option value="">Select routing reason</option>
-                {ROUTING_REASONS.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div style={styles.guideBox}>
+              <strong>Priority Guide:</strong>
+              <p>{priorityGuideText(routingPriority)}</p>
+            </div>
+
+            <Select
+              label="Routing Reason"
+              value={routingReason}
+              setValue={setRoutingReason}
+              options={['', ...ROUTING_REASONS]}
+            />
+
+            {routingReason === 'Other' && (
+              <Input
+                label="Other Routing Reason"
+                value={otherRoutingReason}
+                setValue={setOtherRoutingReason}
+                placeholder="Describe the routing reason"
+              />
+            )}
 
             <label style={styles.label}>
-              Routing Notes Optional
+              Routing Notes
               <textarea
                 value={routingNotes}
                 onChange={(e) => setRoutingNotes(e.target.value)}
-                placeholder="Optional routing context..."
+                placeholder="Use this for case-specific context, location limits, low-data needs, urgency, school/NGO instructions, or safeguarding routing concerns."
                 style={styles.textarea}
               />
             </label>
@@ -440,20 +533,22 @@ export default function InstitutionalRoutingEnginePage() {
         </section>
 
         <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Coordination Nodes</h2>
+          <h2 style={styles.sectionTitle}>Coordination Sites</h2>
 
           <div style={styles.listGrid}>
             {institutions.map((item) => (
-              <article key={item.id} style={styles.nodeCard}>
-                <div style={styles.nodeHeader}>
+              <article key={item.id} style={styles.siteCard}>
+                <div style={styles.siteHeader}>
                   <div>
-                    <h3 style={styles.nodeTitle}>{item.institution_name}</h3>
-                    <p style={styles.nodeMeta}>
-                      {item.institution_type} • {item.operating_level || 'LOCAL'}
+                    <h3 style={styles.siteTitle}>{item.institution_name}</h3>
+                    <p style={styles.siteMeta}>
+                      {item.institution_type} • {item.operating_level || 'Local'}
                     </p>
                   </div>
 
-                  <span style={styles.statusBadge}>{item.coordination_status || 'ACTIVE'}</span>
+                  <span style={styles.statusBadge}>
+                    {item.coordination_status || 'ACTIVE'}
+                  </span>
                 </div>
 
                 <div style={styles.infoGrid}>
@@ -471,6 +566,26 @@ export default function InstitutionalRoutingEnginePage() {
       </div>
     </main>
   )
+}
+
+function priorityGuideText(priority: string) {
+  if (priority === 'LOW') {
+    return 'Learner needs support, but no urgent risk is currently visible.'
+  }
+
+  if (priority === 'MODERATE') {
+    return 'Learning gap is visible and needs structured follow-up.'
+  }
+
+  if (priority === 'HIGH') {
+    return 'Exam risk, repeated failure, or serious learning instability is present.'
+  }
+
+  if (priority === 'CRITICAL') {
+    return 'Safeguarding concern, severe exam risk, major learning breakdown, or urgent institutional escalation.'
+  }
+
+  return 'Select a routing priority.'
 }
 
 function Metric({ label, value }: { label: string; value: number }) {
@@ -502,8 +617,8 @@ function Select({ label, value, setValue, options }: any) {
       {label}
       <select value={value} onChange={(e) => setValue(e.target.value)} style={styles.select}>
         {options.map((option: string) => (
-          <option key={option} value={option}>
-            {option}
+          <option key={option || 'blank'} value={option}>
+            {option || 'Select option'}
           </option>
         ))}
       </select>
@@ -643,28 +758,37 @@ const styles: Record<string, CSSProperties> = {
     cursor: 'pointer',
     fontSize: '16px',
   },
+  guideBox: {
+    background: '#082f49',
+    border: '1px solid #0e7490',
+    color: '#e0f2fe',
+    borderRadius: '14px',
+    padding: '14px',
+    marginBottom: '16px',
+    lineHeight: 1.5,
+  },
   listGrid: {
     display: 'grid',
     gap: '16px',
   },
-  nodeCard: {
+  siteCard: {
     background: '#0f172a',
     border: '1px solid #334155',
     borderRadius: '18px',
     padding: '18px',
   },
-  nodeHeader: {
+  siteHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     gap: '14px',
     alignItems: 'flex-start',
     flexWrap: 'wrap',
   },
-  nodeTitle: {
+  siteTitle: {
     margin: 0,
     fontSize: '22px',
   },
-  nodeMeta: {
+  siteMeta: {
     color: '#93c5fd',
     marginTop: '6px',
   },
