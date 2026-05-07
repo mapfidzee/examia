@@ -33,53 +33,74 @@ const CASE_STATUSES = [
   'REOPENED',
 ]
 
-const SEVERITY_LEVELS = [
-  'LOW',
-  'MODERATE',
-  'HIGH',
-  'CRITICAL',
+const SEVERITY_LEVELS = ['LOW', 'MODERATE', 'HIGH', 'CRITICAL']
+
+const BENEFICIARY_LEVELS = [
+  'Primary school beneficiary',
+  'Secondary school beneficiary',
+  'Exam-year beneficiary',
+  'Out-of-school beneficiary',
+  'Rural/low-access beneficiary',
+  'Community-supported beneficiary',
+  'Institution-referred beneficiary',
+  'Other',
 ]
 
-const INSTABILITY_SIGNALS = [
-  'Repeated comprehension breakdown',
-  'Exam risk detected',
-  'Extended learning gap',
-  'Attendance instability',
-  'Engagement instability',
-  'Repeated assignment failure',
-  'Low confidence indicators',
-  'Connectivity instability',
-  'Safeguarding concern',
-  'Language barrier',
-  'Chronic intervention dependency',
+const SUPPORT_DOMAINS = [
+  'Learning continuity stabilization',
+  'Access and low-bandwidth support',
+  'Responder coordination',
+  'Institutional coordination',
+  'Safeguarding visibility',
+  'District or regional escalation',
+  'Family/guardian support coordination',
+  'Progression or exam-readiness continuity',
+  'Other',
+]
+
+const STABILIZATION_SIGNALS = [
+  'Support pathway disrupted',
+  'Access barrier detected',
+  'Low-bandwidth or connectivity barrier',
+  'No verified responder currently available',
+  'Institution coordination gap',
+  'Repeated support breakdown',
+  'Progression or continuity risk',
+  'Family or guardian support need',
+  'Language-sensitive support need',
+  'Rural or remote access pressure',
+  'Safeguarding visibility concern',
+  'District escalation may be needed',
 ]
 
 const INTERVENTION_TEMPLATES = [
-  'Concept clarification completed',
-  'Exam preparation intervention initiated',
-  'Reading stabilization initiated',
-  'Connectivity barriers identified',
-  'Follow-up intervention recommended',
-  'Assignment recovery intervention initiated',
-  'Safeguarding escalation required',
+  'Initial stabilization review completed',
+  'Responder coordination initiated',
+  'Institution coordination initiated',
+  'Low-data support pathway recommended',
+  'Safeguarding-aware handling recommended',
+  'District escalation recommended',
+  'Family or guardian coordination recommended',
+  'Continuity follow-up recommended',
 ]
 
 const OUTCOME_TEMPLATES = [
-  'Learner stabilized',
+  'Beneficiary pathway stabilized',
   'Partial stabilization achieved',
-  'Intervention incomplete',
-  'Repeated instability detected',
-  'Case escalated for continued support',
+  'Further responder support required',
+  'Institution coordination still required',
+  'Escalation required',
+  'Case ready for closure',
 ]
 
 export default function BeneficiaryCaseEnginePage() {
-  const [mounted, setMounted] = useState(false)
-
   const [cases, setCases] = useState<BeneficiaryCase[]>([])
 
   const [beneficiaryName, setBeneficiaryName] = useState('')
   const [beneficiaryLevel, setBeneficiaryLevel] = useState('')
+  const [otherBeneficiaryLevel, setOtherBeneficiaryLevel] = useState('')
   const [supportDomain, setSupportDomain] = useState('')
+  const [otherSupportDomain, setOtherSupportDomain] = useState('')
   const [severityLevel, setSeverityLevel] = useState('MODERATE')
   const [region, setRegion] = useState('')
   const [institutionName, setInstitutionName] = useState('')
@@ -90,11 +111,8 @@ export default function BeneficiaryCaseEnginePage() {
   const [message, setMessage] = useState('')
 
   useEffect(() => {
-    setMounted(true)
     loadCases()
   }, [])
-
-  if (!mounted) return null
 
   async function loadCases() {
     const { data, error } = await supabase
@@ -110,9 +128,21 @@ export default function BeneficiaryCaseEnginePage() {
     setCases(data || [])
   }
 
+  function finalBeneficiaryLevel() {
+    return beneficiaryLevel === 'Other'
+      ? otherBeneficiaryLevel.trim()
+      : beneficiaryLevel
+  }
+
+  function finalSupportDomain() {
+    return supportDomain === 'Other'
+      ? otherSupportDomain.trim()
+      : supportDomain
+  }
+
   async function createCase() {
-    if (!beneficiaryName.trim() || !supportDomain.trim()) {
-      alert('Enter beneficiary name and support domain.')
+    if (!beneficiaryName.trim() || !finalSupportDomain()) {
+      alert('Enter beneficiary name and stabilization domain.')
       return
     }
 
@@ -123,8 +153,8 @@ export default function BeneficiaryCaseEnginePage() {
       .from('beneficiary_cases')
       .insert({
         beneficiary_name: beneficiaryName.trim(),
-        beneficiary_level: beneficiaryLevel.trim(),
-        support_domain: supportDomain.trim(),
+        beneficiary_level: finalBeneficiaryLevel(),
+        support_domain: finalSupportDomain(),
         severity_level: severityLevel,
         instability_signals: selectedSignals,
         region: region.trim(),
@@ -136,7 +166,6 @@ export default function BeneficiaryCaseEnginePage() {
       .single()
 
     if (error) {
-      console.error(error)
       alert(error.message)
       setLoading(false)
       return
@@ -150,7 +179,9 @@ export default function BeneficiaryCaseEnginePage() {
 
     setBeneficiaryName('')
     setBeneficiaryLevel('')
+    setOtherBeneficiaryLevel('')
     setSupportDomain('')
+    setOtherSupportDomain('')
     setSeverityLevel('MODERATE')
     setRegion('')
     setInstitutionName('')
@@ -158,7 +189,6 @@ export default function BeneficiaryCaseEnginePage() {
     setSafeguardingFlag(false)
 
     setMessage('Beneficiary stabilization case created.')
-
     setLoading(false)
 
     await loadCases()
@@ -174,7 +204,6 @@ export default function BeneficiaryCaseEnginePage() {
       .eq('id', caseItem.id)
 
     if (error) {
-      console.error(error)
       alert(error.message)
       return
     }
@@ -188,10 +217,9 @@ export default function BeneficiaryCaseEnginePage() {
     await loadCases()
   }
 
-  async function applyInterventionSummary(
-    caseItem: BeneficiaryCase,
-    summary: string
-  ) {
+  async function applyInterventionSummary(caseItem: BeneficiaryCase, summary: string) {
+    if (!summary) return
+
     const { error } = await supabase
       .from('beneficiary_cases')
       .update({
@@ -200,23 +228,22 @@ export default function BeneficiaryCaseEnginePage() {
       .eq('id', caseItem.id)
 
     if (error) {
-      console.error(error)
+      alert(error.message)
       return
     }
 
     await supabase.from('case_interventions').insert({
       case_id: caseItem.id,
-      intervention_type: 'STANDARD_INTERVENTION',
+      intervention_type: 'STANDARD_STABILIZATION_INTERVENTION',
       intervention_summary: summary,
     })
 
     await loadCases()
   }
 
-  async function applyOutcomeSummary(
-    caseItem: BeneficiaryCase,
-    outcome: string
-  ) {
+  async function applyOutcomeSummary(caseItem: BeneficiaryCase, outcome: string) {
+    if (!outcome) return
+
     const { error } = await supabase
       .from('beneficiary_cases')
       .update({
@@ -225,7 +252,7 @@ export default function BeneficiaryCaseEnginePage() {
       .eq('id', caseItem.id)
 
     if (error) {
-      console.error(error)
+      alert(error.message)
       return
     }
 
@@ -240,42 +267,29 @@ export default function BeneficiaryCaseEnginePage() {
 
   function toggleSignal(signal: string) {
     if (selectedSignals.includes(signal)) {
-      setSelectedSignals(selectedSignals.filter((s) => s !== signal))
+      setSelectedSignals(selectedSignals.filter((item) => item !== signal))
     } else {
       setSelectedSignals([...selectedSignals, signal])
     }
   }
 
   const totalCases = cases.length
-  const criticalCases = cases.filter(
-    (c) => c.severity_level === 'CRITICAL'
-  ).length
-
-  const escalatedCases = cases.filter(
-    (c) => c.case_status === 'ESCALATED'
-  ).length
-
-  const stabilizedCases = cases.filter(
-    (c) => c.case_status === 'STABILIZED'
-  ).length
+  const criticalCases = cases.filter((item) => item.severity_level === 'CRITICAL').length
+  const escalatedCases = cases.filter((item) => item.case_status === 'ESCALATED').length
+  const stabilizedCases = cases.filter((item) => item.case_status === 'STABILIZED').length
 
   return (
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.hero}>
-          <p style={styles.kicker}>
-            EXAMIA LIS • BENEFICIARY CASE ENGINE
-          </p>
+          <p style={styles.kicker}>EXAMIA LIS • BENEFICIARY CASE ENGINE</p>
 
-          <h1 style={styles.title}>
-            Learning Stabilization Coordination Infrastructure
-          </h1>
+          <h1 style={styles.title}>Beneficiary Stabilization Infrastructure</h1>
 
           <p style={styles.subtitle}>
-            Governed beneficiary stabilization lifecycle management for
-            learning distress detection, intervention routing,
-            stabilization tracking, safeguarding visibility,
-            escalation control, and institutional coordination.
+            Governed case lifecycle management for beneficiary support breakdowns,
+            access barriers, continuity risks, safeguarding visibility, responder
+            coordination, escalation control, and institutional stabilization.
           </p>
         </section>
 
@@ -286,16 +300,16 @@ export default function BeneficiaryCaseEnginePage() {
           <Metric label="Stabilized Cases" value={stabilizedCases} />
         </section>
 
-        {message && (
-          <div style={styles.message}>
-            {message}
-          </div>
-        )}
+        {message && <div style={styles.message}>{message}</div>}
 
         <section style={styles.formCard}>
-          <h2 style={styles.sectionTitle}>
-            Create Beneficiary Stabilization Case
-          </h2>
+          <h2 style={styles.sectionTitle}>Create Beneficiary Stabilization Case</h2>
+
+          <p style={styles.panelNote}>
+            Use this page when a beneficiary needs structured support coordination.
+            The case should describe the stabilization need, not blame the beneficiary,
+            school, family, responder, or institution.
+          </p>
 
           <div style={styles.grid}>
             <Input
@@ -304,66 +318,75 @@ export default function BeneficiaryCaseEnginePage() {
               setValue={setBeneficiaryName}
             />
 
-            <Input
-              label="Learner Level"
+            <Select
+              label="Beneficiary Level / Population Group"
               value={beneficiaryLevel}
               setValue={setBeneficiaryLevel}
-              placeholder="Grade 7, O Level, A Level"
+              options={['', ...BENEFICIARY_LEVELS]}
             />
 
-            <Input
-              label="Support Domain"
+            {beneficiaryLevel === 'Other' && (
+              <Input
+                label="Other Beneficiary Level"
+                value={otherBeneficiaryLevel}
+                setValue={setOtherBeneficiaryLevel}
+                placeholder="Describe beneficiary group"
+              />
+            )}
+
+            <Select
+              label="Stabilization Domain"
               value={supportDomain}
               setValue={setSupportDomain}
-              placeholder="Math recovery, Reading stabilization"
+              options={['', ...SUPPORT_DOMAINS]}
             />
 
-            <Input
-              label="Region"
-              value={region}
-              setValue={setRegion}
-            />
+            {supportDomain === 'Other' && (
+              <Input
+                label="Other Stabilization Domain"
+                value={otherSupportDomain}
+                setValue={setOtherSupportDomain}
+                placeholder="Describe stabilization need"
+              />
+            )}
+
+            <Input label="Region" value={region} setValue={setRegion} />
 
             <Input
-              label="Institution"
+              label="Institution / Referral Source"
               value={institutionName}
               setValue={setInstitutionName}
+              placeholder="School, NGO, district office, community site"
             />
           </div>
 
           <div style={{ marginTop: '24px' }}>
-            <label style={styles.label}>Severity Level</label>
-
-            <select
+            <Select
+              label="Severity Level"
               value={severityLevel}
-              onChange={(e) => setSeverityLevel(e.target.value)}
-              style={styles.select}
-            >
-              {SEVERITY_LEVELS.map((level) => (
-                <option key={level}>{level}</option>
-              ))}
-            </select>
+              setValue={setSeverityLevel}
+              options={SEVERITY_LEVELS}
+            />
           </div>
 
           <div style={{ marginTop: '24px' }}>
-            <label style={styles.label}>
-              Learning Instability Signals
-            </label>
+            <label style={styles.label}>Stabilization Risk Signals</label>
+
+            <p style={styles.panelNote}>
+              Select the visible system signals affecting the beneficiary’s support
+              pathway. These signals help routing, escalation, and responder coordination.
+            </p>
 
             <div style={styles.signalGrid}>
-              {INSTABILITY_SIGNALS.map((signal) => (
+              {STABILIZATION_SIGNALS.map((signal) => (
                 <button
                   key={signal}
                   type="button"
                   onClick={() => toggleSignal(signal)}
                   style={{
                     ...styles.signalButton,
-                    background: selectedSignals.includes(signal)
-                      ? '#67e8f9'
-                      : '#111827',
-                    color: selectedSignals.includes(signal)
-                      ? '#082f49'
-                      : 'white',
+                    background: selectedSignals.includes(signal) ? '#67e8f9' : '#111827',
+                    color: selectedSignals.includes(signal) ? '#082f49' : 'white',
                   }}
                 >
                   {signal}
@@ -376,42 +399,27 @@ export default function BeneficiaryCaseEnginePage() {
             <input
               type="checkbox"
               checked={safeguardingFlag}
-              onChange={(e) => setSafeguardingFlag(e.target.checked)}
+              onChange={(event) => setSafeguardingFlag(event.target.checked)}
             />
 
-            <span>
-              Safeguarding concern present
-            </span>
+            <span>Safeguarding visibility required</span>
           </div>
 
-          <button
-            onClick={createCase}
-            disabled={loading}
-            style={styles.primaryButton}
-          >
-            {loading
-              ? 'Creating Case...'
-              : 'Create Stabilization Case'}
+          <button onClick={createCase} disabled={loading} style={styles.primaryButton}>
+            {loading ? 'Creating Case...' : 'Create Stabilization Case'}
           </button>
         </section>
 
         <section style={styles.caseSection}>
-          <h2 style={styles.sectionTitle}>
-            Active Beneficiary Cases
-          </h2>
+          <h2 style={styles.sectionTitle}>Active Beneficiary Cases</h2>
 
           <div style={styles.caseList}>
             {cases.map((caseItem) => (
               <article key={caseItem.id} style={styles.caseCard}>
                 <div style={styles.caseHeader}>
                   <div>
-                    <h3 style={styles.caseName}>
-                      {caseItem.beneficiary_name}
-                    </h3>
-
-                    <p style={styles.caseDomain}>
-                      {caseItem.support_domain}
-                    </p>
+                    <h3 style={styles.caseName}>{caseItem.beneficiary_name}</h3>
+                    <p style={styles.caseDomain}>{caseItem.support_domain}</p>
                   </div>
 
                   <span style={severityBadge(caseItem.severity_level)}>
@@ -420,28 +428,15 @@ export default function BeneficiaryCaseEnginePage() {
                 </div>
 
                 <div style={styles.infoGrid}>
+                  <Info label="Lifecycle" value={caseItem.case_status} />
                   <Info
-                    label="Lifecycle"
-                    value={caseItem.case_status}
+                    label="Beneficiary Level"
+                    value={caseItem.beneficiary_level || 'Not provided'}
                   />
-
+                  <Info label="Region" value={caseItem.region || 'Not provided'} />
                   <Info
-                    label="Level"
-                    value={
-                      caseItem.beneficiary_level || 'Not provided'
-                    }
-                  />
-
-                  <Info
-                    label="Region"
-                    value={caseItem.region || 'Not provided'}
-                  />
-
-                  <Info
-                    label="Institution"
-                    value={
-                      caseItem.institution_name || 'Not provided'
-                    }
+                    label="Institution / Referral"
+                    value={caseItem.institution_name || 'Not provided'}
                   />
                 </div>
 
@@ -457,9 +452,7 @@ export default function BeneficiaryCaseEnginePage() {
                   {CASE_STATUSES.map((status) => (
                     <button
                       key={status}
-                      onClick={() =>
-                        changeCaseStatus(caseItem, status)
-                      }
+                      onClick={() => changeCaseStatus(caseItem, status)}
                       style={styles.lifecycleButton}
                     >
                       {status}
@@ -468,23 +461,16 @@ export default function BeneficiaryCaseEnginePage() {
                 </div>
 
                 <div style={styles.dropdownSection}>
-                  <label style={styles.label}>
-                    Structured Intervention Summary
-                  </label>
+                  <label style={styles.label}>Structured Stabilization Action</label>
 
                   <select
-                    onChange={(e) =>
-                      applyInterventionSummary(
-                        caseItem,
-                        e.target.value
-                      )
+                    onChange={(event) =>
+                      applyInterventionSummary(caseItem, event.target.value)
                     }
                     style={styles.select}
                     value=""
                   >
-                    <option value="">
-                      Select intervention summary
-                    </option>
+                    <option value="">Select stabilization action</option>
 
                     {INTERVENTION_TEMPLATES.map((item) => (
                       <option key={item} value={item}>
@@ -495,23 +481,16 @@ export default function BeneficiaryCaseEnginePage() {
                 </div>
 
                 <div style={styles.dropdownSection}>
-                  <label style={styles.label}>
-                    Structured Outcome Summary
-                  </label>
+                  <label style={styles.label}>Structured Outcome Summary</label>
 
                   <select
-                    onChange={(e) =>
-                      applyOutcomeSummary(
-                        caseItem,
-                        e.target.value
-                      )
+                    onChange={(event) =>
+                      applyOutcomeSummary(caseItem, event.target.value)
                     }
                     style={styles.select}
                     value=""
                   >
-                    <option value="">
-                      Select outcome summary
-                    </option>
+                    <option value="">Select outcome summary</option>
 
                     {OUTCOME_TEMPLATES.map((item) => (
                       <option key={item} value={item}>
@@ -523,15 +502,13 @@ export default function BeneficiaryCaseEnginePage() {
 
                 {caseItem.intervention_summary && (
                   <div style={styles.summaryBox}>
-                    <strong>Intervention:</strong>{' '}
-                    {caseItem.intervention_summary}
+                    <strong>Stabilization Action:</strong> {caseItem.intervention_summary}
                   </div>
                 )}
 
                 {caseItem.outcome_summary && (
                   <div style={styles.summaryBox}>
-                    <strong>Outcome:</strong>{' '}
-                    {caseItem.outcome_summary}
+                    <strong>Outcome:</strong> {caseItem.outcome_summary}
                   </div>
                 )}
               </article>
@@ -543,39 +520,22 @@ export default function BeneficiaryCaseEnginePage() {
   )
 }
 
-function Metric({
-  label,
-  value,
-}: {
-  label: string
-  value: number
-}) {
+function Metric({ label, value }: { label: string; value: number }) {
   return (
     <div style={styles.metricCard}>
-      <p style={styles.metricLabel}>
-        {label}
-      </p>
-
-      <h2 style={styles.metricValue}>
-        {value}
-      </h2>
+      <p style={styles.metricLabel}>{label}</p>
+      <h2 style={styles.metricValue}>{value}</h2>
     </div>
   )
 }
 
-function Input({
-  label,
-  value,
-  setValue,
-  placeholder = '',
-}: any) {
+function Input({ label, value, setValue, placeholder = '' }: any) {
   return (
     <label style={styles.label}>
       {label}
-
       <input
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(event) => setValue(event.target.value)}
         placeholder={placeholder}
         style={styles.input}
       />
@@ -583,22 +543,30 @@ function Input({
   )
 }
 
-function Info({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
+function Select({ label, value, setValue, options }: any) {
+  return (
+    <label style={styles.label}>
+      {label}
+      <select
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        style={styles.select}
+      >
+        {options.map((option: string) => (
+          <option key={option || 'blank'} value={option}>
+            {option || 'Select option'}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+function Info({ label, value }: { label: string; value: string }) {
   return (
     <div style={styles.infoBox}>
-      <p style={styles.infoLabel}>
-        {label}
-      </p>
-
-      <p style={styles.infoValue}>
-        {value}
-      </p>
+      <p style={styles.infoLabel}>{label}</p>
+      <p style={styles.infoValue}>{value}</p>
     </div>
   )
 }
@@ -640,61 +608,50 @@ const styles: Record<string, CSSProperties> = {
     color: 'white',
     padding: '56px 18px',
   },
-
   container: {
     maxWidth: '1200px',
     margin: '0 auto',
   },
-
   hero: {
     marginBottom: '32px',
   },
-
   kicker: {
     color: '#67e8f9',
     fontWeight: 900,
     letterSpacing: '2px',
     fontSize: '12px',
   },
-
   title: {
-    fontSize: '56px',
+    fontSize: 'clamp(34px, 6vw, 56px)',
     lineHeight: 1.05,
     margin: '12px 0',
   },
-
   subtitle: {
     color: '#cbd5e1',
-    maxWidth: '900px',
+    maxWidth: '920px',
     lineHeight: 1.7,
     fontSize: '18px',
   },
-
   metricsGrid: {
     display: 'grid',
-    gridTemplateColumns:
-      'repeat(auto-fit, minmax(220px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
     gap: '16px',
     marginBottom: '24px',
   },
-
   metricCard: {
     background: '#0f172a',
     border: '1px solid #1e293b',
     borderRadius: '18px',
     padding: '20px',
   },
-
   metricLabel: {
     color: '#94a3b8',
     fontWeight: 800,
   },
-
   metricValue: {
     fontSize: '42px',
     marginTop: '8px',
   },
-
   message: {
     background: '#064e3b',
     color: '#bbf7d0',
@@ -703,7 +660,6 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 800,
     marginBottom: '20px',
   },
-
   formCard: {
     background: '#020617',
     border: '1px solid #1e293b',
@@ -711,25 +667,25 @@ const styles: Record<string, CSSProperties> = {
     padding: '24px',
     marginBottom: '32px',
   },
-
   sectionTitle: {
     fontSize: '28px',
+    marginBottom: '12px',
+  },
+  panelNote: {
+    color: '#cbd5e1',
+    lineHeight: 1.6,
     marginBottom: '18px',
   },
-
   grid: {
     display: 'grid',
-    gridTemplateColumns:
-      'repeat(auto-fit, minmax(220px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
     gap: '16px',
   },
-
   label: {
     display: 'block',
     fontWeight: 800,
     marginBottom: '10px',
   },
-
   input: {
     width: '100%',
     marginTop: '8px',
@@ -739,23 +695,21 @@ const styles: Record<string, CSSProperties> = {
     background: '#111827',
     color: 'white',
   },
-
   select: {
     width: '100%',
+    marginTop: '8px',
     padding: '14px',
     borderRadius: '12px',
     background: '#111827',
     color: 'white',
     border: '1px solid #334155',
   },
-
   signalGrid: {
     display: 'flex',
     flexWrap: 'wrap',
     gap: '10px',
     marginTop: '12px',
   },
-
   signalButton: {
     border: '1px solid #334155',
     borderRadius: '999px',
@@ -763,7 +717,6 @@ const styles: Record<string, CSSProperties> = {
     cursor: 'pointer',
     fontWeight: 700,
   },
-
   checkboxRow: {
     display: 'flex',
     gap: '10px',
@@ -771,7 +724,6 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: '24px',
     alignItems: 'center',
   },
-
   primaryButton: {
     background: '#67e8f9',
     color: '#082f49',
@@ -783,73 +735,60 @@ const styles: Record<string, CSSProperties> = {
     width: '100%',
     fontSize: '16px',
   },
-
   caseSection: {
     marginBottom: '40px',
   },
-
   caseList: {
     display: 'grid',
     gap: '18px',
   },
-
   caseCard: {
     background: '#0f172a',
     border: '1px solid #334155',
     borderRadius: '20px',
     padding: '20px',
   },
-
   caseHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     gap: '16px',
     flexWrap: 'wrap',
   },
-
   caseName: {
     fontSize: '24px',
     margin: 0,
   },
-
   caseDomain: {
     color: '#93c5fd',
     marginTop: '6px',
   },
-
   infoGrid: {
     display: 'grid',
-    gridTemplateColumns:
-      'repeat(auto-fit, minmax(180px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
     gap: '12px',
     marginTop: '18px',
   },
-
   infoBox: {
     background: '#020617',
     borderRadius: '14px',
     padding: '12px',
     border: '1px solid #1e293b',
   },
-
   infoLabel: {
     color: '#94a3b8',
     fontSize: '12px',
     fontWeight: 900,
   },
-
   infoValue: {
     marginTop: '6px',
     lineHeight: 1.5,
   },
-
   signalContainer: {
     display: 'flex',
     flexWrap: 'wrap',
     gap: '8px',
     marginTop: '18px',
   },
-
   signalBadge: {
     background: '#082f49',
     color: '#67e8f9',
@@ -858,15 +797,12 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '12px',
     fontWeight: 800,
   },
-
   lifecycleGrid: {
     display: 'grid',
-    gridTemplateColumns:
-      'repeat(auto-fit, minmax(180px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
     gap: '10px',
     marginTop: '22px',
   },
-
   lifecycleButton: {
     background: '#111827',
     border: '1px solid #334155',
@@ -876,11 +812,9 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 800,
     cursor: 'pointer',
   },
-
   dropdownSection: {
     marginTop: '20px',
   },
-
   summaryBox: {
     marginTop: '18px',
     background: '#020617',
