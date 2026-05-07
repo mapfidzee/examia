@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 
-export default function TeacherSignupPage() {
+export default function ResponderVerificationPortal() {
   const [mounted, setMounted] = useState(false)
 
   const [fullName, setFullName] = useState('')
@@ -15,6 +15,13 @@ export default function TeacherSignupPage() {
   const [hourlyRate, setHourlyRate] = useState('')
   const [bio, setBio] = useState('')
 
+  const [qualificationSummary, setQualificationSummary] = useState('')
+  const [teachingExperience, setTeachingExperience] = useState('')
+  const [availability, setAvailability] = useState('')
+  const [internetAccess, setInternetAccess] = useState('')
+  const [studentSafetyAgreement, setStudentSafetyAgreement] = useState(false)
+  const [platformGovernanceAgreement, setPlatformGovernanceAgreement] = useState(false)
+
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
@@ -24,35 +31,68 @@ export default function TeacherSignupPage() {
 
   if (!mounted) return null
 
-  async function submitTeacherProfile() {
+  function splitList(value: string) {
+    return value
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+  }
+
+  async function submitResponderProfile() {
     if (!fullName.trim() || !email.trim() || !subjects.trim()) {
-      alert('Please enter your full name, email, and subjects.')
+      alert('Please enter your full name, email, and teaching subjects.')
+      return
+    }
+
+    if (!studentSafetyAgreement || !platformGovernanceAgreement) {
+      alert('Please confirm the safety and platform governance agreements.')
       return
     }
 
     setLoading(true)
     setMessage('')
 
+    const completeBio = `
+Teaching Strength:
+${bio.trim() || 'Not provided'}
+
+Qualification Summary:
+${qualificationSummary.trim() || 'Not provided'}
+
+Teaching Experience:
+${teachingExperience.trim() || 'Not provided'}
+
+Availability:
+${availability.trim() || 'Not provided'}
+
+Internet / Device Access:
+${internetAccess.trim() || 'Not provided'}
+
+Governance Confirmations:
+- Student safety agreement accepted
+- Platform governance agreement accepted
+    `.trim()
+
     const { error } = await supabase.from('teacher_profiles').insert({
       full_name: fullName.trim(),
       email: email.trim().toLowerCase(),
-      subjects: subjects.split(',').map((item) => item.trim()).filter(Boolean),
-      grade_levels: gradeLevels.split(',').map((item) => item.trim()).filter(Boolean),
+      subjects: splitList(subjects),
+      grade_levels: splitList(gradeLevels),
       province: province.trim(),
-      spoken_languages: spokenLanguages.split(',').map((item) => item.trim()).filter(Boolean),
+      spoken_languages: splitList(spokenLanguages),
       hourly_rate: hourlyRate ? Number(hourlyRate) : null,
-      bio: bio.trim(),
+      bio: completeBio,
       status: 'PENDING',
     })
 
     if (error) {
       console.error(error)
-      alert('Teacher profile could not be submitted.')
+      alert('Responder verification profile could not be submitted.')
       setLoading(false)
       return
     }
 
-    setMessage('Profile submitted successfully. Awaiting approval.')
+    setMessage('Verification profile submitted. EXAMIA will review before activation.')
 
     setFullName('')
     setEmail('')
@@ -62,160 +102,317 @@ export default function TeacherSignupPage() {
     setSpokenLanguages('')
     setHourlyRate('')
     setBio('')
+    setQualificationSummary('')
+    setTeachingExperience('')
+    setAvailability('')
+    setInternetAccess('')
+    setStudentSafetyAgreement(false)
+    setPlatformGovernanceAgreement(false)
     setLoading(false)
   }
 
   return (
-    <main style={{
-      minHeight: '100vh',
-      background: '#0b3b8f',
-      padding: '80px 20px',
-      color: 'white'
-    }}>
-      <div style={{
-        maxWidth: '1000px',
-        margin: '0 auto'
-      }}>
+    <main style={styles.page}>
+      <div style={styles.container}>
+        <section style={styles.hero}>
+          <p style={styles.kicker}>EXAMIA RESPONDER VERIFICATION PORTAL</p>
 
-        {/* HEADER */}
-        <div style={{ marginBottom: '40px' }}>
-          <p style={{
-            fontSize: '12px',
-            fontWeight: 'bold',
-            letterSpacing: '2px',
-            color: '#dbeafe'
-          }}>
-            EXAMIA TEACHER NETWORK
+          <h1 style={styles.title}>Apply to Become a Verified Learning Responder</h1>
+
+          <p style={styles.subtitle}>
+            EXAMIA is building a governed learning support network for students.
+            Responders are reviewed before they can support learners inside controlled
+            lesson rooms.
           </p>
 
-          <h1 style={{
-            fontSize: '52px',
-            margin: '10px 0'
-          }}>
-            Teach with EXAMIA
-          </h1>
+          <div style={styles.notice}>
+            <strong>Verification-first model:</strong> this is not an instant signup.
+            EXAMIA reviews identity, teaching fit, safety readiness, availability,
+            and platform discipline before activation.
+          </div>
+        </section>
 
-          <p style={{
-            fontSize: '18px',
-            maxWidth: '700px',
-            color: '#e0f2fe'
-          }}>
-            Join a structured platform where teachers support students through
-            controlled lesson rooms, chat, files, voice, and live audio.
-          </p>
-        </div>
-
-        {/* FORM CARD */}
-        <div style={{
-          background: '#0f172a',
-          borderRadius: '20px',
-          padding: '40px',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.4)'
-        }}>
-
-          {/* SECTION 1 */}
-          <Section title="Identity">
+        <section style={styles.card}>
+          <Section title="1. Identity">
             <Input label="Full Name *" value={fullName} setValue={setFullName} />
             <Input label="Email *" value={email} setValue={setEmail} />
+            <Input label="Province / Location" value={province} setValue={setProvince} />
           </Section>
 
-          {/* SECTION 2 */}
-          <Section title="Teaching Fit">
-            <Input label="Subjects *" value={subjects} setValue={setSubjects} placeholder="Math, Biology" />
-            <Input label="Grade Levels" value={gradeLevels} setValue={setGradeLevels} placeholder="Grade 7, A Level" />
-          </Section>
-
-          {/* SECTION 3 */}
-          <Section title="Local Matching">
-            <Input label="Province" value={province} setValue={setProvince} />
-            <Input label="Languages" value={spokenLanguages} setValue={setSpokenLanguages} placeholder="English, Shona" />
-            <Input label="Hourly Rate" value={hourlyRate} setValue={setHourlyRate} />
-          </Section>
-
-          {/* SECTION 4 */}
-          <div style={{
-            background: '#1d4ed8',
-            padding: '30px',
-            borderRadius: '16px',
-            marginBottom: '30px'
-          }}>
-            <h3>Teaching Strength</h3>
-            <textarea
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder="Describe how you teach and help students understand."
-              style={{
-                width: '100%',
-                marginTop: '10px',
-                padding: '16px',
-                borderRadius: '10px',
-                border: 'none',
-                minHeight: '200px'
-              }}
+          <Section title="2. Learning Support Fit">
+            <Input
+              label="Subjects You Can Support *"
+              value={subjects}
+              setValue={setSubjects}
+              placeholder="Mathematics, Science, History, Shona"
             />
-          </div>
 
-          {/* BUTTON */}
+            <Input
+              label="Grade / Level Range"
+              value={gradeLevels}
+              setValue={setGradeLevels}
+              placeholder="Grade 7, Form 2, O Level, A Level"
+            />
+
+            <Input
+              label="Languages You Can Teach In"
+              value={spokenLanguages}
+              setValue={setSpokenLanguages}
+              placeholder="English, Shona, Ndebele"
+            />
+          </Section>
+
+          <Section title="3. Verification Information">
+            <TextArea
+              label="Qualification Summary"
+              value={qualificationSummary}
+              setValue={setQualificationSummary}
+              placeholder="Briefly describe your education, training, certificates, or subject strength."
+            />
+
+            <TextArea
+              label="Teaching / Tutoring Experience"
+              value={teachingExperience}
+              setValue={setTeachingExperience}
+              placeholder="Describe your experience helping learners, even if informal."
+            />
+
+            <TextArea
+              label="Teaching Strength"
+              value={bio}
+              setValue={setBio}
+              placeholder="Describe how you explain difficult concepts and support struggling students."
+            />
+          </Section>
+
+          <Section title="4. Availability and Access">
+            <Input
+              label="Expected Hourly Rate"
+              value={hourlyRate}
+              setValue={setHourlyRate}
+              placeholder="Example: 5"
+            />
+
+            <Input
+              label="Availability"
+              value={availability}
+              setValue={setAvailability}
+              placeholder="Example: Weekdays 6pm–9pm, Saturdays morning"
+            />
+
+            <Input
+              label="Internet / Device Access"
+              value={internetAccess}
+              setValue={setInternetAccess}
+              placeholder="Example: Android phone, laptop, stable data, WiFi"
+            />
+          </Section>
+
+          <section style={styles.governanceBox}>
+            <h3 style={styles.sectionTitle}>5. Safety and Platform Governance</h3>
+
+            <CheckBox
+              checked={studentSafetyAgreement}
+              setChecked={setStudentSafetyAgreement}
+              label="I understand that learners must be treated respectfully, safely, and professionally at all times."
+            />
+
+            <CheckBox
+              checked={platformGovernanceAgreement}
+              setChecked={setPlatformGovernanceAgreement}
+              label="I understand that EXAMIA lessons must remain inside the controlled platform unless EXAMIA authorizes otherwise."
+            />
+          </section>
+
           <button
-            onClick={submitTeacherProfile}
+            onClick={submitResponderProfile}
             disabled={loading}
             style={{
-              width: '100%',
-              padding: '18px',
-              fontSize: '18px',
-              fontWeight: 'bold',
-              background: 'white',
-              color: '#0b3b8f',
-              border: 'none',
-              borderRadius: '12px'
+              ...styles.button,
+              opacity: loading ? 0.7 : 1,
+              cursor: loading ? 'not-allowed' : 'pointer',
             }}
           >
-            {loading ? 'Submitting...' : 'Submit Teacher Profile'}
+            {loading ? 'Submitting Verification Profile...' : 'Submit for Verification'}
           </button>
 
-          {message && (
-            <p style={{ marginTop: '20px', color: '#bbf7d0' }}>
-              {message}
-            </p>
-          )}
-        </div>
+          {message && <p style={styles.success}>{message}</p>}
+        </section>
       </div>
     </main>
   )
 }
 
-/* COMPONENTS */
-
 function Section({ title, children }: any) {
   return (
-    <div style={{ marginBottom: '25px' }}>
-      <h3 style={{ marginBottom: '10px' }}>{title}</h3>
-      <div style={{
-        display: 'grid',
-        gap: '15px'
-      }}>
-        {children}
-      </div>
-    </div>
+    <section style={styles.section}>
+      <h3 style={styles.sectionTitle}>{title}</h3>
+      <div style={styles.grid}>{children}</div>
+    </section>
   )
 }
 
 function Input({ label, value, setValue, placeholder = '' }: any) {
   return (
-    <div>
-      <label style={{ fontWeight: 'bold' }}>{label}</label>
+    <label style={styles.label}>
+      {label}
       <input
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder={placeholder}
-        style={{
-          width: '100%',
-          padding: '14px',
-          marginTop: '5px',
-          borderRadius: '10px',
-          border: 'none'
-        }}
+        style={styles.input}
       />
-    </div>
+    </label>
   )
+}
+
+function TextArea({ label, value, setValue, placeholder = '' }: any) {
+  return (
+    <label style={styles.label}>
+      {label}
+      <textarea
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder={placeholder}
+        style={styles.textarea}
+      />
+    </label>
+  )
+}
+
+function CheckBox({ checked, setChecked, label }: any) {
+  return (
+    <label style={styles.checkboxRow}>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => setChecked(e.target.checked)}
+        style={styles.checkbox}
+      />
+      <span>{label}</span>
+    </label>
+  )
+}
+
+const styles: Record<string, React.CSSProperties> = {
+  page: {
+    minHeight: '100vh',
+    background: 'linear-gradient(180deg, #082f49 0%, #0f172a 100%)',
+    padding: '64px 18px',
+    color: 'white',
+  },
+  container: {
+    maxWidth: '1040px',
+    margin: '0 auto',
+  },
+  hero: {
+    marginBottom: '32px',
+  },
+  kicker: {
+    fontSize: '12px',
+    fontWeight: 800,
+    letterSpacing: '2px',
+    color: '#bae6fd',
+  },
+  title: {
+    fontSize: 'clamp(34px, 6vw, 58px)',
+    lineHeight: 1.05,
+    margin: '12px 0',
+  },
+  subtitle: {
+    fontSize: '18px',
+    maxWidth: '760px',
+    color: '#e0f2fe',
+    lineHeight: 1.6,
+  },
+  notice: {
+    marginTop: '22px',
+    background: 'rgba(255,255,255,0.1)',
+    border: '1px solid rgba(255,255,255,0.18)',
+    padding: '18px',
+    borderRadius: '16px',
+    maxWidth: '820px',
+    color: '#f8fafc',
+    lineHeight: 1.5,
+  },
+  card: {
+    background: '#020617',
+    borderRadius: '24px',
+    padding: 'clamp(22px, 5vw, 44px)',
+    boxShadow: '0 24px 70px rgba(0,0,0,0.45)',
+    border: '1px solid rgba(255,255,255,0.08)',
+  },
+  section: {
+    marginBottom: '28px',
+  },
+  sectionTitle: {
+    fontSize: '20px',
+    marginBottom: '14px',
+  },
+  grid: {
+    display: 'grid',
+    gap: '16px',
+  },
+  label: {
+    display: 'grid',
+    gap: '8px',
+    fontWeight: 700,
+    color: '#f8fafc',
+  },
+  input: {
+    width: '100%',
+    padding: '15px',
+    borderRadius: '12px',
+    border: '1px solid #334155',
+    background: '#0f172a',
+    color: 'white',
+    fontSize: '16px',
+    outline: 'none',
+  },
+  textarea: {
+    width: '100%',
+    minHeight: '140px',
+    padding: '15px',
+    borderRadius: '12px',
+    border: '1px solid #334155',
+    background: '#0f172a',
+    color: 'white',
+    fontSize: '16px',
+    outline: 'none',
+    resize: 'vertical',
+  },
+  governanceBox: {
+    background: '#0b3b8f',
+    padding: '24px',
+    borderRadius: '18px',
+    marginBottom: '28px',
+  },
+  checkboxRow: {
+    display: 'flex',
+    gap: '12px',
+    alignItems: 'flex-start',
+    marginTop: '14px',
+    lineHeight: 1.45,
+    color: '#e0f2fe',
+  },
+  checkbox: {
+    width: '20px',
+    height: '20px',
+    marginTop: '2px',
+  },
+  button: {
+    width: '100%',
+    padding: '18px',
+    fontSize: '18px',
+    fontWeight: 900,
+    background: 'white',
+    color: '#0b3b8f',
+    border: 'none',
+    borderRadius: '14px',
+  },
+  success: {
+    marginTop: '20px',
+    color: '#bbf7d0',
+    fontWeight: 700,
+  },
 }
