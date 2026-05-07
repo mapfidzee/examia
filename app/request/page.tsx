@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 
-type CreatedLesson = {
+type CreatedRequest = {
   id: string
   subject: string
   problem: string
@@ -17,22 +17,22 @@ type CreatedLesson = {
 export default function RequestPage() {
   const router = useRouter()
 
-  const [subject, setSubject] = useState('Mathematics')
-  const [otherSubject, setOtherSubject] = useState('')
+  const [category, setCategory] = useState('Mathematics')
+  const [otherCategory, setOtherCategory] = useState('')
   const [gradeLevel, setGradeLevel] = useState('')
   const [problem, setProblem] = useState('')
   const [preferredTime, setPreferredTime] = useState('')
   const [message, setMessage] = useState('')
-  const [createdLesson, setCreatedLesson] = useState<CreatedLesson | null>(null)
+  const [createdRequest, setCreatedRequest] = useState<CreatedRequest | null>(null)
   const [loading, setLoading] = useState(false)
 
   async function submitRequest(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    const finalSubject = subject === 'Other' ? otherSubject.trim() : subject
+    const finalCategory = category === 'Other' ? otherCategory.trim() : category
 
-    if (!finalSubject) {
-      alert('Please enter the subject.')
+    if (!finalCategory) {
+      alert('Please enter the category or subject.')
       return
     }
 
@@ -42,18 +42,18 @@ export default function RequestPage() {
     }
 
     if (!problem.trim()) {
-      alert('Please describe the learning problem.')
+      alert('Please describe the support need.')
       return
     }
 
     setLoading(true)
-    setMessage('Submitting request...')
-    setCreatedLesson(null)
+    setMessage('Submitting support request...')
+    setCreatedRequest(null)
 
     const { data, error } = await supabase
       .from('lesson_requests')
       .insert({
-        subject: finalSubject,
+        subject: finalCategory,
         grade_level: gradeLevel,
         problem: problem.trim(),
         preferred_time: preferredTime.trim() || null,
@@ -70,49 +70,52 @@ export default function RequestPage() {
       return
     }
 
-    setCreatedLesson(data)
-    setMessage('Lesson created. Payment is required before teacher assignment and lesson access.')
-    setSubject('Mathematics')
-    setOtherSubject('')
+    setCreatedRequest(data)
+    setMessage(
+      'Support request created. EXAMIA will now route this need to an approved responder through the Command Center.'
+    )
+    setCategory('Mathematics')
+    setOtherCategory('')
     setGradeLevel('')
     setProblem('')
     setPreferredTime('')
     setLoading(false)
   }
 
-  async function copyLessonId() {
-    if (!createdLesson) return
-    await navigator.clipboard.writeText(createdLesson.id)
-    alert('Lesson ID copied.')
+  async function copyRequestId() {
+    if (!createdRequest) return
+    await navigator.clipboard.writeText(createdRequest.id)
+    alert('Request ID copied.')
   }
 
-  function checkLessonStatus() {
-    if (!createdLesson) return
-    router.push(`/student-dashboard?lessonId=${createdLesson.id}`)
+  function checkRequestStatus() {
+    if (!createdRequest) return
+    router.push(`/student-dashboard?lessonId=${createdRequest.id}`)
   }
 
   return (
     <main style={styles.page}>
       <div style={styles.wrap}>
         <header style={styles.hero}>
-          <p style={styles.eyebrow}>EXAMIA STUDENT REQUEST</p>
-          <h1 style={styles.h1}>Request a Lesson</h1>
+          <p style={styles.eyebrow}>EXAMIA NEED INTAKE ENGINE</p>
+          <h1 style={styles.h1}>Submit a Support Need</h1>
           <p style={styles.heroText}>
-            Submit your learning problem. EXAMIA will create a Lesson ID
-            immediately so you can track teacher assignment and room readiness.
+            Submit a structured learning need. EXAMIA creates a Request ID
+            immediately so the beneficiary can track routing, responder
+            assignment, room readiness, and completion evidence.
           </p>
         </header>
 
         <section style={styles.card}>
-          <p style={styles.eyebrow}>Lesson details</p>
-          <h2 style={styles.h2}>Tell us what you need help with</h2>
+          <p style={styles.eyebrow}>Need intake</p>
+          <h2 style={styles.h2}>Tell us what support is needed</h2>
 
           <form onSubmit={submitRequest} style={styles.form}>
             <label style={styles.label}>
-              Subject
+              Category / Subject
               <select
-                value={subject}
-                onChange={(event) => setSubject(event.target.value)}
+                value={category}
+                onChange={(event) => setCategory(event.target.value)}
                 style={styles.input}
               >
                 <option>Mathematics</option>
@@ -130,12 +133,12 @@ export default function RequestPage() {
               </select>
             </label>
 
-            {subject === 'Other' && (
+            {category === 'Other' && (
               <label style={styles.label}>
-                Type Subject
+                Type Category / Subject
                 <input
-                  value={otherSubject}
-                  onChange={(event) => setOtherSubject(event.target.value)}
+                  value={otherCategory}
+                  onChange={(event) => setOtherCategory(event.target.value)}
                   placeholder="Example: Commerce, Geography, Divinity"
                   style={styles.input}
                 />
@@ -172,17 +175,17 @@ export default function RequestPage() {
             </label>
 
             <label style={styles.label}>
-              What is the problem?
+              What is the need?
               <textarea
                 value={problem}
                 onChange={(event) => setProblem(event.target.value)}
-                placeholder="Describe where the student is struggling."
+                placeholder="Describe the learning difficulty, topic, question, or support need."
                 style={styles.textarea}
               />
             </label>
 
             <label style={styles.label}>
-              Preferred Time
+              Preferred Support Time
               <input
                 value={preferredTime}
                 onChange={(event) => setPreferredTime(event.target.value)}
@@ -193,32 +196,33 @@ export default function RequestPage() {
             </label>
 
             <button type="submit" disabled={loading} style={styles.whiteButton}>
-              {loading ? 'Submitting Request...' : 'Submit Lesson Request'}
+              {loading ? 'Submitting Request...' : 'Submit Support Request'}
             </button>
           </form>
 
           {message && <p style={styles.message}>{message}</p>}
         </section>
 
-        {createdLesson && (
+        {createdRequest && (
           <section style={styles.successCard}>
-            <p style={styles.eyebrow}>Lesson created</p>
-            <h2 style={styles.h2}>Save your Lesson ID</h2>
+            <p style={styles.eyebrow}>Request created</p>
+            <h2 style={styles.h2}>Save your Request ID</h2>
 
-            <div style={styles.lessonIdBox}>{createdLesson.id}</div>
+            <div style={styles.requestIdBox}>{createdRequest.id}</div>
 
             <p style={styles.smallText}>
-              This ID is how the student checks payment status, teacher
-              assignment, teacher acceptance, and lesson room readiness.
+              This ID is used to check routing status, responder assignment,
+              responder readiness, controlled support room access, and completion
+              evidence.
             </p>
 
             <div style={styles.buttonGrid}>
-              <button type="button" onClick={copyLessonId} style={styles.whiteButton}>
-                Copy Lesson ID
+              <button type="button" onClick={copyRequestId} style={styles.whiteButton}>
+                Copy Request ID
               </button>
 
-              <button type="button" onClick={checkLessonStatus} style={styles.greenButton}>
-                Check Lesson Status
+              <button type="button" onClick={checkRequestStatus} style={styles.greenButton}>
+                Check Request Status
               </button>
             </div>
           </section>
@@ -359,7 +363,7 @@ const styles = {
     fontWeight: 900,
     border: '1px solid rgba(96,165,250,0.24)',
   },
-  lessonIdBox: {
+  requestIdBox: {
     marginTop: '18px',
     background: '#1e293b',
     color: '#ffffff',
