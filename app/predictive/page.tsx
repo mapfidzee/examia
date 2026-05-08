@@ -81,8 +81,6 @@ const RECOMMENDED_ACTIONS = [
 ]
 
 export default function PredictiveIntelligencePage() {
-  const [mounted, setMounted] = useState(false)
-
   const [cases, setCases] = useState<BeneficiaryCase[]>([])
   const [routingActions, setRoutingActions] = useState<RoutingAction[]>([])
   const [interventions, setInterventions] = useState<InterventionRecord[]>([])
@@ -90,31 +88,17 @@ export default function PredictiveIntelligencePage() {
   const [institutions, setInstitutions] = useState<Institution[]>([])
   const [responders, setResponders] = useState<Responder[]>([])
 
-  const [reportTemplate, setReportTemplate] = useState(
-    REPORT_TEMPLATES[0]
+  const [reportTemplate, setReportTemplate] = useState(REPORT_TEMPLATES[0])
+  const [forecastFocus, setForecastFocus] = useState(FORECAST_FOCUS[0])
+  const [operatingScope, setOperatingScope] = useState(OPERATING_SCOPE[0])
+  const [governanceInterpretation, setGovernanceInterpretation] = useState(
+    GOVERNANCE_INTERPRETATIONS[0]
   )
-
-  const [forecastFocus, setForecastFocus] = useState(
-    FORECAST_FOCUS[0]
-  )
-
-  const [operatingScope, setOperatingScope] = useState(
-    OPERATING_SCOPE[0]
-  )
-
-  const [governanceInterpretation, setGovernanceInterpretation] =
-    useState(GOVERNANCE_INTERPRETATIONS[0])
-
-  const [recommendedAction, setRecommendedAction] = useState(
-    RECOMMENDED_ACTIONS[0]
-  )
-
+  const [recommendedAction, setRecommendedAction] = useState(RECOMMENDED_ACTIONS[0])
   const [additionalNotes, setAdditionalNotes] = useState('')
-
   const [message, setMessage] = useState('')
 
   useEffect(() => {
-    setMounted(true)
     loadAll()
   }, [])
 
@@ -135,15 +119,21 @@ export default function PredictiveIntelligencePage() {
       supabase.from('responders').select('*'),
     ])
 
+    if (casesResult.error) console.error(casesResult.error)
+    if (routingResult.error) console.error(routingResult.error)
+    if (interventionsResult.error) console.error(interventionsResult.error)
+    if (outcomesResult.error) console.error(outcomesResult.error)
+    if (institutionsResult.error) console.error(institutionsResult.error)
+    if (respondersResult.error) console.error(respondersResult.error)
+
     setCases(casesResult.data || [])
     setRoutingActions(routingResult.data || [])
     setInterventions(interventionsResult.data || [])
     setOutcomes(outcomesResult.data || [])
     setInstitutions(institutionsResult.data || [])
     setResponders(respondersResult.data || [])
+    setMessage('Predictive coordination intelligence refreshed.')
   }
-
-  if (!mounted) return null
 
   const activeCases = cases.filter((item) =>
     [
@@ -156,50 +146,33 @@ export default function PredictiveIntelligencePage() {
     ].includes(item.case_status)
   ).length
 
-  const escalatedCases = cases.filter(
-    (item) => item.case_status === 'ESCALATED'
-  ).length
-
-  const safeguardingFlags = cases.filter(
-    (item) => item.safeguarding_flag
-  ).length
-
-  const stabilizedCases = cases.filter(
-    (item) => item.case_status === 'STABILIZED'
+  const escalatedCases = cases.filter((item) => item.case_status === 'ESCALATED').length
+  const safeguardingFlags = cases.filter((item) => item.safeguarding_flag).length
+  const stabilizedCases = cases.filter((item) => item.case_status === 'STABILIZED').length
+  const activeResponders = responders.filter(
+    (item) => item.operational_status === 'ACTIVE'
   ).length
 
   const interventionCoverage =
     cases.length > 0
-      ? Math.round(
-          (new Set(interventions.map((i) => i.case_id)).size /
-            cases.length) *
-            100
-        )
+      ? Math.round((new Set(interventions.map((item) => item.case_id)).size / cases.length) * 100)
       : 0
 
   const outcomeCoverage =
     cases.length > 0
-      ? Math.round(
-          (new Set(outcomes.map((o) => o.case_id)).size /
-            cases.length) *
-            100
-        )
+      ? Math.round((new Set(outcomes.map((item) => item.case_id)).size / cases.length) * 100)
       : 0
 
   const stabilizationRate =
-    cases.length > 0
-      ? Math.round((stabilizedCases / cases.length) * 100)
-      : 0
+    cases.length > 0 ? Math.round((stabilizedCases / cases.length) * 100) : 0
 
   const responderLoadRisk =
-    routingActions.length > responders.length * 2
+    activeResponders > 0 && routingActions.length > activeResponders * 2
       ? 'ELEVATED'
       : 'CONTROLLED'
 
   const continuityRisk =
-    activeCases > stabilizedCases
-      ? 'CONTINUITY_PRESSURE_VISIBLE'
-      : 'CONTINUITY_STABLE'
+    activeCases > stabilizedCases ? 'CONTINUITY_PRESSURE_VISIBLE' : 'CONTINUITY_STABLE'
 
   const safeguardingRisk =
     safeguardingFlags >= 2
@@ -207,28 +180,16 @@ export default function PredictiveIntelligencePage() {
       : 'SAFEGUARDING_MONITORED'
 
   const predictiveStatus = useMemo(() => {
-    if (
-      escalatedCases >= 3 ||
-      safeguardingFlags >= 3
-    ) {
+    if (escalatedCases >= 3 || safeguardingFlags >= 3) {
       return 'HIGH_FORECAST_PRESSURE'
     }
 
-    if (
-      activeCases >= stabilizedCases ||
-      responderLoadRisk === 'ELEVATED'
-    ) {
+    if (activeCases >= Math.max(stabilizedCases, 1) || responderLoadRisk === 'ELEVATED') {
       return 'MODERATE_FORECAST_PRESSURE'
     }
 
     return 'CONTROLLED_FORECAST_PRESSURE'
-  }, [
-    activeCases,
-    stabilizedCases,
-    escalatedCases,
-    safeguardingFlags,
-    responderLoadRisk,
-  ])
+  }, [activeCases, stabilizedCases, escalatedCases, safeguardingFlags, responderLoadRisk])
 
   const generatedBrief = `
 EXAMIA LIS PREDICTIVE COORDINATION INTELLIGENCE BRIEF
@@ -255,11 +216,7 @@ Intervention Coverage: ${interventionCoverage}%
 Outcome Coverage: ${outcomeCoverage}%
 Stabilization Rate: ${stabilizationRate}%
 Coordination Sites: ${institutions.length}
-Active Responders: ${
-    responders.filter(
-      (r) => r.operational_status === 'ACTIVE'
-    ).length
-  }
+Active Responders: ${activeResponders}
 
 Predictive Signals:
 Responder Saturation Risk: ${responderLoadRisk}
@@ -276,75 +233,39 @@ Governance-Safe Meaning:
 This predictive intelligence brief identifies early stabilization pressure, continuity weakening, responder saturation patterns, safeguarding accumulation signals, and coordination instability before operational collapse. It supports governance-safe forecasting and stabilization strengthening without assigning blame to institutions, responders, beneficiaries, or partners.
 
 Additional Operational Notes:
-${additionalNotes || 'No additional operational notes entered.'}
+${additionalNotes.trim() || 'No additional operational notes entered.'}
   `.trim()
 
   return (
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.hero}>
-          <p style={styles.kicker}>
-            EXAMIA LIS • PREDICTIVE INTELLIGENCE
-          </p>
+          <p style={styles.kicker}>EXAMIA LIS • PREDICTIVE INTELLIGENCE</p>
 
-          <h1 style={styles.title}>
-            Predictive Stabilization Infrastructure
-          </h1>
+          <h1 style={styles.title}>Predictive Stabilization Infrastructure</h1>
 
           <p style={styles.subtitle}>
-            Detect rising stabilization pressure,
-            responder saturation, continuity weakening,
-            safeguarding accumulation, and coordination
-            bottlenecks before escalation occurs.
+            Detect rising stabilization pressure, responder saturation, continuity weakening,
+            safeguarding accumulation, and coordination bottlenecks before escalation occurs.
           </p>
         </section>
 
-        {message && (
-          <div style={styles.message}>
-            {message}
-          </div>
-        )}
+        {message && <div style={styles.message}>{message}</div>}
 
         <section style={styles.metricsGrid}>
-          <Metric
-            label="Predictive Status"
-            value={predictiveStatus}
-          />
-
-          <Metric
-            label="Active Cases"
-            value={String(activeCases)}
-          />
-
-          <Metric
-            label="Safeguarding Flags"
-            value={String(safeguardingFlags)}
-          />
-
-          <Metric
-            label="Intervention Coverage"
-            value={`${interventionCoverage}%`}
-          />
-
-          <Metric
-            label="Outcome Coverage"
-            value={`${outcomeCoverage}%`}
-          />
-
-          <Metric
-            label="Stabilization Rate"
-            value={`${stabilizationRate}%`}
-          />
+          <Metric label="Predictive Status" value={predictiveStatus} />
+          <Metric label="Active Cases" value={activeCases} />
+          <Metric label="Safeguarding Flags" value={safeguardingFlags} />
+          <Metric label="Intervention Coverage" value={`${interventionCoverage}%`} />
+          <Metric label="Outcome Coverage" value={`${outcomeCoverage}%`} />
+          <Metric label="Stabilization Rate" value={`${stabilizationRate}%`} />
         </section>
 
         <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>
-            Predictive Coordination Brief Template
-          </h2>
+          <h2 style={styles.sectionTitle}>Predictive Coordination Brief Template</h2>
 
           <p style={styles.helperText}>
-            Use dropdown templates to keep predictive
-            coordination intelligence standardized,
+            Use dropdown templates to keep predictive coordination intelligence standardized,
             governance-safe, and operationally coherent.
           </p>
 
@@ -387,38 +308,24 @@ ${additionalNotes || 'No additional operational notes entered.'}
 
           <label style={styles.label}>
             Optional Additional Operational Notes
-
             <textarea
               value={additionalNotes}
-              onChange={(e) =>
-                setAdditionalNotes(e.target.value)
-              }
+              onChange={(event) => setAdditionalNotes(event.target.value)}
               style={styles.textarea}
               placeholder="Use operational language only. Avoid blame or unnecessary personal details."
             />
           </label>
 
-          <button
-            style={styles.primaryButton}
-            onClick={() =>
-              setMessage(
-                'Predictive coordination intelligence refreshed.'
-              )
-            }
-          >
+          <button style={styles.primaryButton} onClick={loadAll}>
             Refresh Predictive Intelligence
           </button>
         </section>
 
         <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>
-            Generated Predictive Brief
-          </h2>
+          <h2 style={styles.sectionTitle}>Generated Predictive Brief</h2>
 
           <div style={styles.generatedBox}>
-            <pre style={styles.pre}>
-              {generatedBrief}
-            </pre>
+            <pre style={styles.pre}>{generatedBrief}</pre>
           </div>
         </section>
       </div>
@@ -426,22 +333,11 @@ ${additionalNotes || 'No additional operational notes entered.'}
   )
 }
 
-function Metric({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
+function Metric({ label, value }: { label: string; value: string | number }) {
   return (
     <div style={styles.metricCard}>
-      <p style={styles.metricLabel}>
-        {label}
-      </p>
-
-      <h2 style={styles.metricValue}>
-        {value}
-      </h2>
+      <p style={styles.metricLabel}>{label}</p>
+      <h2 style={styles.metricValue}>{value}</h2>
     </div>
   )
 }
@@ -451,17 +347,21 @@ function Select({
   value,
   setValue,
   options,
-}: any) {
+}: {
+  label: string
+  value: string
+  setValue: (value: string) => void
+  options: string[]
+}) {
   return (
     <label style={styles.label}>
       {label}
-
       <select
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(event) => setValue(event.target.value)}
         style={styles.select}
       >
-        {options.map((option: string) => (
+        {options.map((option) => (
           <option key={option} value={option}>
             {option}
           </option>
@@ -474,68 +374,56 @@ function Select({
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    background:
-      'linear-gradient(180deg, #020617 0%, #0f172a 100%)',
+    background: 'linear-gradient(180deg, #020617 0%, #0f172a 100%)',
     color: 'white',
     padding: '56px 18px',
   },
-
   container: {
     maxWidth: '1240px',
     margin: '0 auto',
   },
-
   hero: {
     marginBottom: '32px',
   },
-
   kicker: {
     color: '#67e8f9',
     fontWeight: 900,
     letterSpacing: '2px',
     fontSize: '12px',
   },
-
   title: {
-    fontSize: '56px',
+    fontSize: 'clamp(34px, 6vw, 56px)',
     lineHeight: 1.05,
     margin: '12px 0',
   },
-
   subtitle: {
     color: '#cbd5e1',
     maxWidth: '920px',
     lineHeight: 1.7,
     fontSize: '18px',
   },
-
   metricsGrid: {
     display: 'grid',
-    gridTemplateColumns:
-      'repeat(auto-fit, minmax(220px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
     gap: '16px',
     marginBottom: '28px',
   },
-
   metricCard: {
     background: '#0f172a',
     border: '1px solid #1e293b',
     borderRadius: '18px',
     padding: '20px',
   },
-
   metricLabel: {
     color: '#94a3b8',
     fontWeight: 800,
     margin: 0,
   },
-
   metricValue: {
     fontSize: '26px',
     marginTop: '12px',
     lineHeight: 1.2,
   },
-
   card: {
     background: '#020617',
     border: '1px solid #1e293b',
@@ -543,31 +431,25 @@ const styles: Record<string, CSSProperties> = {
     padding: '24px',
     marginBottom: '28px',
   },
-
   sectionTitle: {
     fontSize: '28px',
     marginBottom: '10px',
   },
-
   helperText: {
     color: '#cbd5e1',
     marginBottom: '22px',
     lineHeight: 1.6,
   },
-
   grid: {
     display: 'grid',
-    gridTemplateColumns:
-      'repeat(auto-fit, minmax(260px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
     gap: '18px',
   },
-
   label: {
     display: 'block',
     fontWeight: 800,
     marginBottom: '18px',
   },
-
   select: {
     width: '100%',
     marginTop: '8px',
@@ -577,7 +459,6 @@ const styles: Record<string, CSSProperties> = {
     background: '#111827',
     color: 'white',
   },
-
   textarea: {
     width: '100%',
     minHeight: '120px',
@@ -589,7 +470,6 @@ const styles: Record<string, CSSProperties> = {
     color: 'white',
     resize: 'vertical',
   },
-
   primaryButton: {
     width: '100%',
     padding: '16px',
@@ -601,21 +481,18 @@ const styles: Record<string, CSSProperties> = {
     cursor: 'pointer',
     fontSize: '16px',
   },
-
   generatedBox: {
     background: '#0f172a',
     border: '1px solid #1e293b',
     borderRadius: '18px',
     padding: '18px',
   },
-
   pre: {
     whiteSpace: 'pre-wrap',
     lineHeight: 1.7,
     fontSize: '14px',
     margin: 0,
   },
-
   message: {
     background: '#064e3b',
     color: '#bbf7d0',
