@@ -46,12 +46,7 @@ const COMPLETION_STATUSES = [
   'ESCALATION_REQUIRED',
 ]
 
-const CONTINUITY_RISKS = [
-  'LOW',
-  'MODERATE',
-  'HIGH',
-  'CRITICAL',
-]
+const CONTINUITY_RISKS = ['LOW', 'MODERATE', 'HIGH', 'CRITICAL']
 
 const SESSION_SUMMARIES = [
   'Beneficiary received structured support and immediate pathway is stable.',
@@ -61,6 +56,17 @@ const SESSION_SUMMARIES = [
   'Institution coordination is still required before stabilization.',
   'Safeguarding-aware escalation is recommended.',
   'District or regional visibility is recommended.',
+]
+
+const RESPONDER_NOTE_TEMPLATES = [
+  'Beneficiary engaged successfully during intervention.',
+  'Continuity pathway remains active but follow-up is recommended.',
+  'Access limitations affected intervention continuity.',
+  'Institution coordination remains necessary.',
+  'Low-bandwidth conditions affected session flow.',
+  'Beneficiary requires continued stabilization support.',
+  'Safeguarding-aware handling remains advised.',
+  'District or regional visibility may be required.',
 ]
 
 export default function InterventionCompletionPage() {
@@ -73,7 +79,8 @@ export default function InterventionCompletionPage() {
   const [sessionSummary, setSessionSummary] = useState('')
   const [stabilizationScore, setStabilizationScore] = useState('3')
   const [continuityRisk, setContinuityRisk] = useState('MODERATE')
-  const [responderNotes, setResponderNotes] = useState('')
+  const [responderTemplate, setResponderTemplate] = useState('')
+  const [additionalResponderNotes, setAdditionalResponderNotes] = useState('')
 
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
@@ -137,7 +144,10 @@ Continuity Risk After Intervention:
 ${continuityRisk}
 
 Governance-Safe Responder Notes:
-${responderNotes.trim() || 'No responder notes entered.'}
+${responderTemplate || 'No template selected'}
+
+Additional Operational Notes:
+${additionalResponderNotes.trim() || 'No additional notes entered.'}
 
 Governance Statement:
 This intervention record documents support delivery, stabilization progress, continuity risk, and follow-up needs. It does not blame the beneficiary, family, responder, school, institution, or partner. It exists to support governed learning stabilization, safe coordination, and accountable intervention continuity.
@@ -178,10 +188,7 @@ This intervention record documents support delivery, stabilization progress, con
       nextStatus = 'STABILIZED'
     }
 
-    if (
-      completionStatus === 'ESCALATION_REQUIRED' ||
-      continuityRisk === 'CRITICAL'
-    ) {
+    if (completionStatus === 'ESCALATION_REQUIRED' || continuityRisk === 'CRITICAL') {
       nextStatus = 'ESCALATED'
     }
 
@@ -222,7 +229,8 @@ This intervention record documents support delivery, stabilization progress, con
     setSessionSummary('')
     setStabilizationScore('3')
     setContinuityRisk('MODERATE')
-    setResponderNotes('')
+    setResponderTemplate('')
+    setAdditionalResponderNotes('')
 
     setMessage('Controlled intervention evidence saved and case lifecycle updated.')
     setLoading(false)
@@ -340,12 +348,19 @@ This intervention record documents support delivery, stabilization progress, con
               options={CONTINUITY_RISKS}
             />
 
+            <Select
+              label="Governance-Safe Responder Notes Template"
+              value={responderTemplate}
+              setValue={setResponderTemplate}
+              options={['', ...RESPONDER_NOTE_TEMPLATES]}
+            />
+
             <label style={styles.label}>
-              Governance-Safe Responder Notes
+              Optional Additional Operational Notes
               <textarea
-                value={responderNotes}
-                onChange={(event) => setResponderNotes(event.target.value)}
-                placeholder="Use operational facts only. Avoid unnecessary personal details."
+                value={additionalResponderNotes}
+                onChange={(event) => setAdditionalResponderNotes(event.target.value)}
+                placeholder="Use operational facts only. Avoid blame, emotional language, or unnecessary personal details."
                 style={styles.textarea}
               />
             </label>
@@ -391,11 +406,7 @@ function Select({ label, value, setValue, options }: any) {
   return (
     <label style={styles.label}>
       {label}
-      <select
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        style={styles.select}
-      >
+      <select value={value} onChange={(event) => setValue(event.target.value)} style={styles.select}>
         {options.map((option: string) => (
           <option key={option || 'blank'} value={option}>
             {option || 'Select option'}
