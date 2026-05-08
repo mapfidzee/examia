@@ -14,31 +14,33 @@ type Domain = {
 const domains: Domain[] = [
   {
     number: "01",
+    title: "Healthcare Coordination",
+    status: "PRIMARY DEPLOYMENT DOMAIN",
+    purpose:
+      "Supports healthcare coordination, continuity protection, response routing, recovery monitoring, and operational stabilization across pressured care environments.",
+    intake:
+      "Visible operational need, coordination delay, handoff gap, discharge pressure, support delay, continuity disruption, or escalation concern.",
+    routing:
+      "Route need to the appropriate clinical, operational, administrative, support, or escalation pathway without assigning blame to individuals.",
+    intervention:
+      "Structured coordination action, escalation review, handoff support, continuity repair, resource coordination, or recovery pathway activation.",
+    recovery:
+      "Track whether the care coordination pathway has stabilized, remains fragile, or requires continued leadership attention.",
+  },
+  {
+    number: "02",
     title: "Education Stabilization",
-    status: "FIRST DEPLOYMENT DOMAIN",
+    status: "SECONDARY DEPLOYMENT DOMAIN",
     purpose:
       "Supports learning continuity, beneficiary support, intervention routing, and recovery tracking when educational progress is disrupted.",
-    intake: "Learning need, continuity disruption, preparation gap, support request.",
-    routing: "Route beneficiary need to appropriate responder or support pathway.",
+    intake:
+      "Learning need, continuity disruption, preparation gap, support request, or academic recovery concern.",
+    routing:
+      "Route beneficiary need to the appropriate responder or support pathway.",
     intervention:
       "Governed support session, structured explanation, file exchange, voice support, or live intervention.",
     recovery:
       "Track whether learning continuity has improved, remained fragile, or requires escalation.",
-  },
-  {
-    number: "02",
-    title: "Healthcare Coordination",
-    status: "EXPANSION DOMAIN",
-    purpose:
-      "Supports coordination visibility, response routing, continuity protection, and recovery monitoring across pressured healthcare environments.",
-    intake:
-      "Visible operational need, coordination delay, support gap, continuity disruption.",
-    routing:
-      "Route need to clinical, operational, administrative, or support response pathway.",
-    intervention:
-      "Structured coordination action, escalation review, handoff support, or continuity correction.",
-    recovery:
-      "Track whether the coordination pathway has stabilized or remains under pressure.",
   },
   {
     number: "03",
@@ -47,9 +49,9 @@ const domains: Domain[] = [
     purpose:
       "Supports beneficiary intake, responder coordination, field response visibility, and program continuity across NGO operations.",
     intake:
-      "Beneficiary need, field disruption, service access gap, program continuity risk.",
+      "Beneficiary need, field disruption, service access gap, program continuity risk, or urgent support request.",
     routing:
-      "Route case to field worker, coordinator, partner, or support program.",
+      "Route case to field worker, coordinator, partner, resource pathway, or support program.",
     intervention:
       "Governed assistance action, referral, field support, resource coordination, or follow-up pathway.",
     recovery:
@@ -62,7 +64,7 @@ const domains: Domain[] = [
     purpose:
       "Supports ministries, departments, councils, and public institutions that need governed coordination across visible service disruptions.",
     intake:
-      "Public service need, departmental delay, coordination gap, response request.",
+      "Public service need, departmental delay, coordination gap, response request, or continuity concern.",
     routing:
       "Route need to department, unit, officer, program, or escalation pathway.",
     intervention:
@@ -77,9 +79,9 @@ const domains: Domain[] = [
     purpose:
       "Supports urgent need intake, case prioritization, responder routing, and continuity monitoring across humanitarian response environments.",
     intake:
-      "Urgent beneficiary need, displacement-related need, access barrier, resource request.",
+      "Urgent beneficiary need, displacement-related need, access barrier, resource request, or field response concern.",
     routing:
-      "Route case to responder, partner organization, resource hub, or escalation channel.",
+      "Route case to responder, partner organization, resource hub, field team, or escalation channel.",
     intervention:
       "Aid coordination, referral, emergency support pathway, field response, or follow-up action.",
     recovery:
@@ -92,11 +94,11 @@ const domains: Domain[] = [
     purpose:
       "Supports workforce disruption response, operational continuity, recovery monitoring, and stabilization coordination.",
     intake:
-      "Workforce disruption, coverage gap, role strain, continuity risk, support need.",
+      "Workforce disruption, coverage gap, role strain, continuity risk, support need, or operational pressure signal.",
     routing:
-      "Route disruption to leadership, staffing support, coordination team, or recovery pathway.",
+      "Route disruption to leadership, staffing support, coordination team, recovery pathway, or operational response channel.",
     intervention:
-      "Coverage response, workload redistribution, support activation, or continuity repair.",
+      "Coverage response, workload redistribution, support activation, continuity repair, or stabilization review.",
     recovery:
       "Track whether workforce continuity is recovering or remaining structurally fragile.",
   },
@@ -117,8 +119,8 @@ const universalSpine = [
 ];
 
 const safeguards = [
-  "Each domain uses the same stabilization spine.",
-  "Education is one deployment domain, not the system identity.",
+  "Healthcare is the primary deployment domain, but EXAMIA remains domain-adaptable stabilization infrastructure.",
+  "EXAMIA supports operational coordination and continuity visibility; it does not replace clinical judgment.",
   "No domain may introduce blame-based interpretation.",
   "No domain may convert structural signals into person-level punishment.",
   "Every domain must preserve traceability, recovery logic, and governance-safe action cues.",
@@ -135,19 +137,21 @@ export default function DomainsPage() {
           </div>
 
           <h1 className="max-w-5xl text-3xl font-bold tracking-tight text-white sm:text-5xl">
-            Cross-Domain Stabilization Model
+            Healthcare-First Stabilization Model
           </h1>
 
           <p className="mt-5 max-w-4xl text-base leading-8 text-slate-300 sm:text-lg">
-            EXAMIA is not limited to one sector. It is governed stabilization
-            response infrastructure that can operate across education,
-            healthcare, NGOs, ministries, departments, humanitarian programs,
-            workforce recovery, and other institutional environments where
-            visible need requires coordinated response.
+            EXAMIA is governed stabilization response infrastructure with
+            healthcare coordination as the primary deployment domain. It can
+            support visible need intake, case governance, routing, intervention,
+            continuity, recovery, pressure visibility, command oversight, and
+            audit traceability across healthcare systems, NGOs, ministries,
+            departments, humanitarian programs, education recovery, workforce
+            continuity, and other institutional environments.
           </p>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <SignalCard label="System Identity" value="DOMAIN NEUTRAL" />
+            <SignalCard label="Primary Domain" value="HEALTHCARE" />
             <SignalCard label="Core Function" value="STABILIZATION RESPONSE" />
             <SignalCard label="Governance" value="TRACEABLE" />
             <SignalCard label="Expansion Rule" value="CONTROLLED" />
@@ -160,15 +164,16 @@ export default function DomainsPage() {
               Strategic Interpretation
             </p>
             <h2 className="mt-2 text-2xl font-bold text-white">
-              One Stabilization Architecture, Multiple Domains
+              Healthcare First, Infrastructure Always
             </h2>
             <p className="mt-4 leading-8 text-slate-300">
-              The system does not change its core identity when it enters a new
-              sector. Each domain uses the same governed response spine:
-              visible need enters the system, becomes a traceable case, is
-              routed to a response pathway, receives a governed intervention,
-              produces an outcome, and is monitored for recovery, continuity,
-              pressure, bottlenecks, command action, and audit integrity.
+              EXAMIA naturally mirrors the logic of structured care
+              coordination: assessment of visible need, case governance, routing,
+              intervention, outcome review, recovery monitoring, continuity
+              protection, pressure visibility, bottleneck detection, command
+              response, and audit integrity. Healthcare gives the system its
+              strongest first operating context, while the stabilization spine
+              remains adaptable across other institutional domains.
             </p>
           </div>
 
@@ -177,12 +182,12 @@ export default function DomainsPage() {
               Identity Lock
             </p>
             <h2 className="mt-2 text-xl font-bold text-white">
-              Education Is Not the Container
+              Operational, Not Clinical
             </h2>
             <p className="mt-4 leading-7 text-slate-200">
-              Education remains the first deployment domain. It no longer
-              defines the system category. EXAMIA is governed stabilization
-              response infrastructure.
+              EXAMIA supports coordination, continuity, routing, recovery, and
+              governance visibility. It does not diagnose, prescribe, replace
+              clinical judgment, or create person-level punishment.
             </p>
           </div>
         </section>
@@ -278,8 +283,8 @@ export default function DomainsPage() {
               Domain Admission Rule
             </h2>
             <p className="mt-4 leading-8 text-slate-300">
-              A new domain should only be added when it can clearly use the
-              same stabilization pathway: intake, case governance, routing,
+              A new domain should only be added when it can clearly use the same
+              stabilization pathway: intake, case governance, routing,
               intervention, outcome, recovery, trajectory, pressure visibility,
               bottleneck detection, command oversight, and governance audit.
             </p>
@@ -290,7 +295,7 @@ export default function DomainsPage() {
               Governance Safeguards
             </p>
             <h2 className="mt-2 text-2xl font-bold text-white">
-              Domain Expansion Must Stay Safe
+              Healthcare-First Expansion Must Stay Safe
             </h2>
 
             <div className="mt-6 space-y-3">
@@ -316,10 +321,11 @@ export default function DomainsPage() {
           </h2>
 
           <p className="mt-4 max-w-5xl leading-8 text-slate-200">
-            After domain architecture is locked, the next required layer is a
-            controlled action cue registry. Every stabilization status should
-            automatically align with meaning, risk interpretation, action cue,
-            escalation threshold, and governance note.
+            After healthcare-first domain architecture is locked, the next
+            required layer is a controlled action cue registry. Every
+            stabilization status should automatically align with meaning, risk
+            interpretation, action cue, escalation threshold, and governance
+            note.
           </p>
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
