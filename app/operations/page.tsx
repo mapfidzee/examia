@@ -101,12 +101,17 @@ export default function OperationsPage() {
   const [routingActions, setRoutingActions] = useState<RoutingAction[]>([])
   const [interventions, setInterventions] = useState<CaseIntervention[]>([])
 
-  const [reportTemplate, setReportTemplate] = useState('District operational stability brief')
+  const [reportTemplate, setReportTemplate] = useState(
+    'District operational stability brief'
+  )
   const [operatingLevel, setOperatingLevel] = useState('All levels')
-  const [pressureFocus, setPressureFocus] = useState('Overall stabilization pressure')
-  const [actionCue, setActionCue] = useState('Maintain monitoring; pressure remains within manageable range.')
+  const [pressureFocus, setPressureFocus] = useState(
+    'Overall stabilization pressure'
+  )
+  const [actionCue, setActionCue] = useState(
+    'Maintain monitoring; pressure remains within manageable range.'
+  )
   const [additionalNotes, setAdditionalNotes] = useState('')
-
   const [message, setMessage] = useState('')
 
   useEffect(() => {
@@ -114,14 +119,19 @@ export default function OperationsPage() {
   }, [])
 
   async function loadOperationalData() {
-    const [caseResult, institutionResult, responderResult, routingResult, interventionResult] =
-      await Promise.all([
-        supabase.from('beneficiary_cases').select('*'),
-        supabase.from('institutions').select('*'),
-        supabase.from('responders').select('*'),
-        supabase.from('case_routing_actions').select('*'),
-        supabase.from('case_interventions').select('*'),
-      ])
+    const [
+      caseResult,
+      institutionResult,
+      responderResult,
+      routingResult,
+      interventionResult,
+    ] = await Promise.all([
+      supabase.from('beneficiary_cases').select('*'),
+      supabase.from('institutions').select('*'),
+      supabase.from('responders').select('*'),
+      supabase.from('case_routing_actions').select('*'),
+      supabase.from('case_interventions').select('*'),
+    ])
 
     if (caseResult.error) console.error(caseResult.error)
     if (institutionResult.error) console.error(institutionResult.error)
@@ -144,9 +154,14 @@ export default function OperationsPage() {
   }, [institutions, operatingLevel])
 
   const activeCases = cases.filter((item) =>
-    ['NEED_DETECTED', 'UNDER_ASSESSMENT', 'ROUTED', 'RESPONDER_ASSIGNED', 'INTERVENTION_ACTIVE', 'STABILIZING'].includes(
-      item.case_status
-    )
+    [
+      'NEED_DETECTED',
+      'UNDER_ASSESSMENT',
+      'ROUTED',
+      'RESPONDER_ASSIGNED',
+      'INTERVENTION_ACTIVE',
+      'STABILIZING',
+    ].includes(item.case_status)
   )
 
   const routedCases = cases.filter((item) =>
@@ -157,16 +172,29 @@ export default function OperationsPage() {
   const escalatedCases = cases.filter((item) => item.case_status === 'ESCALATED')
   const criticalCases = cases.filter((item) => item.severity_level === 'CRITICAL')
   const safeguardingCases = cases.filter((item) => item.safeguarding_flag)
-  const activeResponders = responders.filter((item) => item.operational_status === 'ACTIVE')
+  const activeResponders = responders.filter(
+    (item) => item.operational_status === 'ACTIVE'
+  )
+
+  const uniqueInterventionCases = new Set(
+    interventions.map((item) => item.case_id)
+  ).size
 
   const stabilizationRate =
     cases.length > 0 ? Math.round((stabilizedCases.length / cases.length) * 100) : 0
 
   const interventionCoverage =
-    cases.length > 0 ? Math.round((interventions.length / cases.length) * 100) : 0
+    cases.length > 0
+      ? Math.round((uniqueInterventionCases / cases.length) * 100)
+      : 0
+
+  const interventionVolume = interventions.length
 
   const routingPressure =
-    routedCases.length + escalatedCases.length + criticalCases.length + safeguardingCases.length
+    routedCases.length +
+    escalatedCases.length +
+    criticalCases.length +
+    safeguardingCases.length
 
   const pressureStatus =
     routingPressure >= 10
@@ -206,7 +234,8 @@ Critical Cases: ${criticalCases.length}
 Safeguarding Visibility Flags: ${safeguardingCases.length}
 Active Responders: ${activeResponders.length}
 Coordination Sites in View: ${filteredInstitutions.length}
-Intervention Evidence Records: ${interventions.length}
+Intervention Evidence Records: ${interventionVolume}
+Cases With Intervention Evidence: ${uniqueInterventionCases}
 Stabilization Rate: ${stabilizationRate}%
 Intervention Coverage: ${interventionCoverage}%
 
@@ -214,7 +243,7 @@ Recommended Action Cue:
 ${actionCue}
 
 Governance-Safe Interpretation:
-This operational brief summarizes system pressure across beneficiary stabilization, routing, responder capacity, intervention evidence, institutional coordination, safeguarding visibility, and escalation load. It does not evaluate individual blame. It supports district, NGO, regional, ministry, and coordination leaders in identifying where support pathways require strengthening.
+This operational brief summarizes system pressure across beneficiary stabilization, routing, responder capacity, intervention evidence, institutional coordination, safeguarding visibility, and escalation load. It separates raw intervention activity from true case coverage so leaders can distinguish volume from actual stabilization reach. It does not evaluate individual blame. It supports district, NGO, regional, ministry, and coordination leaders in identifying where support pathways require strengthening.
 
 Additional Operational Notes:
 ${additionalNotes.trim() || 'No additional operational notes entered.'}
@@ -246,7 +275,11 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
           <Metric label="Critical" value={criticalCases.length} />
           <Metric label="Safeguarding Flags" value={safeguardingCases.length} />
           <Metric label="Active Responders" value={activeResponders.length} />
-          <Metric label="Intervention Records" value={interventions.length} />
+          <Metric label="Intervention Records" value={interventionVolume} />
+          <Metric
+            label="Cases With Intervention Evidence"
+            value={uniqueInterventionCases}
+          />
         </section>
 
         <section style={styles.layoutGrid}>
@@ -346,6 +379,11 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
             <div style={styles.infoGrid}>
               <Info label="Stabilization Rate" value={`${stabilizationRate}%`} />
               <Info label="Intervention Coverage" value={`${interventionCoverage}%`} />
+              <Info label="Intervention Volume" value={`${interventionVolume}`} />
+              <Info
+                label="Cases With Evidence"
+                value={`${uniqueInterventionCases}`}
+              />
               <Info label="Routing Actions" value={`${routingActions.length}`} />
               <Info label="Sites in View" value={`${filteredInstitutions.length}`} />
             </div>
@@ -406,7 +444,11 @@ function Select({ label, value, setValue, options }: any) {
   return (
     <label style={styles.label}>
       {label}
-      <select value={value} onChange={(event) => setValue(event.target.value)} style={styles.select}>
+      <select
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        style={styles.select}
+      >
         {options.map((option: string) => (
           <option key={option} value={option}>
             {option}
