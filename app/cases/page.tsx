@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
+import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -129,15 +130,11 @@ export default function BeneficiaryCaseEnginePage() {
   }
 
   function finalBeneficiaryLevel() {
-    return beneficiaryLevel === 'Other'
-      ? otherBeneficiaryLevel.trim()
-      : beneficiaryLevel
+    return beneficiaryLevel === 'Other' ? otherBeneficiaryLevel.trim() : beneficiaryLevel
   }
 
   function finalSupportDomain() {
-    return supportDomain === 'Other'
-      ? otherSupportDomain.trim()
-      : supportDomain
+    return supportDomain === 'Other' ? otherSupportDomain.trim() : supportDomain
   }
 
   async function createCase() {
@@ -281,6 +278,10 @@ export default function BeneficiaryCaseEnginePage() {
   return (
     <main style={styles.page}>
       <div style={styles.container}>
+        <div style={styles.quickNavWrap}>
+          <InfrastructureQuickNav />
+        </div>
+
         <section style={styles.hero}>
           <p style={styles.kicker}>EXAMIA LIS • BENEFICIARY CASE ENGINE</p>
 
@@ -441,8 +442,8 @@ export default function BeneficiaryCaseEnginePage() {
                 </div>
 
                 <div style={styles.signalContainer}>
-                  {(caseItem.instability_signals || []).map((signal) => (
-                    <span key={signal} style={styles.signalBadge}>
+                  {(caseItem.instability_signals || []).map((signal, index) => (
+                    <span key={`${signal}-${index}`} style={styles.signalBadge}>
                       {signal}
                     </span>
                   ))}
@@ -529,7 +530,17 @@ function Metric({ label, value }: { label: string; value: number }) {
   )
 }
 
-function Input({ label, value, setValue, placeholder = '' }: any) {
+function Input({
+  label,
+  value,
+  setValue,
+  placeholder = '',
+}: {
+  label: string
+  value: string
+  setValue: (value: string) => void
+  placeholder?: string
+}) {
   return (
     <label style={styles.label}>
       {label}
@@ -543,7 +554,17 @@ function Input({ label, value, setValue, placeholder = '' }: any) {
   )
 }
 
-function Select({ label, value, setValue, options }: any) {
+function Select({
+  label,
+  value,
+  setValue,
+  options,
+}: {
+  label: string
+  value: string
+  setValue: (value: string) => void
+  options: string[]
+}) {
   return (
     <label style={styles.label}>
       {label}
@@ -552,8 +573,8 @@ function Select({ label, value, setValue, options }: any) {
         onChange={(event) => setValue(event.target.value)}
         style={styles.select}
       >
-        {options.map((option: string) => (
-          <option key={option || 'blank'} value={option}>
+        {options.map((option, index) => (
+          <option key={`${option || 'blank'}-${index}`} value={option}>
             {option || 'Select option'}
           </option>
         ))}
@@ -611,6 +632,9 @@ const styles: Record<string, CSSProperties> = {
   container: {
     maxWidth: '1200px',
     margin: '0 auto',
+  },
+  quickNavWrap: {
+    marginBottom: '32px',
   },
   hero: {
     marginBottom: '32px',
