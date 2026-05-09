@@ -1,18 +1,15 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../../lib/supabase'
+import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 
 type BeneficiaryCase = {
   id: string
   case_status: string
   safeguarding_flag: boolean
-}
-
-type RoutingAction = {
-  id: string
-  assigned_responder_id: string | null
+  region: string | null
 }
 
 type InterventionRecord = {
@@ -23,227 +20,282 @@ type InterventionRecord = {
 type OutcomeRecord = {
   id: string
   case_id: string
-  outcome_status: string | null
+  outcome_status?: string | null
 }
 
-const REPORT_TEMPLATES = [
-  'Continuity recovery visibility brief',
-  'Recovery strengthening coordination brief',
-  'Stabilization recovery pathway brief',
-  'Regional recovery continuity brief',
+const RECOVERY_REPORT_OPTIONS = [
+  'Recovery continuity monitoring brief',
+  'Recovery stabilization visibility brief',
+  'Recovery fragmentation risk brief',
+  'Continuity strengthening review',
+  'Recovery governance monitoring brief',
 ]
 
 const RECOVERY_FOCUS_OPTIONS = [
-  'Recovery strengthening visibility',
-  'Continuity recovery monitoring',
-  'Stabilization rebound visibility',
-  'Recovery fragmentation prevention',
+  'Recovery continuity visibility',
+  'Stabilization progression monitoring',
+  'Fragmentation risk visibility',
+  'Safeguarding recovery visibility',
+  'Operational recovery governance',
 ]
 
-const OPERATING_SCOPE_OPTIONS = [
-  'National view',
-  'Regional view',
-  'District view',
-  'Responder-focused',
+const RECOVERY_SCOPE_OPTIONS = [
+  'National recovery view',
+  'Regional recovery view',
+  'District recovery view',
+  'Safeguarding recovery view',
+  'Continuity governance view',
 ]
 
-export default function RecoveryIntelligencePage() {
-  const [mounted, setMounted] = useState(false)
+function getRecoveryInterpretation(status: string) {
+  if (status === 'RECOVERY_STRENGTHENING') {
+    return {
+      interpretation:
+        'Recovery continuity appears stable and stabilization pathways are strengthening.',
+      action:
+        'Maintain continuity monitoring and preserve recovery coordination consistency.',
+      monitoring: 'Recovery strengthening monitoring remains active.',
+    }
+  }
 
+  if (status === 'RECOVERY_PRESSURE_VISIBLE') {
+    return {
+      interpretation:
+        'Recovery pressure signals are visible and continuity movement requires closer monitoring.',
+      action:
+        'Review continuity pathways and reinforce recovery coordination where needed.',
+      monitoring: 'Recovery pressure monitoring remains active.',
+    }
+  }
+
+  return {
+    interpretation:
+      'Recovery fragmentation risk is visible and stabilization continuity may weaken without coordinated review.',
+    action:
+      'Escalate recovery continuity review and reinforce stabilization follow-through.',
+    monitoring: 'Recovery fragmentation monitoring escalation is active.',
+  }
+}
+
+export default function RecoveryPage() {
   const [cases, setCases] = useState<BeneficiaryCase[]>([])
-  const [routingActions, setRoutingActions] = useState<RoutingAction[]>([])
   const [interventions, setInterventions] = useState<InterventionRecord[]>([])
   const [outcomes, setOutcomes] = useState<OutcomeRecord[]>([])
 
+  const [message, setMessage] = useState('')
+
   const [reportTemplate, setReportTemplate] = useState(
-    'Continuity recovery visibility brief'
+    RECOVERY_REPORT_OPTIONS[0]
   )
 
   const [recoveryFocus, setRecoveryFocus] = useState(
-    'Recovery strengthening visibility'
+    RECOVERY_FOCUS_OPTIONS[0]
   )
 
-  const [operatingScope, setOperatingScope] =
-    useState('Regional view')
+  const [recoveryScope, setRecoveryScope] = useState(
+    RECOVERY_SCOPE_OPTIONS[0]
+  )
 
-  const [notes, setNotes] = useState('')
+  const [additionalNotes, setAdditionalNotes] = useState('')
 
   useEffect(() => {
-    setMounted(true)
-    loadAll()
+    loadData()
   }, [])
 
-  if (!mounted) return null
+  async function loadData() {
+    const [casesResult, interventionResult, outcomeResult] =
+      await Promise.all([
+        supabase.from('beneficiary_cases').select('*'),
+        supabase.from('case_interventions').select('*'),
+        supabase.from('case_outcomes').select('*'),
+      ])
 
-  async function loadAll() {
-    const [
-      casesResponse,
-      routingResponse,
-      interventionResponse,
-      outcomeResponse,
-    ] = await Promise.all([
-      supabase.from('beneficiary_cases').select('*'),
-      supabase.from('case_routing_actions').select('*'),
-      supabase.from('case_interventions').select('*'),
-      supabase.from('case_outcomes').select('*'),
-    ])
+    if (casesResult.error) console.error(casesResult.error)
+    if (interventionResult.error) console.error(interventionResult.error)
+    if (outcomeResult.error) console.error(outcomeResult.error)
 
-    setCases(casesResponse.data || [])
-    setRoutingActions(routingResponse.data || [])
-    setInterventions(interventionResponse.data || [])
-    setOutcomes(outcomeResponse.data || [])
+    setCases(casesResult.data || [])
+    setInterventions(interventionResult.data || [])
+    setOutcomes(outcomeResult.data || [])
+
+    setMessage('Recovery continuity intelligence refreshed.')
   }
 
-  const totalCases = cases.length
+  const recoveryMetrics = useMemo(() => {
+    const totalCases = cases.length
 
-  const activeCases = cases.filter(
-    (item) =>
-      item.case_status !== 'STABILIZED' &&
-      item.case_status !== 'CLOSED'
-  ).length
+    const stabilizedCases = cases.filter(
+      (item) => item.case_status === 'STABILIZED'
+    ).length
 
-  const stabilizedCases = cases.filter(
-    (item) => item.case_status === 'STABILIZED'
-  ).length
+    const safeguardingFlags = cases.filter(
+      (item) => item.safeguarding_flag
+    ).length
 
-  const safeguardingFlags = cases.filter(
-    (item) => item.safeguarding_flag
-  ).length
+    const interventionCaseIds = new Set(
+      interventions.map((item) => item.case_id)
+    )
 
-  const interventionCoverage =
-    totalCases === 0
-      ? 0
-      : Math.round(
-          (new Set(interventions.map((i) => i.case_id)).size /
-            totalCases) *
-            100
-        )
+    const outcomeCaseIds = new Set(
+      outcomes.map((item) => item.case_id)
+    )
 
-  const outcomeCoverage =
-    totalCases === 0
-      ? 0
-      : Math.round(
-          (new Set(outcomes.map((o) => o.case_id)).size /
-            totalCases) *
-            100
-        )
+    const interventionCoverage =
+      totalCases === 0
+        ? 0
+        : Math.round((interventionCaseIds.size / totalCases) * 100)
 
-  const stabilizationRate =
-    totalCases === 0
-      ? 0
-      : Math.round((stabilizedCases / totalCases) * 100)
+    const outcomeCoverage =
+      totalCases === 0
+        ? 0
+        : Math.round((outcomeCaseIds.size / totalCases) * 100)
 
-  const unresolvedCases = activeCases
+    const stabilizationRate =
+      totalCases === 0
+        ? 0
+        : Math.round((stabilizedCases / totalCases) * 100)
 
-  const recoveryStatus = deriveRecoveryStatus()
+    let recoveryStatus = 'RECOVERY_FRAGMENTATION_RISK'
 
-  const governanceInterpretation =
-    recoveryStatus === 'RECOVERY_STRENGTHENING'
-      ? 'Recovery continuity is strengthening and stabilization pathways remain coordinated.'
-      : recoveryStatus === 'RECOVERY_PRESSURE_VISIBLE'
-      ? 'Recovery continuity pressure is visible and requires stabilization review.'
-      : 'Recovery fragmentation signals are visible and continuity strengthening is required.'
-
-  const recommendedAction =
-    recoveryStatus === 'RECOVERY_STRENGTHENING'
-      ? 'Maintain continuity monitoring and stabilization coordination.'
-      : recoveryStatus === 'RECOVERY_PRESSURE_VISIBLE'
-      ? 'Review recovery continuity pathways and monitor stabilization gaps.'
-      : 'Strengthen recovery coordination and reduce continuity fragmentation risk.'
-
-  const monitoringNote =
-    recoveryStatus === 'RECOVERY_STRENGTHENING'
-      ? 'Recovery continuity monitoring remains active.'
-      : recoveryStatus === 'RECOVERY_PRESSURE_VISIBLE'
-      ? 'Recovery pressure monitoring remains active.'
-      : 'Recovery fragmentation monitoring remains active.'
-
-  function deriveRecoveryStatus() {
     if (
       stabilizationRate >= 70 &&
       interventionCoverage >= 70 &&
       outcomeCoverage >= 70
     ) {
-      return 'RECOVERY_STRENGTHENING'
-    }
-
-    if (
+      recoveryStatus = 'RECOVERY_STRENGTHENING'
+    } else if (
       interventionCoverage >= 50 &&
       outcomeCoverage >= 50
     ) {
-      return 'RECOVERY_PRESSURE_VISIBLE'
+      recoveryStatus = 'RECOVERY_PRESSURE_VISIBLE'
     }
 
-    return 'RECOVERY_FRAGMENTATION_RISK'
-  }
+    return {
+      totalCases,
+      stabilizedCases,
+      safeguardingFlags,
+      interventionCoverage,
+      outcomeCoverage,
+      stabilizationRate,
+      recoveryStatus,
+    }
+  }, [cases, interventions, outcomes])
+
+  const alignedRecovery =
+    getRecoveryInterpretation(recoveryMetrics.recoveryStatus)
+
+  const generatedRecoveryBrief = `
+EXAMIA LIS RECOVERY CONTINUITY BRIEF
+
+Report Template:
+${reportTemplate}
+
+Recovery Focus:
+${recoveryFocus}
+
+Recovery Scope:
+${recoveryScope}
+
+Recovery Status:
+${recoveryMetrics.recoveryStatus}
+
+Recovery Metrics:
+Total Cases: ${recoveryMetrics.totalCases}
+Stabilized Cases: ${recoveryMetrics.stabilizedCases}
+Safeguarding Flags: ${recoveryMetrics.safeguardingFlags}
+Intervention Coverage: ${recoveryMetrics.interventionCoverage}%
+Outcome Coverage: ${recoveryMetrics.outcomeCoverage}%
+Stabilization Rate: ${recoveryMetrics.stabilizationRate}%
+
+Governance Interpretation:
+${alignedRecovery.interpretation}
+
+Recommended Action:
+${alignedRecovery.action}
+
+Governance-Safe Operational Meaning:
+This recovery continuity brief monitors whether stabilization pathways continue moving toward recovery completion, continuity reinforcement, and governance-safe follow-through. It strengthens visibility without assigning blame to responders, institutions, beneficiaries, or partners.
+
+Monitoring Note:
+${alignedRecovery.monitoring}
+
+Additional Operational Notes:
+${additionalNotes.trim() || 'No additional operational notes entered.'}
+  `.trim()
 
   return (
     <main style={styles.page}>
       <div style={styles.container}>
+        <div style={styles.quickNavWrap}>
+          <InfrastructureQuickNav />
+        </div>
+
         <section style={styles.hero}>
           <p style={styles.kicker}>
-            EXAMIA LIS • CONTINUITY RECOVERY INTELLIGENCE
+            EXAMIA LIS • RECOVERY CONTINUITY INTELLIGENCE
           </p>
 
           <h1 style={styles.title}>
-            Continuity Recovery Infrastructure
+            Recovery Continuity Infrastructure
           </h1>
 
           <p style={styles.subtitle}>
-            Detect recovery strengthening, continuity weakening,
-            stabilization rebound pressure, and re-fragmentation
-            risk before operational recovery pathways collapse.
+            Monitor stabilization continuity, recovery progression,
+            safeguarding recovery pressure, and operational recovery
+            fragmentation risk across governed stabilization pathways.
           </p>
         </section>
+
+        {message && <div style={styles.message}>{message}</div>}
 
         <section style={styles.metricsGrid}>
           <Metric
             label="Recovery Status"
-            value={recoveryStatus}
+            value={recoveryMetrics.recoveryStatus}
           />
 
           <Metric
-            label="Active Cases"
-            value={String(activeCases)}
-          />
-
-          <Metric
-            label="Unresolved Cases"
-            value={String(unresolvedCases)}
-          />
-
-          <Metric
-            label="Safeguarding Flags"
-            value={String(safeguardingFlags)}
+            label="Stabilization Rate"
+            value={`${recoveryMetrics.stabilizationRate}%`}
           />
 
           <Metric
             label="Intervention Coverage"
-            value={`${interventionCoverage}%`}
+            value={`${recoveryMetrics.interventionCoverage}%`}
           />
 
           <Metric
             label="Outcome Coverage"
-            value={`${outcomeCoverage}%`}
+            value={`${recoveryMetrics.outcomeCoverage}%`}
+          />
+
+          <Metric
+            label="Safeguarding Flags"
+            value={recoveryMetrics.safeguardingFlags.toString()}
+          />
+
+          <Metric
+            label="Stabilized Cases"
+            value={recoveryMetrics.stabilizedCases.toString()}
           />
         </section>
 
         <section style={styles.card}>
           <h2 style={styles.sectionTitle}>
-            Continuity Recovery Brief Template
+            Recovery Continuity Brief Template
           </h2>
 
-          <p style={styles.helperText}>
-            Use standardized dropdowns to keep recovery
-            intelligence governance-safe, operationally coherent,
-            and nationally consistent.
+          <p style={styles.helper}>
+            Use standardized recovery governance templates to maintain
+            continuity visibility, stabilization monitoring, and
+            governance-safe recovery interpretation.
           </p>
 
           <Select
-            label="Report Template"
+            label="Recovery Report Template"
             value={reportTemplate}
             setValue={setReportTemplate}
-            options={REPORT_TEMPLATES}
+            options={RECOVERY_REPORT_OPTIONS}
           />
 
           <Select
@@ -254,90 +306,64 @@ export default function RecoveryIntelligencePage() {
           />
 
           <Select
-            label="Operating Scope"
-            value={operatingScope}
-            setValue={setOperatingScope}
-            options={OPERATING_SCOPE_OPTIONS}
+            label="Recovery Scope"
+            value={recoveryScope}
+            setValue={setRecoveryScope}
+            options={RECOVERY_SCOPE_OPTIONS}
           />
 
-          <div style={styles.autoBox}>
-            <strong>
-              Auto-Aligned Governance Interpretation
-            </strong>
+          <div style={styles.alignedBox}>
+            <h3 style={styles.alignedTitle}>
+              Auto-Aligned Recovery Interpretation
+            </h3>
 
-            <p>{governanceInterpretation}</p>
-          </div>
+            <p style={styles.alignedText}>
+              {alignedRecovery.interpretation}
+            </p>
 
-          <div style={styles.autoBox}>
-            <strong>Auto-Aligned Recommended Action</strong>
+            <h3 style={styles.alignedTitle}>
+              Auto-Aligned Recommended Action
+            </h3>
 
-            <p>{recommendedAction}</p>
-          </div>
+            <p style={styles.alignedText}>
+              {alignedRecovery.action}
+            </p>
 
-          <div style={styles.autoBox}>
-            <strong>Auto-Aligned Monitoring Note</strong>
+            <h3 style={styles.alignedTitle}>
+              Auto-Aligned Monitoring Note
+            </h3>
 
-            <p>{monitoringNote}</p>
+            <p style={styles.alignedText}>
+              {alignedRecovery.monitoring}
+            </p>
           </div>
 
           <label style={styles.label}>
             Optional Additional Operational Notes
 
             <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              value={additionalNotes}
+              onChange={(event) =>
+                setAdditionalNotes(event.target.value)
+              }
+              placeholder="Use operational governance language only."
               style={styles.textarea}
-              placeholder="Use operational language only. Avoid blame or unnecessary personal details."
             />
           </label>
+
+          <button onClick={loadData} style={styles.button}>
+            Refresh Recovery Intelligence
+          </button>
         </section>
 
         <section style={styles.card}>
           <h2 style={styles.sectionTitle}>
-            Generated Recovery Brief
+            Generated Recovery Continuity Brief
           </h2>
 
           <div style={styles.briefBox}>
             <pre style={styles.pre}>
-{`EXAMIA LIS CONTINUITY RECOVERY INTELLIGENCE BRIEF
-
-Report Template:
-${reportTemplate}
-
-Recovery Focus:
-${recoveryFocus}
-
-Operating Scope:
-${operatingScope}
-
-Recovery Status:
-${recoveryStatus}
-
-Recovery Metrics:
-Total Cases: ${totalCases}
-Active Cases: ${activeCases}
-Unresolved Cases: ${unresolvedCases}
-Safeguarding Flags: ${safeguardingFlags}
-Routing Actions: ${routingActions.length}
-Intervention Coverage: ${interventionCoverage}%
-Outcome Coverage: ${outcomeCoverage}%
-Stabilization Rate: ${stabilizationRate}%
-
-Governance Interpretation:
-${governanceInterpretation}
-
-Recommended Action:
-${recommendedAction}
-
-Governance-Safe Operational Meaning:
-This continuity recovery intelligence brief identifies whether stabilization pathways are strengthening, weakening, fragmenting, or recovering across interventions, routing activity, outcomes, safeguarding visibility, and coordination continuity. It supports early recovery visibility before operational fragmentation reappears. It does not assign blame to institutions, responders, beneficiaries, or partners.
-
-Governance Monitoring Note:
-${monitoringNote}
-
-Additional Operational Notes:
-${notes || 'No additional operational notes entered.'}
-`}
+              {generatedRecoveryBrief}
             </pre>
           </div>
         </section>
@@ -367,18 +393,25 @@ function Select({
   value,
   setValue,
   options,
-}: any) {
+}: {
+  label: string
+  value: string
+  setValue: (value: string) => void
+  options: string[]
+}) {
   return (
     <label style={styles.label}>
       {label}
 
       <select
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(event) => setValue(event.target.value)}
         style={styles.select}
       >
-        {options.map((option: string) => (
-          <option key={option}>{option}</option>
+        {options.map((item) => (
+          <option key={item} value={item}>
+            {item}
+          </option>
         ))}
       </select>
     </label>
@@ -388,7 +421,8 @@ function Select({
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    background: 'linear-gradient(180deg, #020617 0%, #0f172a 100%)',
+    background:
+      'linear-gradient(180deg, #020617 0%, #0f172a 100%)',
     color: 'white',
     padding: '56px 18px',
   },
@@ -398,6 +432,10 @@ const styles: Record<string, CSSProperties> = {
     margin: '0 auto',
   },
 
+  quickNavWrap: {
+    marginBottom: '32px',
+  },
+
   hero: {
     marginBottom: '32px',
   },
@@ -405,21 +443,30 @@ const styles: Record<string, CSSProperties> = {
   kicker: {
     color: '#67e8f9',
     fontWeight: 900,
-    letterSpacing: '2px',
     fontSize: '12px',
+    letterSpacing: '2px',
   },
 
   title: {
-    fontSize: '56px',
+    fontSize: 'clamp(34px, 6vw, 56px)',
     lineHeight: 1.05,
     margin: '12px 0',
   },
 
   subtitle: {
     color: '#cbd5e1',
-    maxWidth: '900px',
     lineHeight: 1.7,
+    maxWidth: '900px',
     fontSize: '18px',
+  },
+
+  message: {
+    background: '#064e3b',
+    color: '#bbf7d0',
+    padding: '16px',
+    borderRadius: '14px',
+    fontWeight: 800,
+    marginBottom: '24px',
   },
 
   metricsGrid: {
@@ -443,9 +490,9 @@ const styles: Record<string, CSSProperties> = {
   },
 
   metricValue: {
-    fontSize: '22px',
     marginTop: '8px',
-    wordBreak: 'break-word',
+    fontSize: '26px',
+    lineHeight: 1.2,
   },
 
   card: {
@@ -453,67 +500,91 @@ const styles: Record<string, CSSProperties> = {
     border: '1px solid #1e293b',
     borderRadius: '24px',
     padding: '24px',
-    marginBottom: '28px',
+    marginBottom: '24px',
   },
 
   sectionTitle: {
     fontSize: '28px',
-    marginBottom: '14px',
+    marginBottom: '12px',
   },
 
-  helperText: {
+  helper: {
     color: '#cbd5e1',
     lineHeight: 1.6,
-    marginBottom: '22px',
+    marginBottom: '20px',
   },
 
   label: {
     display: 'block',
     fontWeight: 800,
-    marginBottom: '16px',
+    marginBottom: '18px',
   },
 
   select: {
     width: '100%',
+    marginTop: '8px',
     padding: '14px',
     borderRadius: '12px',
     background: '#111827',
     color: 'white',
     border: '1px solid #334155',
-    marginTop: '8px',
   },
 
   textarea: {
     width: '100%',
     minHeight: '120px',
+    marginTop: '8px',
     padding: '14px',
     borderRadius: '12px',
-    border: '1px solid #334155',
     background: '#111827',
     color: 'white',
-    marginTop: '8px',
+    border: '1px solid #334155',
+    resize: 'vertical',
   },
 
-  autoBox: {
-    background: '#082f49',
-    border: '1px solid #0e7490',
-    borderRadius: '16px',
+  button: {
+    width: '100%',
     padding: '16px',
-    marginBottom: '16px',
+    borderRadius: '14px',
+    border: 'none',
+    background: '#67e8f9',
+    color: '#082f49',
+    fontWeight: 900,
+    cursor: 'pointer',
+    fontSize: '16px',
+  },
+
+  alignedBox: {
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '18px',
+    padding: '18px',
+    marginBottom: '20px',
+  },
+
+  alignedTitle: {
+    color: '#67e8f9',
+    fontSize: '14px',
+    margin: '0 0 6px',
+  },
+
+  alignedText: {
+    color: '#e2e8f0',
     lineHeight: 1.6,
+    margin: '0 0 16px',
   },
 
   briefBox: {
     background: '#0f172a',
-    border: '1px solid #1e293b',
+    border: '1px solid #334155',
     borderRadius: '18px',
-    padding: '18px',
+    padding: '20px',
   },
 
   pre: {
     whiteSpace: 'pre-wrap',
     lineHeight: 1.7,
-    fontSize: '14px',
     margin: 0,
+    fontFamily: 'inherit',
   },
 }
