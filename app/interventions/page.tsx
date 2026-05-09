@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
+import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -170,11 +171,13 @@ This intervention record documents support delivery, stabilization progress, con
 
     const evidence = interventionEvidence()
 
-    const { error: interventionError } = await supabase.from('case_interventions').insert({
-      case_id: selectedCaseId,
-      intervention_type: interventionType,
-      intervention_summary: evidence,
-    })
+    const { error: interventionError } = await supabase
+      .from('case_interventions')
+      .insert({
+        case_id: selectedCaseId,
+        intervention_type: interventionType,
+        intervention_summary: evidence,
+      })
 
     if (interventionError) {
       alert(interventionError.message)
@@ -248,6 +251,10 @@ This intervention record documents support delivery, stabilization progress, con
   return (
     <main style={styles.page}>
       <div style={styles.container}>
+        <div style={styles.quickNavWrap}>
+          <InfrastructureQuickNav />
+        </div>
+
         <section style={styles.hero}>
           <p style={styles.kicker}>EXAMIA LIS • CONTROLLED INTERVENTION INTELLIGENCE</p>
 
@@ -287,15 +294,12 @@ This intervention record documents support delivery, stabilization progress, con
                 style={styles.select}
               >
                 <option value="">
-                  {cases.length === 0
-                    ? 'No routed or active cases found'
-                    : 'Select beneficiary case'}
+                  {cases.length === 0 ? 'No routed or active cases found' : 'Select beneficiary case'}
                 </option>
 
                 {cases.map((caseItem) => (
                   <option key={caseItem.id} value={caseItem.id}>
-                    {caseItem.beneficiary_name} • {caseItem.support_domain} •{' '}
-                    {caseItem.case_status}
+                    {caseItem.beneficiary_name} • {caseItem.support_domain} • {caseItem.case_status}
                   </option>
                 ))}
               </select>
@@ -402,13 +406,27 @@ function Metric({ label, value }: { label: string; value: number }) {
   )
 }
 
-function Select({ label, value, setValue, options }: any) {
+function Select({
+  label,
+  value,
+  setValue,
+  options,
+}: {
+  label: string
+  value: string
+  setValue: (value: string) => void
+  options: string[]
+}) {
   return (
     <label style={styles.label}>
       {label}
-      <select value={value} onChange={(event) => setValue(event.target.value)} style={styles.select}>
-        {options.map((option: string) => (
-          <option key={option || 'blank'} value={option}>
+      <select
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        style={styles.select}
+      >
+        {options.map((option, index) => (
+          <option key={`${option || 'blank'}-${index}`} value={option}>
             {option || 'Select option'}
           </option>
         ))}
@@ -427,6 +445,9 @@ const styles: Record<string, CSSProperties> = {
   container: {
     maxWidth: '1240px',
     margin: '0 auto',
+  },
+  quickNavWrap: {
+    marginBottom: '32px',
   },
   hero: {
     marginBottom: '32px',
