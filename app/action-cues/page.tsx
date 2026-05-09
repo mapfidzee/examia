@@ -1,4 +1,5 @@
 import Link from "next/link";
+import InfrastructureQuickNav from "@/components/InfrastructureQuickNav";
 
 type ActionCue = {
   code: string;
@@ -156,6 +157,8 @@ export default function ActionCuesPage() {
   return (
     <main className="min-h-screen bg-[#07111F] text-slate-100">
       <section className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-5 py-8 sm:px-8 lg:px-10">
+        <InfrastructureQuickNav />
+
         <header className="rounded-3xl border border-blue-900/60 bg-[#0B1B30] p-6 shadow-2xl shadow-black/30 sm:p-8">
           <div className="mb-4 inline-flex rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200">
             EXAMIA Action Cue Registry
@@ -192,10 +195,7 @@ export default function ActionCuesPage() {
               EXAMIA should not merely display system pressure. It must help
               leadership understand what the signal means, what risk it points
               toward, what action cue is appropriate, when escalation is
-              justified, and how the signal must be interpreted safely. This
-              registry protects the system from vague dashboard language and
-              keeps response logic consistent across healthcare and other
-              domains.
+              justified, and how the signal must be interpreted safely.
             </p>
           </div>
 
@@ -212,52 +212,6 @@ export default function ActionCuesPage() {
               They do not diagnose, prescribe, replace clinical judgment, or
               rank individuals.
             </p>
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-blue-900/60 bg-[#0B1B30] p-6 sm:p-8">
-          <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-300/80">
-                Registry Logic
-              </p>
-              <h2 className="mt-2 text-2xl font-bold text-white">
-                Required Interpretation Fields
-              </h2>
-            </div>
-
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Link
-                href="/system"
-                className="rounded-2xl border border-cyan-400/40 bg-cyan-400/10 px-5 py-3 text-center text-sm font-semibold text-cyan-100 transition hover:border-cyan-300 hover:bg-cyan-400/20"
-              >
-                System Spine
-              </Link>
-              <Link
-                href="/domains"
-                className="rounded-2xl border border-blue-800/70 bg-[#07111F] px-5 py-3 text-center text-sm font-semibold text-slate-200 transition hover:border-cyan-300 hover:text-cyan-100"
-              >
-                Domains
-              </Link>
-            </div>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-5">
-            {["Status", "Meaning", "Risk", "Action Cue", "Governance Note"].map(
-              (item, index) => (
-                <div
-                  key={item}
-                  className="rounded-2xl border border-blue-900/60 bg-[#07111F] p-4"
-                >
-                  <div className="text-xs font-semibold text-cyan-300">
-                    FIELD {String(index + 1).padStart(2, "0")}
-                  </div>
-                  <div className="mt-2 text-sm font-semibold text-white">
-                    {item}
-                  </div>
-                </div>
-              )
-            )}
           </div>
         </section>
 
@@ -332,33 +286,32 @@ export default function ActionCuesPage() {
 
           <div className="rounded-3xl border border-cyan-400/25 bg-cyan-400/10 p-6 sm:p-8">
             <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-200">
-              Next Infrastructure Layer
+              Governance Reminder
             </p>
 
             <h2 className="mt-2 text-2xl font-bold text-white">
-              Build Case Flow Next
+              Structural Visibility Without Blame
             </h2>
 
             <p className="mt-4 leading-8 text-slate-200">
-              After action cues are locked, the next layer should show how one
-              stabilization case moves through the full governed lifecycle:
-              intake, case governance, routing, intervention, outcome, recovery,
-              trajectory, pressure review, command oversight, and audit
-              traceability.
+              Action cues support stabilization response, continuity review,
+              routing repair, recovery monitoring, and governance oversight.
+              They must never become tools for surveillance, punishment, or
+              person-level performance labeling.
             </p>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <Link
-                href="/command"
+                href="/case-flow"
                 className="rounded-2xl border border-cyan-400/40 bg-[#07111F] px-5 py-3 text-center text-sm font-semibold text-cyan-100 transition hover:border-cyan-300 hover:bg-[#102744]"
               >
-                View Command Center
+                View Case Flow
               </Link>
               <Link
-                href="/audit"
+                href="/command"
                 className="rounded-2xl border border-blue-900/60 bg-[#07111F] px-5 py-3 text-center text-sm font-semibold text-slate-200 transition hover:border-cyan-300 hover:text-cyan-100"
               >
-                View Audit Layer
+                View Command Center
               </Link>
             </div>
           </div>

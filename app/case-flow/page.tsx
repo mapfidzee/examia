@@ -1,4 +1,5 @@
 import Link from "next/link";
+import InfrastructureQuickNav from "@/components/InfrastructureQuickNav";
 
 type FlowStep = {
   number: string;
@@ -168,6 +169,8 @@ export default function CaseFlowPage() {
   return (
     <main className="min-h-screen bg-[#07111F] text-slate-100">
       <section className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-5 py-8 sm:px-8 lg:px-10">
+        <InfrastructureQuickNav />
+
         <header className="rounded-3xl border border-blue-900/60 bg-[#0B1B30] p-6 shadow-2xl shadow-black/30 sm:p-8">
           <div className="mb-4 inline-flex rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200">
             EXAMIA Case Flow
@@ -226,33 +229,14 @@ export default function CaseFlowPage() {
         </section>
 
         <section className="rounded-3xl border border-blue-900/60 bg-[#0B1B30] p-6 sm:p-8">
-          <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-300/80">
-                Demonstration Case Snapshot
-              </p>
-              <h2 className="mt-2 text-2xl font-bold text-white">
-                Example Stabilization Case State
-              </h2>
-            </div>
+          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-300/80">
+            Demonstration Case Snapshot
+          </p>
+          <h2 className="mt-2 text-2xl font-bold text-white">
+            Example Stabilization Case State
+          </h2>
 
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Link
-                href="/action-cues"
-                className="rounded-2xl border border-cyan-400/40 bg-cyan-400/10 px-5 py-3 text-center text-sm font-semibold text-cyan-100 transition hover:border-cyan-300 hover:bg-cyan-400/20"
-              >
-                Action Cues
-              </Link>
-              <Link
-                href="/system"
-                className="rounded-2xl border border-blue-800/70 bg-[#07111F] px-5 py-3 text-center text-sm font-semibold text-slate-200 transition hover:border-cyan-300 hover:text-cyan-100"
-              >
-                System Spine
-              </Link>
-            </div>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="mt-6 grid gap-3 md:grid-cols-3">
             {caseSnapshot.map((item) => (
               <div
                 key={item.label}
