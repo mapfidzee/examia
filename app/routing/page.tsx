@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
+import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import { supabase } from '../../lib/supabase'
 
 type Institution = {
@@ -349,7 +350,9 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
 
   async function routeCase() {
     if (!selectedCaseId) {
-      alert('Select a beneficiary case. If no cases appear, create a beneficiary case first in the Cases page.')
+      alert(
+        'Select a beneficiary case. If no cases appear, create a beneficiary case first in the Cases page.'
+      )
       return
     }
 
@@ -444,6 +447,10 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
   return (
     <main style={styles.page}>
       <div style={styles.container}>
+        <div style={styles.quickNavWrap}>
+          <InfrastructureQuickNav />
+        </div>
+
         <section style={styles.hero}>
           <p style={styles.kicker}>EXAMIA LIS • STRUCTURED ROUTING INTELLIGENCE</p>
           <h1 style={styles.title}>Institutional Coordination + Response Routing</h1>
@@ -746,7 +753,17 @@ function Metric({ label, value }: { label: string; value: number }) {
   )
 }
 
-function Input({ label, value, setValue, placeholder = '' }: any) {
+function Input({
+  label,
+  value,
+  setValue,
+  placeholder = '',
+}: {
+  label: string
+  value: string
+  setValue: (value: string) => void
+  placeholder?: string
+}) {
   return (
     <label style={styles.label}>
       {label}
@@ -760,13 +777,23 @@ function Input({ label, value, setValue, placeholder = '' }: any) {
   )
 }
 
-function Select({ label, value, setValue, options }: any) {
+function Select({
+  label,
+  value,
+  setValue,
+  options,
+}: {
+  label: string
+  value: string
+  setValue: (value: string) => void
+  options: string[]
+}) {
   return (
     <label style={styles.label}>
       {label}
       <select value={value} onChange={(e) => setValue(e.target.value)} style={styles.select}>
-        {options.map((option: string) => (
-          <option key={option || 'blank'} value={option}>
+        {options.map((option, index) => (
+          <option key={`${option || 'blank'}-${index}`} value={option}>
             {option || 'Select option'}
           </option>
         ))}
@@ -783,6 +810,7 @@ const styles: Record<string, CSSProperties> = {
     padding: '56px 18px',
   },
   container: { maxWidth: '1240px', margin: '0 auto' },
+  quickNavWrap: { marginBottom: '32px' },
   hero: { marginBottom: '32px' },
   kicker: { color: '#67e8f9', fontSize: '12px', fontWeight: 900, letterSpacing: '2px' },
   title: { fontSize: 'clamp(34px, 6vw, 58px)', lineHeight: 1.05, margin: '12px 0' },
