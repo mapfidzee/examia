@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -155,7 +156,9 @@ export default function PredictiveIntelligencePage() {
 
   const interventionCoverage =
     cases.length > 0
-      ? Math.round((new Set(interventions.map((item) => item.case_id)).size / cases.length) * 100)
+      ? Math.round(
+          (new Set(interventions.map((item) => item.case_id)).size / cases.length) * 100
+        )
       : 0
 
   const outcomeCoverage =
@@ -239,6 +242,10 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
   return (
     <main style={styles.page}>
       <div style={styles.container}>
+        <div style={styles.quickNavWrap}>
+          <InfrastructureQuickNav />
+        </div>
+
         <section style={styles.hero}>
           <p style={styles.kicker}>EXAMIA LIS • PREDICTIVE INTELLIGENCE</p>
 
@@ -382,6 +389,9 @@ const styles: Record<string, CSSProperties> = {
     maxWidth: '1240px',
     margin: '0 auto',
   },
+  quickNavWrap: {
+    marginBottom: '32px',
+  },
   hero: {
     marginBottom: '32px',
   },
@@ -423,6 +433,7 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '26px',
     marginTop: '12px',
     lineHeight: 1.2,
+    wordBreak: 'break-word',
   },
   card: {
     background: '#020617',
