@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -224,15 +225,19 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
   return (
     <main style={styles.page}>
       <div style={styles.container}>
+        <div style={styles.quickNavWrap}>
+          <InfrastructureQuickNav />
+        </div>
+
         <section style={styles.hero}>
           <p style={styles.kicker}>EXAMIA LIS • ROUTING PRESSURE INTELLIGENCE</p>
 
           <h1 style={styles.title}>Predictive Routing Pressure Infrastructure</h1>
 
           <p style={styles.subtitle}>
-            Detect routing accumulation, responder saturation, coordination bottlenecks,
-            safeguarding density, and continuity pressure before stabilization pathways
-            overload.
+            Detect routing accumulation, responder saturation, coordination
+            bottlenecks, safeguarding density, and continuity pressure before
+            stabilization pathways overload.
           </p>
         </section>
 
@@ -257,9 +262,10 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
           <h2 style={styles.sectionTitle}>Predictive Routing Pressure Brief Template</h2>
 
           <p style={styles.helper}>
-            Use standardized dropdowns to keep routing pressure forecasting governance-safe,
-            operationally coherent, and nationally consistent. Interpretation and action cues
-            are automatically aligned with the detected pressure status.
+            Use standardized dropdowns to keep routing pressure forecasting
+            governance-safe, operationally coherent, and nationally consistent.
+            Interpretation and action cues are automatically aligned with the
+            detected pressure status.
           </p>
 
           <Select
@@ -298,7 +304,7 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
             Optional Additional Operational Notes
             <textarea
               value={additionalNotes}
-              onChange={(e) => setAdditionalNotes(e.target.value)}
+              onChange={(event) => setAdditionalNotes(event.target.value)}
               placeholder="Use operational language only. Avoid blame or unnecessary personal details."
               style={styles.textarea}
             />
@@ -376,7 +382,7 @@ function Select({
       {label}
       <select
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(event) => setValue(event.target.value)}
         style={styles.select}
       >
         {options.map((item) => (
@@ -399,6 +405,9 @@ const styles: Record<string, CSSProperties> = {
   container: {
     maxWidth: '1200px',
     margin: '0 auto',
+  },
+  quickNavWrap: {
+    marginBottom: '32px',
   },
   hero: {
     marginBottom: '32px',
