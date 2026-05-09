@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
+import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import { supabase } from '../../lib/supabase'
 
 type TeacherProfile = {
@@ -82,7 +83,9 @@ export default function GovernanceConsolePage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [message, setMessage] = useState('')
 
-  const [selectedProfile, setSelectedProfile] = useState<TeacherProfile | null>(null)
+  const [selectedProfile, setSelectedProfile] = useState<TeacherProfile | null>(
+    null
+  )
   const [selectedStatus, setSelectedStatus] = useState('')
   const [selectedReason, setSelectedReason] = useState('')
   const [governanceNotes, setGovernanceNotes] = useState('')
@@ -197,16 +200,18 @@ export default function GovernanceConsolePage() {
       return
     }
 
-    const { error: actionError } = await supabase.from('governance_actions').insert({
-      responder_id: responderData.id,
-      teacher_profile_id: selectedProfile.id,
-      action_type: `STATUS_CHANGE_TO_${selectedStatus}`,
-      previous_status: previousStatus,
-      new_status: selectedStatus,
-      governance_actor: 'EXAMIA Governance Console',
-      reason: selectedReason,
-      notes: governanceNotes.trim() || null,
-    })
+    const { error: actionError } = await supabase
+      .from('governance_actions')
+      .insert({
+        responder_id: responderData.id,
+        teacher_profile_id: selectedProfile.id,
+        action_type: `STATUS_CHANGE_TO_${selectedStatus}`,
+        previous_status: previousStatus,
+        new_status: selectedStatus,
+        governance_actor: 'EXAMIA Governance Console',
+        reason: selectedReason,
+        notes: governanceNotes.trim() || null,
+      })
 
     if (actionError) {
       console.error(actionError)
@@ -226,8 +231,12 @@ export default function GovernanceConsolePage() {
   }
 
   const total = profiles.length
-  const pending = profiles.filter((p) => normalizedStatus(p.status) === 'PENDING').length
-  const active = profiles.filter((p) => normalizedStatus(p.status) === 'ACTIVE').length
+  const pending = profiles.filter(
+    (p) => normalizedStatus(p.status) === 'PENDING'
+  ).length
+  const active = profiles.filter(
+    (p) => normalizedStatus(p.status) === 'ACTIVE'
+  ).length
   const restricted = profiles.filter((p) =>
     ['RESTRICTED', 'SUSPENDED'].includes(normalizedStatus(p.status))
   ).length
@@ -235,13 +244,19 @@ export default function GovernanceConsolePage() {
   return (
     <main style={styles.page}>
       <div style={styles.container}>
+        <div style={styles.quickNavWrap}>
+          <InfrastructureQuickNav />
+        </div>
+
         <section style={styles.hero}>
           <p style={styles.kicker}>EXAMIA LIS • STRUCTURED GOVERNANCE ENGINE</p>
+
           <h1 style={styles.title}>Responder Activation + Governance Console</h1>
+
           <p style={styles.subtitle}>
             This console controls responder verification, activation, restriction,
-            suspension, removal, and governance evidence using standardized operational
-            reasons for EXAMIA Learning Stabilization Infrastructure.
+            suspension, removal, and governance evidence using standardized
+            operational reasons for EXAMIA Learning Stabilization Infrastructure.
           </p>
         </section>
 
@@ -258,9 +273,10 @@ export default function GovernanceConsolePage() {
           <div style={styles.cardHeader}>
             <div>
               <h2 style={styles.cardTitle}>Responder Verification Queue</h2>
+
               <p style={styles.cardText}>
-                Review each responder and move them through the governed lifecycle
-                using structured action reasons.
+                Review each responder and move them through the governed
+                lifecycle using structured action reasons.
               </p>
             </div>
 
@@ -286,18 +302,30 @@ export default function GovernanceConsolePage() {
                         <p style={styles.email}>{profile.email}</p>
                       </div>
 
-                      <span style={statusBadge(currentStatus)}>{currentStatus}</span>
+                      <span style={statusBadge(currentStatus)}>
+                        {currentStatus}
+                      </span>
                     </div>
 
                     <div style={styles.infoGrid}>
                       <Info label="Domains" value={arrayText(profile.subjects)} />
-                      <Info label="Learner Levels" value={arrayText(profile.grade_levels)} />
-                      <Info label="Languages" value={arrayText(profile.spoken_languages)} />
-                      <Info label="Region" value={profile.province || 'Not provided'} />
+                      <Info
+                        label="Learner Levels"
+                        value={arrayText(profile.grade_levels)}
+                      />
+                      <Info
+                        label="Languages"
+                        value={arrayText(profile.spoken_languages)}
+                      />
+                      <Info
+                        label="Region"
+                        value={profile.province || 'Not provided'}
+                      />
                       <Info
                         label="Expected Rate"
                         value={
-                          profile.hourly_rate !== null && profile.hourly_rate !== undefined
+                          profile.hourly_rate !== null &&
+                          profile.hourly_rate !== undefined
                             ? String(profile.hourly_rate)
                             : 'Not provided'
                         }
@@ -305,7 +333,10 @@ export default function GovernanceConsolePage() {
                     </div>
 
                     <details style={styles.details}>
-                      <summary style={styles.summary}>View verification evidence</summary>
+                      <summary style={styles.summary}>
+                        View verification evidence
+                      </summary>
+
                       <pre style={styles.bio}>
                         {profile.bio || 'No verification evidence submitted.'}
                       </pre>
@@ -326,7 +357,9 @@ export default function GovernanceConsolePage() {
                                 : 1,
                           }}
                         >
-                          {actionLoading === `${profile.id}-${status}` ? 'Saving...' : status}
+                          {actionLoading === `${profile.id}-${status}`
+                            ? 'Saving...'
+                            : status}
                         </button>
                       ))}
                     </div>
@@ -386,7 +419,10 @@ export default function GovernanceConsolePage() {
                 Cancel
               </button>
 
-              <button onClick={confirmGovernanceAction} style={styles.confirmButton}>
+              <button
+                onClick={confirmGovernanceAction}
+                style={styles.confirmButton}
+              >
                 Confirm Governance Action
               </button>
             </div>
@@ -424,12 +460,29 @@ function statusBadge(status: string): CSSProperties {
     letterSpacing: '0.5px',
   }
 
-  if (status === 'ACTIVE') return { ...base, background: '#dcfce7', color: '#166534' }
-  if (status === 'VERIFIED') return { ...base, background: '#dbeafe', color: '#1e40af' }
-  if (status === 'UNDER_REVIEW') return { ...base, background: '#fef9c3', color: '#854d0e' }
-  if (status === 'RESTRICTED') return { ...base, background: '#ffedd5', color: '#9a3412' }
-  if (status === 'SUSPENDED') return { ...base, background: '#fee2e2', color: '#991b1b' }
-  if (status === 'REMOVED') return { ...base, background: '#111827', color: '#f9fafb' }
+  if (status === 'ACTIVE') {
+    return { ...base, background: '#dcfce7', color: '#166534' }
+  }
+
+  if (status === 'VERIFIED') {
+    return { ...base, background: '#dbeafe', color: '#1e40af' }
+  }
+
+  if (status === 'UNDER_REVIEW') {
+    return { ...base, background: '#fef9c3', color: '#854d0e' }
+  }
+
+  if (status === 'RESTRICTED') {
+    return { ...base, background: '#ffedd5', color: '#9a3412' }
+  }
+
+  if (status === 'SUSPENDED') {
+    return { ...base, background: '#fee2e2', color: '#991b1b' }
+  }
+
+  if (status === 'REMOVED') {
+    return { ...base, background: '#111827', color: '#f9fafb' }
+  }
 
   return { ...base, background: '#e0f2fe', color: '#075985' }
 }
@@ -441,51 +494,65 @@ const styles: Record<string, CSSProperties> = {
     color: 'white',
     padding: '56px 18px',
   },
+
   container: {
     maxWidth: '1180px',
     margin: '0 auto',
   },
+
+  quickNavWrap: {
+    marginBottom: '32px',
+  },
+
   hero: {
     marginBottom: '28px',
   },
+
   kicker: {
     color: '#67e8f9',
     fontSize: '12px',
     fontWeight: 900,
     letterSpacing: '2px',
   },
+
   title: {
     fontSize: 'clamp(34px, 6vw, 58px)',
     margin: '10px 0',
     lineHeight: 1.05,
   },
+
   subtitle: {
     maxWidth: '880px',
     color: '#cbd5e1',
     fontSize: '18px',
     lineHeight: 1.6,
   },
+
   metricsGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
     gap: '14px',
     marginBottom: '22px',
   },
+
   metricCard: {
     background: '#0f172a',
     border: '1px solid #1e293b',
     borderRadius: '18px',
     padding: '20px',
   },
+
   metricLabel: {
     color: '#94a3b8',
     fontWeight: 800,
     margin: 0,
   },
+
   metricValue: {
     fontSize: '36px',
     margin: '8px 0 0',
   },
+
   message: {
     background: '#064e3b',
     color: '#bbf7d0',
@@ -493,6 +560,7 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: '14px',
     fontWeight: 800,
   },
+
   card: {
     background: '#020617',
     border: '1px solid #1e293b',
@@ -500,6 +568,7 @@ const styles: Record<string, CSSProperties> = {
     padding: '24px',
     boxShadow: '0 24px 70px rgba(0,0,0,0.4)',
   },
+
   cardHeader: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -508,14 +577,17 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: '20px',
     flexWrap: 'wrap',
   },
+
   cardTitle: {
     margin: 0,
     fontSize: '26px',
   },
+
   cardText: {
     color: '#cbd5e1',
     lineHeight: 1.5,
   },
+
   refreshButton: {
     background: '#67e8f9',
     color: '#082f49',
@@ -525,16 +597,19 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 900,
     cursor: 'pointer',
   },
+
   profileList: {
     display: 'grid',
     gap: '18px',
   },
+
   profileCard: {
     background: '#0f172a',
     border: '1px solid #334155',
     borderRadius: '20px',
     padding: '20px',
   },
+
   profileTop: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -542,37 +617,44 @@ const styles: Record<string, CSSProperties> = {
     alignItems: 'flex-start',
     flexWrap: 'wrap',
   },
+
   profileName: {
     margin: 0,
     fontSize: '22px',
   },
+
   email: {
     color: '#93c5fd',
     marginTop: '6px',
   },
+
   infoGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
     gap: '12px',
     marginTop: '16px',
   },
+
   infoBox: {
     background: '#020617',
     border: '1px solid #1e293b',
     borderRadius: '14px',
     padding: '12px',
   },
+
   infoLabel: {
     color: '#94a3b8',
     fontSize: '12px',
     fontWeight: 900,
     margin: 0,
   },
+
   infoValue: {
     color: '#f8fafc',
     margin: '6px 0 0',
     lineHeight: 1.4,
   },
+
   details: {
     marginTop: '16px',
     background: '#020617',
@@ -580,11 +662,13 @@ const styles: Record<string, CSSProperties> = {
     padding: '14px',
     border: '1px solid #1e293b',
   },
+
   summary: {
     cursor: 'pointer',
     fontWeight: 900,
     color: '#67e8f9',
   },
+
   bio: {
     whiteSpace: 'pre-wrap',
     color: '#dbeafe',
@@ -592,12 +676,14 @@ const styles: Record<string, CSSProperties> = {
     marginTop: '12px',
     fontFamily: 'inherit',
   },
+
   actionGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
     gap: '10px',
     marginTop: '16px',
   },
+
   actionButton: {
     padding: '12px',
     borderRadius: '12px',
@@ -607,6 +693,7 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 900,
     cursor: 'pointer',
   },
+
   overlay: {
     position: 'fixed',
     inset: 0,
@@ -617,6 +704,7 @@ const styles: Record<string, CSSProperties> = {
     zIndex: 1000,
     padding: '20px',
   },
+
   modal: {
     width: '100%',
     maxWidth: '620px',
@@ -626,21 +714,25 @@ const styles: Record<string, CSSProperties> = {
     border: '1px solid #334155',
     boxShadow: '0 24px 70px rgba(0,0,0,0.55)',
   },
+
   modalTitle: {
     fontSize: '28px',
     margin: '0 0 10px',
   },
+
   modalText: {
     color: '#cbd5e1',
     marginBottom: '20px',
     lineHeight: 1.5,
   },
+
   label: {
     display: 'block',
     marginBottom: '8px',
     marginTop: '16px',
     fontWeight: 800,
   },
+
   select: {
     width: '100%',
     padding: '14px',
@@ -649,6 +741,7 @@ const styles: Record<string, CSSProperties> = {
     color: 'white',
     border: '1px solid #334155',
   },
+
   textarea: {
     width: '100%',
     minHeight: '120px',
@@ -659,12 +752,14 @@ const styles: Record<string, CSSProperties> = {
     border: '1px solid #334155',
     resize: 'vertical',
   },
+
   modalActions: {
     display: 'flex',
     gap: '12px',
     marginTop: '24px',
     flexWrap: 'wrap',
   },
+
   cancelButton: {
     flex: 1,
     padding: '14px',
@@ -675,6 +770,7 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 800,
     cursor: 'pointer',
   },
+
   confirmButton: {
     flex: 1,
     padding: '14px',
