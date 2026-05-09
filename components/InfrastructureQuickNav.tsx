@@ -11,6 +11,7 @@ const quickLinks = [
   { label: "Pressure", href: "/pressure" },
   { label: "Bottlenecks", href: "/bottlenecks" },
   { label: "Recovery", href: "/recovery" },
+  { label: "Predictive", href: "/predictive" },
   { label: "Trajectory", href: "/trajectory" },
 ];
 
