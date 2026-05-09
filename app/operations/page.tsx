@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -53,6 +54,11 @@ type CaseIntervention = {
   case_id: string
   intervention_type: string | null
   intervention_summary: string | null
+}
+
+type PanelRow = {
+  label: string
+  value: number
 }
 
 const REPORT_TEMPLATES = [
@@ -184,9 +190,7 @@ export default function OperationsPage() {
     cases.length > 0 ? Math.round((stabilizedCases.length / cases.length) * 100) : 0
 
   const interventionCoverage =
-    cases.length > 0
-      ? Math.round((uniqueInterventionCases / cases.length) * 100)
-      : 0
+    cases.length > 0 ? Math.round((uniqueInterventionCases / cases.length) * 100) : 0
 
   const interventionVolume = interventions.length
 
@@ -253,6 +257,10 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
   return (
     <main style={styles.page}>
       <div style={styles.container}>
+        <div style={styles.quickNavWrap}>
+          <InfrastructureQuickNav />
+        </div>
+
         <section style={styles.hero}>
           <p style={styles.kicker}>EXAMIA LIS • OPERATIONAL INTELLIGENCE</p>
 
@@ -380,10 +388,7 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
               <Info label="Stabilization Rate" value={`${stabilizationRate}%`} />
               <Info label="Intervention Coverage" value={`${interventionCoverage}%`} />
               <Info label="Intervention Volume" value={`${interventionVolume}`} />
-              <Info
-                label="Cases With Evidence"
-                value={`${uniqueInterventionCases}`}
-              />
+              <Info label="Cases With Evidence" value={`${uniqueInterventionCases}`} />
               <Info label="Routing Actions" value={`${routingActions.length}`} />
               <Info label="Sites in View" value={`${filteredInstitutions.length}`} />
             </div>
@@ -394,7 +399,7 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
   )
 }
 
-function regionBreakdown(cases: BeneficiaryCase[]) {
+function regionBreakdown(cases: BeneficiaryCase[]): PanelRow[] {
   const counts: Record<string, number> = {}
 
   cases.forEach((item) => {
@@ -407,11 +412,12 @@ function regionBreakdown(cases: BeneficiaryCase[]) {
     .map(([label, value]) => ({ label, value }))
 }
 
-function caseStatusBreakdown(cases: BeneficiaryCase[]) {
+function caseStatusBreakdown(cases: BeneficiaryCase[]): PanelRow[] {
   const counts: Record<string, number> = {}
 
   cases.forEach((item) => {
-    counts[item.case_status] = (counts[item.case_status] || 0) + 1
+    const status = item.case_status || 'Status not recorded'
+    counts[status] = (counts[status] || 0) + 1
   })
 
   return Object.entries(counts)
@@ -419,11 +425,12 @@ function caseStatusBreakdown(cases: BeneficiaryCase[]) {
     .map(([label, value]) => ({ label, value }))
 }
 
-function severityLevelBreakdown(cases: BeneficiaryCase[]) {
+function severityLevelBreakdown(cases: BeneficiaryCase[]): PanelRow[] {
   const counts: Record<string, number> = {}
 
   cases.forEach((item) => {
-    counts[item.severity_level] = (counts[item.severity_level] || 0) + 1
+    const severity = item.severity_level || 'Severity not recorded'
+    counts[severity] = (counts[severity] || 0) + 1
   })
 
   return Object.entries(counts)
@@ -440,16 +447,27 @@ function Metric({ label, value }: { label: string; value: number }) {
   )
 }
 
-function Select({ label, value, setValue, options }: any) {
+function Select({
+  label,
+  value,
+  setValue,
+  options,
+}: {
+  label: string
+  value: string
+  setValue: (value: string) => void
+  options: string[]
+}) {
   return (
     <label style={styles.label}>
       {label}
+
       <select
         value={value}
         onChange={(event) => setValue(event.target.value)}
         style={styles.select}
       >
-        {options.map((option: string) => (
+        {options.map((option) => (
           <option key={option} value={option}>
             {option}
           </option>
@@ -475,7 +493,7 @@ function Panel({
 }: {
   title: string
   note: string
-  rows: { label: string; value: number }[]
+  rows: PanelRow[]
 }) {
   return (
     <div style={styles.card}>
@@ -485,8 +503,8 @@ function Panel({
       <div style={styles.panelList}>
         {rows.length === 0 && <p style={styles.emptyText}>No data available yet.</p>}
 
-        {rows.map((row) => (
-          <div key={row.label} style={styles.panelRow}>
+        {rows.map((row, index) => (
+          <div key={`${row.label}-${index}`} style={styles.panelRow}>
             <span>{row.label}</span>
             <strong>{row.value}</strong>
           </div>
@@ -506,6 +524,9 @@ const styles: Record<string, CSSProperties> = {
   container: {
     maxWidth: '1280px',
     margin: '0 auto',
+  },
+  quickNavWrap: {
+    marginBottom: '32px',
   },
   hero: {
     marginBottom: '32px',
