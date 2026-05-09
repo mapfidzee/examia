@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -64,10 +65,8 @@ function getBottleneckInterpretation(status: string) {
     return {
       interpretation:
         'Coordination pathways appear stable with minimal operational blockage visibility.',
-      action:
-        'Maintain standard coordination monitoring.',
-      monitoring:
-        'Low bottleneck monitoring remains active.',
+      action: 'Maintain standard coordination monitoring.',
+      monitoring: 'Low bottleneck monitoring remains active.',
     }
   }
 
@@ -75,10 +74,8 @@ function getBottleneckInterpretation(status: string) {
     return {
       interpretation:
         'Some coordination pathways are slowing and require visibility monitoring.',
-      action:
-        'Review continuity pathways and monitor stabilization progression.',
-      monitoring:
-        'Moderate bottleneck monitoring remains active.',
+      action: 'Review continuity pathways and monitor stabilization progression.',
+      monitoring: 'Moderate bottleneck monitoring remains active.',
     }
   }
 
@@ -88,8 +85,7 @@ function getBottleneckInterpretation(status: string) {
         'Visible coordination bottlenecks are slowing stabilization continuity and require intervention review.',
       action:
         'Redistribute coordination load and review unresolved stabilization pathways.',
-      monitoring:
-        'High bottleneck monitoring remains active.',
+      monitoring: 'High bottleneck monitoring remains active.',
     }
   }
 
@@ -98,8 +94,7 @@ function getBottleneckInterpretation(status: string) {
       'Critical coordination bottlenecks are visible and continuity fragmentation risk is increasing.',
     action:
       'Escalate operational coordination review and rebalance stabilization infrastructure immediately.',
-    monitoring:
-      'Critical bottleneck escalation monitoring is active.',
+    monitoring: 'Critical bottleneck escalation monitoring is active.',
   }
 }
 
@@ -136,6 +131,12 @@ export default function BottlenecksPage() {
       supabase.from('responders').select('*'),
     ])
 
+    if (casesResult.error) console.error(casesResult.error)
+    if (routingResult.error) console.error(routingResult.error)
+    if (interventionsResult.error) console.error(interventionsResult.error)
+    if (outcomesResult.error) console.error(outcomesResult.error)
+    if (respondersResult.error) console.error(respondersResult.error)
+
     setCases(casesResult.data || [])
     setRoutingActions(routingResult.data || [])
     setInterventions(interventionsResult.data || [])
@@ -167,48 +168,29 @@ export default function BottlenecksPage() {
     const outcomeCaseIds = new Set(outcomes.map((item) => item.case_id))
 
     const unresolvedCases = activeCases.filter(
-      (item) =>
-        interventionCaseIds.has(item.id) &&
-        !outcomeCaseIds.has(item.id)
+      (item) => interventionCaseIds.has(item.id) && !outcomeCaseIds.has(item.id)
     ).length
 
     const stalledCases = activeCases.filter(
-      (item) =>
-        outcomeCaseIds.has(item.id) &&
-        item.case_status !== 'STABILIZED'
+      (item) => outcomeCaseIds.has(item.id) && item.case_status !== 'STABILIZED'
     ).length
 
     const responderLoadMap: Record<string, number> = {}
 
     routingActions.forEach((item) => {
       const responder = item.assigned_responder_id || 'UNASSIGNED'
-      responderLoadMap[responder] =
-        (responderLoadMap[responder] || 0) + 1
+      responderLoadMap[responder] = (responderLoadMap[responder] || 0) + 1
     })
 
-    const highestResponderLoad = Math.max(
-      ...Object.values(responderLoadMap),
-      0
-    )
+    const highestResponderLoad = Math.max(...Object.values(responderLoadMap), 0)
 
     let bottleneckStatus = 'LOW_BOTTLENECK_PRESSURE'
 
-    if (
-      highestResponderLoad >= 4 ||
-      stalledCases >= 3 ||
-      safeguardingFlags >= 3
-    ) {
+    if (highestResponderLoad >= 4 || stalledCases >= 3 || safeguardingFlags >= 3) {
       bottleneckStatus = 'CRITICAL_BOTTLENECK_PRESSURE'
-    } else if (
-      highestResponderLoad >= 2 ||
-      unresolvedCases >= 2 ||
-      stalledCases >= 2
-    ) {
+    } else if (highestResponderLoad >= 2 || unresolvedCases >= 2 || stalledCases >= 2) {
       bottleneckStatus = 'HIGH_BOTTLENECK_PRESSURE'
-    } else if (
-      unresolvedCases >= 1 ||
-      safeguardingFlags >= 1
-    ) {
+    } else if (unresolvedCases >= 1 || safeguardingFlags >= 1) {
       bottleneckStatus = 'MODERATE_BOTTLENECK_PRESSURE'
     }
 
@@ -269,14 +251,16 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
   return (
     <main style={styles.page}>
       <div style={styles.container}>
+        <div style={styles.quickNavWrap}>
+          <InfrastructureQuickNav />
+        </div>
+
         <section style={styles.hero}>
           <p style={styles.kicker}>
             EXAMIA LIS • COORDINATION BOTTLENECK VISIBILITY
           </p>
 
-          <h1 style={styles.title}>
-            Coordination Bottleneck Infrastructure
-          </h1>
+          <h1 style={styles.title}>Coordination Bottleneck Infrastructure</h1>
 
           <p style={styles.subtitle}>
             Detect slowing stabilization pathways, responder concentration,
@@ -285,29 +269,32 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
           </p>
         </section>
 
-        {message && (
-          <div style={styles.message}>
-            {message}
-          </div>
-        )}
+        {message && <div style={styles.message}>{message}</div>}
 
         <section style={styles.metricsGrid}>
           <Metric label="Bottleneck Status" value={metrics.bottleneckStatus} />
           <Metric label="Active Cases" value={metrics.activeCases.toString()} />
-          <Metric label="Unresolved Pathways" value={metrics.unresolvedCases.toString()} />
+          <Metric
+            label="Unresolved Pathways"
+            value={metrics.unresolvedCases.toString()}
+          />
           <Metric label="Stalled Cases" value={metrics.stalledCases.toString()} />
-          <Metric label="Safeguarding Flags" value={metrics.safeguardingFlags.toString()} />
-          <Metric label="Highest Responder Load" value={metrics.highestResponderLoad.toString()} />
+          <Metric
+            label="Safeguarding Flags"
+            value={metrics.safeguardingFlags.toString()}
+          />
+          <Metric
+            label="Highest Responder Load"
+            value={metrics.highestResponderLoad.toString()}
+          />
         </section>
 
         <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>
-            Coordination Bottleneck Brief Template
-          </h2>
+          <h2 style={styles.sectionTitle}>Coordination Bottleneck Brief Template</h2>
 
           <p style={styles.helper}>
-            Use standardized dropdowns to keep bottleneck visibility governance-safe,
-            operationally coherent, and nationally consistent.
+            Use standardized dropdowns to keep bottleneck visibility
+            governance-safe, operationally coherent, and nationally consistent.
           </p>
 
           <Select
@@ -336,25 +323,15 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
               Auto-Aligned Governance Interpretation
             </h3>
 
-            <p style={styles.alignedText}>
-              {aligned.interpretation}
-            </p>
+            <p style={styles.alignedText}>{aligned.interpretation}</p>
 
-            <h3 style={styles.alignedTitle}>
-              Auto-Aligned Recommended Action
-            </h3>
+            <h3 style={styles.alignedTitle}>Auto-Aligned Recommended Action</h3>
 
-            <p style={styles.alignedText}>
-              {aligned.action}
-            </p>
+            <p style={styles.alignedText}>{aligned.action}</p>
 
-            <h3 style={styles.alignedTitle}>
-              Auto-Aligned Monitoring Note
-            </h3>
+            <h3 style={styles.alignedTitle}>Auto-Aligned Monitoring Note</h3>
 
-            <p style={styles.alignedText}>
-              {aligned.monitoring}
-            </p>
+            <p style={styles.alignedText}>{aligned.monitoring}</p>
           </div>
 
           <label style={styles.label}>
@@ -362,7 +339,7 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
 
             <textarea
               value={additionalNotes}
-              onChange={(e) => setAdditionalNotes(e.target.value)}
+              onChange={(event) => setAdditionalNotes(event.target.value)}
               placeholder="Use operational language only. Avoid blame or unnecessary personal details."
               style={styles.textarea}
             />
@@ -374,42 +351,30 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
         </section>
 
         <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>
-            Generated Bottleneck Brief
-          </h2>
+          <h2 style={styles.sectionTitle}>Generated Bottleneck Brief</h2>
 
           <div style={styles.briefBox}>
-            <pre style={styles.pre}>
-              {generatedBrief}
-            </pre>
+            <pre style={styles.pre}>{generatedBrief}</pre>
           </div>
         </section>
 
         <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>
-            Responder Concentration Visibility
-          </h2>
+          <h2 style={styles.sectionTitle}>Responder Concentration Visibility</h2>
 
           <div style={styles.grid}>
-            {Object.entries(metrics.responderLoadMap).map(
-              ([responderId, count]) => {
-                const responder = responders.find(
-                  (item) => item.id === responderId
-                )
+            {Object.entries(metrics.responderLoadMap).map(([responderId, count]) => {
+              const responder = responders.find((item) => item.id === responderId)
 
-                return (
-                  <div key={responderId} style={styles.smallCard}>
-                    <h3 style={styles.smallTitle}>
-                      {responder?.full_name || 'Unassigned'}
-                    </h3>
+              return (
+                <div key={responderId} style={styles.smallCard}>
+                  <h3 style={styles.smallTitle}>
+                    {responder?.full_name || 'Unassigned'}
+                  </h3>
 
-                    <p style={styles.smallValue}>
-                      {count} routed case(s)
-                    </p>
-                  </div>
-                )
-              }
-            )}
+                  <p style={styles.smallValue}>{count} routed case(s)</p>
+                </div>
+              )
+            })}
           </div>
         </section>
       </div>
@@ -417,13 +382,7 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
   )
 }
 
-function Metric({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
+function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div style={styles.metricCard}>
       <p style={styles.metricLabel}>{label}</p>
@@ -449,7 +408,7 @@ function Select({
 
       <select
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(event) => setValue(event.target.value)}
         style={styles.select}
       >
         {options.map((item) => (
@@ -473,6 +432,10 @@ const styles: Record<string, CSSProperties> = {
   container: {
     maxWidth: '1200px',
     margin: '0 auto',
+  },
+
+  quickNavWrap: {
+    marginBottom: '32px',
   },
 
   hero: {
@@ -510,8 +473,7 @@ const styles: Record<string, CSSProperties> = {
 
   metricsGrid: {
     display: 'grid',
-    gridTemplateColumns:
-      'repeat(auto-fit, minmax(220px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
     gap: '16px',
     marginBottom: '24px',
   },
@@ -532,6 +494,7 @@ const styles: Record<string, CSSProperties> = {
     marginTop: '8px',
     fontSize: '24px',
     lineHeight: 1.2,
+    wordBreak: 'break-word',
   },
 
   card: {
@@ -629,8 +592,7 @@ const styles: Record<string, CSSProperties> = {
 
   grid: {
     display: 'grid',
-    gridTemplateColumns:
-      'repeat(auto-fit, minmax(220px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
     gap: '16px',
   },
 
