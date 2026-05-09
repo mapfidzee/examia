@@ -1,4 +1,5 @@
 import Link from "next/link";
+import InfrastructureQuickNav from "@/components/InfrastructureQuickNav";
 
 type Domain = {
   number: string;
@@ -131,6 +132,8 @@ export default function DomainsPage() {
   return (
     <main className="min-h-screen bg-[#07111F] text-slate-100">
       <section className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-5 py-8 sm:px-8 lg:px-10">
+        <InfrastructureQuickNav />
+
         <header className="rounded-3xl border border-blue-900/60 bg-[#0B1B30] p-6 shadow-2xl shadow-black/30 sm:p-8">
           <div className="mb-4 inline-flex rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200">
             EXAMIA Operational Domains
