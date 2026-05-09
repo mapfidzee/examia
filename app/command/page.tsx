@@ -1,7 +1,8 @@
- 'use client'
+'use client'
 
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -75,8 +76,7 @@ function getCommandGuidance(status: string) {
         'System-wide stabilization pressure appears controlled. Continue monitoring core continuity and recovery signals.',
       action:
         'Maintain standard stabilization monitoring and continue routine coordination review.',
-      monitoring:
-        'Stable command monitoring remains active.',
+      monitoring: 'Stable command monitoring remains active.',
     }
   }
 
@@ -86,8 +86,7 @@ function getCommandGuidance(status: string) {
         'Early stabilization pressure is visible. Coordination leaders should monitor trajectory, routing pressure, and recovery movement.',
       action:
         'Review active cases, responder distribution, and stabilization conversion before pressure increases.',
-      monitoring:
-        'Watch-level command monitoring remains active.',
+      monitoring: 'Watch-level command monitoring remains active.',
     }
   }
 
@@ -97,8 +96,7 @@ function getCommandGuidance(status: string) {
         'Multiple stabilization pressure signals are visible. Continuity weakening, routing concentration, or recovery pressure may require coordinated action.',
       action:
         'Prioritize coordination review, rebalance responder load, and strengthen recovery continuity pathways.',
-      monitoring:
-        'Elevated command monitoring remains active.',
+      monitoring: 'Elevated command monitoring remains active.',
     }
   }
 
@@ -107,8 +105,7 @@ function getCommandGuidance(status: string) {
       'Critical stabilization pressure is visible. Coordination bottlenecks, recovery weakness, or safeguarding pressure may be threatening continuity.',
     action:
       'Escalate governance review, redistribute stabilization load, and activate high-priority coordination monitoring.',
-    monitoring:
-      'Critical command escalation monitoring is active.',
+    monitoring: 'Critical command escalation monitoring is active.',
   }
 }
 
@@ -119,7 +116,6 @@ export default function CommandCenterPage() {
   const [outcomes, setOutcomes] = useState<OutcomeRecord[]>([])
   const [responders, setResponders] = useState<Responder[]>([])
   const [institutions, setInstitutions] = useState<Institution[]>([])
-
   const [message, setMessage] = useState('')
 
   const [reportTemplate, setReportTemplate] = useState(COMMAND_REPORT_TEMPLATES[0])
@@ -302,17 +298,44 @@ export default function CommandCenterPage() {
           stabilizationRate * 0.4 +
             interventionCoverage * 0.25 +
             outcomeCoverage * 0.25 -
-            (totalCases === 0 ? 0 : Math.round((escalatedCases / totalCases) * 100)) * 0.1
+            (totalCases === 0 ? 0 : Math.round((escalatedCases / totalCases) * 100)) *
+              0.1
         )
       )
     )
 
     const riskPoints =
-      (predictiveStatus === 'HIGH_FORECAST_PRESSURE' ? 3 : predictiveStatus === 'MODERATE_FORECAST_PRESSURE' ? 2 : 0) +
-      (trajectoryStatus === 'ESCALATION_RISK' ? 3 : trajectoryStatus === 'FRAGMENTED_CONTINUITY' ? 2 : trajectoryStatus === 'SLOW_STABILIZATION' ? 1 : 0) +
-      (routingPressureStatus === 'CRITICAL_ROUTING_PRESSURE' ? 3 : routingPressureStatus === 'HIGH_ROUTING_PRESSURE' ? 2 : routingPressureStatus === 'MODERATE_ROUTING_PRESSURE' ? 1 : 0) +
-      (bottleneckStatus === 'CRITICAL_BOTTLENECK_PRESSURE' ? 3 : bottleneckStatus === 'HIGH_BOTTLENECK_PRESSURE' ? 2 : bottleneckStatus === 'MODERATE_BOTTLENECK_PRESSURE' ? 1 : 0) +
-      (recoveryStatus === 'RECOVERY_FRAGMENTATION_RISK' ? 2 : recoveryStatus === 'RECOVERY_PRESSURE_VISIBLE' ? 1 : 0)
+      (predictiveStatus === 'HIGH_FORECAST_PRESSURE'
+        ? 3
+        : predictiveStatus === 'MODERATE_FORECAST_PRESSURE'
+          ? 2
+          : 0) +
+      (trajectoryStatus === 'ESCALATION_RISK'
+        ? 3
+        : trajectoryStatus === 'FRAGMENTED_CONTINUITY'
+          ? 2
+          : trajectoryStatus === 'SLOW_STABILIZATION'
+            ? 1
+            : 0) +
+      (routingPressureStatus === 'CRITICAL_ROUTING_PRESSURE'
+        ? 3
+        : routingPressureStatus === 'HIGH_ROUTING_PRESSURE'
+          ? 2
+          : routingPressureStatus === 'MODERATE_ROUTING_PRESSURE'
+            ? 1
+            : 0) +
+      (bottleneckStatus === 'CRITICAL_BOTTLENECK_PRESSURE'
+        ? 3
+        : bottleneckStatus === 'HIGH_BOTTLENECK_PRESSURE'
+          ? 2
+          : bottleneckStatus === 'MODERATE_BOTTLENECK_PRESSURE'
+            ? 1
+            : 0) +
+      (recoveryStatus === 'RECOVERY_FRAGMENTATION_RISK'
+        ? 2
+        : recoveryStatus === 'RECOVERY_PRESSURE_VISIBLE'
+          ? 1
+          : 0)
 
     const commandStatus =
       riskPoints >= 9
@@ -410,15 +433,19 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
   return (
     <main style={styles.page}>
       <div style={styles.container}>
+        <div style={styles.quickNavWrap}>
+          <InfrastructureQuickNav />
+        </div>
+
         <section style={styles.hero}>
           <p style={styles.kicker}>EXAMIA LIS • STABILIZATION COMMAND CENTER</p>
 
           <h1 style={styles.title}>Stabilization Command Infrastructure</h1>
 
           <p style={styles.subtitle}>
-            Consolidate predictive pressure, trajectory, routing pressure, bottlenecks,
-            recovery, reliability, safeguarding visibility, and stabilization movement into
-            one governance-safe command view.
+            Consolidate predictive pressure, trajectory, routing pressure,
+            bottlenecks, recovery, reliability, safeguarding visibility, and
+            stabilization movement into one governance-safe command view.
           </p>
         </section>
 
@@ -440,8 +467,8 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
 
           <p style={styles.helper}>
             Use standardized dropdowns to keep executive command intelligence
-            governance-safe, operationally coherent, and ready for district, NGO, ministry,
-            or institutional review.
+            governance-safe, operationally coherent, and ready for district, NGO,
+            ministry, or institutional review.
           </p>
 
           <Select
@@ -526,11 +553,7 @@ function Select({
   return (
     <label style={styles.label}>
       {label}
-      <select
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        style={styles.select}
-      >
+      <select value={value} onChange={(event) => setValue(event.target.value)} style={styles.select}>
         {options.map((item) => (
           <option key={item} value={item}>
             {item}
@@ -551,6 +574,9 @@ const styles: Record<string, CSSProperties> = {
   container: {
     maxWidth: '1280px',
     margin: '0 auto',
+  },
+  quickNavWrap: {
+    marginBottom: '32px',
   },
   hero: {
     marginBottom: '32px',
