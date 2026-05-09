@@ -155,12 +155,13 @@ const caseSnapshot = [
 ];
 
 const lifecycleRules = [
-  "A case must move through visible intake before routing.",
-  "Routing must connect to a governed response pathway.",
-  "Intervention must produce an outcome signal.",
-  "Outcome review must connect to recovery monitoring.",
-  "Recovery pressure must inform trajectory and command visibility.",
+  "A case must begin with visible need intake.",
+  "Every case must have a routing pathway.",
+  "Every intervention must produce an outcome signal.",
+  "Every outcome must connect to recovery review.",
+  "Unresolved recovery pressure must inform trajectory and command visibility.",
   "Every case pathway must remain traceable through governance audit.",
+  "No case signal may be used for blame, surveillance, or person-level punishment.",
 ];
 
 export default function CaseFlowPage() {
@@ -343,19 +344,19 @@ export default function CaseFlowPage() {
 
           <div className="rounded-3xl border border-cyan-400/25 bg-cyan-400/10 p-6 sm:p-8">
             <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-200">
-              Next Infrastructure Layer
+              Case Governance Outcome
             </p>
 
             <h2 className="mt-2 text-2xl font-bold text-white">
-              Consolidate Navigation Next
+              Stabilization Pathway Is Traceable
             </h2>
 
             <p className="mt-4 leading-8 text-slate-200">
-              After case flow is locked, the next priority is to connect the
-              infrastructure routes through a consistent navigation spine. Users
-              should be able to move between system, domains, action cues, case
-              flow, command, audit, governance, pressure, recovery, and
-              bottlenecks without manually entering routes.
+              This case pathway shows that the visible need was captured,
+              routed, addressed, reviewed, monitored for recovery, elevated into
+              pressure visibility where needed, and protected by governance
+              audit. The case is not interpreted as individual failure. It is
+              interpreted as a governed stabilization pathway.
             </p>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
