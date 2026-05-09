@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -109,22 +110,24 @@ export default function TrajectoryPage() {
   }, [])
 
   async function loadData() {
-    const [
-      casesResult,
-      interventionsResult,
-      outcomesResult,
-      routingResult,
-    ] = await Promise.all([
-      supabase.from('beneficiary_cases').select('*'),
-      supabase.from('case_interventions').select('*'),
-      supabase.from('case_outcomes').select('*'),
-      supabase.from('case_routing_actions').select('*'),
-    ])
+    const [casesResult, interventionsResult, outcomesResult, routingResult] =
+      await Promise.all([
+        supabase.from('beneficiary_cases').select('*'),
+        supabase.from('case_interventions').select('*'),
+        supabase.from('case_outcomes').select('*'),
+        supabase.from('case_routing_actions').select('*'),
+      ])
+
+    if (casesResult.error) console.error(casesResult.error)
+    if (interventionsResult.error) console.error(interventionsResult.error)
+    if (outcomesResult.error) console.error(outcomesResult.error)
+    if (routingResult.error) console.error(routingResult.error)
 
     setCases(casesResult.data || [])
     setInterventions(interventionsResult.data || [])
     setOutcomes(outcomesResult.data || [])
     setRoutingActions(routingResult.data || [])
+    setMessage('Trajectory intelligence refreshed.')
   }
 
   const metrics = useMemo(() => {
@@ -155,7 +158,7 @@ export default function TrajectoryPage() {
       cases.length === 0
         ? 0
         : Math.round(
-            (new Set(interventions.map((i) => i.case_id)).size /
+            (new Set(interventions.map((item) => item.case_id)).size /
               cases.length) *
               100
           )
@@ -164,7 +167,8 @@ export default function TrajectoryPage() {
       cases.length === 0
         ? 0
         : Math.round(
-            (new Set(outcomes.map((o) => o.case_id)).size / cases.length) * 100
+            (new Set(outcomes.map((item) => item.case_id)).size / cases.length) *
+              100
           )
 
     const stabilizationRate =
@@ -195,10 +199,6 @@ export default function TrajectoryPage() {
       trajectoryStatus,
     }
   }, [cases, interventions, outcomes])
-
-  function refreshIntelligence() {
-    setMessage('Trajectory intelligence refreshed.')
-  }
 
   const generatedBrief = `
 EXAMIA LIS STABILIZATION TRAJECTORY INTELLIGENCE BRIEF
@@ -239,56 +239,45 @@ Governance-Safe Monitoring Note:
 ${governanceNote}
 
 Additional Operational Notes:
-${additionalNotes || 'No additional operational notes entered.'}
+${additionalNotes.trim() || 'No additional operational notes entered.'}
   `.trim()
 
   return (
     <main style={styles.page}>
       <div style={styles.container}>
-        <section style={styles.hero}>
-          <p style={styles.kicker}>
-            EXAMIA LIS • TRAJECTORY INTELLIGENCE
-          </p>
+        <div style={styles.quickNavWrap}>
+          <InfrastructureQuickNav />
+        </div>
 
-          <h1 style={styles.title}>
-            Stabilization Trajectory Infrastructure
-          </h1>
+        <section style={styles.hero}>
+          <p style={styles.kicker}>EXAMIA LIS • TRAJECTORY INTELLIGENCE</p>
+
+          <h1 style={styles.title}>Stabilization Trajectory Infrastructure</h1>
 
           <p style={styles.subtitle}>
-            Detect stabilization direction, continuity weakening,
-            escalation accumulation, safeguarding trajectory pressure,
-            and recovery strengthening before operational fragmentation occurs.
+            Detect stabilization direction, continuity weakening, escalation
+            accumulation, safeguarding trajectory pressure, and recovery
+            strengthening before operational fragmentation occurs.
           </p>
         </section>
 
         {message && <div style={styles.message}>{message}</div>}
 
         <section style={styles.metricsGrid}>
-          <Metric
-            label="Trajectory Status"
-            value={metrics.trajectoryStatus}
-          />
-
-          <Metric
-            label="Active Cases"
-            value={metrics.activeCases.toString()}
-          />
-
+          <Metric label="Trajectory Status" value={metrics.trajectoryStatus} />
+          <Metric label="Active Cases" value={metrics.activeCases.toString()} />
           <Metric
             label="Safeguarding Flags"
             value={metrics.safeguardingFlags.toString()}
           />
-
           <Metric
             label="Intervention Coverage"
             value={`${metrics.interventionCoverage}%`}
           />
-
           <Metric
             label="Outcome Coverage"
             value={`${metrics.outcomeCoverage}%`}
           />
-
           <Metric
             label="Stabilization Rate"
             value={`${metrics.stabilizationRate}%`}
@@ -296,9 +285,7 @@ ${additionalNotes || 'No additional operational notes entered.'}
         </section>
 
         <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>
-            Trajectory Intelligence Brief Template
-          </h2>
+          <h2 style={styles.sectionTitle}>Trajectory Intelligence Brief Template</h2>
 
           <p style={styles.helper}>
             Use standardized dropdowns to keep trajectory intelligence
@@ -352,29 +339,22 @@ ${additionalNotes || 'No additional operational notes entered.'}
 
             <textarea
               value={additionalNotes}
-              onChange={(e) => setAdditionalNotes(e.target.value)}
+              onChange={(event) => setAdditionalNotes(event.target.value)}
               placeholder="Use operational language only. Avoid blame or unnecessary personal details."
               style={styles.textarea}
             />
           </label>
 
-          <button
-            onClick={refreshIntelligence}
-            style={styles.button}
-          >
+          <button onClick={loadData} style={styles.button}>
             Refresh Trajectory Intelligence
           </button>
         </section>
 
         <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>
-            Generated Trajectory Brief
-          </h2>
+          <h2 style={styles.sectionTitle}>Generated Trajectory Brief</h2>
 
           <div style={styles.briefBox}>
-            <pre style={styles.pre}>
-              {generatedBrief}
-            </pre>
+            <pre style={styles.pre}>{generatedBrief}</pre>
           </div>
         </section>
       </div>
@@ -382,13 +362,7 @@ ${additionalNotes || 'No additional operational notes entered.'}
   )
 }
 
-function Metric({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
+function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div style={styles.metricCard}>
       <p style={styles.metricLabel}>{label}</p>
@@ -403,18 +377,23 @@ function Select({
   value,
   setValue,
   options,
-}: any) {
+}: {
+  label: string
+  value: string
+  setValue: (value: string) => void
+  options: string[]
+}) {
   return (
     <label style={styles.label}>
       {label}
 
       <select
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(event) => setValue(event.target.value)}
         style={styles.select}
       >
-        {options.map((item: string) => (
-          <option key={item}>
+        {options.map((item) => (
+          <option key={item} value={item}>
             {item}
           </option>
         ))}
@@ -436,6 +415,10 @@ const styles: Record<string, CSSProperties> = {
     margin: '0 auto',
   },
 
+  quickNavWrap: {
+    marginBottom: '32px',
+  },
+
   hero: {
     marginBottom: '32px',
   },
@@ -448,7 +431,7 @@ const styles: Record<string, CSSProperties> = {
   },
 
   title: {
-    fontSize: '56px',
+    fontSize: 'clamp(34px, 6vw, 56px)',
     lineHeight: 1.05,
     margin: '12px 0',
   },
@@ -471,8 +454,7 @@ const styles: Record<string, CSSProperties> = {
 
   metricsGrid: {
     display: 'grid',
-    gridTemplateColumns:
-      'repeat(auto-fit, minmax(220px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
     gap: '16px',
     marginBottom: '24px',
   },
@@ -493,6 +475,7 @@ const styles: Record<string, CSSProperties> = {
     marginTop: '8px',
     fontSize: '28px',
     lineHeight: 1.2,
+    wordBreak: 'break-word',
   },
 
   card: {
