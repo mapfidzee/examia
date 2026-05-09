@@ -16,6 +16,7 @@ const quickLinks = [
   { label: "Operations", href: "/operations" },
   { label: "Coordination", href: "/coordination" },
   { label: "Interventions", href: "/interventions" },
+  { label: "Outcomes", href: "/outcomes" },
   { label: "Trajectory", href: "/trajectory" },
 ];
 

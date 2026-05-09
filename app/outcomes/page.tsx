@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -36,19 +37,9 @@ const OUTCOME_STATUSES = [
   'ESCALATION_REQUIRED',
 ]
 
-const EFFECTIVENESS_LEVELS = [
-  'LOW',
-  'MODERATE',
-  'HIGH',
-  'VERY_HIGH',
-]
+const EFFECTIVENESS_LEVELS = ['LOW', 'MODERATE', 'HIGH', 'VERY_HIGH']
 
-const CONTINUITY_OUTLOOKS = [
-  'STABLE',
-  'MONITOR',
-  'AT_RISK',
-  'UNSTABLE',
-]
+const CONTINUITY_OUTLOOKS = ['STABLE', 'MONITOR', 'AT_RISK', 'UNSTABLE']
 
 const GOVERNANCE_NOTES = [
   'Beneficiary continuity appears stable after intervention.',
@@ -156,12 +147,7 @@ This outcome record summarizes stabilization progress, continuity outlook, inter
       return
     }
 
-    if (
-      !outcomeTemplate ||
-      !outcomeStatus ||
-      !effectivenessLevel ||
-      !continuityOutlook
-    ) {
+    if (!outcomeTemplate || !outcomeStatus || !effectivenessLevel || !continuityOutlook) {
       alert('Complete all structured outcome selections.')
       return
     }
@@ -171,13 +157,11 @@ This outcome record summarizes stabilization progress, continuity outlook, inter
 
     const summary = outcomeRecord()
 
-    const { error: outcomeError } = await supabase
-      .from('case_outcomes')
-      .insert({
-        case_id: selectedCaseId,
-        outcome_status: outcomeStatus,
-        outcome_summary: summary,
-      })
+    const { error: outcomeError } = await supabase.from('case_outcomes').insert({
+      case_id: selectedCaseId,
+      outcome_status: outcomeStatus,
+      outcome_summary: summary,
+    })
 
     if (outcomeError) {
       alert(outcomeError.message)
@@ -195,10 +179,7 @@ This outcome record summarizes stabilization progress, continuity outlook, inter
       nextCaseStatus = 'STABILIZED'
     }
 
-    if (
-      outcomeStatus === 'ESCALATION_REQUIRED' ||
-      continuityOutlook === 'UNSTABLE'
-    ) {
+    if (outcomeStatus === 'ESCALATION_REQUIRED' || continuityOutlook === 'UNSTABLE') {
       nextCaseStatus = 'ESCALATED'
     }
 
@@ -239,32 +220,26 @@ This outcome record summarizes stabilization progress, continuity outlook, inter
     await loadCases()
   }
 
-  const stabilizedCases = cases.filter(
-    (item) => item.case_status === 'STABILIZED'
-  ).length
-
-  const escalatedCases = cases.filter(
-    (item) => item.case_status === 'ESCALATED'
-  ).length
-
-  const safeguardingCases = cases.filter(
-    (item) => item.safeguarding_flag
-  ).length
+  const stabilizedCases = cases.filter((item) => item.case_status === 'STABILIZED').length
+  const escalatedCases = cases.filter((item) => item.case_status === 'ESCALATED').length
+  const safeguardingCases = cases.filter((item) => item.safeguarding_flag).length
 
   return (
     <main style={styles.page}>
       <div style={styles.container}>
+        <div style={styles.quickNavWrap}>
+          <InfrastructureQuickNav />
+        </div>
+
         <section style={styles.hero}>
           <p style={styles.kicker}>EXAMIA LIS • OUTCOME INTELLIGENCE</p>
 
-          <h1 style={styles.title}>
-            Structured Stabilization Outcome Infrastructure
-          </h1>
+          <h1 style={styles.title}>Structured Stabilization Outcome Infrastructure</h1>
 
           <p style={styles.subtitle}>
-            Measure intervention effectiveness, stabilization outcomes,
-            continuity outlook, escalation visibility, and governance-safe
-            operational follow-up using standardized outcome intelligence.
+            Measure intervention effectiveness, stabilization outcomes, continuity outlook,
+            escalation visibility, and governance-safe operational follow-up using
+            standardized outcome intelligence.
           </p>
         </section>
 
@@ -279,13 +254,11 @@ This outcome record summarizes stabilization progress, continuity outlook, inter
 
         <section style={styles.layoutGrid}>
           <div style={styles.card}>
-            <h2 style={styles.sectionTitle}>
-              Structured Outcome Recording
-            </h2>
+            <h2 style={styles.sectionTitle}>Structured Outcome Recording</h2>
 
             <p style={styles.panelNote}>
-              Use dropdown templates to keep stabilization reporting
-              governance-safe, nationally consistent, and operationally measurable.
+              Use dropdown templates to keep stabilization reporting governance-safe,
+              nationally consistent, and operationally measurable.
             </p>
 
             <label style={styles.label}>
@@ -296,15 +269,12 @@ This outcome record summarizes stabilization progress, continuity outlook, inter
                 style={styles.select}
               >
                 <option value="">
-                  {cases.length === 0
-                    ? 'No intervention-stage cases found'
-                    : 'Select beneficiary case'}
+                  {cases.length === 0 ? 'No intervention-stage cases found' : 'Select beneficiary case'}
                 </option>
 
                 {cases.map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.beneficiary_name} • {item.support_domain} •{' '}
-                    {item.case_status}
+                    {item.beneficiary_name} • {item.support_domain} • {item.case_status}
                   </option>
                 ))}
               </select>
@@ -356,34 +326,23 @@ This outcome record summarizes stabilization progress, continuity outlook, inter
               Optional Additional Operational Notes
               <textarea
                 value={additionalOperationalNotes}
-                onChange={(event) =>
-                  setAdditionalOperationalNotes(event.target.value)
-                }
+                onChange={(event) => setAdditionalOperationalNotes(event.target.value)}
                 placeholder="Use operational language only. Avoid blame or unnecessary personal details."
                 style={styles.textarea}
               />
             </label>
 
-            <button
-              onClick={saveOutcomeRecord}
-              disabled={loading}
-              style={styles.primaryButton}
-            >
-              {loading
-                ? 'Saving Outcome...'
-                : 'Save Structured Outcome Intelligence'}
+            <button onClick={saveOutcomeRecord} disabled={loading} style={styles.primaryButton}>
+              {loading ? 'Saving Outcome...' : 'Save Structured Outcome Intelligence'}
             </button>
           </div>
 
           <div style={styles.card}>
-            <h2 style={styles.sectionTitle}>
-              Generated Outcome Intelligence
-            </h2>
+            <h2 style={styles.sectionTitle}>Generated Outcome Intelligence</h2>
 
             <p style={styles.panelNote}>
-              Structured outcome reporting keeps stabilization intelligence
-              measurable and governance-safe across districts, NGOs,
-              ministries, and responders.
+              Structured outcome reporting keeps stabilization intelligence measurable and
+              governance-safe across districts, NGOs, ministries, and responders.
             </p>
 
             <pre style={styles.summaryBox}>
@@ -397,23 +356,26 @@ This outcome record summarizes stabilization progress, continuity outlook, inter
   )
 }
 
-function Metric({
-  label,
-  value,
-}: {
-  label: string
-  value: number
-}) {
+function Metric({ label, value }: { label: string; value: number }) {
   return (
     <div style={styles.metricCard}>
       <p style={styles.metricLabel}>{label}</p>
-
       <h2 style={styles.metricValue}>{value}</h2>
     </div>
   )
 }
 
-function Select({ label, value, setValue, options }: any) {
+function Select({
+  label,
+  value,
+  setValue,
+  options,
+}: {
+  label: string
+  value: string
+  setValue: (value: string) => void
+  options: string[]
+}) {
   return (
     <label style={styles.label}>
       {label}
@@ -423,8 +385,8 @@ function Select({ label, value, setValue, options }: any) {
         onChange={(event) => setValue(event.target.value)}
         style={styles.select}
       >
-        {options.map((option: string) => (
-          <option key={option || 'blank'} value={option}>
+        {options.map((option, index) => (
+          <option key={`${option || 'blank'}-${index}`} value={option}>
             {option || 'Select option'}
           </option>
         ))}
@@ -440,36 +402,33 @@ const styles: Record<string, CSSProperties> = {
     color: 'white',
     padding: '56px 18px',
   },
-
   container: {
     maxWidth: '1280px',
     margin: '0 auto',
   },
-
+  quickNavWrap: {
+    marginBottom: '32px',
+  },
   hero: {
     marginBottom: '32px',
   },
-
   kicker: {
     color: '#67e8f9',
     fontSize: '12px',
     fontWeight: 900,
     letterSpacing: '2px',
   },
-
   title: {
     fontSize: 'clamp(34px, 6vw, 58px)',
     lineHeight: 1.05,
     margin: '12px 0',
   },
-
   subtitle: {
     color: '#cbd5e1',
     maxWidth: '980px',
     lineHeight: 1.7,
     fontSize: '18px',
   },
-
   message: {
     background: '#064e3b',
     color: '#bbf7d0',
@@ -478,41 +437,33 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 800,
     marginBottom: '20px',
   },
-
   metricsGrid: {
     display: 'grid',
-    gridTemplateColumns:
-      'repeat(auto-fit, minmax(220px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
     gap: '14px',
     marginBottom: '24px',
   },
-
   metricCard: {
     background: '#0f172a',
     border: '1px solid #1e293b',
     borderRadius: '18px',
     padding: '20px',
   },
-
   metricLabel: {
     color: '#94a3b8',
     fontWeight: 800,
     margin: 0,
   },
-
   metricValue: {
     fontSize: '38px',
     margin: '8px 0 0',
   },
-
   layoutGrid: {
     display: 'grid',
-    gridTemplateColumns:
-      'repeat(auto-fit, minmax(340px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
     gap: '20px',
     marginBottom: '28px',
   },
-
   card: {
     background: '#020617',
     border: '1px solid #1e293b',
@@ -521,24 +472,20 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: '28px',
     boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
   },
-
   sectionTitle: {
     fontSize: '26px',
     margin: '0 0 10px',
   },
-
   panelNote: {
     color: '#cbd5e1',
     lineHeight: 1.6,
     marginBottom: '18px',
   },
-
   label: {
     display: 'block',
     fontWeight: 800,
     marginBottom: '16px',
   },
-
   select: {
     width: '100%',
     marginTop: '8px',
@@ -548,7 +495,6 @@ const styles: Record<string, CSSProperties> = {
     background: '#111827',
     color: 'white',
   },
-
   textarea: {
     width: '100%',
     minHeight: '120px',
@@ -560,7 +506,6 @@ const styles: Record<string, CSSProperties> = {
     color: 'white',
     resize: 'vertical',
   },
-
   primaryButton: {
     width: '100%',
     padding: '16px',
@@ -572,7 +517,6 @@ const styles: Record<string, CSSProperties> = {
     cursor: 'pointer',
     fontSize: '16px',
   },
-
   summaryBox: {
     whiteSpace: 'pre-wrap',
     background: '#0f172a',
