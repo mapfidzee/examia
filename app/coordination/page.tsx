@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -53,6 +54,12 @@ type CaseOutcome = {
   id: string
   case_id: string
   outcome_status: string | null
+}
+
+type PanelRow = {
+  label: string
+  value: number
+  detail: string
 }
 
 const COORDINATION_REPORT_TEMPLATES = [
@@ -113,10 +120,16 @@ export default function CoordinationPage() {
   const [outcomes, setOutcomes] = useState<CaseOutcome[]>([])
 
   const [reportTemplate, setReportTemplate] = useState('National coordination brief')
-  const [coordinationFocus, setCoordinationFocus] = useState('Overall coordination stability')
+  const [coordinationFocus, setCoordinationFocus] = useState(
+    'Overall coordination stability'
+  )
   const [coordinationScope, setCoordinationScope] = useState('National view')
-  const [governanceNote, setGovernanceNote] = useState('Coordination pattern is currently manageable.')
-  const [recommendedAction, setRecommendedAction] = useState('Maintain current coordination monitoring.')
+  const [governanceNote, setGovernanceNote] = useState(
+    'Coordination pattern is currently manageable.'
+  )
+  const [recommendedAction, setRecommendedAction] = useState(
+    'Maintain current coordination monitoring.'
+  )
   const [additionalNotes, setAdditionalNotes] = useState('')
   const [message, setMessage] = useState('')
 
@@ -125,15 +138,21 @@ export default function CoordinationPage() {
   }, [])
 
   async function loadCoordinationData() {
-    const [caseResult, institutionResult, responderResult, routingResult, interventionResult, outcomeResult] =
-      await Promise.all([
-        supabase.from('beneficiary_cases').select('*'),
-        supabase.from('institutions').select('*'),
-        supabase.from('responders').select('*'),
-        supabase.from('case_routing_actions').select('*'),
-        supabase.from('case_interventions').select('*'),
-        supabase.from('case_outcomes').select('*'),
-      ])
+    const [
+      caseResult,
+      institutionResult,
+      responderResult,
+      routingResult,
+      interventionResult,
+      outcomeResult,
+    ] = await Promise.all([
+      supabase.from('beneficiary_cases').select('*'),
+      supabase.from('institutions').select('*'),
+      supabase.from('responders').select('*'),
+      supabase.from('case_routing_actions').select('*'),
+      supabase.from('case_interventions').select('*'),
+      supabase.from('case_outcomes').select('*'),
+    ])
 
     if (caseResult.error) console.error(caseResult.error)
     if (institutionResult.error) console.error(institutionResult.error)
@@ -152,25 +171,44 @@ export default function CoordinationPage() {
   }
 
   const activeCases = cases.filter((item) =>
-    ['NEED_DETECTED', 'UNDER_ASSESSMENT', 'ROUTED', 'RESPONDER_ASSIGNED', 'INTERVENTION_ACTIVE', 'STABILIZING'].includes(item.case_status)
+    [
+      'NEED_DETECTED',
+      'UNDER_ASSESSMENT',
+      'ROUTED',
+      'RESPONDER_ASSIGNED',
+      'INTERVENTION_ACTIVE',
+      'STABILIZING',
+    ].includes(item.case_status)
   )
 
   const stabilizedCases = cases.filter((item) => item.case_status === 'STABILIZED')
   const escalatedCases = cases.filter((item) => item.case_status === 'ESCALATED')
   const criticalCases = cases.filter((item) => item.severity_level === 'CRITICAL')
   const safeguardingCases = cases.filter((item) => item.safeguarding_flag)
-  const activeResponders = responders.filter((item) => item.operational_status === 'ACTIVE')
-  const activeInstitutions = institutions.filter((item) => item.coordination_status === 'ACTIVE')
+  const activeResponders = responders.filter(
+    (item) => item.operational_status === 'ACTIVE'
+  )
+  const activeInstitutions = institutions.filter(
+    (item) => item.coordination_status === 'ACTIVE'
+  )
 
   const uniqueInterventionCases = new Set(interventions.map((item) => item.case_id)).size
   const uniqueOutcomeCases = new Set(outcomes.map((item) => item.case_id)).size
 
-  const interventionCoverage = cases.length > 0 ? Math.round((uniqueInterventionCases / cases.length) * 100) : 0
-  const outcomeCoverage = cases.length > 0 ? Math.round((uniqueOutcomeCases / cases.length) * 100) : 0
-  const stabilizationRate = cases.length > 0 ? Math.round((stabilizedCases.length / cases.length) * 100) : 0
+  const interventionCoverage =
+    cases.length > 0 ? Math.round((uniqueInterventionCases / cases.length) * 100) : 0
+
+  const outcomeCoverage =
+    cases.length > 0 ? Math.round((uniqueOutcomeCases / cases.length) * 100) : 0
+
+  const stabilizationRate =
+    cases.length > 0 ? Math.round((stabilizedCases.length / cases.length) * 100) : 0
 
   const coordinationPressure =
-    activeCases.length + escalatedCases.length * 2 + criticalCases.length * 2 + safeguardingCases.length
+    activeCases.length +
+    escalatedCases.length * 2 +
+    criticalCases.length * 2 +
+    safeguardingCases.length
 
   const coordinationStatus =
     coordinationPressure >= 12
@@ -181,30 +219,46 @@ export default function CoordinationPage() {
           ? 'MODERATE_COORDINATION_PRESSURE'
           : 'COORDINATION_STABLE'
 
-  const regionRows = useMemo(() => groupedRows(cases.map((item) => item.region || 'Region not recorded')), [cases])
-  const institutionRows = useMemo(() => {
+  const regionRows = useMemo(
+    () => groupedRows(cases.map((item) => item.region || 'Region not recorded')),
+    [cases]
+  )
+
+  const institutionRows = useMemo<PanelRow[]>(() => {
     return institutions.map((site) => {
-      const load = routingActions.filter((route) => route.institution_id === site.id).length
+      const load = routingActions.filter((route) => route.institution_id === site.id)
+        .length
+
       return {
-        label: site.institution_name,
+        label: site.institution_name || 'Unnamed institution',
         value: load,
-        detail: `${site.institution_type} • ${site.operating_level || 'Level not recorded'}`,
+        detail: `${site.institution_type || 'Type not recorded'} • ${
+          site.operating_level || 'Level not recorded'
+        }`,
       }
     })
   }, [institutions, routingActions])
 
-  const responderRows = useMemo(() => {
+  const responderRows = useMemo<PanelRow[]>(() => {
     return responders.map((responder) => {
-      const load = routingActions.filter((route) => route.assigned_responder_id === responder.id).length
+      const load = routingActions.filter(
+        (route) => route.assigned_responder_id === responder.id
+      ).length
+
       return {
-        label: responder.full_name,
+        label: responder.full_name || 'Unnamed responder',
         value: load,
-        detail: `${responder.operational_status} • ${responder.region || 'Region not recorded'}`,
+        detail: `${responder.operational_status || 'Status not recorded'} • ${
+          responder.region || 'Region not recorded'
+        }`,
       }
     })
   }, [responders, routingActions])
 
-  const lifecycleRows = useMemo(() => groupedRows(cases.map((item) => item.case_status)), [cases])
+  const lifecycleRows = useMemo(
+    () => groupedRows(cases.map((item) => item.case_status || 'Status not recorded')),
+    [cases]
+  )
 
   function coordinationBrief() {
     return `
@@ -256,12 +310,21 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
   return (
     <main style={styles.page}>
       <div style={styles.container}>
+        <div style={styles.quickNavWrap}>
+          <InfrastructureQuickNav />
+        </div>
+
         <section style={styles.hero}>
-          <p style={styles.kicker}>EXAMIA LIS • NATIONAL COORDINATION INTELLIGENCE</p>
+          <p style={styles.kicker}>
+            EXAMIA LIS • NATIONAL COORDINATION INTELLIGENCE
+          </p>
+
           <h1 style={styles.title}>Coordination Stability Infrastructure</h1>
+
           <p style={styles.subtitle}>
-            Convert cases, institutions, responders, routing actions, interventions, outcomes,
-            and safeguarding visibility into governed coordination intelligence for national scale.
+            Convert cases, institutions, responders, routing actions, interventions,
+            outcomes, and safeguarding visibility into governed coordination intelligence
+            for national scale.
           </p>
         </section>
 
@@ -281,16 +344,46 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
         <section style={styles.layoutGrid}>
           <div style={styles.card}>
             <h2 style={styles.sectionTitle}>Coordination Brief Template</h2>
+
             <p style={styles.panelNote}>
               Use standardized dropdowns to keep coordination intelligence consistent,
               governance-safe, and ready for district, NGO, regional, or ministry review.
             </p>
 
-            <Select label="Coordination Report Template" value={reportTemplate} setValue={setReportTemplate} options={COORDINATION_REPORT_TEMPLATES} />
-            <Select label="Coordination Focus" value={coordinationFocus} setValue={setCoordinationFocus} options={COORDINATION_FOCUS} />
-            <Select label="Coordination Scope" value={coordinationScope} setValue={setCoordinationScope} options={COORDINATION_SCOPE} />
-            <Select label="Governance Interpretation" value={governanceNote} setValue={setGovernanceNote} options={GOVERNANCE_NOTES} />
-            <Select label="Recommended Coordination Action" value={recommendedAction} setValue={setRecommendedAction} options={COORDINATION_ACTIONS} />
+            <Select
+              label="Coordination Report Template"
+              value={reportTemplate}
+              setValue={setReportTemplate}
+              options={COORDINATION_REPORT_TEMPLATES}
+            />
+
+            <Select
+              label="Coordination Focus"
+              value={coordinationFocus}
+              setValue={setCoordinationFocus}
+              options={COORDINATION_FOCUS}
+            />
+
+            <Select
+              label="Coordination Scope"
+              value={coordinationScope}
+              setValue={setCoordinationScope}
+              options={COORDINATION_SCOPE}
+            />
+
+            <Select
+              label="Governance Interpretation"
+              value={governanceNote}
+              setValue={setGovernanceNote}
+              options={GOVERNANCE_NOTES}
+            />
+
+            <Select
+              label="Recommended Coordination Action"
+              value={recommendedAction}
+              setValue={setRecommendedAction}
+              options={COORDINATION_ACTIONS}
+            />
 
             <label style={styles.label}>
               Optional Additional Operational Notes
@@ -309,25 +402,46 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
 
           <div style={styles.card}>
             <h2 style={styles.sectionTitle}>Generated Coordination Brief</h2>
+
             <p style={styles.panelNote}>
               This brief is designed for governance visibility, not individual punishment.
             </p>
+
             <pre style={styles.summaryBox}>{coordinationBrief()}</pre>
           </div>
         </section>
 
         <section style={styles.layoutGrid}>
-          <Panel title="Regional Coordination Visibility" note="Shows where beneficiary stabilization pressure is appearing." rows={regionRows} />
-          <Panel title="Institution Coordination Load" note="Shows routing load by coordination site." rows={institutionRows} />
-          <Panel title="Responder Coordination Load" note="Shows routing load by responder network." rows={responderRows} />
-          <Panel title="Lifecycle Coordination View" note="Shows where cases are sitting inside the stabilization pathway." rows={lifecycleRows} />
+          <Panel
+            title="Regional Coordination Visibility"
+            note="Shows where beneficiary stabilization pressure is appearing."
+            rows={regionRows}
+          />
+
+          <Panel
+            title="Institution Coordination Load"
+            note="Shows routing load by coordination site."
+            rows={institutionRows}
+          />
+
+          <Panel
+            title="Responder Coordination Load"
+            note="Shows routing load by responder network."
+            rows={responderRows}
+          />
+
+          <Panel
+            title="Lifecycle Coordination View"
+            note="Shows where cases are sitting inside the stabilization pathway."
+            rows={lifecycleRows}
+          />
         </section>
       </div>
     </main>
   )
 }
 
-function groupedRows(items: string[]) {
+function groupedRows(items: string[]): PanelRow[] {
   const counts: Record<string, number> = {}
 
   items.forEach((item) => {
@@ -353,6 +467,7 @@ function Metric({
   return (
     <div style={styles.metricCard}>
       <p style={styles.metricLabel}>{label}</p>
+
       <h2 style={textValue ? styles.metricTextValue : styles.metricValue}>
         {textValue || `${value ?? 0}${suffix}`}
       </h2>
@@ -360,12 +475,27 @@ function Metric({
   )
 }
 
-function Select({ label, value, setValue, options }: any) {
+function Select({
+  label,
+  value,
+  setValue,
+  options,
+}: {
+  label: string
+  value: string
+  setValue: (value: string) => void
+  options: string[]
+}) {
   return (
     <label style={styles.label}>
       {label}
-      <select value={value} onChange={(event) => setValue(event.target.value)} style={styles.select}>
-        {options.map((option: string) => (
+
+      <select
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        style={styles.select}
+      >
+        {options.map((option) => (
           <option key={option} value={option}>
             {option}
           </option>
@@ -382,7 +512,7 @@ function Panel({
 }: {
   title: string
   note: string
-  rows: { label: string; value: number; detail: string }[]
+  rows: PanelRow[]
 }) {
   return (
     <div style={styles.card}>
@@ -392,12 +522,13 @@ function Panel({
       <div style={styles.panelList}>
         {rows.length === 0 && <p style={styles.emptyText}>No data available yet.</p>}
 
-        {rows.map((row) => (
-          <div key={`${row.label}-${row.detail}`} style={styles.panelRow}>
+        {rows.map((row, index) => (
+          <div key={`${row.label}-${index}`} style={styles.panelRow}>
             <div>
               <strong>{row.label}</strong>
               <p style={styles.rowDetail}>{row.detail}</p>
             </div>
+
             <strong>{row.value}</strong>
           </div>
         ))}
@@ -416,6 +547,9 @@ const styles: Record<string, CSSProperties> = {
   container: {
     maxWidth: '1280px',
     margin: '0 auto',
+  },
+  quickNavWrap: {
+    marginBottom: '32px',
   },
   hero: {
     marginBottom: '32px',
