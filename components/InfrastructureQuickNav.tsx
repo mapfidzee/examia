@@ -13,6 +13,7 @@ const quickLinks = [
   { label: "Recovery", href: "/recovery" },
   { label: "Predictive", href: "/predictive" },
   { label: "Reliability", href: "/reliability" },
+  { label: "Operations", href: "/operations" },
   { label: "Trajectory", href: "/trajectory" },
 ];
 
