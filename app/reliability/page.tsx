@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -58,6 +59,12 @@ type CaseOutcome = {
   case_id: string
   outcome_status: string | null
   outcome_summary: string | null
+}
+
+type PanelRow = {
+  label: string
+  value: number
+  detail: string
 }
 
 const RELIABILITY_REPORT_TEMPLATES = [
@@ -117,7 +124,9 @@ export default function ReliabilityPage() {
   const [outcomes, setOutcomes] = useState<CaseOutcome[]>([])
 
   const [reportTemplate, setReportTemplate] = useState('Responder reliability brief')
-  const [reliabilityFocus, setReliabilityFocus] = useState('Overall stabilization reliability')
+  const [reliabilityFocus, setReliabilityFocus] = useState(
+    'Overall stabilization reliability'
+  )
   const [operatingScope, setOperatingScope] = useState('All records')
   const [recommendedAction, setRecommendedAction] = useState(
     'Maintain monitoring; reliability pattern is currently acceptable.'
@@ -126,7 +135,6 @@ export default function ReliabilityPage() {
     'Reliability pattern is stable enough for continued monitoring.'
   )
   const [additionalNotes, setAdditionalNotes] = useState('')
-
   const [message, setMessage] = useState('')
 
   useEffect(() => {
@@ -167,7 +175,9 @@ export default function ReliabilityPage() {
     setMessage('Reliability intelligence refreshed.')
   }
 
-  const activeResponders = responders.filter((item) => item.operational_status === 'ACTIVE')
+  const activeResponders = responders.filter(
+    (item) => item.operational_status === 'ACTIVE'
+  )
   const stabilizedCases = cases.filter((item) => item.case_status === 'STABILIZED')
   const escalatedCases = cases.filter((item) => item.case_status === 'ESCALATED')
   const safeguardingCases = cases.filter((item) => item.safeguarding_flag)
@@ -209,14 +219,13 @@ export default function ReliabilityPage() {
           ? 'DEVELOPING_RELIABILITY'
           : 'LOW_RELIABILITY'
 
-  const responderRows = useMemo(() => {
+  const responderRows = useMemo<PanelRow[]>(() => {
     return responders.map((responder) => {
       const assignedRoutes = routingActions.filter(
         (item) => item.assigned_responder_id === responder.id
       )
 
       const assignedCaseIds = new Set(assignedRoutes.map((item) => item.case_id))
-
       const assignedCases = cases.filter((item) => assignedCaseIds.has(item.id))
 
       const stabilizedAssignedCases = assignedCases.filter(
@@ -229,28 +238,28 @@ export default function ReliabilityPage() {
           : 0
 
       return {
-        label: responder.full_name,
+        label: responder.full_name || 'Unnamed responder',
         value: score,
         detail: `${assignedCases.length} assigned case(s)`,
       }
     })
   }, [responders, routingActions, cases])
 
-  const institutionRows = useMemo(() => {
+  const institutionRows = useMemo<PanelRow[]>(() => {
     return institutions.map((institution) => {
       const siteRoutes = routingActions.filter(
         (item) => item.institution_id === institution.id
       )
 
       return {
-        label: institution.institution_name,
+        label: institution.institution_name || 'Unnamed institution',
         value: siteRoutes.length,
         detail: institution.operating_level || 'Operating level not recorded',
       }
     })
   }, [institutions, routingActions])
 
-  const outcomeRows = useMemo(() => {
+  const outcomeRows = useMemo<PanelRow[]>(() => {
     const counts: Record<string, number> = {}
 
     outcomes.forEach((item) => {
@@ -316,6 +325,10 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
   return (
     <main style={styles.page}>
       <div style={styles.container}>
+        <div style={styles.quickNavWrap}>
+          <InfrastructureQuickNav />
+        </div>
+
         <section style={styles.hero}>
           <p style={styles.kicker}>EXAMIA LIS • RELIABILITY INTELLIGENCE</p>
 
@@ -442,7 +455,10 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
             </p>
 
             <div style={styles.infoGrid}>
-              <Info label="Cases With Intervention Evidence" value={`${uniqueInterventionCases}`} />
+              <Info
+                label="Cases With Intervention Evidence"
+                value={`${uniqueInterventionCases}`}
+              />
               <Info label="Cases With Outcome Evidence" value={`${uniqueOutcomeCases}`} />
               <Info label="Safeguarding Flags" value={`${safeguardingCases.length}`} />
               <Info label="Coordination Sites" value={`${institutions.length}`} />
@@ -474,7 +490,17 @@ function Metric({
   )
 }
 
-function Select({ label, value, setValue, options }: any) {
+function Select({
+  label,
+  value,
+  setValue,
+  options,
+}: {
+  label: string
+  value: string
+  setValue: (value: string) => void
+  options: string[]
+}) {
   return (
     <label style={styles.label}>
       {label}
@@ -483,7 +509,7 @@ function Select({ label, value, setValue, options }: any) {
         onChange={(event) => setValue(event.target.value)}
         style={styles.select}
       >
-        {options.map((option: string) => (
+        {options.map((option) => (
           <option key={option} value={option}>
             {option}
           </option>
@@ -509,7 +535,7 @@ function Panel({
 }: {
   title: string
   note: string
-  rows: { label: string; value: number; detail: string }[]
+  rows: PanelRow[]
 }) {
   return (
     <div style={styles.card}>
@@ -519,8 +545,8 @@ function Panel({
       <div style={styles.panelList}>
         {rows.length === 0 && <p style={styles.emptyText}>No data available yet.</p>}
 
-        {rows.map((row) => (
-          <div key={row.label} style={styles.panelRow}>
+        {rows.map((row, index) => (
+          <div key={`${row.label}-${index}`} style={styles.panelRow}>
             <div>
               <strong>{row.label}</strong>
               <p style={styles.rowDetail}>{row.detail}</p>
@@ -544,6 +570,9 @@ const styles: Record<string, CSSProperties> = {
   container: {
     maxWidth: '1280px',
     margin: '0 auto',
+  },
+  quickNavWrap: {
+    marginBottom: '32px',
   },
   hero: {
     marginBottom: '32px',
