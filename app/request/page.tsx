@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import type { CSSProperties } from 'react'
+import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import { supabase } from '../../lib/supabase'
 
 type CreatedRequest = {
@@ -154,6 +156,10 @@ export default function RequestPage() {
   return (
     <main style={styles.page}>
       <div style={styles.wrap}>
+        <div style={styles.quickNavWrap}>
+          <InfrastructureQuickNav />
+        </div>
+
         <header style={styles.hero}>
           <p style={styles.eyebrow}>EXAMIA NEED INTAKE ENGINE</p>
           <h1 style={styles.h1}>Submit a Support Need</h1>
@@ -300,19 +306,22 @@ export default function RequestPage() {
   )
 }
 
-const styles = {
+const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
     background:
       'linear-gradient(135deg, #062b6f 0%, #0b3b8f 50%, #031b45 100%)',
     color: '#ffffff',
-    padding: '72px 22px 140px',
+    padding: '56px 22px 140px',
     fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
   },
   wrap: {
     width: '100%',
     maxWidth: '980px',
     margin: '0 auto',
+  },
+  quickNavWrap: {
+    marginBottom: '32px',
   },
   hero: {
     marginBottom: '34px',
@@ -323,7 +332,7 @@ const styles = {
     fontSize: '12px',
     fontWeight: 900,
     letterSpacing: '0.14em',
-    textTransform: 'uppercase' as const,
+    textTransform: 'uppercase',
   },
   h1: {
     margin: 0,
@@ -378,7 +387,7 @@ const styles = {
   },
   input: {
     width: '100%',
-    boxSizing: 'border-box' as const,
+    boxSizing: 'border-box',
     border: 'none',
     borderRadius: '18px',
     padding: '18px',
@@ -389,7 +398,7 @@ const styles = {
   },
   textarea: {
     width: '100%',
-    boxSizing: 'border-box' as const,
+    boxSizing: 'border-box',
     border: 'none',
     borderRadius: '18px',
     padding: '18px',
@@ -398,7 +407,7 @@ const styles = {
     background: '#ffffff',
     outline: 'none',
     minHeight: '170px',
-    resize: 'vertical' as const,
+    resize: 'vertical',
   },
   whiteButton: {
     width: '100%',
@@ -437,7 +446,7 @@ const styles = {
     color: '#ffffff',
     borderRadius: '18px',
     padding: '18px',
-    wordBreak: 'break-word' as const,
+    wordBreak: 'break-word',
     fontWeight: 900,
     lineHeight: 1.5,
   },
