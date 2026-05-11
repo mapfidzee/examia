@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
+import { evaluateOutcomeLifecycle } from '../../lib/lifecycleGovernance'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -39,7 +41,7 @@ const OUTCOME_STATUSES = [
 
 const EFFECTIVENESS_LEVELS = ['LOW', 'MODERATE', 'HIGH', 'VERY_HIGH']
 
-const CONTINUITY_OUTLOOKS = ['STABLE', 'MONITOR', 'AT_RISK', 'UNSTABLE']
+const CONTINUITY_OUTLOOKS = ['STABLE', 'MONITOR', 'AT_RISK', 'UNSTABLE', 'ESCALATE', 'HIGH_RISK']
 
 const GOVERNANCE_NOTES = [
   'Beneficiary continuity appears stable after intervention.',
@@ -61,6 +63,21 @@ const OUTCOME_ACTIONS = [
 ]
 
 export default function OutcomesPage() {
+  return (
+    <GovernanceRouteGuard
+      allowedRoles={[
+        'SUPER_ADMIN',
+        'COMMAND_ADMIN',
+        'GOVERNANCE_OFFICER',
+        'INSTITUTION_COORDINATOR',
+      ]}
+    >
+      <OutcomesContent />
+    </GovernanceRouteGuard>
+  )
+}
+
+function OutcomesContent() {
   const [cases, setCases] = useState<BeneficiaryCase[]>([])
 
   const [selectedCaseId, setSelectedCaseId] = useState('')
@@ -85,6 +102,9 @@ export default function OutcomesPage() {
       .select('*')
       .in('case_status', [
         'INTERVENTION_ACTIVE',
+        'INTERVENTION_RECORDED',
+        'RECOVERY_MONITORING',
+        'PARTIAL_STABILIZATION',
         'STABILIZING',
         'ESCALATED',
         'RESPONDER_ASSIGNED',
@@ -105,6 +125,11 @@ export default function OutcomesPage() {
 
   function outcomeRecord() {
     if (!selectedCase) return ''
+
+    const lifecycleDecision = evaluateOutcomeLifecycle({
+      outcomeStatus,
+      continuityOutlook,
+    })
 
     return `
 EXAMIA LIS STRUCTURED OUTCOME RECORD
@@ -127,6 +152,14 @@ ${effectivenessLevel}
 Continuity Outlook:
 ${continuityOutlook}
 
+Lifecycle Governance:
+Next Status: ${lifecycleDecision.nextStatus}
+Continuity Risk: ${lifecycleDecision.continuityRisk}
+Stabilization Confidence: ${lifecycleDecision.stabilizationConfidence}
+Escalation Required: ${lifecycleDecision.shouldEscalate ? 'YES' : 'NO'}
+Recovery Monitoring Required: ${lifecycleDecision.shouldMonitorRecovery ? 'YES' : 'NO'}
+Command Visibility: ${lifecycleDecision.commandVisibility ? 'YES' : 'NO'}
+
 Governance-Safe Outcome Note:
 ${governanceNote || 'No governance-safe note selected'}
 
@@ -138,6 +171,9 @@ ${additionalOperationalNotes.trim() || 'No additional operational notes entered.
 
 Governance Interpretation:
 This outcome record summarizes stabilization progress, continuity outlook, intervention effectiveness, and operational follow-up requirements. It exists to support safe stabilization governance and coordinated continuity management without assigning blame to beneficiaries, responders, institutions, or families.
+
+Lifecycle Principle:
+Outcome is not automatically stabilization. EXAMIA confirms, monitors, or escalates based on recovery evidence and continuity outlook.
     `.trim()
   }
 
@@ -155,6 +191,11 @@ This outcome record summarizes stabilization progress, continuity outlook, inter
     setLoading(true)
     setMessage('')
 
+    const lifecycleDecision = evaluateOutcomeLifecycle({
+      outcomeStatus,
+      continuityOutlook,
+    })
+
     const summary = outcomeRecord()
 
     const { error: outcomeError } = await supabase.from('case_outcomes').insert({
@@ -169,24 +210,10 @@ This outcome record summarizes stabilization progress, continuity outlook, inter
       return
     }
 
-    let nextCaseStatus = 'STABILIZING'
-
-    if (
-      outcomeStatus === 'STABILIZED' &&
-      ['HIGH', 'VERY_HIGH'].includes(effectivenessLevel) &&
-      continuityOutlook === 'STABLE'
-    ) {
-      nextCaseStatus = 'STABILIZED'
-    }
-
-    if (outcomeStatus === 'ESCALATION_REQUIRED' || continuityOutlook === 'UNSTABLE') {
-      nextCaseStatus = 'ESCALATED'
-    }
-
     const { error: updateError } = await supabase
       .from('beneficiary_cases')
       .update({
-        case_status: nextCaseStatus,
+        case_status: lifecycleDecision.nextStatus,
         outcome_summary: summary,
         updated_at: new Date().toISOString(),
       })
@@ -198,12 +225,18 @@ This outcome record summarizes stabilization progress, continuity outlook, inter
       return
     }
 
-    await supabase.from('case_timeline').insert({
+    const { error: timelineError } = await supabase.from('case_timeline').insert({
       case_id: selectedCaseId,
-      event_type: 'OUTCOME_RECORDED',
-      event_summary: `Structured outcome recorded. Outcome status: ${outcomeStatus}. Continuity outlook: ${continuityOutlook}.`,
-      actor: 'EXAMIA LIS Outcome Intelligence',
+      event_type: lifecycleDecision.timelineEventType,
+      event_summary: `${lifecycleDecision.timelineSummary} Outcome status: ${outcomeStatus}. Continuity outlook: ${continuityOutlook}. Stabilization confidence: ${lifecycleDecision.stabilizationConfidence}.`,
+      actor: 'EXAMIA LIS Lifecycle Governance Outcome',
     })
+
+    if (timelineError) {
+      alert(timelineError.message)
+      setLoading(false)
+      return
+    }
 
     setSelectedCaseId('')
     setOutcomeTemplate('')
@@ -214,7 +247,7 @@ This outcome record summarizes stabilization progress, continuity outlook, inter
     setRecommendedAction('')
     setAdditionalOperationalNotes('')
 
-    setMessage('Structured outcome intelligence saved successfully.')
+    setMessage('Structured outcome saved. Lifecycle governance and timeline memory updated.')
     setLoading(false)
 
     await loadCases()
@@ -232,14 +265,14 @@ This outcome record summarizes stabilization progress, continuity outlook, inter
         </div>
 
         <section style={styles.hero}>
-          <p style={styles.kicker}>EXAMIA LIS • OUTCOME INTELLIGENCE</p>
+          <p style={styles.kicker}>EXAMIA LIS • LIFECYCLE OUTCOME INTELLIGENCE</p>
 
           <h1 style={styles.title}>Structured Stabilization Outcome Infrastructure</h1>
 
           <p style={styles.subtitle}>
             Measure intervention effectiveness, stabilization outcomes, continuity outlook,
-            escalation visibility, and governance-safe operational follow-up using
-            standardized outcome intelligence.
+            escalation visibility, lifecycle movement, and governance-safe operational
+            follow-up using standardized outcome intelligence.
           </p>
         </section>
 
@@ -258,7 +291,7 @@ This outcome record summarizes stabilization progress, continuity outlook, inter
 
             <p style={styles.panelNote}>
               Use dropdown templates to keep stabilization reporting governance-safe,
-              nationally consistent, and operationally measurable.
+              nationally consistent, lifecycle-aware, and operationally measurable.
             </p>
 
             <label style={styles.label}>
@@ -333,7 +366,7 @@ This outcome record summarizes stabilization progress, continuity outlook, inter
             </label>
 
             <button onClick={saveOutcomeRecord} disabled={loading} style={styles.primaryButton}>
-              {loading ? 'Saving Outcome...' : 'Save Structured Outcome Intelligence'}
+              {loading ? 'Saving Outcome...' : 'Save Lifecycle Outcome Intelligence'}
             </button>
           </div>
 
@@ -341,8 +374,9 @@ This outcome record summarizes stabilization progress, continuity outlook, inter
             <h2 style={styles.sectionTitle}>Generated Outcome Intelligence</h2>
 
             <p style={styles.panelNote}>
-              Structured outcome reporting keeps stabilization intelligence measurable and
-              governance-safe across districts, NGOs, ministries, and responders.
+              Structured outcome reporting keeps stabilization intelligence measurable,
+              lifecycle-aware, and governance-safe across institutions, districts,
+              NGOs, ministries, and responders.
             </p>
 
             <pre style={styles.summaryBox}>
