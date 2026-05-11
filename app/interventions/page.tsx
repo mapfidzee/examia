@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
+import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
+import {
+  evaluateInterventionLifecycle,
+  type ContinuityRisk,
+} from '../../lib/lifecycleGovernance'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -47,7 +52,7 @@ const COMPLETION_STATUSES = [
   'ESCALATION_REQUIRED',
 ]
 
-const CONTINUITY_RISKS = ['LOW', 'MODERATE', 'HIGH', 'CRITICAL']
+const CONTINUITY_RISKS: ContinuityRisk[] = ['LOW', 'MODERATE', 'HIGH', 'CRITICAL']
 
 const SESSION_SUMMARIES = [
   'Beneficiary received structured support and immediate pathway is stable.',
@@ -71,6 +76,22 @@ const RESPONDER_NOTE_TEMPLATES = [
 ]
 
 export default function InterventionCompletionPage() {
+  return (
+    <GovernanceRouteGuard
+      allowedRoles={[
+        'SUPER_ADMIN',
+        'COMMAND_ADMIN',
+        'GOVERNANCE_OFFICER',
+        'INSTITUTION_COORDINATOR',
+        'RESPONDER',
+      ]}
+    >
+      <InterventionCompletionContent />
+    </GovernanceRouteGuard>
+  )
+}
+
+function InterventionCompletionContent() {
   const [cases, setCases] = useState<BeneficiaryCase[]>([])
 
   const [selectedCaseId, setSelectedCaseId] = useState('')
@@ -79,7 +100,7 @@ export default function InterventionCompletionPage() {
   const [completionStatus, setCompletionStatus] = useState('')
   const [sessionSummary, setSessionSummary] = useState('')
   const [stabilizationScore, setStabilizationScore] = useState('3')
-  const [continuityRisk, setContinuityRisk] = useState('MODERATE')
+  const [continuityRisk, setContinuityRisk] = useState<ContinuityRisk>('MODERATE')
   const [responderTemplate, setResponderTemplate] = useState('')
   const [additionalResponderNotes, setAdditionalResponderNotes] = useState('')
 
@@ -98,6 +119,8 @@ export default function InterventionCompletionPage() {
         'ROUTED',
         'RESPONDER_ASSIGNED',
         'INTERVENTION_ACTIVE',
+        'INTERVENTION_RECORDED',
+        'RECOVERY_MONITORING',
         'STABILIZING',
         'ESCALATED',
       ])
@@ -119,6 +142,11 @@ export default function InterventionCompletionPage() {
     const caseItem = selectedCase()
 
     if (!caseItem) return ''
+
+    const lifecycleDecision = evaluateInterventionLifecycle({
+      completionStatus,
+      continuityRisk,
+    })
 
     return `
 CONTROLLED INTERVENTION EVIDENCE RECORD
@@ -144,6 +172,13 @@ ${stabilizationScore}/5
 Continuity Risk After Intervention:
 ${continuityRisk}
 
+Lifecycle Governance:
+Next Status: ${lifecycleDecision.nextStatus}
+Stabilization Confidence: ${lifecycleDecision.stabilizationConfidence}
+Escalation Required: ${lifecycleDecision.shouldEscalate ? 'YES' : 'NO'}
+Recovery Monitoring Required: ${lifecycleDecision.shouldMonitorRecovery ? 'YES' : 'NO'}
+Command Visibility: ${lifecycleDecision.commandVisibility ? 'YES' : 'NO'}
+
 Governance-Safe Responder Notes:
 ${responderTemplate || 'No template selected'}
 
@@ -151,7 +186,10 @@ Additional Operational Notes:
 ${additionalResponderNotes.trim() || 'No additional notes entered.'}
 
 Governance Statement:
-This intervention record documents support delivery, stabilization progress, continuity risk, and follow-up needs. It does not blame the beneficiary, family, responder, school, institution, or partner. It exists to support governed learning stabilization, safe coordination, and accountable intervention continuity.
+This intervention record documents support delivery, stabilization progress, continuity risk, and follow-up needs. It does not blame the beneficiary, family, responder, school, institution, or partner. It exists to support governed stabilization, safe coordination, accountable intervention continuity, and lifecycle movement.
+
+Lifecycle Principle:
+Intervention is not recovery. EXAMIA records the intervention, evaluates continuity risk, and keeps recovery monitoring active until stabilization is confirmed.
     `.trim()
   }
 
@@ -169,6 +207,11 @@ This intervention record documents support delivery, stabilization progress, con
     setLoading(true)
     setMessage('')
 
+    const lifecycleDecision = evaluateInterventionLifecycle({
+      completionStatus,
+      continuityRisk,
+    })
+
     const evidence = interventionEvidence()
 
     const { error: interventionError } = await supabase
@@ -185,28 +228,10 @@ This intervention record documents support delivery, stabilization progress, con
       return
     }
 
-    let nextStatus = 'STABILIZING'
-
-    if (completionStatus === 'COMPLETED' && ['LOW', 'MODERATE'].includes(continuityRisk)) {
-      nextStatus = 'STABILIZED'
-    }
-
-    if (completionStatus === 'ESCALATION_REQUIRED' || continuityRisk === 'CRITICAL') {
-      nextStatus = 'ESCALATED'
-    }
-
-    if (
-      completionStatus === 'PARTIALLY_COMPLETED' ||
-      completionStatus === 'FOLLOW_UP_REQUIRED' ||
-      continuityRisk === 'HIGH'
-    ) {
-      nextStatus = 'STABILIZING'
-    }
-
     const { error: caseError } = await supabase
       .from('beneficiary_cases')
       .update({
-        case_status: nextStatus,
+        case_status: lifecycleDecision.nextStatus,
         intervention_summary: evidence,
         updated_at: new Date().toISOString(),
       })
@@ -218,12 +243,18 @@ This intervention record documents support delivery, stabilization progress, con
       return
     }
 
-    await supabase.from('case_timeline').insert({
+    const { error: timelineError } = await supabase.from('case_timeline').insert({
       case_id: selectedCaseId,
-      event_type: 'INTERVENTION_EVIDENCE_RECORDED',
-      event_summary: `Controlled intervention evidence recorded. Completion: ${completionStatus}. Continuity risk: ${continuityRisk}.`,
-      actor: 'EXAMIA LIS Controlled Intervention Intelligence',
+      event_type: lifecycleDecision.timelineEventType,
+      event_summary: `${lifecycleDecision.timelineSummary} Completion: ${completionStatus}. Continuity risk: ${continuityRisk}. Stabilization confidence: ${lifecycleDecision.stabilizationConfidence}.`,
+      actor: 'EXAMIA LIS Lifecycle Governance Intervention',
     })
+
+    if (timelineError) {
+      alert(timelineError.message)
+      setLoading(false)
+      return
+    }
 
     setSelectedCaseId('')
     setInterventionType('')
@@ -235,7 +266,7 @@ This intervention record documents support delivery, stabilization progress, con
     setResponderTemplate('')
     setAdditionalResponderNotes('')
 
-    setMessage('Controlled intervention evidence saved and case lifecycle updated.')
+    setMessage('Controlled intervention evidence saved. Lifecycle governance and timeline memory updated.')
     setLoading(false)
 
     await loadCases()
@@ -256,14 +287,14 @@ This intervention record documents support delivery, stabilization progress, con
         </div>
 
         <section style={styles.hero}>
-          <p style={styles.kicker}>EXAMIA LIS • CONTROLLED INTERVENTION INTELLIGENCE</p>
+          <p style={styles.kicker}>EXAMIA LIS • LIFECYCLE INTERVENTION INTELLIGENCE</p>
 
           <h1 style={styles.title}>Intervention Completion Evidence</h1>
 
           <p style={styles.subtitle}>
             Govern actual support delivery by converting each intervention into a
             structured evidence record for stabilization tracking, continuity scoring,
-            responder accountability, and safe institutional follow-up.
+            responder accountability, lifecycle movement, and safe institutional follow-up.
           </p>
         </section>
 
@@ -348,7 +379,7 @@ This intervention record documents support delivery, stabilization progress, con
             <Select
               label="Continuity Risk After Intervention"
               value={continuityRisk}
-              setValue={setContinuityRisk}
+              setValue={(value) => setContinuityRisk(value as ContinuityRisk)}
               options={CONTINUITY_RISKS}
             />
 
@@ -374,7 +405,7 @@ This intervention record documents support delivery, stabilization progress, con
               disabled={loading}
               style={styles.primaryButton}
             >
-              {loading ? 'Saving Evidence...' : 'Save Intervention Evidence'}
+              {loading ? 'Saving Evidence...' : 'Save Lifecycle Intervention Evidence'}
             </button>
           </div>
 
@@ -382,8 +413,9 @@ This intervention record documents support delivery, stabilization progress, con
             <h2 style={styles.sectionTitle}>Generated Evidence Record</h2>
 
             <p style={styles.panelNote}>
-              This is the structured record that will be saved to the intervention table
-              and added to the case lifecycle.
+              This is the structured lifecycle record that will be saved to the
+              intervention table, added to the case timeline, and used for recovery
+              continuity visibility.
             </p>
 
             <pre style={styles.summaryBox}>
