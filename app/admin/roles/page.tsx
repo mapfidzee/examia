@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import { supabase } from '../../../lib/supabase'
+import { logAuditEvent } from '../../../lib/auditLogger'
 
 type UserRole = {
   id?: string
@@ -65,6 +66,17 @@ function AdminRolesContent() {
     [roles]
   )
 
+  async function getAuditActor() {
+    const { data } = await supabase.auth.getUser()
+    const user = data.user
+
+    return {
+      userId: user?.id ?? null,
+      email: user?.email ?? null,
+      role: 'SUPER_ADMIN',
+    }
+  }
+
   async function loadRoles() {
     setLoading(true)
     setMessage('Loading governance access roles...')
@@ -95,14 +107,16 @@ function AdminRolesContent() {
     setSavingKey('create')
     setMessage('Creating governance role...')
 
-    const { error } = await supabase.from('user_roles').insert({
+    const createdRole = {
       user_id: newUserId.trim(),
       email: newEmail.trim().toLowerCase(),
       role: newRole,
       status: newStatus,
       governance_scope: newScope.trim() || 'GLOBAL',
       updated_at: new Date().toISOString(),
-    })
+    }
+
+    const { error } = await supabase.from('user_roles').insert(createdRole)
 
     if (error) {
       console.error(error)
@@ -111,6 +125,20 @@ function AdminRolesContent() {
       setMessage('')
       return
     }
+
+    const actor = await getAuditActor()
+
+    await logAuditEvent({
+      userId: actor.userId,
+      email: actor.email,
+      role: actor.role,
+      actionType: 'CREATE_GOVERNANCE_ROLE',
+      route: '/admin/roles',
+      recordType: 'user_roles',
+      recordId: createdRole.user_id,
+      summary: `Created governance role ${createdRole.role} with status ${createdRole.status} for ${createdRole.email}.`,
+      severity: createdRole.role === 'SUPER_ADMIN' ? 'HIGH' : 'MODERATE',
+    })
 
     setNewUserId('')
     setNewEmail('')
@@ -142,6 +170,23 @@ function AdminRolesContent() {
       setMessage('')
       return
     }
+
+    const actor = await getAuditActor()
+
+    await logAuditEvent({
+      userId: actor.userId,
+      email: actor.email,
+      role: actor.role,
+      actionType: 'UPDATE_GOVERNANCE_ROLE',
+      route: '/admin/roles',
+      recordType: 'user_roles',
+      recordId: item.user_id,
+      summary: `Updated governance role record for ${item.email}. Field changed: ${field}. New value: ${value}.`,
+      severity:
+        field === 'role' || field === 'status'
+          ? 'HIGH'
+          : 'MODERATE',
+    })
 
     setSavingKey(null)
     setMessage('Governance access updated.')
