@@ -2,6 +2,7 @@
 
 import { Dispatch, SetStateAction, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import { supabase } from '../../lib/supabase'
 
 const APP_URL = 'https://examia-ten.vercel.app'
@@ -36,6 +37,14 @@ type ResponderProfile = {
 }
 
 export default function AdminPage() {
+  return (
+    <GovernanceRouteGuard allowedRoles={['SUPER_ADMIN']}>
+      <AdminContent />
+    </GovernanceRouteGuard>
+  )
+}
+
+function AdminContent() {
   const [requests, setRequests] = useState<SupportRequest[]>([])
   const [responders, setResponders] = useState<ResponderProfile[]>([])
   const [message, setMessage] = useState('Loading command center...')
@@ -272,12 +281,13 @@ export default function AdminPage() {
       <div className="pageShell">
         <section className="frontDoorHero">
           <div className="heroContent">
-            <p className="eyebrow">EXAMIA OS COMMAND CENTER</p>
-            <h1>Command Center</h1>
+            <p className="eyebrow">EXAMIA GOVERNED COMMAND CENTER</p>
+            <h1>Admin Command Center</h1>
             <p className="heroText">
-              Coordinate the full support lifecycle from one place: need intake,
-              responder routing, controlled support rooms, active sessions,
-              completion evidence, and institutional visibility.
+              Coordinate the full governed support lifecycle from one protected
+              authority surface: need intake, responder routing, controlled
+              support rooms, active sessions, completion evidence, and
+              institutional visibility.
             </p>
           </div>
 
