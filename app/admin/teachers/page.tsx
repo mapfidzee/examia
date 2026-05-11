@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import { supabase } from '../../../lib/supabase'
 
 type TeacherProfile = {
@@ -19,33 +20,41 @@ type TeacherProfile = {
 }
 
 export default function AdminTeachersPage() {
-  const [teachers, setTeachers] = useState<TeacherProfile[]>([])
+  return (
+    <GovernanceRouteGuard allowedRoles={['SUPER_ADMIN', 'GOVERNANCE_OFFICER']}>
+      <ResponderGovernanceContent />
+    </GovernanceRouteGuard>
+  )
+}
+
+function ResponderGovernanceContent() {
+  const [responders, setResponders] = useState<TeacherProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const [savingId, setSavingId] = useState<string | null>(null)
 
   useEffect(() => {
-    loadTeachers()
+    loadResponders()
   }, [])
 
-  const pendingTeachers = useMemo(
-    () => teachers.filter((teacher) => teacher.status === 'PENDING'),
-    [teachers]
+  const pendingResponders = useMemo(
+    () => responders.filter((responder) => responder.status === 'PENDING'),
+    [responders]
   )
 
-  const approvedTeachers = useMemo(
-    () => teachers.filter((teacher) => teacher.status === 'APPROVED'),
-    [teachers]
+  const approvedResponders = useMemo(
+    () => responders.filter((responder) => responder.status === 'APPROVED'),
+    [responders]
   )
 
-  const suspendedTeachers = useMemo(
-    () => teachers.filter((teacher) => teacher.status === 'SUSPENDED'),
-    [teachers]
+  const suspendedResponders = useMemo(
+    () => responders.filter((responder) => responder.status === 'SUSPENDED'),
+    [responders]
   )
 
-  async function loadTeachers() {
+  async function loadResponders() {
     setLoading(true)
-    setMessage('Loading teacher governance center...')
+    setMessage('Loading responder governance center...')
 
     const { data, error } = await supabase
       .from('teacher_profiles')
@@ -54,19 +63,19 @@ export default function AdminTeachersPage() {
 
     if (error) {
       console.error(error)
-      setMessage('Could not load teacher profiles.')
+      setMessage('Could not load responder profiles.')
       setLoading(false)
       return
     }
 
-    setTeachers(data || [])
+    setResponders(data || [])
     setMessage('')
     setLoading(false)
   }
 
-  async function updateTeacherStatus(id: string, status: string) {
+  async function updateResponderStatus(id: string, status: string) {
     setSavingId(id)
-    setMessage('Updating teacher status...')
+    setMessage('Updating responder status...')
 
     const { error } = await supabase
       .from('teacher_profiles')
@@ -75,14 +84,14 @@ export default function AdminTeachersPage() {
 
     if (error) {
       console.error(error)
-      alert('Could not update teacher status.')
+      alert('Could not update responder status.')
       setMessage('')
       setSavingId(null)
       return
     }
 
-    setMessage(`Teacher marked as ${status}.`)
-    await loadTeachers()
+    setMessage(`Responder marked as ${status}.`)
+    await loadResponders()
     setSavingId(null)
   }
 
@@ -91,12 +100,13 @@ export default function AdminTeachersPage() {
       <div className="pageShell">
         <section className="frontDoorHero">
           <div className="heroContent">
-            <p className="eyebrow">EXAMIA TEACHER GOVERNANCE</p>
-            <h1>Teacher Governance Center</h1>
+            <p className="eyebrow">EXAMIA RESPONDER GOVERNANCE</p>
+            <h1>Responder Governance Center</h1>
             <p className="heroText">
-              Approve teachers, protect the learning pool, and keep lesson
-              matching safe. This page controls who can receive student lesson
-              offers inside EXAMIA.
+              Review, approve, suspend, and restore responders inside EXAMIA.
+              This protected governance surface controls who can receive
+              stabilization assignments and participate in governed recovery
+              action.
             </p>
 
             <div className="heroActions">
@@ -105,48 +115,49 @@ export default function AdminTeachersPage() {
               </Link>
 
               <Link href="/teacher" className="heroButton successHeroButton">
-                Teacher Signup
+                Responder Intake
               </Link>
 
-              <button className="heroButton refreshHeroButton" onClick={loadTeachers}>
-                Refresh Teachers
+              <button className="heroButton refreshHeroButton" onClick={loadResponders}>
+                Refresh Responders
               </button>
             </div>
           </div>
 
           <div className="heroPanel">
             <p className="panelKicker">Governance focus</p>
-            <h2>Clean teacher pool. Clear approval flow.</h2>
+            <h2>Controlled responder pool. Clear approval flow.</h2>
             <p>
-              Pending teachers wait for review. Approved teachers can receive
-              lesson offers. Suspended teachers stay blocked until restored.
+              Pending responders wait for review. Approved responders can receive
+              governed assignments. Suspended responders remain blocked until
+              governance restores them.
             </p>
           </div>
         </section>
 
         <section className="commandTiles">
           <CommandTile
-            label="Pending Approval"
-            value={pendingTeachers.length}
-            description="Teachers waiting for admin decision"
+            label="Pending Review"
+            value={pendingResponders.length}
+            description="Responders waiting for governance decision"
             tone="amber"
           />
           <CommandTile
             label="Approved Pool"
-            value={approvedTeachers.length}
-            description="Teachers ready for lesson matching"
+            value={approvedResponders.length}
+            description="Responders ready for assignment"
             tone="green"
           />
           <CommandTile
             label="Suspended"
-            value={suspendedTeachers.length}
-            description="Teachers blocked from matching"
+            value={suspendedResponders.length}
+            description="Responders blocked from assignment"
             tone="red"
           />
           <CommandTile
             label="Total Profiles"
-            value={teachers.length}
-            description="All teacher records in the system"
+            value={responders.length}
+            description="All responder records in the system"
             tone="blue"
           />
         </section>
@@ -155,53 +166,53 @@ export default function AdminTeachersPage() {
 
         {loading ? (
           <section className="sectionShell">
-            <p className="emptyText">Loading teacher profiles...</p>
+            <p className="emptyText">Loading responder profiles...</p>
           </section>
         ) : (
           <>
-            <TeacherDecisionSection
+            <ResponderDecisionSection
               kicker="Step 1"
-              title="Pending Approval"
-              description="Review these teacher applications before they enter the active teaching pool."
+              title="Pending Review"
+              description="Review these responder applications before they enter the active assignment pool."
               tone="amber"
-              teachers={pendingTeachers}
-              emptyText="No teachers are waiting for approval."
+              responders={pendingResponders}
+              emptyText="No responders are waiting for review."
               savingId={savingId}
-              primaryLabel="Approve Teacher"
-              primaryAction={(id) => updateTeacherStatus(id, 'APPROVED')}
+              primaryLabel="Approve Responder"
+              primaryAction={(id) => updateResponderStatus(id, 'APPROVED')}
               secondaryLabel="Suspend"
-              secondaryAction={(id) => updateTeacherStatus(id, 'SUSPENDED')}
+              secondaryAction={(id) => updateResponderStatus(id, 'SUSPENDED')}
             />
 
-            <TeacherDecisionSection
+            <ResponderDecisionSection
               kicker="Step 2"
-              title="Approved Teacher Pool"
-              description="These teachers are active and can receive lesson offers from the Admin Command Center."
+              title="Approved Responder Pool"
+              description="These responders are active and can receive governed assignments from the Admin Command Center."
               tone="green"
-              teachers={approvedTeachers}
-              emptyText="No approved teachers yet."
+              responders={approvedResponders}
+              emptyText="No approved responders yet."
               savingId={savingId}
-              primaryLabel="Suspend Teacher"
-              primaryAction={(id) => updateTeacherStatus(id, 'SUSPENDED')}
+              primaryLabel="Suspend Responder"
+              primaryAction={(id) => updateResponderStatus(id, 'SUSPENDED')}
               secondaryLabel="Return to Pending"
-              secondaryAction={(id) => updateTeacherStatus(id, 'PENDING')}
+              secondaryAction={(id) => updateResponderStatus(id, 'PENDING')}
             />
 
-            <TeacherDecisionSection
+            <ResponderDecisionSection
               kicker="Step 3"
-              title="Suspended Teachers"
-              description="These teachers are blocked from lesson matching until admin restores them."
+              title="Suspended Responders"
+              description="These responders are blocked from assignment until governance restores them."
               tone="red"
-              teachers={suspendedTeachers}
-              emptyText="No suspended teachers."
+              responders={suspendedResponders}
+              emptyText="No suspended responders."
               savingId={savingId}
               primaryLabel="Approve Again"
-              primaryAction={(id) => updateTeacherStatus(id, 'APPROVED')}
+              primaryAction={(id) => updateResponderStatus(id, 'APPROVED')}
               secondaryLabel="Return to Pending"
-              secondaryAction={(id) => updateTeacherStatus(id, 'PENDING')}
+              secondaryAction={(id) => updateResponderStatus(id, 'PENDING')}
             />
 
-            <TeacherProfileRecords teachers={teachers} />
+            <ResponderProfileRecords responders={responders} />
           </>
         )}
       </div>
@@ -677,12 +688,12 @@ function CommandTile({
   )
 }
 
-function TeacherDecisionSection({
+function ResponderDecisionSection({
   kicker,
   title,
   description,
   tone,
-  teachers,
+  responders,
   emptyText,
   savingId,
   primaryLabel,
@@ -694,7 +705,7 @@ function TeacherDecisionSection({
   title: string
   description: string
   tone: 'amber' | 'green' | 'red'
-  teachers: TeacherProfile[]
+  responders: TeacherProfile[]
   emptyText: string
   savingId: string | null
   primaryLabel: string
@@ -710,45 +721,45 @@ function TeacherDecisionSection({
         <p>{description}</p>
       </div>
 
-      {teachers.length === 0 ? (
+      {responders.length === 0 ? (
         <p className="emptyBox">{emptyText}</p>
       ) : (
         <div className="teacherDecisionList">
-          {teachers.map((teacher) => (
-            <article className="teacherDecisionCard" key={teacher.id}>
+          {responders.map((responder) => (
+            <article className="teacherDecisionCard" key={responder.id}>
               <div className="teacherTop">
                 <div>
-                  <p className="miniLabel">Teacher decision record</p>
-                  <h3>{teacher.full_name || 'Unnamed Teacher'}</h3>
+                  <p className="miniLabel">Responder decision record</p>
+                  <h3>{responder.full_name || 'Unnamed Responder'}</h3>
                   <p className="teacherEmail">
-                    {teacher.email || 'No email provided'}
+                    {responder.email || 'No email provided'}
                   </p>
                 </div>
 
-                <span className={`statusBadge status-${teacher.status}`}>
-                  {teacher.status || 'UNKNOWN'}
+                <span className={`statusBadge status-${responder.status}`}>
+                  {responder.status || 'UNKNOWN'}
                 </span>
               </div>
 
               <div className="decisionInfoGrid">
-                <Detail label="Subjects" value={formatList(teacher.subjects)} />
-                <Detail label="Grade Levels" value={formatList(teacher.grade_levels)} />
-                <Detail label="Hourly Rate" value={formatMoney(teacher.hourly_rate)} />
+                <Detail label="Domains" value={formatList(responder.subjects)} />
+                <Detail label="Operational Levels" value={formatList(responder.grade_levels)} />
+                <Detail label="Expected Rate" value={formatMoney(responder.hourly_rate)} />
               </div>
 
               <div className="buttonRow">
                 <button
                   className="primaryBtn"
-                  onClick={() => primaryAction(teacher.id)}
-                  disabled={savingId === teacher.id}
+                  onClick={() => primaryAction(responder.id)}
+                  disabled={savingId === responder.id}
                 >
-                  {savingId === teacher.id ? 'Updating...' : primaryLabel}
+                  {savingId === responder.id ? 'Updating...' : primaryLabel}
                 </button>
 
                 <button
                   className="secondaryBtn"
-                  onClick={() => secondaryAction(teacher.id)}
-                  disabled={savingId === teacher.id}
+                  onClick={() => secondaryAction(responder.id)}
+                  disabled={savingId === responder.id}
                 >
                   {secondaryLabel}
                 </button>
@@ -761,50 +772,50 @@ function TeacherDecisionSection({
   )
 }
 
-function TeacherProfileRecords({ teachers }: { teachers: TeacherProfile[] }) {
+function ResponderProfileRecords({ responders }: { responders: TeacherProfile[] }) {
   return (
     <section className="sectionShell">
       <div className="sectionHeader header-blue">
         <p className="sectionKicker">Reference records</p>
-        <h2>Full Teacher Profile Records</h2>
+        <h2>Full Responder Profile Records</h2>
         <p>
-          Use this section to read the full teacher profile clearly. Approval
-          decisions are handled in the decision sections above.
+          Use this section to review the full responder profile clearly.
+          Governance decisions are handled in the decision sections above.
         </p>
       </div>
 
-      {teachers.length === 0 ? (
-        <p className="emptyBox">No teacher profiles found.</p>
+      {responders.length === 0 ? (
+        <p className="emptyBox">No responder profiles found.</p>
       ) : (
         <div className="teacherProfileList">
-          {teachers.map((teacher) => (
-            <article className="teacherProfileCard" key={teacher.id}>
+          {responders.map((responder) => (
+            <article className="teacherProfileCard" key={responder.id}>
               <div className="profileTop">
                 <div>
-                  <p className="miniLabel">Teacher profile</p>
-                  <h3>{teacher.full_name || 'Unnamed Teacher'}</h3>
+                  <p className="miniLabel">Responder profile</p>
+                  <h3>{responder.full_name || 'Unnamed Responder'}</h3>
                   <p className="profileEmail">
-                    {teacher.email || 'No email provided'}
+                    {responder.email || 'No email provided'}
                   </p>
                 </div>
 
-                <span className={`statusBadge status-${teacher.status}`}>
-                  {teacher.status || 'UNKNOWN'}
+                <span className={`statusBadge status-${responder.status}`}>
+                  {responder.status || 'UNKNOWN'}
                 </span>
               </div>
 
               <div className="profileInfoGrid">
-                <Detail label="Subjects" value={formatList(teacher.subjects)} />
-                <Detail label="Grade Levels" value={formatList(teacher.grade_levels)} />
-                <Detail label="Province" value={teacher.province || 'Not provided'} />
-                <Detail label="Languages" value={formatList(teacher.spoken_languages)} />
-                <Detail label="Hourly Rate" value={formatMoney(teacher.hourly_rate)} />
-                <Detail label="Submitted At" value={formatDateTime(teacher.created_at)} />
+                <Detail label="Domains" value={formatList(responder.subjects)} />
+                <Detail label="Operational Levels" value={formatList(responder.grade_levels)} />
+                <Detail label="Region" value={responder.province || 'Not provided'} />
+                <Detail label="Languages" value={formatList(responder.spoken_languages)} />
+                <Detail label="Expected Rate" value={formatMoney(responder.hourly_rate)} />
+                <Detail label="Submitted At" value={formatDateTime(responder.created_at)} />
               </div>
 
               <div className="bioBox">
-                <span>Teaching strength</span>
-                <p>{teacher.bio || 'No bio provided.'}</p>
+                <span>Responder evidence</span>
+                <p>{responder.bio || 'No profile evidence provided.'}</p>
               </div>
             </article>
           ))}
