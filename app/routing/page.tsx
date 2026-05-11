@@ -5,6 +5,7 @@ import type { CSSProperties } from 'react'
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import { evaluateRoutingLifecycle } from '../../lib/lifecycleGovernance'
+import { logAuditEvent } from '../../lib/auditLogger'
 import { supabase } from '../../lib/supabase'
 
 type Institution = {
@@ -201,6 +202,17 @@ function RoutingContent() {
     loadAll()
   }, [])
 
+  async function getAuditActor() {
+    const { data } = await supabase.auth.getUser()
+    const user = data.user
+
+    return {
+      userId: user?.id ?? null,
+      email: user?.email ?? null,
+      role: 'GOVERNANCE_ROUTING_USER',
+    }
+  }
+
   async function loadAll() {
     await Promise.all([loadInstitutions(), loadCases(), loadResponders()])
   }
@@ -339,11 +351,16 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
     setLoading(true)
     setMessage('')
 
+    const finalName = siteName.trim()
+    const finalType = finalSiteType()
+    const finalRegion = region.trim()
+    const finalDistrict = district.trim()
+
     const { error } = await supabase.from('institutions').insert({
-      institution_name: siteName.trim(),
-      institution_type: finalSiteType(),
-      region: region.trim(),
-      district: district.trim(),
+      institution_name: finalName,
+      institution_type: finalType,
+      region: finalRegion,
+      district: finalDistrict,
       operating_level: operatingLevel,
       coordination_status: 'ACTIVE',
       contact_person: contactPerson.trim(),
@@ -356,6 +373,20 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
       setLoading(false)
       return
     }
+
+    const actor = await getAuditActor()
+
+    await logAuditEvent({
+      userId: actor.userId,
+      email: actor.email,
+      role: actor.role,
+      actionType: 'REGISTER_COORDINATION_SITE',
+      route: '/routing',
+      recordType: 'institutions',
+      recordId: finalName,
+      summary: `Registered coordination site ${finalName} as ${finalType} at ${operatingLevel} level.`,
+      severity: 'MODERATE',
+    })
 
     setSiteName('')
     setSiteType('School')
@@ -393,6 +424,7 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
     const lifecycleDecision = evaluateRoutingLifecycle()
     const currentCase = selectedCase()
     const currentInstitution = selectedInstitution()
+    const currentResponder = selectedResponder()
 
     const nextStatus = selectedResponderId
       ? lifecycleDecision.nextStatus
@@ -453,6 +485,25 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
       return
     }
 
+    const actor = await getAuditActor()
+
+    await logAuditEvent({
+      userId: actor.userId,
+      email: actor.email,
+      role: actor.role,
+      actionType: 'ROUTE_BENEFICIARY_CASE',
+      route: '/routing',
+      recordType: 'beneficiary_cases',
+      recordId: selectedCaseId,
+      summary: `Routed case ${currentCase?.beneficiary_name || selectedCaseId} with priority ${routingPriority}. Status moved to ${nextStatus}. Coordination site: ${currentInstitution?.institution_name || 'none selected'}. Responder: ${currentResponder?.full_name || 'none assigned'}.`,
+      severity:
+        routingPriority === 'CRITICAL'
+          ? 'CRITICAL'
+          : routingPriority === 'HIGH'
+            ? 'HIGH'
+            : 'MODERATE',
+    })
+
     setSelectedCaseId('')
     setCaseType('')
     setOtherCaseType('')
@@ -469,7 +520,7 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
     setResponseMode('')
     setAdditionalNotes('')
 
-    setMessage('Structured routing completed. Lifecycle governance and timeline memory updated.')
+    setMessage('Structured routing completed. Lifecycle governance, timeline memory, and audit trail updated.')
     setLoading(false)
 
     await loadAll()
