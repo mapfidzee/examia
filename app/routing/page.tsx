@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
+import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
+import { evaluateRoutingLifecycle } from '../../lib/lifecycleGovernance'
 import { supabase } from '../../lib/supabase'
 
 type Institution = {
@@ -146,6 +148,21 @@ const ROUTING_REASONS = [
 const ROUTING_PRIORITIES = ['LOW', 'MODERATE', 'HIGH', 'CRITICAL']
 
 export default function RoutingPage() {
+  return (
+    <GovernanceRouteGuard
+      allowedRoles={[
+        'SUPER_ADMIN',
+        'COMMAND_ADMIN',
+        'GOVERNANCE_OFFICER',
+        'INSTITUTION_COORDINATOR',
+      ]}
+    >
+      <RoutingContent />
+    </GovernanceRouteGuard>
+  )
+}
+
+function RoutingContent() {
   const [institutions, setInstitutions] = useState<Institution[]>([])
   const [cases, setCases] = useState<BeneficiaryCase[]>([])
   const [responders, setResponders] = useState<Responder[]>([])
@@ -250,10 +267,9 @@ export default function RoutingPage() {
 
   function routingSummary() {
     const currentCase = selectedCase()
+    const lifecycleDecision = evaluateRoutingLifecycle()
 
-    if (!currentCase) {
-      return ''
-    }
+    if (!currentCase) return ''
 
     return `
 STRUCTURED ROUTING INTELLIGENCE RECORD
@@ -291,8 +307,18 @@ ${selectedInstitution()?.institution_name || 'No coordination site selected'}
 Assigned Responder:
 ${selectedResponder()?.full_name || 'No responder selected'}
 
+Lifecycle Governance:
+Next Status: ${selectedResponderId ? lifecycleDecision.nextStatus : 'ROUTED'}
+Continuity Risk: ${lifecycleDecision.continuityRisk}
+Stabilization Confidence: ${lifecycleDecision.stabilizationConfidence}
+Recovery Monitoring Required: ${lifecycleDecision.shouldMonitorRecovery ? 'YES' : 'NO'}
+Command Visibility: ${lifecycleDecision.commandVisibility ? 'YES' : 'NO'}
+
 Governance-Safe Summary:
 This routing record creates a structured coordination pathway for beneficiary stabilization. It supports consistent action across schools, NGOs, community sites, district offices, regional teams, ministry partners, and verified responders. The record focuses on access, continuity, safeguarding visibility, responder availability, escalation needs, and institutional coordination. It avoids blame and unnecessary personal exposure.
+
+Lifecycle Principle:
+Routing is not resolution. EXAMIA has created ownership and recovery monitoring, but stabilization must still be confirmed through intervention evidence and outcome review.
 
 Additional Operational Notes:
 ${additionalNotes.trim() || 'No additional operational notes entered.'}
@@ -364,18 +390,31 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
     setLoading(true)
     setMessage('')
 
+    const lifecycleDecision = evaluateRoutingLifecycle()
     const currentCase = selectedCase()
     const currentInstitution = selectedInstitution()
+
+    const nextStatus = selectedResponderId
+      ? lifecycleDecision.nextStatus
+      : 'ROUTED'
+
+    const timelineEventType = selectedResponderId
+      ? lifecycleDecision.timelineEventType
+      : 'CASE_ROUTED'
+
+    const timelineSummary = selectedResponderId
+      ? lifecycleDecision.timelineSummary
+      : 'Case routed through institutional coordination pathway. Recovery ownership remains pending until responder assignment occurs.'
 
     const { error: routeError } = await supabase.from('case_routing_actions').insert({
       case_id: selectedCaseId,
       institution_id: selectedInstitutionId || null,
       assigned_responder_id: selectedResponderId || null,
-      routing_status: selectedResponderId ? 'RESPONDER_ASSIGNED' : 'ROUTED',
+      routing_status: nextStatus,
       routing_priority: routingPriority,
       routing_reason: finalRoutingReason(),
       routing_notes: routingSummary(),
-      routed_by: 'EXAMIA LIS Structured Routing Intelligence System',
+      routed_by: 'EXAMIA LIS Lifecycle Governance Routing',
     })
 
     if (routeError) {
@@ -383,8 +422,6 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
       setLoading(false)
       return
     }
-
-    const nextStatus = selectedResponderId ? 'RESPONDER_ASSIGNED' : 'ROUTED'
 
     const { error: caseError } = await supabase
       .from('beneficiary_cases')
@@ -403,14 +440,18 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
       return
     }
 
-    await supabase.from('case_timeline').insert({
+    const { error: timelineError } = await supabase.from('case_timeline').insert({
       case_id: selectedCaseId,
-      event_type: selectedResponderId ? 'RESPONDER_ASSIGNED' : 'CASE_ROUTED',
-      event_summary: selectedResponderId
-        ? 'Case routed and responder assigned through structured routing intelligence.'
-        : 'Case routed through institutional coordination pathway.',
-      actor: 'EXAMIA LIS Structured Routing Intelligence System',
+      event_type: timelineEventType,
+      event_summary: timelineSummary,
+      actor: 'EXAMIA LIS Lifecycle Governance Routing',
     })
+
+    if (timelineError) {
+      alert(timelineError.message)
+      setLoading(false)
+      return
+    }
 
     setSelectedCaseId('')
     setCaseType('')
@@ -428,7 +469,7 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
     setResponseMode('')
     setAdditionalNotes('')
 
-    setMessage('Structured routing completed and timeline updated.')
+    setMessage('Structured routing completed. Lifecycle governance and timeline memory updated.')
     setLoading(false)
 
     await loadAll()
@@ -452,11 +493,12 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
         </div>
 
         <section style={styles.hero}>
-          <p style={styles.kicker}>EXAMIA LIS • STRUCTURED ROUTING INTELLIGENCE</p>
-          <h1 style={styles.title}>Institutional Coordination + Response Routing</h1>
+          <p style={styles.kicker}>EXAMIA LIS • LIFECYCLE ROUTING INTELLIGENCE</p>
+          <h1 style={styles.title}>Institutional Coordination + Governed Response Routing</h1>
           <p style={styles.subtitle}>
             Route beneficiary stabilization cases through the right coordination site,
-            responder pathway, escalation level, and governance-safe intervention record.
+            responder pathway, escalation level, lifecycle movement, and governance-safe
+            recovery memory.
           </p>
         </section>
 
@@ -714,7 +756,7 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
             </label>
 
             <button onClick={routeCase} disabled={loading} style={styles.primaryButton}>
-              {loading ? 'Routing...' : 'Confirm Structured Routing'}
+              {loading ? 'Routing...' : 'Confirm Governed Routing'}
             </button>
           </div>
         </section>
@@ -722,8 +764,9 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
         <section style={styles.card}>
           <h2 style={styles.sectionTitle}>Auto-Generated Routing Summary</h2>
           <p style={styles.panelNote}>
-            This summary becomes the governance-safe intervention record for coordination,
-            escalation, responder assignment, and future review.
+            This summary becomes the governance-safe routing and lifecycle record for
+            coordination, escalation, responder assignment, continuity monitoring,
+            and future review.
           </p>
 
           <pre style={styles.summaryBox}>
