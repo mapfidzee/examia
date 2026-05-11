@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import { supabase } from '../../../lib/supabase'
 
 type LessonRequest = {
@@ -29,6 +30,14 @@ type TeacherProfile = {
 }
 
 export default function AdminAssignPage() {
+  return (
+    <GovernanceRouteGuard allowedRoles={['SUPER_ADMIN', 'COMMAND_ADMIN']}>
+      <AdminAssignContent />
+    </GovernanceRouteGuard>
+  )
+}
+
+function AdminAssignContent() {
   const [mounted, setMounted] = useState(false)
   const [lessons, setLessons] = useState<LessonRequest[]>([])
   const [teachers, setTeachers] = useState<TeacherProfile[]>([])
@@ -56,7 +65,7 @@ export default function AdminAssignPage() {
 
     if (lessonError) {
       console.error(lessonError)
-      alert('Could not load lesson requests.')
+      alert('Could not load support requests.')
       setLoading(false)
       return
     }
@@ -69,7 +78,7 @@ export default function AdminAssignPage() {
 
     if (teacherError) {
       console.error(teacherError)
-      alert('Could not load approved teachers.')
+      alert('Could not load approved responders.')
       setLoading(false)
       return
     }
@@ -83,18 +92,18 @@ export default function AdminAssignPage() {
     const teacherId = selectedTeacherByLesson[lesson.id]
 
     if (!teacherId) {
-      alert('Please select an approved teacher first.')
+      alert('Please select an approved responder first.')
       return
     }
 
     const selectedTeacher = teachers.find((teacher) => teacher.id === teacherId)
 
     if (!selectedTeacher) {
-      alert('Selected teacher was not found.')
+      alert('Selected responder was not found.')
       return
     }
 
-    setMessage('Assigning teacher...')
+    setMessage('Assigning responder...')
 
     const { error } = await supabase
       .from('lesson_requests')
@@ -107,12 +116,12 @@ export default function AdminAssignPage() {
 
     if (error) {
       console.error(error)
-      alert('Could not assign teacher.')
+      alert('Could not assign responder.')
       setMessage('')
       return
     }
 
-    setMessage(`Lesson offered to ${selectedTeacher.full_name}.`)
+    setMessage(`Support request offered to ${selectedTeacher.full_name}.`)
     await loadData()
   }
 
@@ -132,11 +141,12 @@ export default function AdminAssignPage() {
     <main className="assignPage">
       <div className="pageWrap">
         <header className="hero">
-          <p className="eyebrow">EXAMIA ADMIN ASSIGNMENT</p>
-          <h1>Assign Teachers to Lessons</h1>
+          <p className="eyebrow">EXAMIA GOVERNED ASSIGNMENT</p>
+          <h1>Responder Assignment</h1>
           <p>
-            Match student lesson requests with approved teachers. Once assigned,
-            the lesson is offered to the teacher for acceptance.
+            Match support requests with approved responders. This protected
+            assignment surface supports ownership, continuity, recovery
+            coordination, and controlled operational follow-through.
           </p>
         </header>
 
@@ -156,14 +166,15 @@ export default function AdminAssignPage() {
         ) : (
           <section className="panel">
             <div className="sectionHeader">
-              <h2>Lesson Requests</h2>
+              <h2>Support Requests</h2>
               <p>
-                Select an approved teacher, then offer the lesson to that teacher.
+                Select an approved responder, then offer the support request for
+                governed response ownership.
               </p>
             </div>
 
             {lessons.length === 0 ? (
-              <p className="empty">No lesson requests found.</p>
+              <p className="empty">No support requests found.</p>
             ) : (
               <div className="lessonList">
                 {lessons.map((lesson) => (
@@ -172,7 +183,7 @@ export default function AdminAssignPage() {
                       <div>
                         <h3>{lesson.subject}</h3>
                         <p className="lessonMeta">
-                          Lesson status: {lesson.status || 'Not set'} · Teacher status:{' '}
+                          Request status: {lesson.status || 'Not set'} · Responder status:{' '}
                           {lesson.teacher_status || 'Not offered'}
                         </p>
                       </div>
@@ -183,24 +194,24 @@ export default function AdminAssignPage() {
                     </div>
 
                     <div className="problemBox">
-                      <span>Student problem</span>
+                      <span>Support need</span>
                       <p>{lesson.problem}</p>
                     </div>
 
                     <div className="detailsGrid">
                       <Detail label="Preferred Time" value={lesson.preferred_time || 'Not provided'} />
                       <Detail label="Scheduled Time" value={lesson.scheduled_time || 'Not scheduled'} />
-                      <Detail label="Assigned Teacher" value={lesson.assigned_teacher || 'None yet'} />
+                      <Detail label="Assigned Responder" value={lesson.assigned_teacher || 'None yet'} />
                     </div>
 
                     <div className="assignBox">
                       <label>
-                        Select approved teacher
+                        Select approved responder
                         <select
                           value={selectedTeacherByLesson[lesson.id] || ''}
                           onChange={(event) => updateSelectedTeacher(lesson.id, event.target.value)}
                         >
-                          <option value="">Choose teacher...</option>
+                          <option value="">Choose responder...</option>
                           {teachers.map((teacher) => (
                             <option key={teacher.id} value={teacher.id}>
                               {teacher.full_name} — {formatList(teacher.subjects)}
@@ -210,7 +221,7 @@ export default function AdminAssignPage() {
                       </label>
 
                       <button onClick={() => assignTeacher(lesson)}>
-                        Offer Lesson to Teacher
+                        Offer Request to Responder
                       </button>
                     </div>
                   </article>
@@ -510,6 +521,6 @@ function Detail({ label, value }: { label: string; value: string }) {
 }
 
 function formatList(value: string[] | null) {
-  if (!value || value.length === 0) return 'No subjects listed'
+  if (!value || value.length === 0) return 'No domains listed'
   return value.join(', ')
 }
