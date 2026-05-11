@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import { supabase } from '../../lib/supabase'
 
@@ -431,102 +432,106 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
   `.trim()
 
   return (
-    <main style={styles.page}>
-      <div style={styles.container}>
-        <div style={styles.quickNavWrap}>
-          <InfrastructureQuickNav />
-        </div>
-
-        <section style={styles.hero}>
-          <p style={styles.kicker}>EXAMIA LIS • STABILIZATION COMMAND CENTER</p>
-
-          <h1 style={styles.title}>Stabilization Command Infrastructure</h1>
-
-          <p style={styles.subtitle}>
-            Consolidate predictive pressure, trajectory, routing pressure,
-            bottlenecks, recovery, reliability, safeguarding visibility, and
-            stabilization movement into one governance-safe command view.
-          </p>
-        </section>
-
-        {message && <div style={styles.message}>{message}</div>}
-
-        <section style={styles.metricsGrid}>
-          <Metric label="Command Status" value={intelligence.commandStatus} />
-          <Metric label="Predictive Status" value={intelligence.predictiveStatus} />
-          <Metric label="Trajectory Status" value={intelligence.trajectoryStatus} />
-          <Metric label="Routing Pressure" value={intelligence.routingPressureStatus} />
-          <Metric label="Bottleneck Status" value={intelligence.bottleneckStatus} />
-          <Metric label="Recovery Status" value={intelligence.recoveryStatus} />
-          <Metric label="Reliability Score" value={`${intelligence.reliabilityScore}/100`} />
-          <Metric label="Stabilization Rate" value={`${intelligence.stabilizationRate}%`} />
-        </section>
-
-        <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Command Brief Template</h2>
-
-          <p style={styles.helper}>
-            Use standardized dropdowns to keep executive command intelligence
-            governance-safe, operationally coherent, and ready for district, NGO,
-            ministry, or institutional review.
-          </p>
-
-          <Select
-            label="Command Report Template"
-            value={reportTemplate}
-            setValue={setReportTemplate}
-            options={COMMAND_REPORT_TEMPLATES}
-          />
-
-          <Select
-            label="Command Focus"
-            value={commandFocus}
-            setValue={setCommandFocus}
-            options={COMMAND_FOCUS_OPTIONS}
-          />
-
-          <Select
-            label="Command Scope"
-            value={commandScope}
-            setValue={setCommandScope}
-            options={COMMAND_SCOPE_OPTIONS}
-          />
-
-          <div style={styles.alignedBox}>
-            <h3 style={styles.alignedTitle}>Auto-Aligned Command Interpretation</h3>
-            <p style={styles.alignedText}>{commandGuidance.interpretation}</p>
-
-            <h3 style={styles.alignedTitle}>Auto-Aligned Command Action</h3>
-            <p style={styles.alignedText}>{commandGuidance.action}</p>
-
-            <h3 style={styles.alignedTitle}>Auto-Aligned Monitoring Note</h3>
-            <p style={styles.alignedText}>{commandGuidance.monitoring}</p>
+    <GovernanceRouteGuard
+      allowedRoles={['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']}
+    >
+      <main style={styles.page}>
+        <div style={styles.container}>
+          <div style={styles.quickNavWrap}>
+            <InfrastructureQuickNav />
           </div>
 
-          <label style={styles.label}>
-            Optional Additional Operational Notes
-            <textarea
-              value={additionalNotes}
-              onChange={(event) => setAdditionalNotes(event.target.value)}
-              placeholder="Use system-level operational notes only. Avoid blame, personal judgment, or unnecessary personal details."
-              style={styles.textarea}
+          <section style={styles.hero}>
+            <p style={styles.kicker}>EXAMIA LIS • STABILIZATION COMMAND CENTER</p>
+
+            <h1 style={styles.title}>Stabilization Command Infrastructure</h1>
+
+            <p style={styles.subtitle}>
+              Consolidate predictive pressure, trajectory, routing pressure,
+              bottlenecks, recovery, reliability, safeguarding visibility, and
+              stabilization movement into one governance-safe command view.
+            </p>
+          </section>
+
+          {message && <div style={styles.message}>{message}</div>}
+
+          <section style={styles.metricsGrid}>
+            <Metric label="Command Status" value={intelligence.commandStatus} />
+            <Metric label="Predictive Status" value={intelligence.predictiveStatus} />
+            <Metric label="Trajectory Status" value={intelligence.trajectoryStatus} />
+            <Metric label="Routing Pressure" value={intelligence.routingPressureStatus} />
+            <Metric label="Bottleneck Status" value={intelligence.bottleneckStatus} />
+            <Metric label="Recovery Status" value={intelligence.recoveryStatus} />
+            <Metric label="Reliability Score" value={`${intelligence.reliabilityScore}/100`} />
+            <Metric label="Stabilization Rate" value={`${intelligence.stabilizationRate}%`} />
+          </section>
+
+          <section style={styles.card}>
+            <h2 style={styles.sectionTitle}>Command Brief Template</h2>
+
+            <p style={styles.helper}>
+              Use standardized dropdowns to keep executive command intelligence
+              governance-safe, operationally coherent, and ready for district, NGO,
+              ministry, or institutional review.
+            </p>
+
+            <Select
+              label="Command Report Template"
+              value={reportTemplate}
+              setValue={setReportTemplate}
+              options={COMMAND_REPORT_TEMPLATES}
             />
-          </label>
 
-          <button onClick={loadData} style={styles.button}>
-            Refresh Command Intelligence
-          </button>
-        </section>
+            <Select
+              label="Command Focus"
+              value={commandFocus}
+              setValue={setCommandFocus}
+              options={COMMAND_FOCUS_OPTIONS}
+            />
 
-        <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Generated Stabilization Command Brief</h2>
+            <Select
+              label="Command Scope"
+              value={commandScope}
+              setValue={setCommandScope}
+              options={COMMAND_SCOPE_OPTIONS}
+            />
 
-          <div style={styles.briefBox}>
-            <pre style={styles.pre}>{commandBrief}</pre>
-          </div>
-        </section>
-      </div>
-    </main>
+            <div style={styles.alignedBox}>
+              <h3 style={styles.alignedTitle}>Auto-Aligned Command Interpretation</h3>
+              <p style={styles.alignedText}>{commandGuidance.interpretation}</p>
+
+              <h3 style={styles.alignedTitle}>Auto-Aligned Command Action</h3>
+              <p style={styles.alignedText}>{commandGuidance.action}</p>
+
+              <h3 style={styles.alignedTitle}>Auto-Aligned Monitoring Note</h3>
+              <p style={styles.alignedText}>{commandGuidance.monitoring}</p>
+            </div>
+
+            <label style={styles.label}>
+              Optional Additional Operational Notes
+              <textarea
+                value={additionalNotes}
+                onChange={(event) => setAdditionalNotes(event.target.value)}
+                placeholder="Use system-level operational notes only. Avoid blame, personal judgment, or unnecessary personal details."
+                style={styles.textarea}
+              />
+            </label>
+
+            <button onClick={loadData} style={styles.button}>
+              Refresh Command Intelligence
+            </button>
+          </section>
+
+          <section style={styles.card}>
+            <h2 style={styles.sectionTitle}>Generated Stabilization Command Brief</h2>
+
+            <div style={styles.briefBox}>
+              <pre style={styles.pre}>{commandBrief}</pre>
+            </div>
+          </section>
+        </div>
+      </main>
+    </GovernanceRouteGuard>
   )
 }
 
