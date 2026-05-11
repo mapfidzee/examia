@@ -1,12 +1,22 @@
 'use client'
 
 import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
+import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 
 export default function AuditPage() {
   return (
+    <GovernanceRouteGuard
+      allowedRoles={['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']}
+    >
+      <AuditContent />
+    </GovernanceRouteGuard>
+  )
+}
+
+function AuditContent() {
+  return (
     <main className="min-h-screen bg-[#020617] text-white">
       <section className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-5 py-8 sm:px-8 lg:px-10">
-
         <InfrastructureQuickNav />
 
         <header className="rounded-3xl border border-cyan-900/40 bg-[#0B1120] p-6 shadow-2xl shadow-black/30 sm:p-8">
@@ -29,31 +39,15 @@ export default function AuditPage() {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <SignalCard
-                label="Audit Integrity"
-                value="TRACEABLE"
-              />
-
-              <SignalCard
-                label="Governance Status"
-                value="ACTIVE"
-              />
-
-              <SignalCard
-                label="Continuity Review"
-                value="VISIBLE"
-              />
-
-              <SignalCard
-                label="Operational Meaning"
-                value="NON-PUNITIVE"
-              />
+              <SignalCard label="Audit Integrity" value="TRACEABLE" />
+              <SignalCard label="Governance Status" value="PROTECTED" />
+              <SignalCard label="Continuity Review" value="VISIBLE" />
+              <SignalCard label="Operational Meaning" value="NON-PUNITIVE" />
             </div>
           </div>
         </header>
 
         <section className="grid gap-5 lg:grid-cols-3">
-
           <div className="rounded-3xl border border-cyan-900/40 bg-[#07101F] p-6">
             <p className="text-sm font-semibold uppercase tracking-[0.25em] text-cyan-300">
               Audit Purpose
@@ -102,11 +96,9 @@ export default function AuditPage() {
               structural visibility across high-pressure operational systems.
             </p>
           </div>
-
         </section>
 
         <section className="rounded-3xl border border-cyan-900/40 bg-[#07101F] p-6 sm:p-8">
-
           <p className="text-sm font-semibold uppercase tracking-[0.25em] text-cyan-300">
             Governance Reminder
           </p>
@@ -121,9 +113,7 @@ export default function AuditPage() {
             traceability. The infrastructure must remain healthcare-first,
             structural, governed, and non-punitive at all times.
           </p>
-
         </section>
-
       </section>
     </main>
   )
@@ -142,9 +132,7 @@ function SignalCard({
         {label}
       </p>
 
-      <p className="mt-2 text-lg font-black text-cyan-300">
-        {value}
-      </p>
+      <p className="mt-2 text-lg font-black text-cyan-300">{value}</p>
     </div>
   )
 }
