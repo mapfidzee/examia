@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
-import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -325,10 +324,6 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
   return (
     <main style={styles.page}>
       <div style={styles.container}>
-        <div style={styles.quickNavWrap}>
-          <InfrastructureQuickNav />
-        </div>
-
         <section style={styles.hero}>
           <p style={styles.kicker}>EXAMIA LIS • RELIABILITY INTELLIGENCE</p>
 
@@ -570,9 +565,6 @@ const styles: Record<string, CSSProperties> = {
   container: {
     maxWidth: '1280px',
     margin: '0 auto',
-  },
-  quickNavWrap: {
-    marginBottom: '32px',
   },
   hero: {
     marginBottom: '32px',
