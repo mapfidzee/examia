@@ -3,7 +3,6 @@
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { CSSProperties } from 'react'
-import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import { supabase } from '../../lib/supabase'
 
 type CreatedRequest = {
@@ -156,10 +155,6 @@ export default function RequestPage() {
   return (
     <main style={styles.page}>
       <div style={styles.wrap}>
-        <div style={styles.quickNavWrap}>
-          <InfrastructureQuickNav />
-        </div>
-
         <header style={styles.hero}>
           <p style={styles.eyebrow}>EXAMIA NEED INTAKE ENGINE</p>
           <h1 style={styles.h1}>Submit a Support Need</h1>
@@ -319,9 +314,6 @@ const styles: Record<string, CSSProperties> = {
     width: '100%',
     maxWidth: '980px',
     margin: '0 auto',
-  },
-  quickNavWrap: {
-    marginBottom: '32px',
   },
   hero: {
     marginBottom: '34px',
