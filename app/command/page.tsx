@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
-import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -158,7 +157,7 @@ export default function CommandCenterPage() {
     setOutcomes(outcomeResult.data || [])
     setResponders(responderResult.data || [])
     setInstitutions(institutionResult.data || [])
-    setMessage('Stabilization command intelligence refreshed.')
+    setMessage('Command intelligence refreshed.')
   }
 
   const intelligence = useMemo(() => {
@@ -437,10 +436,6 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
     >
       <main style={styles.page}>
         <div style={styles.container}>
-          <div style={styles.quickNavWrap}>
-            <InfrastructureQuickNav />
-          </div>
-
           <section style={styles.hero}>
             <p style={styles.kicker}>EXAMIA LIS • STABILIZATION COMMAND CENTER</p>
 
@@ -572,19 +567,14 @@ function Select({
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    background: 'linear-gradient(180deg, #020617 0%, #0f172a 100%)',
     color: 'white',
-    padding: '56px 18px',
   },
   container: {
     maxWidth: '1280px',
     margin: '0 auto',
   },
-  quickNavWrap: {
-    marginBottom: '32px',
-  },
   hero: {
-    marginBottom: '32px',
+    marginBottom: '28px',
   },
   kicker: {
     color: '#67e8f9',
@@ -593,7 +583,7 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: '2px',
   },
   title: {
-    fontSize: 'clamp(34px, 6vw, 58px)',
+    fontSize: 'clamp(32px, 5vw, 54px)',
     lineHeight: 1.05,
     margin: '12px 0',
   },
@@ -601,37 +591,43 @@ const styles: Record<string, CSSProperties> = {
     color: '#cbd5e1',
     lineHeight: 1.7,
     maxWidth: '980px',
-    fontSize: '18px',
+    fontSize: '17px',
   },
   message: {
     background: '#064e3b',
     color: '#bbf7d0',
-    padding: '16px',
+    padding: '14px',
     borderRadius: '14px',
     fontWeight: 800,
-    marginBottom: '24px',
+    marginBottom: '22px',
   },
   metricsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
     gap: '16px',
     marginBottom: '24px',
   },
   metricCard: {
+    minHeight: '116px',
     background: '#0f172a',
     border: '1px solid #1e293b',
     borderRadius: '18px',
-    padding: '20px',
+    padding: '18px',
+    overflow: 'hidden',
   },
   metricLabel: {
     color: '#94a3b8',
     fontWeight: 800,
+    fontSize: '13px',
+    margin: 0,
   },
   metricValue: {
-    marginTop: '8px',
-    fontSize: '22px',
-    lineHeight: 1.2,
+    marginTop: '10px',
+    fontSize: 'clamp(13px, 1.5vw, 17px)',
+    lineHeight: 1.25,
     wordBreak: 'break-word',
+    overflowWrap: 'anywhere',
+    letterSpacing: '-0.01em',
   },
   card: {
     background: '#020617',
