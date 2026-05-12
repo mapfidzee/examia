@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
-import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import { supabase } from '../../lib/supabase'
 
@@ -250,10 +249,6 @@ function GovernanceConsoleContent() {
   return (
     <main style={styles.page}>
       <div style={styles.container}>
-        <div style={styles.quickNavWrap}>
-          <InfrastructureQuickNav />
-        </div>
-
         <section style={styles.hero}>
           <p style={styles.kicker}>EXAMIA LIS • GOVERNED STABILIZATION INFRASTRUCTURE</p>
 
@@ -487,9 +482,6 @@ const styles: Record<string, CSSProperties> = {
   container: {
     maxWidth: '1180px',
     margin: '0 auto',
-  },
-  quickNavWrap: {
-    marginBottom: '32px',
   },
   hero: {
     marginBottom: '28px',
