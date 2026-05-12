@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
-import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import { supabase } from '../../lib/supabase'
 
 type TimelineEvent = {
@@ -16,13 +15,7 @@ type TimelineEvent = {
 
 export default function TimelinePage() {
   return (
-    <GovernanceRouteGuard
-      allowedRoles={[
-        'SUPER_ADMIN',
-        'COMMAND_ADMIN',
-        'GOVERNANCE_OFFICER',
-      ]}
-    >
+    <GovernanceRouteGuard allowedRoles={['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']}>
       <TimelineContent />
     </GovernanceRouteGuard>
   )
@@ -31,9 +24,7 @@ export default function TimelinePage() {
 function TimelineContent() {
   const [events, setEvents] = useState<TimelineEvent[]>([])
   const [loading, setLoading] = useState(true)
-  const [message, setMessage] = useState(
-    'Loading governed stabilization chronology...'
-  )
+  const [message, setMessage] = useState('Loading governed stabilization chronology...')
 
   useEffect(() => {
     loadTimeline()
@@ -46,15 +37,11 @@ function TimelineContent() {
   }, [events])
 
   const routingEvents = useMemo(() => {
-    return events.filter((event) =>
-      event.event_type.includes('RESPONDER_ASSIGNED')
-    ).length
+    return events.filter((event) => event.event_type.includes('RESPONDER_ASSIGNED')).length
   }, [events])
 
   const outcomeEvents = useMemo(() => {
-    return events.filter((event) =>
-      event.event_type.includes('OUTCOME')
-    ).length
+    return events.filter((event) => event.event_type.includes('OUTCOME')).length
   }, [events])
 
   async function loadTimeline() {
@@ -99,145 +86,73 @@ function TimelineContent() {
   return (
     <main className="timelinePage">
       <div className="pageShell">
-
-        <InfrastructureQuickNav />
-
         <header className="hero">
-          <p className="eyebrow">
-            EXAMIA TRACEABILITY INFRASTRUCTURE
-          </p>
+          <p className="eyebrow">EXAMIA TRACEABILITY INFRASTRUCTURE</p>
 
-          <h1>
-            Governed Stabilization Chronology
-          </h1>
+          <h1>Governed Stabilization Chronology</h1>
 
           <p className="heroText">
-            This protected timeline preserves institutional memory,
-            continuity visibility, routing traceability, intervention
-            chronology, and operational accountability after disruption
-            is detected inside EXAMIA.
+            This protected timeline preserves institutional memory, continuity visibility,
+            routing traceability, intervention chronology, and operational accountability
+            after disruption is detected inside EXAMIA.
           </p>
         </header>
 
         <section className="metricsGrid">
-          <Metric
-            label="Timeline Events"
-            value={totalEvents}
-          />
-
-          <Metric
-            label="Cases With Memory"
-            value={uniqueCases}
-          />
-
-          <Metric
-            label="Routing Events"
-            value={routingEvents}
-          />
-
-          <Metric
-            label="Outcome Events"
-            value={outcomeEvents}
-          />
+          <Metric label="Timeline Events" value={totalEvents} />
+          <Metric label="Cases With Memory" value={uniqueCases} />
+          <Metric label="Routing Events" value={routingEvents} />
+          <Metric label="Outcome Events" value={outcomeEvents} />
         </section>
 
-        {message && (
-          <p className="message">
-            {message}
-          </p>
-        )}
+        {message && <p className="message">{message}</p>}
 
         <section className="panel">
-
           <div className="panelHeader">
             <div>
-              <p className="sectionKicker">
-                Operational memory
-              </p>
+              <p className="sectionKicker">Operational memory</p>
 
-              <h2>
-                Timeline Events
-              </h2>
+              <h2>Timeline Events</h2>
 
               <p>
-                Every stabilization event below strengthens
-                institutional continuity, auditability,
-                traceability, governance visibility,
-                and operational memory.
+                Every stabilization event below strengthens institutional continuity,
+                auditability, traceability, governance visibility, and operational memory.
               </p>
             </div>
 
-            <button onClick={loadTimeline}>
-              Refresh Timeline
-            </button>
+            <button onClick={loadTimeline}>Refresh Timeline</button>
           </div>
 
           {loading ? (
-            <p className="emptyBox">
-              Loading timeline...
-            </p>
+            <p className="emptyBox">Loading timeline...</p>
           ) : events.length === 0 ? (
-            <p className="emptyBox">
-              No timeline events found.
-            </p>
+            <p className="emptyBox">No timeline events found.</p>
           ) : (
             <div className="timelineList">
-
               {events.map((event) => (
-                <article
-                  className="timelineCard"
-                  key={event.id}
-                >
-
+                <article className="timelineCard" key={event.id}>
                   <div className="timelineTop">
-
                     <div>
-                      <p className="miniLabel">
-                        Case {shortCaseId(event.case_id)}
-                      </p>
+                      <p className="miniLabel">Case {shortCaseId(event.case_id)}</p>
 
-                      <h3>
-                        {event.event_type}
-                      </h3>
+                      <h3>{event.event_type}</h3>
                     </div>
 
-                    <span className="timeBadge">
-                      {formatDateTime(event.created_at)}
-                    </span>
-
+                    <span className="timeBadge">{formatDateTime(event.created_at)}</span>
                   </div>
 
-                  <p className="summary">
-                    {event.event_summary}
-                  </p>
+                  <p className="summary">{event.event_summary}</p>
 
                   <div className="detailGrid">
-
-                    <Detail
-                      label="Case ID"
-                      value={event.case_id}
-                    />
-
-                    <Detail
-                      label="Actor"
-                      value={event.actor || 'Not recorded'}
-                    />
-
-                    <Detail
-                      label="Event ID"
-                      value={event.id}
-                    />
-
+                    <Detail label="Case ID" value={event.case_id} />
+                    <Detail label="Actor" value={event.actor || 'Not recorded'} />
+                    <Detail label="Event ID" value={event.id} />
                   </div>
-
                 </article>
               ))}
-
             </div>
           )}
-
         </section>
-
       </div>
 
       <style jsx>{`
@@ -480,13 +395,7 @@ function TimelineContent() {
   )
 }
 
-function Metric({
-  label,
-  value,
-}: {
-  label: string
-  value: number
-}) {
+function Metric({ label, value }: { label: string; value: number }) {
   return (
     <article className="metricCard">
       <p>{label}</p>
@@ -495,13 +404,7 @@ function Metric({
   )
 }
 
-function Detail({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
+function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div className="detailBox">
       <span>{label}</span>
