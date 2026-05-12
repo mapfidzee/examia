@@ -92,13 +92,13 @@ function ExecutiveShell({ children }: { children: React.ReactNode }) {
 
             <div className="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-5 py-4">
               <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-cyan-200">
-                Current Phase
+                Operational Oversight
               </p>
               <p className="mt-2 text-sm font-bold text-white">
-                World-Class Hardening
+                Continuity • Stabilization • Recovery
               </p>
               <p className="mt-1 text-xs text-slate-300">
-                Governance • Continuity • Recovery • Auditability
+                Institutional coordination with governed audit visibility.
               </p>
             </div>
           </div>
