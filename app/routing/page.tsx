@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
-import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import { evaluateRoutingLifecycle } from '../../lib/lifecycleGovernance'
 import { logAuditEvent } from '../../lib/auditLogger'
 import { supabase } from '../../lib/supabase'
@@ -426,9 +425,7 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
     const currentInstitution = selectedInstitution()
     const currentResponder = selectedResponder()
 
-    const nextStatus = selectedResponderId
-      ? lifecycleDecision.nextStatus
-      : 'ROUTED'
+    const nextStatus = selectedResponderId ? lifecycleDecision.nextStatus : 'ROUTED'
 
     const timelineEventType = selectedResponderId
       ? lifecycleDecision.timelineEventType
@@ -495,7 +492,11 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
       route: '/routing',
       recordType: 'beneficiary_cases',
       recordId: selectedCaseId,
-      summary: `Routed case ${currentCase?.beneficiary_name || selectedCaseId} with priority ${routingPriority}. Status moved to ${nextStatus}. Coordination site: ${currentInstitution?.institution_name || 'none selected'}. Responder: ${currentResponder?.full_name || 'none assigned'}.`,
+      summary: `Routed case ${
+        currentCase?.beneficiary_name || selectedCaseId
+      } with priority ${routingPriority}. Status moved to ${nextStatus}. Coordination site: ${
+        currentInstitution?.institution_name || 'none selected'
+      }. Responder: ${currentResponder?.full_name || 'none assigned'}.`,
       severity:
         routingPriority === 'CRITICAL'
           ? 'CRITICAL'
@@ -539,10 +540,6 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
   return (
     <main style={styles.page}>
       <div style={styles.container}>
-        <div style={styles.quickNavWrap}>
-          <InfrastructureQuickNav />
-        </div>
-
         <section style={styles.hero}>
           <p style={styles.kicker}>EXAMIA LIS • LIFECYCLE ROUTING INTELLIGENCE</p>
           <h1 style={styles.title}>Institutional Coordination + Governed Response Routing</h1>
@@ -904,7 +901,6 @@ const styles: Record<string, CSSProperties> = {
     padding: '56px 18px',
   },
   container: { maxWidth: '1240px', margin: '0 auto' },
-  quickNavWrap: { marginBottom: '32px' },
   hero: { marginBottom: '32px' },
   kicker: { color: '#67e8f9', fontSize: '12px', fontWeight: 900, letterSpacing: '2px' },
   title: { fontSize: 'clamp(34px, 6vw, 58px)', lineHeight: 1.05, margin: '12px 0' },
