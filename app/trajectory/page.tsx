@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
-import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -79,30 +78,14 @@ export default function TrajectoryPage() {
 
   const [message, setMessage] = useState('')
 
-  const [reportTemplate, setReportTemplate] = useState(
-    TRAJECTORY_REPORT_TEMPLATES[0]
-  )
-
-  const [trajectoryFocus, setTrajectoryFocus] = useState(
-    TRAJECTORY_FOCUS_OPTIONS[0]
-  )
-
-  const [trajectoryScope, setTrajectoryScope] = useState(
-    TRAJECTORY_SCOPE_OPTIONS[1]
-  )
-
+  const [reportTemplate, setReportTemplate] = useState(TRAJECTORY_REPORT_TEMPLATES[0])
+  const [trajectoryFocus, setTrajectoryFocus] = useState(TRAJECTORY_FOCUS_OPTIONS[0])
+  const [trajectoryScope, setTrajectoryScope] = useState(TRAJECTORY_SCOPE_OPTIONS[1])
   const [governanceInterpretation, setGovernanceInterpretation] = useState(
     GOVERNANCE_INTERPRETATIONS[0]
   )
-
-  const [recommendedAction, setRecommendedAction] = useState(
-    RECOMMENDED_ACTIONS[0]
-  )
-
-  const [governanceNote, setGovernanceNote] = useState(
-    GOVERNANCE_NOTE_TEMPLATES[0]
-  )
-
+  const [recommendedAction, setRecommendedAction] = useState(RECOMMENDED_ACTIONS[0])
+  const [governanceNote, setGovernanceNote] = useState(GOVERNANCE_NOTE_TEMPLATES[0])
   const [additionalNotes, setAdditionalNotes] = useState('')
 
   useEffect(() => {
@@ -142,39 +125,24 @@ export default function TrajectoryPage() {
       ].includes(item.case_status)
     ).length
 
-    const stabilizedCases = cases.filter(
-      (item) => item.case_status === 'STABILIZED'
-    ).length
-
-    const escalatedCases = cases.filter(
-      (item) => item.case_status === 'ESCALATED'
-    ).length
-
-    const safeguardingFlags = cases.filter(
-      (item) => item.safeguarding_flag
-    ).length
+    const stabilizedCases = cases.filter((item) => item.case_status === 'STABILIZED').length
+    const escalatedCases = cases.filter((item) => item.case_status === 'ESCALATED').length
+    const safeguardingFlags = cases.filter((item) => item.safeguarding_flag).length
 
     const interventionCoverage =
       cases.length === 0
         ? 0
         : Math.round(
-            (new Set(interventions.map((item) => item.case_id)).size /
-              cases.length) *
-              100
+            (new Set(interventions.map((item) => item.case_id)).size / cases.length) * 100
           )
 
     const outcomeCoverage =
       cases.length === 0
         ? 0
-        : Math.round(
-            (new Set(outcomes.map((item) => item.case_id)).size / cases.length) *
-              100
-          )
+        : Math.round((new Set(outcomes.map((item) => item.case_id)).size / cases.length) * 100)
 
     const stabilizationRate =
-      cases.length === 0
-        ? 0
-        : Math.round((stabilizedCases / cases.length) * 100)
+      cases.length === 0 ? 0 : Math.round((stabilizedCases / cases.length) * 100)
 
     let trajectoryStatus = 'STABILIZING'
 
@@ -245,19 +213,15 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
   return (
     <main style={styles.page}>
       <div style={styles.container}>
-        <div style={styles.quickNavWrap}>
-          <InfrastructureQuickNav />
-        </div>
-
         <section style={styles.hero}>
           <p style={styles.kicker}>EXAMIA LIS • TRAJECTORY INTELLIGENCE</p>
 
           <h1 style={styles.title}>Stabilization Trajectory Infrastructure</h1>
 
           <p style={styles.subtitle}>
-            Detect stabilization direction, continuity weakening, escalation
-            accumulation, safeguarding trajectory pressure, and recovery
-            strengthening before operational fragmentation occurs.
+            Detect stabilization direction, continuity weakening, escalation accumulation,
+            safeguarding trajectory pressure, and recovery strengthening before operational
+            fragmentation occurs.
           </p>
         </section>
 
@@ -266,30 +230,18 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
         <section style={styles.metricsGrid}>
           <Metric label="Trajectory Status" value={metrics.trajectoryStatus} />
           <Metric label="Active Cases" value={metrics.activeCases.toString()} />
-          <Metric
-            label="Safeguarding Flags"
-            value={metrics.safeguardingFlags.toString()}
-          />
-          <Metric
-            label="Intervention Coverage"
-            value={`${metrics.interventionCoverage}%`}
-          />
-          <Metric
-            label="Outcome Coverage"
-            value={`${metrics.outcomeCoverage}%`}
-          />
-          <Metric
-            label="Stabilization Rate"
-            value={`${metrics.stabilizationRate}%`}
-          />
+          <Metric label="Safeguarding Flags" value={metrics.safeguardingFlags.toString()} />
+          <Metric label="Intervention Coverage" value={`${metrics.interventionCoverage}%`} />
+          <Metric label="Outcome Coverage" value={`${metrics.outcomeCoverage}%`} />
+          <Metric label="Stabilization Rate" value={`${metrics.stabilizationRate}%`} />
         </section>
 
         <section style={styles.card}>
           <h2 style={styles.sectionTitle}>Trajectory Intelligence Brief Template</h2>
 
           <p style={styles.helper}>
-            Use standardized dropdowns to keep trajectory intelligence
-            governance-safe, operationally coherent, and nationally consistent.
+            Use standardized dropdowns to keep trajectory intelligence governance-safe,
+            operationally coherent, and nationally consistent.
           </p>
 
           <Select
@@ -336,7 +288,6 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
 
           <label style={styles.label}>
             Optional Additional Operational Notes
-
             <textarea
               value={additionalNotes}
               onChange={(event) => setAdditionalNotes(event.target.value)}
@@ -366,7 +317,6 @@ function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div style={styles.metricCard}>
       <p style={styles.metricLabel}>{label}</p>
-
       <h2 style={styles.metricValue}>{value}</h2>
     </div>
   )
@@ -386,12 +336,7 @@ function Select({
   return (
     <label style={styles.label}>
       {label}
-
-      <select
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        style={styles.select}
-      >
+      <select value={value} onChange={(event) => setValue(event.target.value)} style={styles.select}>
         {options.map((item) => (
           <option key={item} value={item}>
             {item}
@@ -413,10 +358,6 @@ const styles: Record<string, CSSProperties> = {
   container: {
     maxWidth: '1200px',
     margin: '0 auto',
-  },
-
-  quickNavWrap: {
-    marginBottom: '32px',
   },
 
   hero: {
