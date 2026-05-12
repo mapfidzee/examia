@@ -8,6 +8,7 @@ import {
   evaluateInterventionLifecycle,
   type ContinuityRisk,
 } from '../../lib/lifecycleGovernance'
+import { logAuditEvent } from '../../lib/auditLogger'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -111,6 +112,17 @@ function InterventionCompletionContent() {
     loadCases()
   }, [])
 
+  async function getAuditActor() {
+    const { data } = await supabase.auth.getUser()
+    const user = data.user
+
+    return {
+      userId: user?.id ?? null,
+      email: user?.email ?? null,
+      role: 'INTERVENTION_GOVERNANCE_USER',
+    }
+  }
+
   async function loadCases() {
     const { data, error } = await supabase
       .from('beneficiary_cases')
@@ -207,6 +219,7 @@ Intervention is not recovery. EXAMIA records the intervention, evaluates continu
     setLoading(true)
     setMessage('')
 
+    const caseItem = selectedCase()
     const lifecycleDecision = evaluateInterventionLifecycle({
       completionStatus,
       continuityRisk,
@@ -256,6 +269,27 @@ Intervention is not recovery. EXAMIA records the intervention, evaluates continu
       return
     }
 
+    const actor = await getAuditActor()
+
+    await logAuditEvent({
+      userId: actor.userId,
+      email: actor.email,
+      role: actor.role,
+      actionType: 'SAVE_INTERVENTION_EVIDENCE',
+      route: '/interventions',
+      recordType: 'beneficiary_cases',
+      recordId: selectedCaseId,
+      summary: `Saved intervention evidence for ${caseItem?.beneficiary_name || selectedCaseId}. Completion: ${completionStatus}. Continuity risk: ${continuityRisk}. Next status: ${lifecycleDecision.nextStatus}.`,
+      severity:
+        continuityRisk === 'CRITICAL'
+          ? 'CRITICAL'
+          : continuityRisk === 'HIGH'
+            ? 'HIGH'
+            : completionStatus === 'ESCALATION_REQUIRED'
+              ? 'HIGH'
+              : 'MODERATE',
+    })
+
     setSelectedCaseId('')
     setInterventionType('')
     setInterventionMode('')
@@ -266,7 +300,7 @@ Intervention is not recovery. EXAMIA records the intervention, evaluates continu
     setResponderTemplate('')
     setAdditionalResponderNotes('')
 
-    setMessage('Controlled intervention evidence saved. Lifecycle governance and timeline memory updated.')
+    setMessage('Controlled intervention evidence saved. Lifecycle governance, timeline memory, and audit trail updated.')
     setLoading(false)
 
     await loadCases()
