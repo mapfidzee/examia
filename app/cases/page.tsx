@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
-import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -278,10 +277,6 @@ export default function BeneficiaryCaseEnginePage() {
   return (
     <main style={styles.page}>
       <div style={styles.container}>
-        <div style={styles.quickNavWrap}>
-          <InfrastructureQuickNav />
-        </div>
-
         <section style={styles.hero}>
           <p style={styles.kicker}>EXAMIA LIS • BENEFICIARY CASE ENGINE</p>
 
@@ -632,9 +627,6 @@ const styles: Record<string, CSSProperties> = {
   container: {
     maxWidth: '1200px',
     margin: '0 auto',
-  },
-  quickNavWrap: {
-    marginBottom: '32px',
   },
   hero: {
     marginBottom: '32px',
