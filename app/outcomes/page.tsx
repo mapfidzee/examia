@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
-import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import { evaluateOutcomeLifecycle } from '../../lib/lifecycleGovernance'
 import { supabase } from '../../lib/supabase'
 
@@ -260,10 +259,6 @@ Outcome is not automatically stabilization. EXAMIA confirms, monitors, or escala
   return (
     <main style={styles.page}>
       <div style={styles.container}>
-        <div style={styles.quickNavWrap}>
-          <InfrastructureQuickNav />
-        </div>
-
         <section style={styles.hero}>
           <p style={styles.kicker}>EXAMIA LIS • LIFECYCLE OUTCOME INTELLIGENCE</p>
 
@@ -439,9 +434,6 @@ const styles: Record<string, CSSProperties> = {
   container: {
     maxWidth: '1280px',
     margin: '0 auto',
-  },
-  quickNavWrap: {
-    marginBottom: '32px',
   },
   hero: {
     marginBottom: '32px',
