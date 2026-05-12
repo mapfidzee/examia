@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
-import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import {
   evaluateInterventionLifecycle,
   type ContinuityRisk,
@@ -316,10 +315,6 @@ Intervention is not recovery. EXAMIA records the intervention, evaluates continu
   return (
     <main style={styles.page}>
       <div style={styles.container}>
-        <div style={styles.quickNavWrap}>
-          <InfrastructureQuickNav />
-        </div>
-
         <section style={styles.hero}>
           <p style={styles.kicker}>EXAMIA LIS • LIFECYCLE INTERVENTION INTELLIGENCE</p>
 
@@ -511,9 +506,6 @@ const styles: Record<string, CSSProperties> = {
   container: {
     maxWidth: '1240px',
     margin: '0 auto',
-  },
-  quickNavWrap: {
-    marginBottom: '32px',
   },
   hero: {
     marginBottom: '32px',
