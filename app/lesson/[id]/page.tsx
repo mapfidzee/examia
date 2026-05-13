@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useEffect, useRef, useState, type ReactNode } from 'react'
+import { use, useEffect, useRef, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 
 type PageProps = {
@@ -60,6 +60,8 @@ type LessonAudioSignal = {
   created_at: string
 }
 
+type RoomRole = 'beneficiary' | 'responder' | 'admin'
+
 type CallState =
   | 'idle'
   | 'calling'
@@ -80,7 +82,7 @@ export default function LessonRoomPage({ params }: PageProps) {
   const [onlineUsers, setOnlineUsers] = useState<any[]>([])
 
   const [name, setName] = useState('')
-  const [role, setRole] = useState<'student' | 'teacher' | 'admin'>('student')
+  const [role, setRole] = useState<RoomRole>('beneficiary')
   const [entered, setEntered] = useState(false)
 
   const [message, setMessage] = useState('')
@@ -110,7 +112,7 @@ export default function LessonRoomPage({ params }: PageProps) {
   const currentCallIdRef = useRef<string | null>(null)
   const incomingCallRef = useRef<LessonAudioSignal | null>(null)
 
-  const isPaid = lesson?.status === 'PAID'
+  const isReady = lesson?.status === 'PAID'
   const isActive = lesson?.status === 'ACTIVE'
   const isClosed =
     lesson?.status === 'COMPLETED' ||
@@ -118,7 +120,7 @@ export default function LessonRoomPage({ params }: PageProps) {
     lesson?.status === 'FAILED'
 
   const liveToolsEnabled = isActive
-  const prepMode = isPaid
+  const prepMode = isReady
 
   useEffect(() => {
     callStateRef.current = callState
@@ -294,19 +296,12 @@ export default function LessonRoomPage({ params }: PageProps) {
   }
 
   async function markActive() {
-    await supabase
-      .from('lesson_requests')
-      .update({ status: 'ACTIVE' })
-      .eq('id', id)
+    await supabase.from('lesson_requests').update({ status: 'ACTIVE' }).eq('id', id)
   }
 
   async function completeLesson() {
     await endCall()
-
-    await supabase
-      .from('lesson_requests')
-      .update({ status: 'COMPLETED' })
-      .eq('id', id)
+    await supabase.from('lesson_requests').update({ status: 'COMPLETED' }).eq('id', id)
   }
 
   async function uploadFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -375,9 +370,7 @@ export default function LessonRoomPage({ params }: PageProps) {
       const audioName = `voice-note-${Date.now()}.webm`
       const audioPath = `${id}/${audioName}`
 
-      const { error } = await supabase.storage
-        .from('lesson-audio')
-        .upload(audioPath, blob)
+      const { error } = await supabase.storage.from('lesson-audio').upload(audioPath, blob)
 
       if (!error) {
         await supabase.from('lesson_audio_notes').insert({
@@ -460,7 +453,7 @@ export default function LessonRoomPage({ params }: PageProps) {
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = event.streams[0]
         remoteAudioRef.current.play().catch(() => {
-          // Browser may require user interaction; Accept Call counts as interaction on mobile.
+          // Browser may require user interaction.
         })
       }
 
@@ -469,10 +462,7 @@ export default function LessonRoomPage({ params }: PageProps) {
     }
 
     peer.onconnectionstatechange = () => {
-      if (
-        peer.connectionState === 'connected' ||
-        peer.iceConnectionState === 'connected'
-      ) {
+      if (peer.connectionState === 'connected' || peer.iceConnectionState === 'connected') {
         setAudioError(null)
         setCallState('connected')
       }
@@ -482,10 +472,7 @@ export default function LessonRoomPage({ params }: PageProps) {
         setCallState('failed')
       }
 
-      if (
-        peer.connectionState === 'disconnected' ||
-        peer.connectionState === 'closed'
-      ) {
+      if (peer.connectionState === 'disconnected' || peer.connectionState === 'closed') {
         if (callStateRef.current !== 'ended') {
           setCallState('ended')
         }
@@ -510,7 +497,7 @@ export default function LessonRoomPage({ params }: PageProps) {
       return stream
     } catch {
       setAudioError(
-        'Microphone access failed. On phone, allow microphone permission and keep the browser tab open.'
+        'Microphone access failed. Allow microphone permission and keep the browser tab open.'
       )
       throw new Error('Microphone access failed')
     }
@@ -607,7 +594,6 @@ export default function LessonRoomPage({ params }: PageProps) {
 
     setCurrentCallId(call.call_id)
     currentCallIdRef.current = call.call_id
-
     setRemoteCaller(call.sender_name)
 
     try {
@@ -701,7 +687,6 @@ export default function LessonRoomPage({ params }: PageProps) {
 
         setCurrentCallId(signal.call_id)
         currentCallIdRef.current = signal.call_id
-
         setRemoteCaller(signal.sender_name)
 
         setCallState('incoming')
@@ -720,10 +705,7 @@ export default function LessonRoomPage({ params }: PageProps) {
           setCallState('connecting')
           callStateRef.current = 'connecting'
 
-          await peerRef.current.setRemoteDescription(
-            new RTCSessionDescription(signal.payload)
-          )
-
+          await peerRef.current.setRemoteDescription(new RTCSessionDescription(signal.payload))
           await flushPendingCandidates()
         } catch {
           setAudioError('Could not complete audio answer handshake.')
@@ -768,9 +750,9 @@ export default function LessonRoomPage({ params }: PageProps) {
     return (
       <main className="min-h-screen bg-slate-950 text-white p-4">
         <div className="max-w-xl mx-auto mt-10 bg-slate-900 border border-slate-800 rounded-2xl p-6">
-          <h1 className="text-2xl font-bold">EXAMIA Lesson Room</h1>
+          <h1 className="text-2xl font-bold">EXAMIA Controlled Intervention Room</h1>
           <p className="text-slate-300 mt-2">
-            Enter your name and role to join this controlled learning room.
+            Enter your name and role to join this governed intervention space.
           </p>
 
           <input
@@ -783,10 +765,10 @@ export default function LessonRoomPage({ params }: PageProps) {
           <select
             className="w-full mt-3 p-3 rounded-xl bg-slate-800 border border-slate-700"
             value={role}
-            onChange={e => setRole(e.target.value as any)}
+            onChange={e => setRole(e.target.value as RoomRole)}
           >
-            <option value="student">Student</option>
-            <option value="teacher">Teacher</option>
+            <option value="beneficiary">Beneficiary</option>
+            <option value="responder">Responder</option>
             <option value="admin">Admin</option>
           </select>
 
@@ -794,7 +776,7 @@ export default function LessonRoomPage({ params }: PageProps) {
             onClick={enterRoom}
             className="w-full mt-5 bg-blue-600 hover:bg-blue-700 rounded-xl p-3 font-semibold"
           >
-            Enter Lesson Room
+            Enter Intervention Room
           </button>
         </div>
       </main>
@@ -806,9 +788,7 @@ export default function LessonRoomPage({ params }: PageProps) {
       {callState === 'incoming' && (
         <div className="fixed inset-x-0 top-0 z-50 border-b border-blue-500 bg-blue-950 p-4 shadow-2xl">
           <div className="mx-auto max-w-5xl">
-            <p className="text-sm font-semibold text-blue-200">
-              Incoming Audio Call
-            </p>
+            <p className="text-sm font-semibold text-blue-200">Incoming Audio Call</p>
             <h2 className="mt-1 text-xl font-bold">
               {remoteCaller || 'Someone'} is calling.
             </h2>
@@ -835,55 +815,62 @@ export default function LessonRoomPage({ params }: PageProps) {
       <div className="max-w-5xl mx-auto space-y-5 pt-2">
         <header className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
           <p className="text-sm text-blue-300 font-semibold">
-            EXAMIA CONTROLLED LESSON SPACE
+            EXAMIA CONTROLLED INTERVENTION SPACE
           </p>
-          <h1 className="text-2xl font-bold mt-1">Lesson Room</h1>
+
+          <h1 className="text-2xl font-bold mt-1">Controlled Intervention Room</h1>
+
           <p className="text-slate-300 mt-2">
-            A governed learning room for preparation, live teaching, files,
-            voice explanations, audio support, and locked lesson completion.
+            A governed low-bandwidth coordination room for intervention communication,
+            files, voice notes, live audio support, and locked completion.
           </p>
 
           <div className="mt-4 flex flex-wrap gap-2">
             <span className="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-sm">
               Status: {lesson?.status || 'Loading'}
             </span>
+
             <span className="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-sm">
               {onlineUsers.length} online
             </span>
+
             <span className="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-sm">
               {callStateText(callState)}
             </span>
+
             {prepMode && (
               <span className="px-3 py-1 rounded-full bg-yellow-900/50 border border-yellow-700 text-sm">
-                Preparation Mode
+                Readiness Mode
               </span>
             )}
+
             {isActive && (
               <span className="px-3 py-1 rounded-full bg-green-900/50 border border-green-700 text-sm">
-                Live Session Active
+                Intervention Active
               </span>
             )}
+
             {isClosed && (
               <span className="px-3 py-1 rounded-full bg-red-900/50 border border-red-700 text-sm">
-                Lesson Locked
+                Intervention Locked
               </span>
             )}
           </div>
         </header>
 
         <section className="grid md:grid-cols-2 gap-4">
-          <Info label="Subject" value={lesson?.subject} />
-          <Info label="Level" value={lesson?.level || 'Not set'} />
-          <Info label="Teacher" value={lesson?.assigned_teacher || 'Not assigned'} />
+          <Info label="Support Domain" value={lesson?.subject} />
+          <Info label="Beneficiary Level" value={lesson?.level || 'Not set'} />
+          <Info label="Assigned Responder" value={lesson?.assigned_teacher || 'Not assigned'} />
           <Info label="Preferred Time" value={lesson?.preferred_time} />
           <Info label="Scheduled Time" value={lesson?.scheduled_time || 'Not scheduled'} />
-          <Info label="Learning Problem" value={lesson?.problem} />
+          <Info label="Support Need" value={lesson?.problem} />
         </section>
 
         <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
           <h2 className="text-xl font-bold">Live Presence</h2>
           <p className="text-slate-400 text-sm mt-1">
-            Who is currently inside the room.
+            Who is currently inside the controlled intervention room.
           </p>
 
           <div className="mt-4 flex flex-wrap gap-2">
@@ -892,16 +879,16 @@ export default function LessonRoomPage({ params }: PageProps) {
                 key={index}
                 className="px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-sm"
               >
-                {user.name} — {user.role}
+                {user.name} — {displayRole(user.role)}
               </span>
             ))}
           </div>
         </section>
 
         <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-          <h2 className="text-xl font-bold">Lesson Control</h2>
+          <h2 className="text-xl font-bold">Intervention Control</h2>
           <p className="text-slate-400 text-sm mt-1">
-            Start, monitor, and close the session.
+            Activate, monitor, and close the governed intervention.
           </p>
 
           <div className="mt-4 flex flex-wrap gap-3">
@@ -910,7 +897,7 @@ export default function LessonRoomPage({ params }: PageProps) {
               disabled={isClosed || isActive}
               className="bg-green-600 disabled:bg-slate-700 hover:bg-green-700 rounded-xl px-4 py-3 font-semibold"
             >
-              Mark Lesson Active
+              Mark Intervention Active
             </button>
 
             <button
@@ -918,7 +905,7 @@ export default function LessonRoomPage({ params }: PageProps) {
               disabled={isClosed}
               className="bg-red-600 disabled:bg-slate-700 hover:bg-red-700 rounded-xl px-4 py-3 font-semibold"
             >
-              Complete Lesson
+              Complete Intervention
             </button>
           </div>
         </section>
@@ -926,13 +913,11 @@ export default function LessonRoomPage({ params }: PageProps) {
         <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
           <h2 className="text-xl font-bold">Live Audio</h2>
           <p className="text-slate-400 text-sm mt-1">
-            Low-data real-time voice support.
+            Low-data real-time voice support for controlled intervention coordination.
           </p>
 
           <div className="mt-4 rounded-xl border border-yellow-700 bg-yellow-900/30 p-4">
-            <p className="font-semibold text-yellow-100">
-              Phone audio instruction
-            </p>
+            <p className="font-semibold text-yellow-100">Mobile audio instruction</p>
             <p className="mt-1 text-sm text-yellow-100/80">
               Keep the phone screen awake during live audio. If the screen sleeps,
               mobile browsers may weaken or stop the connection.
@@ -958,7 +943,7 @@ export default function LessonRoomPage({ params }: PageProps) {
 
             {!wakeLockSupported && (
               <p className="mt-2 text-sm text-red-200">
-                This browser may not support screen wake lock. Keep the phone screen on manually.
+                This browser may not support screen wake lock. Keep the screen on manually.
               </p>
             )}
           </div>
@@ -977,9 +962,7 @@ export default function LessonRoomPage({ params }: PageProps) {
           {callState === 'incoming' && (
             <div className="mt-4 p-4 rounded-xl bg-blue-950 border border-blue-700">
               <h3 className="font-bold">Incoming Audio Call</h3>
-              <p className="text-blue-100 mt-1">
-                {remoteCaller} is calling.
-              </p>
+              <p className="text-blue-100 mt-1">{remoteCaller} is calling.</p>
 
               <div className="mt-4 flex gap-3">
                 <button
@@ -1027,14 +1010,12 @@ export default function LessonRoomPage({ params }: PageProps) {
         </section>
 
         <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-          <h2 className="text-xl font-bold">Lesson Chat</h2>
+          <h2 className="text-xl font-bold">Intervention Communication</h2>
 
           <div className="mt-4 h-80 overflow-y-auto space-y-3 bg-slate-950 border border-slate-800 rounded-xl p-4">
             {messages.map(msg => (
               <div key={msg.id} className="bg-slate-800 rounded-xl p-3">
-                <p className="text-sm text-blue-300 font-semibold">
-                  {msg.sender}
-                </p>
+                <p className="text-sm text-blue-300 font-semibold">{msg.sender}</p>
                 <p className="mt-1">{msg.message}</p>
               </div>
             ))}
@@ -1043,7 +1024,9 @@ export default function LessonRoomPage({ params }: PageProps) {
           <div className="mt-4 flex gap-2">
             <input
               className="flex-1 p-3 rounded-xl bg-slate-800 border border-slate-700"
-              placeholder={isClosed ? 'Lesson is locked' : 'Type a lesson message...'}
+              placeholder={
+                isClosed ? 'Intervention is locked' : 'Type an intervention message...'
+              }
               value={message}
               onChange={e => setMessage(e.target.value)}
               disabled={isClosed}
@@ -1062,7 +1045,7 @@ export default function LessonRoomPage({ params }: PageProps) {
         <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
           <h2 className="text-xl font-bold">Files</h2>
           <p className="text-slate-400 text-sm mt-1">
-            Upload and download learning materials.
+            Upload and download intervention materials.
           </p>
 
           <input
@@ -1072,9 +1055,7 @@ export default function LessonRoomPage({ params }: PageProps) {
             className="mt-4 block w-full text-sm"
           />
 
-          {uploadingFile && (
-            <p className="text-blue-300 mt-2">Uploading file...</p>
-          )}
+          {uploadingFile && <p className="text-blue-300 mt-2">Uploading file...</p>}
 
           <div className="mt-4 space-y-3">
             {files.map(file => (
@@ -1085,7 +1066,7 @@ export default function LessonRoomPage({ params }: PageProps) {
                 <div>
                   <p className="font-semibold">{file.file_name}</p>
                   <p className="text-sm text-slate-400">
-                    Uploaded by {file.uploaded_by_name} ({file.uploaded_by_role})
+                    Uploaded by {file.uploaded_by_name} ({displayRole(file.uploaded_by_role)})
                   </p>
                 </div>
 
@@ -1103,7 +1084,7 @@ export default function LessonRoomPage({ params }: PageProps) {
         <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
           <h2 className="text-xl font-bold">Voice Notes</h2>
           <p className="text-slate-400 text-sm mt-1">
-            Record short explanations for low-data learning.
+            Record short intervention explanations for low-data continuity support.
           </p>
 
           <div className="mt-4 flex gap-3">
@@ -1138,7 +1119,7 @@ export default function LessonRoomPage({ params }: PageProps) {
                 <div>
                   <p className="font-semibold">{note.audio_name}</p>
                   <p className="text-sm text-slate-400">
-                    Recorded by {note.uploaded_by_name} ({note.uploaded_by_role})
+                    Recorded by {note.uploaded_by_name} ({displayRole(note.uploaded_by_role)})
                   </p>
                 </div>
 
@@ -1164,6 +1145,15 @@ function Info({ label, value }: { label: string; value: any }) {
       <p className="font-semibold mt-1">{value || 'Not set'}</p>
     </div>
   )
+}
+
+function displayRole(role: string) {
+  if (role === 'student') return 'Beneficiary'
+  if (role === 'teacher') return 'Responder'
+  if (role === 'beneficiary') return 'Beneficiary'
+  if (role === 'responder') return 'Responder'
+  if (role === 'admin') return 'Admin'
+  return role || 'Participant'
 }
 
 function callStateText(callState: CallState) {
