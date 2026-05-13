@@ -11,17 +11,17 @@ export default function ResponderVerificationPortal() {
   const [province, setProvince] = useState('')
   const [languages, setLanguages] = useState('')
   const [supportDomains, setSupportDomains] = useState('')
-  const [learnerLevels, setLearnerLevels] = useState('')
+  const [beneficiaryLevels, setBeneficiaryLevels] = useState('')
   const [responseRole, setResponseRole] = useState('')
   const [availability, setAvailability] = useState('')
   const [accessCapacity, setAccessCapacity] = useState('')
   const [rate, setRate] = useState('')
   const [competenceSummary, setCompetenceSummary] = useState('')
-  const [learnerSupportApproach, setLearnerSupportApproach] = useState('')
+  const [supportApproach, setSupportApproach] = useState('')
   const [safeguardingReadiness, setSafeguardingReadiness] = useState('')
   const [systemDiscipline, setSystemDiscipline] = useState('')
 
-  const [minorProtectionAgreement, setMinorProtectionAgreement] = useState(false)
+  const [beneficiaryProtectionAgreement, setBeneficiaryProtectionAgreement] = useState(false)
   const [platformContainmentAgreement, setPlatformContainmentAgreement] = useState(false)
   const [noBypassAgreement, setNoBypassAgreement] = useState(false)
 
@@ -47,7 +47,7 @@ export default function ResponderVerificationPortal() {
       return
     }
 
-    if (!minorProtectionAgreement || !platformContainmentAgreement || !noBypassAgreement) {
+    if (!beneficiaryProtectionAgreement || !platformContainmentAgreement || !noBypassAgreement) {
       alert('Please accept all governance agreements before submitting.')
       return
     }
@@ -64,8 +64,8 @@ ${responseRole.trim() || 'Not provided'}
 Competence Summary:
 ${competenceSummary.trim() || 'Not provided'}
 
-Learner Support Approach:
-${learnerSupportApproach.trim() || 'Not provided'}
+Beneficiary Support Approach:
+${supportApproach.trim() || 'Not provided'}
 
 Safeguarding Readiness:
 ${safeguardingReadiness.trim() || 'Not provided'}
@@ -80,7 +80,7 @@ Access Capacity:
 ${accessCapacity.trim() || 'Not provided'}
 
 Governance Agreements:
-- Minor protection accepted
+- Beneficiary protection accepted
 - Platform containment accepted
 - No off-platform bypass accepted
     `.trim()
@@ -89,7 +89,7 @@ Governance Agreements:
       full_name: fullName.trim(),
       email: email.trim().toLowerCase(),
       subjects: splitList(supportDomains),
-      grade_levels: splitList(learnerLevels),
+      grade_levels: splitList(beneficiaryLevels),
       province: province.trim(),
       spoken_languages: splitList(languages),
       hourly_rate: rate ? Number(rate) : null,
@@ -111,16 +111,16 @@ Governance Agreements:
     setProvince('')
     setLanguages('')
     setSupportDomains('')
-    setLearnerLevels('')
+    setBeneficiaryLevels('')
     setResponseRole('')
     setAvailability('')
     setAccessCapacity('')
     setRate('')
     setCompetenceSummary('')
-    setLearnerSupportApproach('')
+    setSupportApproach('')
     setSafeguardingReadiness('')
     setSystemDiscipline('')
-    setMinorProtectionAgreement(false)
+    setBeneficiaryProtectionAgreement(false)
     setPlatformContainmentAgreement(false)
     setNoBypassAgreement(false)
     setLoading(false)
@@ -130,21 +130,20 @@ Governance Agreements:
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.hero}>
-          <p style={styles.kicker}>EXAMIA OS • RESPONDER VERIFICATION</p>
+          <p style={styles.kicker}>EXAMIA • RESPONDER VERIFICATION</p>
 
-          <h1 style={styles.title}>Verified Learning Response Network</h1>
+          <h1 style={styles.title}>Verified Response Network</h1>
 
           <p style={styles.subtitle}>
-            EXAMIA is not only matching students to teachers. It is building a governed
-            learning response system where verified responders help diagnose need,
-            stabilize learning gaps, support students safely, and operate inside controlled
-            digital lesson rooms.
+            EXAMIA is building a governed responder network for continuity support,
+            stabilization assistance, safe beneficiary interaction, and controlled
+            intervention delivery inside traceable institutional pathways.
           </p>
 
           <div style={styles.principleGrid}>
             <div style={styles.principleCard}>Need Intake</div>
             <div style={styles.principleCard}>Responder Verification</div>
-            <div style={styles.principleCard}>Controlled Lesson Space</div>
+            <div style={styles.principleCard}>Controlled Intervention Space</div>
             <div style={styles.principleCard}>Beneficiary Visibility</div>
           </div>
         </section>
@@ -154,7 +153,12 @@ Governance Agreements:
             <Input label="Full Name *" value={fullName} setValue={setFullName} />
             <Input label="Email *" value={email} setValue={setEmail} />
             <Input label="Province / Operating Location" value={province} setValue={setProvince} />
-            <Input label="Languages of Support" value={languages} setValue={setLanguages} placeholder="English, Shona, Ndebele" />
+            <Input
+              label="Languages of Support"
+              value={languages}
+              setValue={setLanguages}
+              placeholder="English, Shona, Ndebele"
+            />
           </Section>
 
           <Section title="2. Response Capability">
@@ -162,21 +166,21 @@ Governance Agreements:
               label="Support Domains *"
               value={supportDomains}
               setValue={setSupportDomains}
-              placeholder="Math recovery, Science support, Reading support, Exam preparation"
+              placeholder="Math recovery, science support, reading support, exam preparation, family support"
             />
 
             <Input
-              label="Learner Levels You Can Support"
-              value={learnerLevels}
-              setValue={setLearnerLevels}
-              placeholder="Grade 7, Form 1, O Level, A Level"
+              label="Beneficiary Levels You Can Support"
+              value={beneficiaryLevels}
+              setValue={setBeneficiaryLevels}
+              placeholder="Grade 7, Form 1, O Level, A Level, adult support"
             />
 
             <Input
               label="Preferred Responder Role"
               value={responseRole}
               setValue={setResponseRole}
-              placeholder="Academic responder, exam coach, homework support, STEM responder"
+              placeholder="Academic responder, exam coach, continuity support responder, STEM responder"
             />
           </Section>
 
@@ -185,28 +189,28 @@ Governance Agreements:
               label="Competence Summary"
               value={competenceSummary}
               setValue={setCompetenceSummary}
-              placeholder="Describe what you can confidently help learners with and why EXAMIA should trust your capability."
+              placeholder="Describe what you can confidently support and why EXAMIA should trust your capability."
             />
 
             <TextArea
-              label="Learner Support Approach"
-              value={learnerSupportApproach}
-              setValue={setLearnerSupportApproach}
-              placeholder="Describe how you identify what a learner does not understand, guide them step by step, and confirm progress."
+              label="Beneficiary Support Approach"
+              value={supportApproach}
+              setValue={setSupportApproach}
+              placeholder="Describe how you identify support needs, guide the beneficiary step by step, and confirm progress."
             />
 
             <TextArea
               label="Safeguarding Readiness"
               value={safeguardingReadiness}
               setValue={setSafeguardingReadiness}
-              placeholder="Describe how you will keep learner interaction respectful, safe, age-appropriate, and professional."
+              placeholder="Describe how you will keep beneficiary interaction respectful, safe, age-appropriate, and professional."
             />
 
             <TextArea
               label="System Discipline"
               value={systemDiscipline}
               setValue={setSystemDiscipline}
-              placeholder="Describe how you will follow EXAMIA rules, keep lessons inside the platform, and avoid informal side arrangements."
+              placeholder="Describe how you will follow EXAMIA rules, keep interventions inside the platform, and avoid informal side arrangements."
             />
           </Section>
 
@@ -237,21 +241,21 @@ Governance Agreements:
             <h3 style={styles.sectionTitle}>5. EXAMIA Governance Lock</h3>
 
             <CheckBox
-              checked={minorProtectionAgreement}
-              setChecked={setMinorProtectionAgreement}
-              label="I understand that EXAMIA may serve minors, and every interaction must protect learner dignity, safety, and trust."
+              checked={beneficiaryProtectionAgreement}
+              setChecked={setBeneficiaryProtectionAgreement}
+              label="I understand that EXAMIA may serve vulnerable beneficiaries, and every interaction must protect dignity, safety, and trust."
             />
 
             <CheckBox
               checked={platformContainmentAgreement}
               setChecked={setPlatformContainmentAgreement}
-              label="I understand that learning support must remain inside the controlled EXAMIA lesson space unless authorized."
+              label="I understand that support must remain inside the controlled EXAMIA intervention space unless authorized."
             />
 
             <CheckBox
               checked={noBypassAgreement}
               setChecked={setNoBypassAgreement}
-              label="I understand that bypassing the platform, soliciting learners privately, or moving lessons off-system can lead to removal."
+              label="I understand that bypassing the platform, soliciting beneficiaries privately, or moving interventions off-system can lead to removal."
             />
           </section>
 
