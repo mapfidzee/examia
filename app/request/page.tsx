@@ -157,7 +157,9 @@ export default function RequestPage() {
       <div style={styles.wrap}>
         <header style={styles.hero}>
           <p style={styles.eyebrow}>EXAMIA NEED INTAKE ENGINE</p>
+
           <h1 style={styles.h1}>Submit a Support Need</h1>
+
           <p style={styles.heroText}>
             Submit a structured need. EXAMIA creates a Request ID immediately so
             the beneficiary can track routing, responder assignment, room
@@ -167,6 +169,7 @@ export default function RequestPage() {
 
         <section style={styles.card}>
           <p style={styles.eyebrow}>Need intake</p>
+
           <h2 style={styles.h2}>Tell us what support is needed</h2>
 
           <form onSubmit={submitRequest} style={styles.form}>
@@ -234,7 +237,7 @@ export default function RequestPage() {
                 <option>O Level</option>
                 <option>A Level</option>
                 <option>College</option>
-                <option>Adult Learner</option>
+                <option>Adult Beneficiary</option>
                 <option>Community Member</option>
                 <option>Field Worker</option>
                 <option>Parent / Caregiver</option>
@@ -248,7 +251,7 @@ export default function RequestPage() {
               <textarea
                 value={needDescription}
                 onChange={(event) => setNeedDescription(event.target.value)}
-                placeholder="Describe the learning difficulty, health education need, training need, community support issue, or coordination request."
+                placeholder="Describe the education support need, health education need, training need, community support issue, or coordination request."
                 style={styles.textarea}
               />
             </label>
@@ -275,14 +278,15 @@ export default function RequestPage() {
         {createdRequest && (
           <section style={styles.successCard}>
             <p style={styles.eyebrow}>Request created</p>
+
             <h2 style={styles.h2}>Save your Request ID</h2>
 
             <div style={styles.requestIdBox}>{createdRequest.id}</div>
 
             <p style={styles.smallText}>
               This ID is used to check routing status, responder assignment,
-              responder readiness, controlled support room access, and completion
-              evidence.
+              responder readiness, controlled intervention room access, and
+              completion evidence.
             </p>
 
             <div style={styles.buttonGrid}>
