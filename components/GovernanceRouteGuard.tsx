@@ -6,6 +6,14 @@ import type { GovernanceRole } from '@/lib/authGovernance'
 import { requireGovernanceRole } from '@/lib/authGovernance'
 import { supabase } from '@/lib/supabase'
 
+type GovernanceAccessState =
+  | 'CHECKING'
+  | 'ALLOWED'
+  | 'DENIED'
+  | 'RESTRICTED'
+  | 'SUSPENDED'
+  | 'INACTIVE'
+
 export default function GovernanceRouteGuard({
   allowedRoles,
   children,
@@ -14,8 +22,13 @@ export default function GovernanceRouteGuard({
   children: ReactNode
 }) {
   const router = useRouter()
-  const [checking, setChecking] = useState(true)
-  const [allowed, setAllowed] = useState(false)
+
+  const [accessState, setAccessState] =
+    useState<GovernanceAccessState>('CHECKING')
+
+  const [message, setMessage] = useState(
+    'Verifying governance access...'
+  )
 
   useEffect(() => {
     checkAccess()
@@ -32,56 +45,283 @@ export default function GovernanceRouteGuard({
       return
     }
 
-    const result = await requireGovernanceRole(allowedRoles)
+    const roleResult = await requireGovernanceRole(
+      allowedRoles
+    )
 
-    if (!result.allowed) {
+    if (!roleResult.allowed) {
+      setAccessState('DENIED')
+
+      setMessage(
+        'Your governance role does not currently permit access to this infrastructure area.'
+      )
+
       router.replace('/access-denied')
       return
     }
 
-    setAllowed(true)
-    setChecking(false)
+    const { data: responder, error: responderError } =
+      await supabase
+        .from('responders')
+        .select(
+          `
+            operational_status,
+            governance_status,
+            governance_reason
+          `
+        )
+        .eq('email', user.email)
+        .maybeSingle()
+
+    if (responderError) {
+      console.error(responderError)
+
+      setAccessState('DENIED')
+
+      setMessage(
+        'Governance verification could not be completed.'
+      )
+
+      router.replace('/access-denied')
+      return
+    }
+
+    if (!responder) {
+      setAccessState('INACTIVE')
+
+      setMessage(
+        'No governed responder profile is currently linked to this account.'
+      )
+
+      router.replace('/access-denied')
+      return
+    }
+
+    const governanceStatus =
+      responder.governance_status || 'PENDING'
+
+    const operationalStatus =
+      responder.operational_status || 'INACTIVE'
+
+    if (
+      governanceStatus === 'SUSPENDED' ||
+      operationalStatus === 'SUSPENDED'
+    ) {
+      setAccessState('SUSPENDED')
+
+      setMessage(
+        responder.governance_reason ||
+          'Governance access is currently suspended.'
+      )
+
+      router.replace('/access-denied')
+      return
+    }
+
+    if (
+      governanceStatus === 'RESTRICTED' ||
+      operationalStatus === 'RESTRICTED'
+    ) {
+      setAccessState('RESTRICTED')
+
+      setMessage(
+        responder.governance_reason ||
+          'Governance access is currently restricted.'
+      )
+
+      router.replace('/access-denied')
+      return
+    }
+
+    if (
+      governanceStatus !== 'ACTIVE' &&
+      governanceStatus !== 'VERIFIED'
+    ) {
+      setAccessState('INACTIVE')
+
+      setMessage(
+        responder.governance_reason ||
+          'Governance activation is not yet complete.'
+      )
+
+      router.replace('/access-denied')
+      return
+    }
+
+    setAccessState('ALLOWED')
   }
 
-  if (checking) {
+  if (accessState === 'CHECKING') {
     return (
-      <main
-        style={{
-          minHeight: '100vh',
-          background: 'linear-gradient(180deg, #020617 0%, #0f172a 100%)',
-          color: 'white',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '24px',
-          textAlign: 'center',
-        }}
-      >
-        <section>
-          <p
-            style={{
-              color: '#67e8f9',
-              fontWeight: 900,
-              letterSpacing: '2px',
-              fontSize: '12px',
-            }}
-          >
-            EXAMIA LIS • GOVERNANCE ACCESS CHECK
-          </p>
-
-          <h1 style={{ fontSize: '34px', marginTop: '12px' }}>
-            Checking governed access...
-          </h1>
-
-          <p style={{ color: '#cbd5e1', marginTop: '12px' }}>
-            Verifying your role, status, and command permissions.
-          </p>
-        </section>
-      </main>
+      <InfrastructureAccessScreen
+        title="Checking governed access..."
+        message={message}
+        status="ACCESS_VERIFICATION_ACTIVE"
+      />
     )
   }
 
-  if (!allowed) return null
+  if (accessState === 'DENIED') {
+    return (
+      <InfrastructureAccessScreen
+        title="Governance access denied"
+        message={message}
+        status="ROLE_ACCESS_DENIED"
+      />
+    )
+  }
+
+  if (accessState === 'RESTRICTED') {
+    return (
+      <InfrastructureAccessScreen
+        title="Governance access restricted"
+        message={message}
+        status="RESTRICTED_ACCESS_STATE"
+      />
+    )
+  }
+
+  if (accessState === 'SUSPENDED') {
+    return (
+      <InfrastructureAccessScreen
+        title="Governance access suspended"
+        message={message}
+        status="SUSPENDED_ACCESS_STATE"
+      />
+    )
+  }
+
+  if (accessState === 'INACTIVE') {
+    return (
+      <InfrastructureAccessScreen
+        title="Governance activation incomplete"
+        message={message}
+        status="INACTIVE_GOVERNANCE_STATE"
+      />
+    )
+  }
 
   return <>{children}</>
+}
+
+function InfrastructureAccessScreen({
+  title,
+  message,
+  status,
+}: {
+  title: string
+  message: string
+  status: string
+}) {
+  return (
+    <main
+      style={{
+        minHeight: '100vh',
+        background:
+          'linear-gradient(180deg, #020617 0%, #0f172a 100%)',
+        color: 'white',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px',
+      }}
+    >
+      <section
+        style={{
+          width: '100%',
+          maxWidth: '720px',
+          background: '#020617',
+          border: '1px solid #1e293b',
+          borderRadius: '28px',
+          padding: '36px',
+          boxShadow: '0 25px 80px rgba(0,0,0,0.45)',
+        }}
+      >
+        <p
+          style={{
+            color: '#67e8f9',
+            fontWeight: 900,
+            letterSpacing: '2px',
+            fontSize: '12px',
+            margin: 0,
+          }}
+        >
+          EXAMIA • GOVERNANCE ACCESS CONTROL
+        </p>
+
+        <h1
+          style={{
+            fontSize: 'clamp(32px, 6vw, 52px)',
+            lineHeight: 1.05,
+            marginTop: '16px',
+            marginBottom: '18px',
+          }}
+        >
+          {title}
+        </h1>
+
+        <div
+          style={{
+            display: 'inline-flex',
+            padding: '10px 14px',
+            borderRadius: '999px',
+            background: '#082f49',
+            border: '1px solid #155e75',
+            color: '#bae6fd',
+            fontSize: '12px',
+            fontWeight: 900,
+            letterSpacing: '0.12em',
+            marginBottom: '24px',
+          }}
+        >
+          {status}
+        </div>
+
+        <p
+          style={{
+            color: '#cbd5e1',
+            lineHeight: 1.8,
+            fontSize: '16px',
+            margin: 0,
+          }}
+        >
+          {message}
+        </p>
+
+        <div
+          style={{
+            marginTop: '28px',
+            padding: '18px',
+            borderRadius: '18px',
+            background: '#0f172a',
+            border: '1px solid #334155',
+          }}
+        >
+          <p
+            style={{
+              color: '#67e8f9',
+              fontWeight: 800,
+              marginTop: 0,
+            }}
+          >
+            Governance Boundary
+          </p>
+
+          <p
+            style={{
+              color: '#cbd5e1',
+              lineHeight: 1.7,
+              marginBottom: 0,
+            }}
+          >
+            EXAMIA protects continuity governance, routing integrity,
+            recovery visibility, institutional memory, safeguarding
+            coordination, and audit traceability. Access is governed
+            according to operational authorization and governance
+            status.
+          </p>
+        </div>
+      </section>
+    </main>
+  )
 }
