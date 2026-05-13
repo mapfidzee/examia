@@ -73,6 +73,42 @@ const GOVERNANCE_REASONS: Record<string, string[]> = {
   ],
 }
 
+const doctrineLocks = [
+  {
+    title: 'Continuity First',
+    text:
+      'EXAMIA exists to keep visible disruption governed until ownership, response, evidence, recovery, and institutional memory are confirmed.',
+  },
+  {
+    title: 'Non-Punitive Interpretation',
+    text:
+      'Signals must support stabilization and fair response. They must not become person-level blame, ranking, or punishment tools.',
+  },
+  {
+    title: 'Traceability Before Closure',
+    text:
+      'A pathway is not complete because action occurred. Closure requires traceable outcome, recovery position, and audit memory.',
+  },
+  {
+    title: 'Access Must Match Authority',
+    text:
+      'Role, governance status, operational status, and responder trust state must control what users can see or do.',
+  },
+]
+
+const deploymentHardening = [
+  'Environment variables verified before deployment',
+  'Supabase project and table access confirmed',
+  'RLS policies reviewed before institutional use',
+  'Command route accessible to authorized leaders only',
+  'Audit route preserved as institutional memory layer',
+  'Recovery protocol reviewed before pilot launch',
+  'Manual degraded-operations capture process defined',
+  'Backup and export discipline scheduled',
+  'Access-denied pathway tested',
+  'Responder suspension and restriction behavior tested',
+]
+
 export default function GovernanceConsolePage() {
   return (
     <GovernanceRouteGuard allowedRoles={['SUPER_ADMIN', 'GOVERNANCE_OFFICER']}>
@@ -88,9 +124,7 @@ function GovernanceConsoleContent() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [message, setMessage] = useState('')
 
-  const [selectedProfile, setSelectedProfile] = useState<TeacherProfile | null>(
-    null
-  )
+  const [selectedProfile, setSelectedProfile] = useState<TeacherProfile | null>(null)
   const [selectedStatus, setSelectedStatus] = useState('')
   const [selectedReason, setSelectedReason] = useState('')
   const [governanceNotes, setGovernanceNotes] = useState('')
@@ -180,6 +214,8 @@ function GovernanceConsoleContent() {
           full_name: selectedProfile.full_name,
           email: selectedProfile.email,
           operational_status: selectedStatus,
+          governance_status: selectedStatus,
+          governance_reason: selectedReason,
           governance_role: 'RESPONDER',
           response_domains: selectedProfile.subjects || [],
           learner_levels: selectedProfile.grade_levels || [],
@@ -205,18 +241,16 @@ function GovernanceConsoleContent() {
       return
     }
 
-    const { error: actionError } = await supabase
-      .from('governance_actions')
-      .insert({
-        responder_id: responderData.id,
-        teacher_profile_id: selectedProfile.id,
-        action_type: `STATUS_CHANGE_TO_${selectedStatus}`,
-        previous_status: previousStatus,
-        new_status: selectedStatus,
-        governance_actor: 'EXAMIA Governance Console',
-        reason: selectedReason,
-        notes: governanceNotes.trim() || null,
-      })
+    const { error: actionError } = await supabase.from('governance_actions').insert({
+      responder_id: responderData.id,
+      teacher_profile_id: selectedProfile.id,
+      action_type: `STATUS_CHANGE_TO_${selectedStatus}`,
+      previous_status: previousStatus,
+      new_status: selectedStatus,
+      governance_actor: 'EXAMIA Governance Console',
+      reason: selectedReason,
+      notes: governanceNotes.trim() || null,
+    })
 
     if (actionError) {
       console.error(actionError)
@@ -236,12 +270,8 @@ function GovernanceConsoleContent() {
   }
 
   const total = profiles.length
-  const pending = profiles.filter(
-    (p) => normalizedStatus(p.status) === 'PENDING'
-  ).length
-  const active = profiles.filter(
-    (p) => normalizedStatus(p.status) === 'ACTIVE'
-  ).length
+  const pending = profiles.filter((p) => normalizedStatus(p.status) === 'PENDING').length
+  const active = profiles.filter((p) => normalizedStatus(p.status) === 'ACTIVE').length
   const restricted = profiles.filter((p) =>
     ['RESTRICTED', 'SUSPENDED'].includes(normalizedStatus(p.status))
   ).length
@@ -250,15 +280,14 @@ function GovernanceConsoleContent() {
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.hero}>
-          <p style={styles.kicker}>EXAMIA LIS • GOVERNED STABILIZATION INFRASTRUCTURE</p>
+          <p style={styles.kicker}>EXAMIA • GOVERNANCE DOCTRINE + ACCESS CONTROL</p>
 
-          <h1 style={styles.title}>Responder Governance Console</h1>
+          <h1 style={styles.title}>Institutional Governance Console</h1>
 
           <p style={styles.subtitle}>
-            This protected governance surface controls responder verification,
-            activation, restriction, suspension, removal, and institutional trust
-            evidence. It supports ownership, continuity, auditability, and
-            controlled operational recovery after disruption becomes visible.
+            This protected governance surface controls responder verification, access
+            authority, restriction, suspension, removal, institutional trust evidence,
+            deployment discipline, and continuity doctrine.
           </p>
         </section>
 
@@ -271,14 +300,50 @@ function GovernanceConsoleContent() {
 
         {message && <p style={styles.message}>{message}</p>}
 
+        <section style={styles.gridTwo}>
+          <div style={styles.card}>
+            <h2 style={styles.cardTitle}>Governance Doctrine Locks</h2>
+            <p style={styles.cardText}>
+              These rules protect EXAMIA from drifting into surveillance, blame, weak
+              closure, or uncontrolled institutional access.
+            </p>
+
+            <div style={styles.doctrineGrid}>
+              {doctrineLocks.map((item) => (
+                <article key={item.title} style={styles.doctrineCard}>
+                  <h3 style={styles.doctrineTitle}>{item.title}</h3>
+                  <p style={styles.doctrineText}>{item.text}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+
+          <div style={styles.card}>
+            <h2 style={styles.cardTitle}>Deployment Hardening Checklist</h2>
+            <p style={styles.cardText}>
+              These checks must be treated as operational doctrine before serious
+              institutional demonstration or pilot deployment.
+            </p>
+
+            <div style={styles.checkList}>
+              {deploymentHardening.map((item) => (
+                <div key={item} style={styles.checkItem}>
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section style={styles.card}>
           <div style={styles.cardHeader}>
             <div>
               <h2 style={styles.cardTitle}>Responder Verification Queue</h2>
 
               <p style={styles.cardText}>
-                Review each responder and move them through the governed
-                lifecycle using structured action reasons.
+                Review each responder and move them through the governed lifecycle using
+                structured action reasons. These decisions affect route access,
+                operational authority, trust scoring, and assignment eligibility.
               </p>
             </div>
 
@@ -304,30 +369,18 @@ function GovernanceConsoleContent() {
                         <p style={styles.email}>{profile.email}</p>
                       </div>
 
-                      <span style={statusBadge(currentStatus)}>
-                        {currentStatus}
-                      </span>
+                      <span style={statusBadge(currentStatus)}>{currentStatus}</span>
                     </div>
 
                     <div style={styles.infoGrid}>
                       <Info label="Domains" value={arrayText(profile.subjects)} />
-                      <Info
-                        label="Operational Levels"
-                        value={arrayText(profile.grade_levels)}
-                      />
-                      <Info
-                        label="Languages"
-                        value={arrayText(profile.spoken_languages)}
-                      />
-                      <Info
-                        label="Region"
-                        value={profile.province || 'Not provided'}
-                      />
+                      <Info label="Operational Levels" value={arrayText(profile.grade_levels)} />
+                      <Info label="Languages" value={arrayText(profile.spoken_languages)} />
+                      <Info label="Region" value={profile.province || 'Not provided'} />
                       <Info
                         label="Expected Rate"
                         value={
-                          profile.hourly_rate !== null &&
-                          profile.hourly_rate !== undefined
+                          profile.hourly_rate !== null && profile.hourly_rate !== undefined
                             ? String(profile.hourly_rate)
                             : 'Not provided'
                         }
@@ -335,9 +388,7 @@ function GovernanceConsoleContent() {
                     </div>
 
                     <details style={styles.details}>
-                      <summary style={styles.summary}>
-                        View verification evidence
-                      </summary>
+                      <summary style={styles.summary}>View verification evidence</summary>
 
                       <pre style={styles.bio}>
                         {profile.bio || 'No verification evidence submitted.'}
@@ -359,9 +410,7 @@ function GovernanceConsoleContent() {
                                 : 1,
                           }}
                         >
-                          {actionLoading === `${profile.id}-${status}`
-                            ? 'Saving...'
-                            : status}
+                          {actionLoading === `${profile.id}-${status}` ? 'Saving...' : status}
                         </button>
                       ))}
                     </div>
@@ -421,10 +470,7 @@ function GovernanceConsoleContent() {
                 Cancel
               </button>
 
-              <button
-                onClick={confirmGovernanceAction}
-                style={styles.confirmButton}
-              >
+              <button onClick={confirmGovernanceAction} style={styles.confirmButton}>
                 Confirm Governance Action
               </button>
             </div>
@@ -498,7 +544,7 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.05,
   },
   subtitle: {
-    maxWidth: '880px',
+    maxWidth: '900px',
     color: '#cbd5e1',
     fontSize: '18px',
     lineHeight: 1.6,
@@ -530,6 +576,13 @@ const styles: Record<string, CSSProperties> = {
     padding: '14px',
     borderRadius: '14px',
     fontWeight: 800,
+    marginBottom: '22px',
+  },
+  gridTwo: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+    gap: '18px',
+    marginBottom: '24px',
   },
   card: {
     background: '#020617',
@@ -537,6 +590,7 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: '24px',
     padding: '24px',
     boxShadow: '0 24px 70px rgba(0,0,0,0.4)',
+    marginBottom: '24px',
   },
   cardHeader: {
     display: 'flex',
@@ -552,7 +606,41 @@ const styles: Record<string, CSSProperties> = {
   },
   cardText: {
     color: '#cbd5e1',
-    lineHeight: 1.5,
+    lineHeight: 1.6,
+  },
+  doctrineGrid: {
+    display: 'grid',
+    gap: '14px',
+    marginTop: '18px',
+  },
+  doctrineCard: {
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '18px',
+    padding: '16px',
+  },
+  doctrineTitle: {
+    color: '#67e8f9',
+    margin: '0 0 8px',
+    fontSize: '17px',
+  },
+  doctrineText: {
+    color: '#cbd5e1',
+    lineHeight: 1.6,
+    margin: 0,
+  },
+  checkList: {
+    display: 'grid',
+    gap: '10px',
+    marginTop: '18px',
+  },
+  checkItem: {
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '14px',
+    padding: '14px',
+    color: '#e2e8f0',
+    fontWeight: 700,
   },
   refreshButton: {
     background: '#67e8f9',
