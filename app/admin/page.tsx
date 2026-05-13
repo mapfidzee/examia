@@ -97,7 +97,7 @@ function AdminContent() {
       .order('created_at', { ascending: false })
 
     if (requestError) {
-      setMessage('Could not load support requests.')
+      setMessage('Could not load support needs.')
       console.error(requestError)
       return
     }
@@ -223,7 +223,7 @@ function AdminContent() {
       .eq('id', request.id)
 
     if (error) {
-      alert('Assignment failed.')
+      alert('Responder routing failed.')
       console.error(error)
     } else {
       await loadAdminData()
@@ -282,11 +282,13 @@ function AdminContent() {
         <section className="frontDoorHero">
           <div className="heroContent">
             <p className="eyebrow">EXAMIA GOVERNED COMMAND CENTER</p>
-            <h1>Admin Command Center</h1>
+
+            <h1>Command Operations Center</h1>
+
             <p className="heroText">
-              Coordinate the full governed support lifecycle from one protected
+              Coordinate the full governed intervention lifecycle from one protected
               authority surface: need intake, responder routing, controlled
-              support rooms, active sessions, completion evidence, and
+              intervention rooms, active interventions, completion evidence, and
               institutional visibility.
             </p>
           </div>
@@ -295,12 +297,15 @@ function AdminContent() {
             <Link href="/admin/teachers" className="quickLink blueLink">
               Responder Governance
             </Link>
+
             <Link href="/request" className="quickLink greenLink">
               Need Intake
             </Link>
+
             <Link href="/student-dashboard" className="quickLink purpleLink">
               Beneficiary Dashboard
             </Link>
+
             <Link href="/teacher-dashboard" className="quickLink orangeLink">
               Responder Dashboard
             </Link>
@@ -308,7 +313,7 @@ function AdminContent() {
         </section>
 
         <section className="commandTiles">
-          <CommandTile label="Total Requests" value={summary.total} tone="blue" />
+          <CommandTile label="Total Needs" value={summary.total} tone="blue" />
           <CommandTile label="New Needs" value={summary.new} tone="amber" />
           <CommandTile label="Routed" value={summary.routed} tone="purple" />
           <CommandTile label="Ready / Active" value={summary.readyActive} tone="green" />
@@ -326,10 +331,10 @@ function AdminContent() {
         <OperationalSection
           kicker="Queue 1"
           title="New Needs"
-          description="These support requests need triage, responder assignment, and scheduling."
+          description="These support needs require triage, responder routing, and scheduling."
           tone="amber"
           requests={newRequests}
-          emptyText="No new support requests right now."
+          emptyText="No new support needs right now."
           responders={responders}
           selectedResponders={selectedResponders}
           timeInputs={timeInputs}
@@ -347,11 +352,11 @@ function AdminContent() {
 
         <OperationalSection
           kicker="Queue 2"
-          title="Routed / Offered Support"
-          description="These requests have been routed or offered and may be waiting for responder confirmation, readiness, or activation."
+          title="Routed / Offered Interventions"
+          description="These needs have been routed or offered and may be waiting for responder confirmation, readiness, or activation."
           tone="purple"
           requests={routedRequests}
-          emptyText="No routed support requests waiting right now."
+          emptyText="No routed interventions waiting right now."
           responders={responders}
           selectedResponders={selectedResponders}
           timeInputs={timeInputs}
@@ -369,11 +374,11 @@ function AdminContent() {
 
         <OperationalSection
           kicker="Queue 3"
-          title="Ready / Active Support"
-          description="These support sessions are ready or active. Admin can open the room, mark active, or complete the session after support is delivered."
+          title="Ready / Active Interventions"
+          description="These interventions are ready or active. Command can open the room, mark active, or complete the intervention after support is delivered."
           tone="green"
           requests={readyActiveRequests}
-          emptyText="No ready or active support sessions right now."
+          emptyText="No ready or active interventions right now."
           responders={responders}
           selectedResponders={selectedResponders}
           timeInputs={timeInputs}
@@ -935,7 +940,7 @@ function OperationalSection({
       ) : (
         <div className="supportList">
           {requests.map((request) => {
-            const supportRoomLink = `${APP_URL}/lesson/${request.id}`
+            const interventionRoomLink = `${APP_URL}/lesson/${request.id}`
             const beneficiaryDashboardLink = `${APP_URL}/student-dashboard?lessonId=${request.id}`
 
             return (
@@ -952,9 +957,9 @@ function OperationalSection({
                 </div>
 
                 <div className="infoGrid">
-                  <Info label="Category / Subject" value={displayCategory(request)} />
-                  <Info label="Grade / Level" value={request.grade_level || 'Not provided'} />
-                  <Info label="Need / Problem" value={request.problem || 'Not provided'} />
+                  <Info label="Support Domain" value={displayCategory(request)} />
+                  <Info label="Beneficiary Level" value={request.grade_level || 'Not provided'} />
+                  <Info label="Support Need" value={request.problem || 'Not provided'} />
                   <Info label="Preferred Time" value={request.preferred_time || 'Not provided'} />
                   <Info label="Scheduled Time" value={formatDateTime(request.scheduled_time, 'Not scheduled')} />
                   <Info label="Assigned Responder" value={request.assigned_teacher || 'Not assigned'} />
@@ -1006,7 +1011,7 @@ function OperationalSection({
                     onClick={() => saveAssignment(request)}
                     disabled={savingId === request.id}
                   >
-                    {savingId === request.id ? 'Saving...' : 'Assign Responder'}
+                    {savingId === request.id ? 'Saving...' : 'Route Responder'}
                   </button>
                 </div>
 
@@ -1040,10 +1045,10 @@ function OperationalSection({
                   />
 
                   <ActionButton
-                    label="Copy Support Room"
+                    label="Copy Intervention Room"
                     color="#2563eb"
                     disabled={false}
-                    onClick={() => copyLink(supportRoomLink, 'Controlled support room link')}
+                    onClick={() => copyLink(interventionRoomLink, 'Controlled intervention room link')}
                   />
 
                   <ActionButton
@@ -1055,8 +1060,8 @@ function OperationalSection({
                 </div>
 
                 <div className="directLinks">
-                  <a href={supportRoomLink} target="_blank" rel="noreferrer">
-                    Open Controlled Support Room
+                  <a href={interventionRoomLink} target="_blank" rel="noreferrer">
+                    Open Controlled Intervention Room
                   </a>
 
                   <a href={beneficiaryDashboardLink} target="_blank" rel="noreferrer">
@@ -1095,24 +1100,24 @@ function CompletionEvidenceSection({
         <p className="sectionKicker">Locked evidence</p>
         <h2>Completion Evidence Log</h2>
         <p>
-          These support sessions are closed. They remain visible for history,
+          These interventions are closed. They remain visible for history,
           accountability, institutional reporting, and proof of completed work.
         </p>
       </div>
 
       {requests.length === 0 ? (
-        <p className="emptyBox">No completed support sessions yet.</p>
+        <p className="emptyBox">No completed interventions yet.</p>
       ) : (
         <div className="evidenceList">
           {requests.map((request) => {
-            const supportRoomLink = `${APP_URL}/lesson/${request.id}`
+            const interventionRoomLink = `${APP_URL}/lesson/${request.id}`
             const beneficiaryDashboardLink = `${APP_URL}/student-dashboard?lessonId=${request.id}`
 
             return (
               <article className="evidenceCard" key={request.id}>
                 <div className="requestTop">
                   <div>
-                    <p className="miniLabel">Completed support record</p>
+                    <p className="miniLabel">Completed intervention record</p>
                     <h3>{displayCategory(request)}</h3>
                   </div>
 
@@ -1120,9 +1125,9 @@ function CompletionEvidenceSection({
                 </div>
 
                 <div className="infoGrid">
-                  <Info label="Category / Subject" value={displayCategory(request)} />
-                  <Info label="Grade / Level" value={request.grade_level || 'Not provided'} />
-                  <Info label="Need / Problem" value={request.problem || 'Not provided'} />
+                  <Info label="Support Domain" value={displayCategory(request)} />
+                  <Info label="Beneficiary Level" value={request.grade_level || 'Not provided'} />
+                  <Info label="Support Need" value={request.problem || 'Not provided'} />
                   <Info label="Assigned Responder" value={request.assigned_teacher || 'Not assigned'} />
                   <Info label="Responder Status" value={request.teacher_status || 'Not offered yet'} />
                   <Info label="Created At" value={formatDateTime(request.created_at)} />
@@ -1133,16 +1138,16 @@ function CompletionEvidenceSection({
                 </div>
 
                 <div className="completedNotice">
-                  This support session is completed and locked. No assignment or
+                  This intervention is completed and locked. No assignment or
                   status action is shown here because this is now an evidence record.
                 </div>
 
                 <div className="evidenceActions">
                   <ActionButton
-                    label="Copy Support Room"
+                    label="Copy Intervention Room"
                     color="#2563eb"
                     disabled={false}
-                    onClick={() => copyLink(supportRoomLink, 'Controlled support room link')}
+                    onClick={() => copyLink(interventionRoomLink, 'Controlled intervention room link')}
                   />
 
                   <ActionButton
@@ -1152,8 +1157,8 @@ function CompletionEvidenceSection({
                     onClick={() => copyLink(beneficiaryDashboardLink, 'Beneficiary dashboard link')}
                   />
 
-                  <a href={supportRoomLink} target="_blank" rel="noreferrer">
-                    Open Controlled Support Room
+                  <a href={interventionRoomLink} target="_blank" rel="noreferrer">
+                    Open Controlled Intervention Room
                   </a>
 
                   <a href={beneficiaryDashboardLink} target="_blank" rel="noreferrer">
