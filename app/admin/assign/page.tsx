@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import { supabase } from '../../../lib/supabase'
 
-type LessonRequest = {
+type SupportRequest = {
   id: string
   subject: string
   problem: string
@@ -17,7 +17,7 @@ type LessonRequest = {
   created_at: string
 }
 
-type TeacherProfile = {
+type ResponderProfile = {
   id: string
   full_name: string
   email: string
@@ -39,9 +39,9 @@ export default function AdminAssignPage() {
 
 function AdminAssignContent() {
   const [mounted, setMounted] = useState(false)
-  const [lessons, setLessons] = useState<LessonRequest[]>([])
-  const [teachers, setTeachers] = useState<TeacherProfile[]>([])
-  const [selectedTeacherByLesson, setSelectedTeacherByLesson] = useState<Record<string, string>>({})
+  const [requests, setRequests] = useState<SupportRequest[]>([])
+  const [responders, setResponders] = useState<ResponderProfile[]>([])
+  const [selectedResponderByRequest, setSelectedResponderByRequest] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
 
@@ -58,110 +58,110 @@ function AdminAssignContent() {
   async function loadData() {
     setLoading(true)
 
-    const { data: lessonData, error: lessonError } = await supabase
+    const { data: requestData, error: requestError } = await supabase
       .from('lesson_requests')
       .select('*')
       .order('created_at', { ascending: false })
 
-    if (lessonError) {
-      console.error(lessonError)
+    if (requestError) {
+      console.error(requestError)
       alert('Could not load support requests.')
       setLoading(false)
       return
     }
 
-    const { data: teacherData, error: teacherError } = await supabase
+    const { data: responderData, error: responderError } = await supabase
       .from('teacher_profiles')
       .select('*')
-      .eq('status', 'APPROVED')
+      .in('status', ['APPROVED', 'VERIFIED', 'ACTIVE'])
       .order('full_name', { ascending: true })
 
-    if (teacherError) {
-      console.error(teacherError)
+    if (responderError) {
+      console.error(responderError)
       alert('Could not load approved responders.')
       setLoading(false)
       return
     }
 
-    setLessons(lessonData || [])
-    setTeachers(teacherData || [])
+    setRequests(requestData || [])
+    setResponders(responderData || [])
     setLoading(false)
   }
 
-  async function assignTeacher(lesson: LessonRequest) {
-    const teacherId = selectedTeacherByLesson[lesson.id]
+  async function routeResponder(request: SupportRequest) {
+    const responderId = selectedResponderByRequest[request.id]
 
-    if (!teacherId) {
+    if (!responderId) {
       alert('Please select an approved responder first.')
       return
     }
 
-    const selectedTeacher = teachers.find((teacher) => teacher.id === teacherId)
+    const selectedResponder = responders.find((responder) => responder.id === responderId)
 
-    if (!selectedTeacher) {
+    if (!selectedResponder) {
       alert('Selected responder was not found.')
       return
     }
 
-    setMessage('Assigning responder...')
+    setMessage('Routing responder...')
 
     const { error } = await supabase
       .from('lesson_requests')
       .update({
-        teacher_id: selectedTeacher.id,
-        assigned_teacher: selectedTeacher.full_name,
+        teacher_id: selectedResponder.id,
+        assigned_teacher: selectedResponder.full_name,
         teacher_status: 'OFFERED',
       })
-      .eq('id', lesson.id)
+      .eq('id', request.id)
 
     if (error) {
       console.error(error)
-      alert('Could not assign responder.')
+      alert('Could not route responder.')
       setMessage('')
       return
     }
 
-    setMessage(`Support request offered to ${selectedTeacher.full_name}.`)
+    setMessage(`Support request routed to ${selectedResponder.full_name}.`)
     await loadData()
   }
 
-  function updateSelectedTeacher(lessonId: string, teacherId: string) {
-    setSelectedTeacherByLesson((current) => ({
+  function updateSelectedResponder(requestId: string, responderId: string) {
+    setSelectedResponderByRequest((current) => ({
       ...current,
-      [lessonId]: teacherId,
+      [requestId]: responderId,
     }))
   }
 
-  const unassignedLessons = lessons.filter((lesson) => !lesson.teacher_id)
-  const offeredLessons = lessons.filter((lesson) => lesson.teacher_status === 'OFFERED')
-  const acceptedLessons = lessons.filter((lesson) => lesson.teacher_status === 'ACCEPTED')
-  const declinedLessons = lessons.filter((lesson) => lesson.teacher_status === 'DECLINED')
+  const unassignedRequests = requests.filter((request) => !request.teacher_id)
+  const offeredRequests = requests.filter((request) => request.teacher_status === 'OFFERED')
+  const acceptedRequests = requests.filter((request) => request.teacher_status === 'ACCEPTED')
+  const declinedRequests = requests.filter((request) => request.teacher_status === 'DECLINED')
 
   return (
     <main className="assignPage">
       <div className="pageWrap">
         <header className="hero">
-          <p className="eyebrow">EXAMIA GOVERNED ASSIGNMENT</p>
-          <h1>Responder Assignment</h1>
+          <p className="eyebrow">EXAMIA GOVERNED ROUTING</p>
+          <h1>Responder Routing</h1>
           <p>
-            Match support requests with approved responders. This protected
-            assignment surface supports ownership, continuity, recovery
-            coordination, and controlled operational follow-through.
+            Route support requests to approved responders. This protected routing
+            surface supports ownership, continuity, recovery coordination, and
+            controlled operational follow-through.
           </p>
         </header>
 
         <section className="statsGrid">
-          <Stat title="Unassigned" value={unassignedLessons.length} />
-          <Stat title="Offered" value={offeredLessons.length} />
-          <Stat title="Accepted" value={acceptedLessons.length} />
-          <Stat title="Declined" value={declinedLessons.length} />
+          <Stat title="Unrouted" value={unassignedRequests.length} />
+          <Stat title="Offered" value={offeredRequests.length} />
+          <Stat title="Accepted" value={acceptedRequests.length} />
+          <Stat title="Declined" value={declinedRequests.length} />
         </section>
 
         {message && <p className="message">{message}</p>}
 
         {loading ? (
           <section className="panel">
-            <p>Loading assignment data...</p>
+            <p>Loading routing data...</p>
           </section>
         ) : (
           <section className="panel">
@@ -173,55 +173,55 @@ function AdminAssignContent() {
               </p>
             </div>
 
-            {lessons.length === 0 ? (
+            {requests.length === 0 ? (
               <p className="empty">No support requests found.</p>
             ) : (
-              <div className="lessonList">
-                {lessons.map((lesson) => (
-                  <article className="lessonCard" key={lesson.id}>
-                    <div className="lessonTop">
+              <div className="requestList">
+                {requests.map((request) => (
+                  <article className="requestCard" key={request.id}>
+                    <div className="requestTop">
                       <div>
-                        <h3>{lesson.subject}</h3>
-                        <p className="lessonMeta">
-                          Request status: {lesson.status || 'Not set'} · Responder status:{' '}
-                          {lesson.teacher_status || 'Not offered'}
+                        <h3>{request.subject}</h3>
+                        <p className="requestMeta">
+                          Request status: {request.status || 'Not set'} · Responder status:{' '}
+                          {request.teacher_status || 'Not offered'}
                         </p>
                       </div>
 
                       <span className="badge">
-                        {lesson.teacher_status || 'UNASSIGNED'}
+                        {request.teacher_status || 'UNROUTED'}
                       </span>
                     </div>
 
                     <div className="problemBox">
                       <span>Support need</span>
-                      <p>{lesson.problem}</p>
+                      <p>{request.problem}</p>
                     </div>
 
                     <div className="detailsGrid">
-                      <Detail label="Preferred Time" value={lesson.preferred_time || 'Not provided'} />
-                      <Detail label="Scheduled Time" value={lesson.scheduled_time || 'Not scheduled'} />
-                      <Detail label="Assigned Responder" value={lesson.assigned_teacher || 'None yet'} />
+                      <Detail label="Preferred Time" value={request.preferred_time || 'Not provided'} />
+                      <Detail label="Scheduled Time" value={request.scheduled_time || 'Not scheduled'} />
+                      <Detail label="Assigned Responder" value={request.assigned_teacher || 'None yet'} />
                     </div>
 
                     <div className="assignBox">
                       <label>
                         Select approved responder
                         <select
-                          value={selectedTeacherByLesson[lesson.id] || ''}
-                          onChange={(event) => updateSelectedTeacher(lesson.id, event.target.value)}
+                          value={selectedResponderByRequest[request.id] || ''}
+                          onChange={(event) => updateSelectedResponder(request.id, event.target.value)}
                         >
                           <option value="">Choose responder...</option>
-                          {teachers.map((teacher) => (
-                            <option key={teacher.id} value={teacher.id}>
-                              {teacher.full_name} — {formatList(teacher.subjects)}
+                          {responders.map((responder) => (
+                            <option key={responder.id} value={responder.id}>
+                              {responder.full_name} — {formatList(responder.subjects)}
                             </option>
                           ))}
                         </select>
                       </label>
 
-                      <button onClick={() => assignTeacher(lesson)}>
-                        Offer Request to Responder
+                      <button onClick={() => routeResponder(request)}>
+                        Route Request to Responder
                       </button>
                     </div>
                   </article>
@@ -282,7 +282,7 @@ function AdminAssignContent() {
 
         .statCard,
         .panel,
-        .lessonCard {
+        .requestCard {
           background: #0f172a;
           border: 1px solid rgba(255, 255, 255, 0.14);
           border-radius: 24px;
@@ -338,29 +338,29 @@ function AdminAssignContent() {
           line-height: 1.55;
         }
 
-        .lessonList {
+        .requestList {
           display: grid;
           gap: 16px;
         }
 
-        .lessonCard {
+        .requestCard {
           padding: 22px;
         }
 
-        .lessonTop {
+        .requestTop {
           display: flex;
           flex-direction: column;
           gap: 12px;
           margin-bottom: 16px;
         }
 
-        .lessonTop h3 {
+        .requestTop h3 {
           margin: 0;
           font-size: 26px;
           letter-spacing: -0.04em;
         }
 
-        .lessonMeta {
+        .requestMeta {
           margin: 8px 0 0;
           color: #bfdbfe;
           line-height: 1.45;
@@ -482,7 +482,7 @@ function AdminAssignContent() {
             grid-template-columns: repeat(4, 1fr);
           }
 
-          .lessonTop {
+          .requestTop {
             flex-direction: row;
             align-items: flex-start;
             justify-content: space-between;
