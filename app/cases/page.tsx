@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
+import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -94,6 +95,14 @@ const OUTCOME_TEMPLATES = [
 ]
 
 export default function BeneficiaryCaseEnginePage() {
+  return (
+    <CGIGovernanceShell>
+      <BeneficiaryCaseEngineContent />
+    </CGIGovernanceShell>
+  )
+}
+
+function BeneficiaryCaseEngineContent() {
   const [cases, setCases] = useState<BeneficiaryCase[]>([])
 
   const [beneficiaryName, setBeneficiaryName] = useState('')
@@ -278,7 +287,7 @@ export default function BeneficiaryCaseEnginePage() {
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.hero}>
-          <p style={styles.kicker}>EXAMIA LIS • BENEFICIARY CASE ENGINE</p>
+          <p style={styles.kicker}>TSINAXA CGI • CASE GOVERNANCE</p>
 
           <h1 style={styles.title}>Beneficiary Stabilization Infrastructure</h1>
 
@@ -308,11 +317,7 @@ export default function BeneficiaryCaseEnginePage() {
           </p>
 
           <div style={styles.grid}>
-            <Input
-              label="Beneficiary Name"
-              value={beneficiaryName}
-              setValue={setBeneficiaryName}
-            />
+            <Input label="Beneficiary Name" value={beneficiaryName} setValue={setBeneficiaryName} />
 
             <Select
               label="Beneficiary Level / Population Group"
@@ -425,10 +430,7 @@ export default function BeneficiaryCaseEnginePage() {
 
                 <div style={styles.infoGrid}>
                   <Info label="Lifecycle" value={caseItem.case_status} />
-                  <Info
-                    label="Beneficiary Level"
-                    value={caseItem.beneficiary_level || 'Not provided'}
-                  />
+                  <Info label="Beneficiary Level" value={caseItem.beneficiary_level || 'Not provided'} />
                   <Info label="Region" value={caseItem.region || 'Not provided'} />
                   <Info
                     label="Institution / Referral"
@@ -460,9 +462,7 @@ export default function BeneficiaryCaseEnginePage() {
                   <label style={styles.label}>Structured Stabilization Action</label>
 
                   <select
-                    onChange={(event) =>
-                      applyInterventionSummary(caseItem, event.target.value)
-                    }
+                    onChange={(event) => applyInterventionSummary(caseItem, event.target.value)}
                     style={styles.select}
                     value=""
                   >
@@ -480,9 +480,7 @@ export default function BeneficiaryCaseEnginePage() {
                   <label style={styles.label}>Structured Outcome Summary</label>
 
                   <select
-                    onChange={(event) =>
-                      applyOutcomeSummary(caseItem, event.target.value)
-                    }
+                    onChange={(event) => applyOutcomeSummary(caseItem, event.target.value)}
                     style={styles.select}
                     value=""
                   >
@@ -563,11 +561,7 @@ function Select({
   return (
     <label style={styles.label}>
       {label}
-      <select
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        style={styles.select}
-      >
+      <select value={value} onChange={(event) => setValue(event.target.value)} style={styles.select}>
         {options.map((option, index) => (
           <option key={`${option || 'blank'}-${index}`} value={option}>
             {option || 'Select option'}
@@ -620,9 +614,7 @@ function severityBadge(level: string): CSSProperties {
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    background: 'linear-gradient(180deg, #020617 0%, #0f172a 100%)',
     color: 'white',
-    padding: '56px 18px',
   },
   container: {
     maxWidth: '1200px',
