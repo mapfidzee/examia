@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
+import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -133,7 +134,9 @@ function getCommandGuidance(status: string) {
 export default function CommandCenterPage() {
   return (
     <GovernanceRouteGuard allowedRoles={['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']}>
-      <CommandCenterContent />
+      <CGIGovernanceShell>
+        <CommandCenterContent />
+      </CGIGovernanceShell>
     </GovernanceRouteGuard>
   )
 }
@@ -192,7 +195,9 @@ function CommandCenterContent() {
   const intelligence = useMemo(() => {
     const totalCases = cases.length
 
-    const activeCases = cases.filter((item) => ACTIVE_CASE_STATUSES.includes(item.case_status)).length
+    const activeCases = cases.filter((item) =>
+      ACTIVE_CASE_STATUSES.includes(item.case_status)
+    ).length
     const stabilizedCases = cases.filter((item) => item.case_status === 'STABILIZED').length
     const escalatedCases = cases.filter((item) => item.case_status === 'ESCALATED').length
     const criticalCases = cases.filter((item) => item.severity_level === 'CRITICAL').length
@@ -501,7 +506,7 @@ function CommandCenterContent() {
   ]
 
   const commandBrief = `
-EXAMIA CONTINUITY GOVERNANCE COMMAND BRIEF
+TSINAXA CGI CONTINUITY GOVERNANCE COMMAND BRIEF
 
 Report Template:
 ${reportTemplate}
@@ -565,7 +570,7 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.hero}>
-          <p style={styles.kicker}>EXAMIA • EXECUTIVE COMMAND INTELLIGENCE</p>
+          <p style={styles.kicker}>TSINAXA CGI • EXECUTIVE COMMAND INTELLIGENCE</p>
 
           <h1 style={styles.title}>Continuity Governance Command Center</h1>
 
@@ -612,7 +617,10 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
           <Panel title="Recovery Command Status" note="Evidence of movement from intervention to confirmed outcome.">
             <CommandRow label="Intervention Coverage" value={`${intelligence.interventionCoverage}%`} />
             <CommandRow label="Outcome Coverage" value={`${intelligence.outcomeCoverage}%`} />
-            <CommandRow label="Unresolved Intervention Pathways" value={intelligence.unresolvedInterventionPathways.toString()} />
+            <CommandRow
+              label="Unresolved Intervention Pathways"
+              value={intelligence.unresolvedInterventionPathways.toString()}
+            />
             <CommandRow label="Stalled Stabilization Cases" value={intelligence.stalledCases.toString()} />
           </Panel>
 
