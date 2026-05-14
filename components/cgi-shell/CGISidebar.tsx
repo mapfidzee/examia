@@ -54,9 +54,7 @@ export default function CGISidebar() {
 
                       {item.status !== 'ACTIVE' && (
                         <span className="rounded-full border border-neutral-700 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-neutral-500">
-                          {item.status === 'FUTURE_RLI'
-                            ? 'RLI'
-                            : 'Legacy'}
+                          {item.status === 'FUTURE_RLI' ? 'RLI' : 'Legacy'}
                         </span>
                       )}
                     </div>
