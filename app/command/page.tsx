@@ -7,6 +7,7 @@ import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { evaluateContinuityIntelligence } from '../lib/continuityIntelligence'
 import { evaluatePressurePropagation } from '../lib/pressurePropagation'
 import { evaluateTrajectoryIntelligence } from '../lib/trajectoryIntelligence'
+import { evaluateStructuralMemory } from '../lib/structuralMemory'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -98,6 +99,7 @@ const COMMAND_REPORT_TEMPLATES = [
   'Recovery and continuity command brief',
   'Pressure propagation command brief',
   'Trajectory intelligence command brief',
+  'Structural memory command brief',
 ]
 
 const COMMAND_FOCUS_OPTIONS = [
@@ -105,6 +107,7 @@ const COMMAND_FOCUS_OPTIONS = [
   'Operational disruption visibility',
   'Pressure propagation visibility',
   'Trajectory direction visibility',
+  'Structural memory visibility',
   'Recovery and continuity visibility',
   'Routing and bottleneck visibility',
   'Safeguarding coordination visibility',
@@ -124,7 +127,7 @@ function getCommandGuidance(status: string) {
   if (status === 'STABLE_COMMAND_STATUS') {
     return {
       interpretation:
-        'Operational continuity appears controlled. Continue monitoring unresolved pathways, recovery movement, pressure propagation, trajectory direction, and governance integrity.',
+        'Operational continuity appears controlled. Continue monitoring unresolved pathways, recovery movement, pressure propagation, trajectory direction, structural memory, and governance integrity.',
       action:
         'Maintain standard continuity monitoring and continue routine coordination review.',
       monitoring: 'Stable command monitoring remains active.',
@@ -134,9 +137,9 @@ function getCommandGuidance(status: string) {
   if (status === 'WATCH_COMMAND_STATUS') {
     return {
       interpretation:
-        'Early continuity pressure is visible. Leaders should monitor routing pressure, recovery movement, pressure propagation, trajectory drift, unresolved pathways, and safeguarding signals.',
+        'Early continuity pressure is visible. Leaders should monitor routing pressure, recovery movement, pressure propagation, trajectory drift, structural recurrence, unresolved pathways, and safeguarding signals.',
       action:
-        'Review active pathways, responder distribution, stabilization conversion, propagation signals, and trajectory movement before pressure increases.',
+        'Review active pathways, responder distribution, stabilization conversion, propagation signals, trajectory movement, and repeated instability patterns before pressure increases.',
       monitoring: 'Watch-level command monitoring remains active.',
     }
   }
@@ -144,18 +147,18 @@ function getCommandGuidance(status: string) {
   if (status === 'ELEVATED_COMMAND_STATUS') {
     return {
       interpretation:
-        'Multiple continuity pressure signals are visible. Routing concentration, pressure spread, trajectory weakness, recovery weakness, bottlenecks, or safeguarding pressure may require coordinated action.',
+        'Multiple continuity pressure signals are visible. Routing concentration, pressure spread, trajectory weakness, structural recurrence, recovery weakness, bottlenecks, or safeguarding pressure may require coordinated action.',
       action:
-        'Prioritize command review, rebalance responder load, inspect propagation sources, review trajectory drift, strengthen recovery pathways, and verify governance traceability.',
+        'Prioritize command review, rebalance responder load, inspect propagation sources, review trajectory drift, inspect recurring structural patterns, strengthen recovery pathways, and verify governance traceability.',
       monitoring: 'Elevated command monitoring remains active.',
     }
   }
 
   return {
     interpretation:
-      'Critical continuity pressure is visible. Unresolved disruption, pressure propagation, trajectory deterioration, recovery weakness, safeguarding pressure, or bottlenecks may be threatening institutional stability.',
+      'Critical continuity pressure is visible. Unresolved disruption, pressure propagation, trajectory deterioration, structural recurrence, recovery weakness, safeguarding pressure, or bottlenecks may be threatening institutional stability.',
     action:
-      'Activate governance escalation, redistribute stabilization load, review stuck pathways, inspect propagation corridors, verify trajectory direction, and confirm recovery ownership.',
+      'Activate governance escalation, redistribute stabilization load, review stuck pathways, inspect propagation corridors, verify trajectory direction, inspect structural memory patterns, and confirm recovery ownership.',
     monitoring: 'Critical command escalation monitoring is active.',
   }
 }
@@ -334,6 +337,7 @@ function CommandCenterContent() {
       intervention_type: item.intervention_type,
       intervention_status: item.intervention_status || 'PENDING',
       responder_id: item.responder_id || item.assigned_responder_id,
+      assigned_responder_id: item.assigned_responder_id,
       created_at: item.created_at,
       completed_at: item.completed_at,
     }))
@@ -345,6 +349,16 @@ function CommandCenterContent() {
       stabilization_status: item.stabilization_status,
       recovery_status: item.recovery_status,
       created_at: item.created_at,
+    }))
+
+    const mappedResponders = responders.map((item) => ({
+      id: item.id,
+      governance_status:
+        item.governance_status || item.responder_status || item.operational_status,
+      responder_status: item.responder_status || item.operational_status,
+      operational_status: item.operational_status,
+      trust_score: item.trust_score,
+      active_case_count: item.active_case_count,
     }))
 
     const continuityScores = evaluateContinuityIntelligence({
@@ -366,14 +380,7 @@ function CommandCenterContent() {
       routingActions: mappedRoutingActions,
       interventions: mappedInterventions,
       outcomes: mappedOutcomes,
-      responders: responders.map((item) => ({
-        id: item.id,
-        governance_status:
-          item.governance_status || item.responder_status || item.operational_status,
-        responder_status: item.responder_status || item.operational_status,
-        trust_score: item.trust_score,
-        active_case_count: item.active_case_count,
-      })),
+      responders: mappedResponders,
     })
 
     const trajectoryIntelligence = evaluateTrajectoryIntelligence({
@@ -381,6 +388,14 @@ function CommandCenterContent() {
       routingActions: mappedRoutingActions,
       interventions: mappedInterventions,
       outcomes: mappedOutcomes,
+    })
+
+    const structuralMemory = evaluateStructuralMemory({
+      cases,
+      routingActions: mappedRoutingActions,
+      interventions: mappedInterventions,
+      outcomes: mappedOutcomes,
+      responders: mappedResponders,
     })
 
     const predictiveStatus =
@@ -444,9 +459,19 @@ function CommandCenterContent() {
               ? 1
               : 0
 
+    const structuralMemoryRiskPoints =
+      structuralMemory.structuralMemoryState === 'SYSTEMIC_MEMORY_RISK'
+        ? 4
+        : structuralMemory.structuralMemoryState === 'STRUCTURAL_FRAGILITY'
+          ? 3
+          : structuralMemory.structuralMemoryState === 'RECURRING_PATTERN'
+            ? 2
+            : 0
+
     const riskPoints =
       pressureRiskPoints +
       trajectoryRiskPoints +
+      structuralMemoryRiskPoints +
       (predictiveStatus === 'HIGH_FORECAST_PRESSURE'
         ? 3
         : predictiveStatus === 'MODERATE_FORECAST_PRESSURE'
@@ -478,9 +503,9 @@ function CommandCenterContent() {
           : 0)
 
     const commandStatus =
-      riskPoints >= 14
+      riskPoints >= 16
         ? 'CRITICAL_COMMAND_STATUS'
-        : riskPoints >= 9
+        : riskPoints >= 10
           ? 'ELEVATED_COMMAND_STATUS'
           : riskPoints >= 3
             ? 'WATCH_COMMAND_STATUS'
@@ -498,6 +523,12 @@ function CommandCenterContent() {
         status: trajectoryIntelligence.trajectoryDirection,
         interpretation: trajectoryIntelligence.executiveSummary,
         action: trajectoryIntelligence.actionCue,
+      },
+      {
+        label: 'Structural Memory',
+        status: structuralMemory.structuralMemoryState,
+        interpretation: structuralMemory.executiveSummary,
+        action: structuralMemory.actionCue,
       },
       {
         label: 'Continuity State',
@@ -595,6 +626,7 @@ function CommandCenterContent() {
       continuityScores,
       pressurePropagation,
       trajectoryIntelligence,
+      structuralMemory,
     }
   }, [cases, routingActions, interventions, outcomes, responders, institutions])
 
@@ -612,6 +644,12 @@ function CommandCenterContent() {
       status: intelligence.trajectoryIntelligence.dominantTrajectorySignal,
       interpretation: `The leading trajectory signal is ${intelligence.trajectoryIntelligence.dominantTrajectorySignal}.`,
       action: intelligence.trajectoryIntelligence.actionCue,
+    },
+    {
+      label: 'Dominant Structural Memory Pattern',
+      status: intelligence.structuralMemory.dominantMemoryPattern,
+      interpretation: `The leading structural memory pattern is ${intelligence.structuralMemory.dominantMemoryPattern}.`,
+      action: intelligence.structuralMemory.actionCue,
     },
     {
       label: 'Unresolved Intervention Pathways',
@@ -666,17 +704,26 @@ ${intelligence.pressurePropagation.pressurePropagationState}
 Trajectory Direction:
 ${intelligence.trajectoryIntelligence.trajectoryDirection}
 
+Structural Memory State:
+${intelligence.structuralMemory.structuralMemoryState}
+
 Pressure Propagation Severity:
 ${intelligence.pressurePropagation.severity}
 
 Trajectory Severity:
 ${intelligence.trajectoryIntelligence.severity}
 
+Structural Memory Severity:
+${intelligence.structuralMemory.severity}
+
 Dominant Pressure Source:
 ${intelligence.pressurePropagation.dominantPressureSource}
 
 Dominant Trajectory Signal:
 ${intelligence.trajectoryIntelligence.dominantTrajectorySignal}
+
+Dominant Structural Memory Pattern:
+${intelligence.structuralMemory.dominantMemoryPattern}
 
 Core Command Metrics:
 Total Cases: ${intelligence.totalCases}
@@ -716,6 +763,15 @@ Recovery Direction: ${intelligence.trajectoryIntelligence.recoveryDirection}/100
 Stabilization Trend: ${intelligence.trajectoryIntelligence.stabilizationTrend}/100
 Unresolved Momentum: ${intelligence.trajectoryIntelligence.unresolvedMomentum}/100
 
+Structural Memory Intelligence:
+Structural Memory Risk: ${intelligence.structuralMemory.structuralMemoryRisk}/100
+Routing Failure Recurrence: ${intelligence.structuralMemory.routingFailureRecurrence}/100
+Escalation Corridor Recurrence: ${intelligence.structuralMemory.escalationCorridorRecurrence}/100
+Institutional Fragility Signature: ${intelligence.structuralMemory.institutionalFragilitySignature}/100
+Intervention Failure Pattern: ${intelligence.structuralMemory.interventionFailurePattern}/100
+Responder Strain Recurrence: ${intelligence.structuralMemory.responderStrainRecurrence}/100
+Continuity Collapse Recurrence: ${intelligence.structuralMemory.continuityCollapseRecurrence}/100
+
 Executive Command Signals:
 Predictive Status: ${intelligence.predictiveStatus}
 Routing Pressure Status: ${intelligence.routingPressureStatus}
@@ -737,6 +793,9 @@ ${intelligence.pressurePropagation.executiveSummary}
 Trajectory Interpretation:
 ${intelligence.trajectoryIntelligence.executiveSummary}
 
+Structural Memory Interpretation:
+${intelligence.structuralMemory.executiveSummary}
+
 Governance Interpretation:
 ${commandGuidance.interpretation}
 
@@ -749,8 +808,11 @@ ${intelligence.pressurePropagation.actionCue}
 Trajectory Action:
 ${intelligence.trajectoryIntelligence.actionCue}
 
+Structural Memory Action:
+${intelligence.structuralMemory.actionCue}
+
 Governance-Safe Command Meaning:
-This command brief consolidates operational disruption visibility, continuity risk, pressure propagation, trajectory direction, routing ownership, bottleneck pressure, recovery movement, intervention coverage, outcome coverage, safeguarding visibility, regional pressure, governance integrity, and institutional memory into one executive command view. It supports system-level action without assigning blame to responders, institutions, beneficiaries, families, or partners.
+This command brief consolidates operational disruption visibility, continuity risk, pressure propagation, trajectory direction, structural memory, routing ownership, bottleneck pressure, recovery movement, intervention coverage, outcome coverage, safeguarding visibility, regional pressure, governance integrity, and institutional memory into one executive command view. It supports system-level action without assigning blame to responders, institutions, beneficiaries, families, or partners.
 
 Monitoring Note:
 ${commandGuidance.monitoring}
@@ -770,8 +832,8 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
           <p style={styles.subtitle}>
             Govern what happens after visible disruption enters an institutional pathway:
             routing, response ownership, pressure propagation, trajectory direction,
-            evidence, recovery, escalation, accountability, and institutional memory until
-            stabilization is confirmed.
+            structural memory, evidence, recovery, escalation, accountability, and
+            institutional memory until stabilization is confirmed.
           </p>
 
           <div style={styles.commandBanner}>
@@ -794,6 +856,10 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
             value={intelligence.trajectoryIntelligence.trajectoryDirection}
           />
           <Metric
+            label="Memory State"
+            value={intelligence.structuralMemory.structuralMemoryState}
+          />
+          <Metric
             label="Propagation Risk"
             value={`${intelligence.pressurePropagation.propagationRisk}/100`}
           />
@@ -801,10 +867,9 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
             label="Trajectory Risk"
             value={`${intelligence.trajectoryIntelligence.trajectoryRisk}/100`}
           />
-          <Metric label="Recovery Status" value={intelligence.recoveryStatus} />
           <Metric
-            label="Survivability Score"
-            value={`${intelligence.continuityScores.operationalSurvivabilityScore}/100`}
+            label="Memory Risk"
+            value={`${intelligence.structuralMemory.structuralMemoryRisk}/100`}
           />
         </section>
 
@@ -876,14 +941,72 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
           </div>
         </section>
 
+        <section style={styles.memoryHero}>
+          <div>
+            <p style={styles.scoreLabel}>Structural Memory State</p>
+            <h2 style={styles.memoryState}>
+              {intelligence.structuralMemory.structuralMemoryState}
+            </h2>
+            <p style={styles.helper}>
+              {intelligence.structuralMemory.executiveSummary}
+            </p>
+          </div>
+
+          <div style={styles.metricsGrid}>
+            <Metric
+              label="Structural Memory Risk"
+              value={`${intelligence.structuralMemory.structuralMemoryRisk}/100`}
+            />
+            <Metric
+              label="Routing Failure Recurrence"
+              value={`${intelligence.structuralMemory.routingFailureRecurrence}/100`}
+            />
+            <Metric
+              label="Escalation Corridor Recurrence"
+              value={`${intelligence.structuralMemory.escalationCorridorRecurrence}/100`}
+            />
+            <Metric
+              label="Institutional Fragility"
+              value={`${intelligence.structuralMemory.institutionalFragilitySignature}/100`}
+            />
+            <Metric
+              label="Intervention Failure Pattern"
+              value={`${intelligence.structuralMemory.interventionFailurePattern}/100`}
+            />
+            <Metric
+              label="Responder Strain Recurrence"
+              value={`${intelligence.structuralMemory.responderStrainRecurrence}/100`}
+            />
+            <Metric
+              label="Continuity Collapse Recurrence"
+              value={`${intelligence.structuralMemory.continuityCollapseRecurrence}/100`}
+            />
+          </div>
+
+          <div style={styles.metricsGrid}>
+            <Metric
+              label="Memory Severity"
+              value={intelligence.structuralMemory.severity}
+            />
+            <Metric
+              label="Dominant Memory Pattern"
+              value={intelligence.structuralMemory.dominantMemoryPattern}
+            />
+            <Metric
+              label="Memory Action"
+              value={intelligence.structuralMemory.actionCue}
+            />
+          </div>
+        </section>
+
         <section style={styles.sectionGrid}>
-          <Panel title="Operational Stability Overview" note="Executive view of continuity posture, pressure propagation, and trajectory direction.">
+          <Panel title="Operational Stability Overview" note="Executive view of continuity posture, pressure propagation, trajectory direction, and structural memory.">
             {intelligence.operationalSignals.map((signal) => (
               <SignalCard key={signal.label} signal={signal} />
             ))}
           </Panel>
 
-          <Panel title="Continuity Risk Zones" note="Where disruption risks spreading, drifting, or disappearing after notice.">
+          <Panel title="Continuity Risk Zones" note="Where disruption risks spreading, drifting, repeating, or disappearing after notice.">
             {continuityRiskZones.map((signal) => (
               <SignalCard key={signal.label} signal={signal} />
             ))}
@@ -951,6 +1074,9 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
             <h3 style={styles.alignedTitle}>Auto-Aligned Trajectory Interpretation</h3>
             <p style={styles.alignedText}>{intelligence.trajectoryIntelligence.executiveSummary}</p>
 
+            <h3 style={styles.alignedTitle}>Auto-Aligned Structural Memory Interpretation</h3>
+            <p style={styles.alignedText}>{intelligence.structuralMemory.executiveSummary}</p>
+
             <h3 style={styles.alignedTitle}>Auto-Aligned Command Action</h3>
             <p style={styles.alignedText}>{commandGuidance.action}</p>
 
@@ -959,6 +1085,9 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
 
             <h3 style={styles.alignedTitle}>Auto-Aligned Trajectory Action</h3>
             <p style={styles.alignedText}>{intelligence.trajectoryIntelligence.actionCue}</p>
+
+            <h3 style={styles.alignedTitle}>Auto-Aligned Structural Memory Action</h3>
+            <p style={styles.alignedText}>{intelligence.structuralMemory.actionCue}</p>
 
             <h3 style={styles.alignedTitle}>Auto-Aligned Monitoring Note</h3>
             <p style={styles.alignedText}>{commandGuidance.monitoring}</p>
@@ -1120,6 +1249,13 @@ const styles: Record<string, CSSProperties> = {
     padding: '24px',
     marginBottom: '24px',
   },
+  memoryHero: {
+    background: '#1f2937',
+    border: '1px solid #94a3b8',
+    borderRadius: '24px',
+    padding: '24px',
+    marginBottom: '24px',
+  },
   scoreLabel: {
     color: '#94a3b8',
     fontWeight: 900,
@@ -1131,6 +1267,12 @@ const styles: Record<string, CSSProperties> = {
     fontSize: 'clamp(36px, 7vw, 68px)',
     margin: '0 0 18px',
     color: '#a78bfa',
+    letterSpacing: '-0.05em',
+  },
+  memoryState: {
+    fontSize: 'clamp(36px, 7vw, 68px)',
+    margin: '0 0 18px',
+    color: '#d1d5db',
     letterSpacing: '-0.05em',
   },
   metricsGrid: {
