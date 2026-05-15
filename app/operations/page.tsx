@@ -5,6 +5,7 @@ import type { CSSProperties } from 'react'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { evaluateContinuityIntelligence } from '../lib/continuityIntelligence'
 import { evaluatePressurePropagation } from '../lib/pressurePropagation'
+import { evaluateTrajectoryIntelligence } from '../lib/trajectoryIntelligence'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -83,6 +84,7 @@ const REPORT_TEMPLATES = [
   'Responder workload brief',
   'Institutional routing pressure brief',
   'Intervention completion reliability brief',
+  'Trajectory intelligence brief',
 ]
 
 const OPERATING_LEVELS = [
@@ -106,6 +108,10 @@ const PRESSURE_FOCUS = [
   'Routing friction',
   'Coordination instability',
   'Stabilization drag',
+  'Trajectory risk',
+  'Continuity drift',
+  'Escalation momentum',
+  'Recovery direction',
 ]
 
 const ACTION_TEMPLATES = [
@@ -118,6 +124,7 @@ const ACTION_TEMPLATES = [
   'Improve intervention completion evidence and follow-up discipline.',
   'Review routing delays, responder load, and intervention gaps before pressure becomes systemic.',
   'Activate command review, inspect unresolved pathways, and prioritize high-severity or safeguarding-linked cases.',
+  'Strengthen routing ownership, intervention completion, and outcome confirmation to restore clear stabilization direction.',
 ]
 
 export default function OperationsPage() {
@@ -263,6 +270,43 @@ function OperationsContent() {
     (item) => !item.assigned_responder_id,
   ).length
 
+  const mappedRoutingActions = routingActions.map((item) => ({
+    id: item.id,
+    case_id: item.case_id,
+    routing_status: item.routing_status,
+    priority_level: item.routing_priority,
+    routing_decision: item.routing_reason,
+    responder_id: item.assigned_responder_id,
+    assigned_responder_id: item.assigned_responder_id,
+    institution_id: item.institution_id,
+    created_at: item.created_at,
+  }))
+
+  const mappedInterventions = interventions.map((item) => ({
+    id: item.id,
+    case_id: item.case_id,
+    intervention_type: item.intervention_type,
+    intervention_status:
+      item.intervention_status ||
+      (item.intervention_summary ? 'COMPLETED' : 'PENDING'),
+    responder_id: item.responder_id || item.assigned_responder_id,
+    created_at: item.created_at,
+    completed_at: item.completed_at,
+  }))
+
+  const mappedOutcomes = cases
+    .filter((item) => item.outcome_summary)
+    .map((item) => ({
+      id: `case-outcome-${item.id}`,
+      case_id: item.id,
+      outcome_status:
+        item.case_status === 'STABILIZED' ? 'STABILIZED' : 'OUTCOME_RECORDED',
+      stabilization_status:
+        item.case_status === 'STABILIZED' ? 'STABILIZED' : 'PARTIAL',
+      recovery_status:
+        item.case_status === 'STABILIZED' ? 'RECOVERING' : 'UNDER_REVIEW',
+    }))
+
   const continuityScores = evaluateContinuityIntelligence({
     totalCases: cases.length,
     activeCases: activeCases.length,
@@ -279,39 +323,9 @@ function OperationsContent() {
 
   const pressurePropagation = evaluatePressurePropagation({
     cases,
-    routingActions: routingActions.map((item) => ({
-      id: item.id,
-      case_id: item.case_id,
-      routing_status: item.routing_status,
-      priority_level: item.routing_priority,
-      routing_decision: item.routing_reason,
-      responder_id: item.assigned_responder_id,
-      institution_id: item.institution_id,
-      created_at: item.created_at,
-    })),
-    interventions: interventions.map((item) => ({
-      id: item.id,
-      case_id: item.case_id,
-      intervention_type: item.intervention_type,
-      intervention_status:
-        item.intervention_status ||
-        (item.intervention_summary ? 'COMPLETED' : 'PENDING'),
-      responder_id: item.responder_id || item.assigned_responder_id,
-      created_at: item.created_at,
-      completed_at: item.completed_at,
-    })),
-    outcomes: cases
-      .filter((item) => item.outcome_summary)
-      .map((item) => ({
-        id: `case-outcome-${item.id}`,
-        case_id: item.id,
-        outcome_status:
-          item.case_status === 'STABILIZED' ? 'STABILIZED' : 'OUTCOME_RECORDED',
-        stabilization_status:
-          item.case_status === 'STABILIZED' ? 'STABILIZED' : 'PARTIAL',
-        recovery_status:
-          item.case_status === 'STABILIZED' ? 'STABILIZED' : 'UNDER_REVIEW',
-      })),
+    routingActions: mappedRoutingActions,
+    interventions: mappedInterventions,
+    outcomes: mappedOutcomes,
     responders: responders.map((item) => ({
       id: item.id,
       governance_status:
@@ -320,6 +334,13 @@ function OperationsContent() {
       trust_score: item.trust_score,
       active_case_count: item.active_case_count,
     })),
+  })
+
+  const trajectoryIntelligence = evaluateTrajectoryIntelligence({
+    cases,
+    routingActions: mappedRoutingActions,
+    interventions: mappedInterventions,
+    outcomes: mappedOutcomes,
   })
 
   const topRegions = regionBreakdown(cases)
@@ -348,6 +369,15 @@ ${continuityScores.continuityState}
 Pressure Propagation State:
 ${pressurePropagation.pressurePropagationState}
 
+Trajectory Direction:
+${trajectoryIntelligence.trajectoryDirection}
+
+Trajectory Severity:
+${trajectoryIntelligence.severity}
+
+Dominant Trajectory Signal:
+${trajectoryIntelligence.dominantTrajectorySignal}
+
 Pressure Propagation Severity:
 ${pressurePropagation.severity}
 
@@ -368,6 +398,14 @@ Responder Pressure: ${pressurePropagation.responderPressure}/100
 Escalation Velocity: ${pressurePropagation.escalationVelocity}/100
 Coordination Instability: ${pressurePropagation.coordinationInstability}/100
 Stabilization Drag: ${pressurePropagation.stabilizationDrag}/100
+
+Trajectory Intelligence:
+Trajectory Risk: ${trajectoryIntelligence.trajectoryRisk}/100
+Continuity Drift: ${trajectoryIntelligence.continuityDrift}/100
+Escalation Momentum: ${trajectoryIntelligence.escalationMomentum}/100
+Recovery Direction: ${trajectoryIntelligence.recoveryDirection}/100
+Stabilization Trend: ${trajectoryIntelligence.stabilizationTrend}/100
+Unresolved Momentum: ${trajectoryIntelligence.unresolvedMomentum}/100
 
 Core Metrics:
 Total Beneficiary Cases: ${cases.length}
@@ -390,14 +428,20 @@ Routed Without Responder Ownership: ${routedWithoutResponder}
 Pressure Interpretation:
 ${pressurePropagation.executiveSummary}
 
-Recommended Action Cue:
+Trajectory Interpretation:
+${trajectoryIntelligence.executiveSummary}
+
+Recommended Pressure Action Cue:
 ${pressurePropagation.actionCue}
+
+Recommended Trajectory Action Cue:
+${trajectoryIntelligence.actionCue}
 
 Selected Governance Action Cue:
 ${actionCue}
 
 Governance-Safe Interpretation:
-This brief separates operational activity from continuity confidence. It does not assume that routing, intervention, or outcome documentation automatically means stabilization is durable. CGI evaluates continuity integrity, stabilization confidence, pressure propagation, escalation velocity, routing friction, recovery reliability, and operational survivability so leaders can see whether the system is merely busy or actually stabilizing.
+This brief separates operational activity from continuity confidence. It does not assume that routing, intervention, or outcome documentation automatically means stabilization is durable. CGI evaluates continuity integrity, stabilization confidence, pressure propagation, trajectory direction, escalation velocity, routing friction, recovery reliability, and operational survivability so leaders can see whether the system is merely busy, spreading instability, drifting, recovering, or actually stabilizing.
 
 Additional Operational Notes:
 ${additionalNotes.trim() || 'No additional operational notes entered.'}
@@ -415,8 +459,8 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
           <p style={styles.subtitle}>
             Convert cases, routing activity, intervention evidence, safeguarding flags,
             institutions, and responder capacity into continuity integrity, pressure
-            propagation, stabilization confidence, escalation pressure, recovery
-            reliability, and operational survivability intelligence.
+            propagation, trajectory intelligence, stabilization confidence, escalation
+            pressure, recovery reliability, and operational survivability intelligence.
           </p>
         </section>
 
@@ -498,6 +542,52 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
           </div>
         </section>
 
+        <section style={styles.trajectoryHero}>
+          <div>
+            <p style={styles.scoreLabel}>Trajectory Direction</p>
+            <h2 style={styles.trajectoryState}>
+              {trajectoryIntelligence.trajectoryDirection}
+            </h2>
+            <p style={styles.panelNote}>{trajectoryIntelligence.executiveSummary}</p>
+          </div>
+
+          <div style={styles.scoreGrid}>
+            <ScoreMetric
+              label="Trajectory Risk"
+              value={trajectoryIntelligence.trajectoryRisk}
+            />
+            <ScoreMetric
+              label="Continuity Drift"
+              value={trajectoryIntelligence.continuityDrift}
+            />
+            <ScoreMetric
+              label="Escalation Momentum"
+              value={trajectoryIntelligence.escalationMomentum}
+            />
+            <ScoreMetric
+              label="Recovery Direction"
+              value={trajectoryIntelligence.recoveryDirection}
+            />
+            <ScoreMetric
+              label="Stabilization Trend"
+              value={trajectoryIntelligence.stabilizationTrend}
+            />
+            <ScoreMetric
+              label="Unresolved Momentum"
+              value={trajectoryIntelligence.unresolvedMomentum}
+            />
+          </div>
+
+          <div style={styles.pressureInsight}>
+            <Info label="Severity" value={trajectoryIntelligence.severity} />
+            <Info
+              label="Dominant Signal"
+              value={trajectoryIntelligence.dominantTrajectorySignal}
+            />
+            <Info label="Action Cue" value={trajectoryIntelligence.actionCue} />
+          </div>
+        </section>
+
         <section style={styles.metricsGrid}>
           <Metric label="Total Cases" value={cases.length} />
           <Metric label="Active Stabilization" value={activeCases.length} />
@@ -571,7 +661,8 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
 
             <p style={styles.panelNote}>
               This brief separates activity from stabilization confidence and adds pressure
-              propagation visibility so leaders can see whether instability is spreading.
+              propagation plus trajectory visibility so leaders can see whether instability
+              is spreading, drifting, recovering, or stabilizing.
             </p>
 
             <pre style={styles.summaryBox}>{operationalBrief()}</pre>
@@ -605,8 +696,8 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
             <p style={styles.panelNote}>
               This pressure status is an early operational signal derived from routed cases,
               escalations, critical cases, and safeguarding visibility. Pressure Propagation
-              Intelligence goes deeper by evaluating whether pressure is spreading across
-              routing, responders, coordination, and stabilization pathways.
+              Intelligence evaluates whether pressure is spreading, while Trajectory
+              Intelligence evaluates where continuity is heading.
             </p>
 
             <div style={styles.infoGrid}>
@@ -806,6 +897,14 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: '24px',
     boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
   },
+  trajectoryHero: {
+    background: '#172554',
+    border: '1px solid #4338ca',
+    borderRadius: '28px',
+    padding: '24px',
+    marginBottom: '24px',
+    boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
+  },
   scoreLabel: {
     color: '#94a3b8',
     fontWeight: 900,
@@ -823,6 +922,12 @@ const styles: Record<string, CSSProperties> = {
     fontSize: 'clamp(38px, 8vw, 76px)',
     margin: '8px 0 20px',
     color: '#fbbf24',
+    letterSpacing: '-0.05em',
+  },
+  trajectoryState: {
+    fontSize: 'clamp(38px, 8vw, 76px)',
+    margin: '8px 0 20px',
+    color: '#a78bfa',
     letterSpacing: '-0.05em',
   },
   scoreGrid: {
