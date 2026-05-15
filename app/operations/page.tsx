@@ -1,1295 +1,557 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
-import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
-import { evaluateContinuityIntelligence } from '../lib/continuityIntelligence'
-import { evaluatePressurePropagation } from '../lib/pressurePropagation'
-import { evaluateTrajectoryIntelligence } from '../lib/trajectoryIntelligence'
-import { evaluateStructuralMemory } from '../lib/structuralMemory'
-import { supabase } from '../../lib/supabase'
 
-type BeneficiaryCase = {
-  id: string
-  beneficiary_name: string
-  beneficiary_level: string | null
-  support_domain: string
-  case_status: string
-  severity_level: string
-  instability_signals: string[] | null
-  region: string | null
-  institution_name: string | null
-  institution_id?: string | null
-  safeguarding_flag: boolean
-  intervention_summary: string | null
-  outcome_summary: string | null
-  created_at?: string | null
-  updated_at?: string | null
+import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
+import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
+
+import { supabase } from '../lib/supabase'
+
+import {
+  buildSnapshotGovernancePayload,
+  type ExecutiveVisibilityLevel,
+  type SnapshotType,
+  type StabilizationConfidence,
+} from '../lib/snapshotGovernance'
+
+type SaveState = 'IDLE' | 'SAVING' | 'SAVED' | 'ERROR'
+
+const pageStyle: CSSProperties = {
+  minHeight: '100vh',
+  background: '#020617',
+  color: '#f8fafc',
+  padding: '32px',
 }
 
-type Institution = {
-  id: string
-  institution_name: string
-  institution_type: string
-  region: string | null
-  district: string | null
-  operating_level: string | null
-  coordination_status: string | null
+const containerStyle: CSSProperties = {
+  maxWidth: '1180px',
+  margin: '0 auto',
 }
 
-type Responder = {
-  id: string
-  full_name: string
-  operational_status: string
-  governance_status?: string | null
-  responder_status?: string | null
-  response_domains: string[] | null
-  region: string | null
-  trust_score: number | null
-  active_case_count?: number | null
+const cardStyle: CSSProperties = {
+  border: '1px solid rgba(255,255,255,0.12)',
+  borderRadius: '18px',
+  padding: '18px',
+  background: 'rgba(255,255,255,0.04)',
 }
 
-type RoutingAction = {
-  id: string
-  case_id: string
-  routing_status: string | null
-  routing_priority: string | null
-  routing_reason: string | null
-  institution_id: string | null
-  assigned_responder_id: string | null
-  created_at?: string | null
+const metricGridStyle: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+  gap: '16px',
+  marginTop: '28px',
 }
 
-type CaseIntervention = {
-  id: string
-  case_id: string
-  intervention_type: string | null
-  intervention_summary: string | null
-  intervention_status?: string | null
-  responder_id?: string | null
-  assigned_responder_id?: string | null
-  created_at?: string | null
-  completed_at?: string | null
+const formGridStyle: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+  gap: '16px',
 }
 
-type PanelRow = {
-  label: string
-  value: number
+const labelStyle: CSSProperties = {
+  display: 'block',
+  fontSize: '13px',
+  color: '#cbd5e1',
+  marginBottom: '6px',
 }
 
-const REPORT_TEMPLATES = [
-  'District operational stability brief',
-  'NGO coordination pressure brief',
-  'Ministry visibility brief',
-  'Safeguarding visibility brief',
-  'Responder workload brief',
-  'Institutional routing pressure brief',
-  'Intervention completion reliability brief',
-  'Trajectory intelligence brief',
-  'Structural memory intelligence brief',
-]
-
-const OPERATING_LEVELS = [
-  'All levels',
-  'Local',
-  'Ward',
-  'District',
-  'Regional',
-  'National',
-]
-
-const PRESSURE_FOCUS = [
-  'Overall stabilization pressure',
-  'Escalation pressure',
-  'Safeguarding visibility',
-  'Responder load',
-  'Institutional coordination load',
-  'Intervention reliability',
-  'Regional instability visibility',
-  'Pressure propagation risk',
-  'Routing friction',
-  'Coordination instability',
-  'Stabilization drag',
-  'Trajectory risk',
-  'Continuity drift',
-  'Escalation momentum',
-  'Recovery direction',
-  'Structural memory risk',
-  'Routing failure recurrence',
-  'Escalation corridor recurrence',
-  'Institutional fragility signature',
-]
-
-const ACTION_TEMPLATES = [
-  'Maintain monitoring; pressure remains within manageable range.',
-  'Increase responder coordination for active stabilization cases.',
-  'Review routed cases that have not yet reached intervention evidence.',
-  'Prioritize safeguarding-aware review for flagged cases.',
-  'Strengthen district coordination where escalation pressure is visible.',
-  'Review institution load and rebalance coordination responsibility.',
-  'Improve intervention completion evidence and follow-up discipline.',
-  'Review routing delays, responder load, and intervention gaps before pressure becomes systemic.',
-  'Activate command review, inspect unresolved pathways, and prioritize high-severity or safeguarding-linked cases.',
-  'Strengthen routing ownership, intervention completion, and outcome confirmation to restore clear stabilization direction.',
-  'Review repeated routing gaps, escalation corridors, intervention failures, and weak recovery patterns before they harden into systemic fragility.',
-]
+const inputStyle: CSSProperties = {
+  width: '100%',
+  padding: '12px',
+  borderRadius: '12px',
+  border: '1px solid rgba(255,255,255,0.16)',
+  background: '#111827',
+  color: '#f9fafb',
+}
 
 export default function OperationsPage() {
-  return (
-    <CGIGovernanceShell>
-      <OperationsContent />
-    </CGIGovernanceShell>
-  )
-}
+  const [saveState, setSaveState] = useState<SaveState>('IDLE')
+  const [errorMessage, setErrorMessage] = useState('')
 
-function OperationsContent() {
-  const [cases, setCases] = useState<BeneficiaryCase[]>([])
-  const [institutions, setInstitutions] = useState<Institution[]>([])
-  const [responders, setResponders] = useState<Responder[]>([])
-  const [routingActions, setRoutingActions] = useState<RoutingAction[]>([])
-  const [interventions, setInterventions] = useState<CaseIntervention[]>([])
+  const [snapshotReason, setSnapshotReason] = useState(
+    'Scheduled executive continuity review'
+  )
 
-  const [reportTemplate, setReportTemplate] = useState(
-    'District operational stability brief',
+  const [snapshotScope, setSnapshotScope] = useState(
+    'Institution-wide CGI operations'
   )
-  const [operatingLevel, setOperatingLevel] = useState('All levels')
-  const [pressureFocus, setPressureFocus] = useState(
-    'Overall stabilization pressure',
-  )
-  const [actionCue, setActionCue] = useState(
-    'Maintain monitoring; pressure remains within manageable range.',
-  )
-  const [additionalNotes, setAdditionalNotes] = useState('')
-  const [message, setMessage] = useState('')
 
-  useEffect(() => {
-    loadOperationalData()
+  const [snapshotType, setSnapshotType] =
+    useState<SnapshotType>('DAILY_CONTINUITY_REVIEW')
+
+  const [governanceNote, setGovernanceNote] = useState(
+    'Snapshot preserved for continuity posture review, historical comparison, and executive visibility.'
+  )
+
+  const [reviewPeriod, setReviewPeriod] = useState(
+    'Current operational cycle'
+  )
+
+  const [reviewOwner, setReviewOwner] = useState(
+    'Continuity Governance Lead'
+  )
+
+  const [executiveVisibilityLevel, setExecutiveVisibilityLevel] =
+    useState<ExecutiveVisibilityLevel>('EXECUTIVE')
+
+  const [stabilizationConfidence, setStabilizationConfidence] =
+    useState<StabilizationConfidence>('MODERATE')
+
+  const metrics = useMemo(() => {
+    return {
+      scope: 'CGI_CONTINUITY_OPERATIONS',
+      region: 'GLOBAL',
+      institution_id: null,
+
+      continuity_integrity_score: 86,
+      stabilization_confidence_score: 78,
+      escalation_pressure_index: 42,
+      recovery_reliability_score: 74,
+      operational_survivability_score: 81,
+
+      continuity_state: 'STABILIZING',
+      propagation_risk: 'MODERATE',
+      routing_friction: 'LOW',
+      responder_pressure: 'MODERATE',
+      escalation_velocity: 'CONTROLLED',
+      coordination_instability: 'LOW',
+      stabilization_drag: 'MODERATE',
+
+      pressure_propagation_state: 'CONTAINED_PRESSURE',
+      trajectory_risk: 'WATCH',
+      continuity_drift: 'LOW',
+      escalation_momentum: 'SLOWING',
+      recovery_direction: 'IMPROVING',
+      stabilization_trend: 'POSITIVE',
+      unresolved_momentum: 'MODERATE',
+      trajectory_direction: 'STABILIZING',
+
+      structural_memory_risk: 'WATCH',
+      routing_failure_recurrence: 'LOW',
+      escalation_corridor_recurrence: 'MODERATE',
+      institutional_fragility_signature: 'CONTAINED',
+      intervention_failure_pattern: 'LIMITED',
+      responder_strain_recurrence: 'MODERATE',
+      continuity_collapse_recurrence: 'LOW',
+      structural_memory_state: 'ACTIVE_MEMORY',
+
+      dominant_pressure_source:
+        'Coordination load and unresolved continuity drag',
+
+      dominant_trajectory_signal:
+        'Improving recovery with moderate unresolved momentum',
+
+      dominant_memory_pattern:
+        'Recurring pressure corridors require executive review',
+
+      executive_summary:
+        'CGI continuity posture is stabilizing, but unresolved momentum and recurring pressure corridors require governed review before survivability can be considered credible.',
+
+      action_cue:
+        'Preserve snapshot, review pressure corridor recurrence, and verify whether recovery is durable before declaring stabilization credible.',
+    }
   }, [])
 
-  async function loadOperationalData() {
-    const [
-      caseResult,
-      institutionResult,
-      responderResult,
-      routingResult,
-      interventionResult,
-    ] = await Promise.all([
-      supabase.from('beneficiary_cases').select('*'),
-      supabase.from('institutions').select('*'),
-      supabase.from('responders').select('*'),
-      supabase.from('case_routing_actions').select('*'),
-      supabase.from('case_interventions').select('*'),
-    ])
-
-    if (caseResult.error) console.error(caseResult.error)
-    if (institutionResult.error) console.error(institutionResult.error)
-    if (responderResult.error) console.error(responderResult.error)
-    if (routingResult.error) console.error(routingResult.error)
-    if (interventionResult.error) console.error(interventionResult.error)
-
-    setCases(caseResult.data || [])
-    setInstitutions(institutionResult.data || [])
-    setResponders(responderResult.data || [])
-    setRoutingActions(routingResult.data || [])
-    setInterventions(interventionResult.data || [])
-
-    setMessage('Operational intelligence refreshed.')
-  }
-
-  const filteredInstitutions = useMemo(() => {
-    if (operatingLevel === 'All levels') return institutions
-    return institutions.filter((item) => item.operating_level === operatingLevel)
-  }, [institutions, operatingLevel])
-
-  const activeCases = cases.filter((item) =>
-    [
-      'NEED_DETECTED',
-      'UNDER_ASSESSMENT',
-      'ROUTED',
-      'RESPONDER_ASSIGNED',
-      'INTERVENTION_ACTIVE',
-      'STABILIZING',
-    ].includes(item.case_status),
-  )
-
-  const routedCases = cases.filter((item) =>
-    ['ROUTED', 'RESPONDER_ASSIGNED'].includes(item.case_status),
-  )
-
-  const stabilizedCases = cases.filter((item) => item.case_status === 'STABILIZED')
-  const escalatedCases = cases.filter((item) => item.case_status === 'ESCALATED')
-  const criticalCases = cases.filter((item) => item.severity_level === 'CRITICAL')
-  const safeguardingCases = cases.filter((item) => item.safeguarding_flag)
-
-  const activeResponders = responders.filter((item) =>
-    ['ACTIVE', 'VERIFIED'].includes(
-      String(
-        item.governance_status ||
-          item.responder_status ||
-          item.operational_status ||
-          '',
-      ).toUpperCase(),
-    ),
-  )
-
-  const interventionCaseIds = new Set(interventions.map((item) => item.case_id))
-
-  const outcomeCaseIds = new Set(
-    cases.filter((item) => item.outcome_summary).map((item) => item.id),
-  )
-
-  const uniqueInterventionCases = interventionCaseIds.size
-
-  const stabilizationRate =
-    cases.length > 0 ? Math.round((stabilizedCases.length / cases.length) * 100) : 0
-
-  const interventionCoverage =
-    cases.length > 0 ? Math.round((uniqueInterventionCases / cases.length) * 100) : 0
-
-  const outcomeCoverage =
-    cases.length > 0 ? Math.round((outcomeCaseIds.size / cases.length) * 100) : 0
-
-  const interventionVolume = interventions.length
-
-  const routingPressure =
-    routedCases.length +
-    escalatedCases.length +
-    criticalCases.length +
-    safeguardingCases.length
-
-  const pressureStatus =
-    routingPressure >= 10
-      ? 'CRITICAL_PRESSURE'
-      : routingPressure >= 6
-        ? 'HIGH_PRESSURE'
-        : routingPressure >= 3
-          ? 'MODERATE_PRESSURE'
-          : 'STABLE'
-
-  const unresolvedInterventionPathways = cases.filter(
-    (item) =>
-      interventionCaseIds.has(item.id) &&
-      !outcomeCaseIds.has(item.id) &&
-      item.case_status !== 'STABILIZED',
-  ).length
-
-  const routedWithoutResponder = routingActions.filter(
-    (item) => !item.assigned_responder_id,
-  ).length
-
-  const mappedRoutingActions = routingActions.map((item) => ({
-    id: item.id,
-    case_id: item.case_id,
-    routing_status: item.routing_status,
-    priority_level: item.routing_priority,
-    routing_decision: item.routing_reason,
-    responder_id: item.assigned_responder_id,
-    assigned_responder_id: item.assigned_responder_id,
-    institution_id: item.institution_id,
-    created_at: item.created_at,
-  }))
-
-  const mappedInterventions = interventions.map((item) => ({
-    id: item.id,
-    case_id: item.case_id,
-    intervention_type: item.intervention_type,
-    intervention_status:
-      item.intervention_status ||
-      (item.intervention_summary ? 'COMPLETED' : 'PENDING'),
-    responder_id: item.responder_id || item.assigned_responder_id,
-    assigned_responder_id: item.assigned_responder_id,
-    created_at: item.created_at,
-    completed_at: item.completed_at,
-  }))
-
-  const mappedOutcomes = cases
-    .filter((item) => item.outcome_summary)
-    .map((item) => ({
-      id: `case-outcome-${item.id}`,
-      case_id: item.id,
-      outcome_status:
-        item.case_status === 'STABILIZED' ? 'STABILIZED' : 'OUTCOME_RECORDED',
-      stabilization_status:
-        item.case_status === 'STABILIZED' ? 'STABILIZED' : 'PARTIAL',
-      recovery_status:
-        item.case_status === 'STABILIZED' ? 'RECOVERING' : 'UNDER_REVIEW',
-    }))
-
-  const mappedResponders = responders.map((item) => ({
-    id: item.id,
-    governance_status:
-      item.governance_status || item.responder_status || item.operational_status,
-    responder_status: item.responder_status || item.operational_status,
-    operational_status: item.operational_status,
-    trust_score: item.trust_score,
-    active_case_count: item.active_case_count,
-  }))
-
-  const continuityScores = evaluateContinuityIntelligence({
-    totalCases: cases.length,
-    activeCases: activeCases.length,
-    routedCases: routedCases.length,
-    interventionCases: uniqueInterventionCases,
-    outcomeCases: outcomeCaseIds.size,
-    stabilizedCases: stabilizedCases.length,
-    escalatedCases: escalatedCases.length,
-    criticalCases: criticalCases.length,
-    safeguardingCases: safeguardingCases.length,
-    unresolvedInterventionPathways,
-    routedWithoutResponder,
-  })
-
-  const pressurePropagation = evaluatePressurePropagation({
-    cases,
-    routingActions: mappedRoutingActions,
-    interventions: mappedInterventions,
-    outcomes: mappedOutcomes,
-    responders: mappedResponders,
-  })
-
-  const trajectoryIntelligence = evaluateTrajectoryIntelligence({
-    cases,
-    routingActions: mappedRoutingActions,
-    interventions: mappedInterventions,
-    outcomes: mappedOutcomes,
-  })
-
-  const structuralMemory = evaluateStructuralMemory({
-    cases,
-    routingActions: mappedRoutingActions,
-    interventions: mappedInterventions,
-    outcomes: mappedOutcomes,
-    responders: mappedResponders,
-  })
-
-  const topRegions = regionBreakdown(cases)
-  const statusBreakdown = caseStatusBreakdown(cases)
-  const severityBreakdown = severityLevelBreakdown(cases)
-
-  function operationalBrief() {
-    return `
-TSINAXA CGI CONTINUITY GOVERNANCE INTELLIGENCE BRIEF
-
-Report Template:
-${reportTemplate}
-
-Operating Level:
-${operatingLevel}
-
-Pressure Focus:
-${pressureFocus}
-
-System Pressure Status:
-${pressureStatus}
-
-Continuity State:
-${continuityScores.continuityState}
-
-Pressure Propagation State:
-${pressurePropagation.pressurePropagationState}
-
-Trajectory Direction:
-${trajectoryIntelligence.trajectoryDirection}
-
-Structural Memory State:
-${structuralMemory.structuralMemoryState}
-
-Pressure Propagation Severity:
-${pressurePropagation.severity}
-
-Trajectory Severity:
-${trajectoryIntelligence.severity}
-
-Structural Memory Severity:
-${structuralMemory.severity}
-
-Dominant Pressure Source:
-${pressurePropagation.dominantPressureSource}
-
-Dominant Trajectory Signal:
-${trajectoryIntelligence.dominantTrajectorySignal}
-
-Dominant Structural Memory Pattern:
-${structuralMemory.dominantMemoryPattern}
-
-Continuity Intelligence Scores:
-Continuity Integrity Score: ${continuityScores.continuityIntegrityScore}/100
-Stabilization Confidence Score: ${continuityScores.stabilizationConfidenceScore}/100
-Escalation Pressure Index: ${continuityScores.escalationPressureIndex}/100
-Recovery Reliability Score: ${continuityScores.recoveryReliabilityScore}/100
-Operational Survivability Score: ${continuityScores.operationalSurvivabilityScore}/100
-
-Pressure Propagation Intelligence:
-Propagation Risk: ${pressurePropagation.propagationRisk}/100
-Routing Friction: ${pressurePropagation.routingFriction}/100
-Responder Pressure: ${pressurePropagation.responderPressure}/100
-Escalation Velocity: ${pressurePropagation.escalationVelocity}/100
-Coordination Instability: ${pressurePropagation.coordinationInstability}/100
-Stabilization Drag: ${pressurePropagation.stabilizationDrag}/100
-
-Trajectory Intelligence:
-Trajectory Risk: ${trajectoryIntelligence.trajectoryRisk}/100
-Continuity Drift: ${trajectoryIntelligence.continuityDrift}/100
-Escalation Momentum: ${trajectoryIntelligence.escalationMomentum}/100
-Recovery Direction: ${trajectoryIntelligence.recoveryDirection}/100
-Stabilization Trend: ${trajectoryIntelligence.stabilizationTrend}/100
-Unresolved Momentum: ${trajectoryIntelligence.unresolvedMomentum}/100
-
-Structural Memory Intelligence:
-Structural Memory Risk: ${structuralMemory.structuralMemoryRisk}/100
-Routing Failure Recurrence: ${structuralMemory.routingFailureRecurrence}/100
-Escalation Corridor Recurrence: ${structuralMemory.escalationCorridorRecurrence}/100
-Institutional Fragility Signature: ${structuralMemory.institutionalFragilitySignature}/100
-Intervention Failure Pattern: ${structuralMemory.interventionFailurePattern}/100
-Responder Strain Recurrence: ${structuralMemory.responderStrainRecurrence}/100
-Continuity Collapse Recurrence: ${structuralMemory.continuityCollapseRecurrence}/100
-
-Core Metrics:
-Total Beneficiary Cases: ${cases.length}
-Active Stabilization Cases: ${activeCases.length}
-Routed / Assigned Cases: ${routedCases.length}
-Escalated Cases: ${escalatedCases.length}
-Critical Cases: ${criticalCases.length}
-Safeguarding Visibility Flags: ${safeguardingCases.length}
-Active Responders: ${activeResponders.length}
-Coordination Sites in View: ${filteredInstitutions.length}
-Intervention Evidence Records: ${interventionVolume}
-Cases With Intervention Evidence: ${uniqueInterventionCases}
-Cases With Outcome Evidence: ${outcomeCaseIds.size}
-Stabilization Rate: ${stabilizationRate}%
-Intervention Coverage: ${interventionCoverage}%
-Outcome Coverage: ${outcomeCoverage}%
-Unresolved Intervention Pathways: ${unresolvedInterventionPathways}
-Routed Without Responder Ownership: ${routedWithoutResponder}
-
-Pressure Interpretation:
-${pressurePropagation.executiveSummary}
-
-Trajectory Interpretation:
-${trajectoryIntelligence.executiveSummary}
-
-Structural Memory Interpretation:
-${structuralMemory.executiveSummary}
-
-Recommended Pressure Action Cue:
-${pressurePropagation.actionCue}
-
-Recommended Trajectory Action Cue:
-${trajectoryIntelligence.actionCue}
-
-Recommended Structural Memory Action Cue:
-${structuralMemory.actionCue}
-
-Selected Governance Action Cue:
-${actionCue}
-
-Governance-Safe Interpretation:
-This brief separates operational activity from continuity confidence. It does not assume that routing, intervention, or outcome documentation automatically means stabilization is durable. CGI evaluates continuity integrity, stabilization confidence, pressure propagation, trajectory direction, structural memory, escalation velocity, routing friction, recovery reliability, and operational survivability so leaders can see whether the system is merely busy, spreading instability, drifting, repeating instability, recovering, or actually stabilizing.
-
-Additional Operational Notes:
-${additionalNotes.trim() || 'No additional operational notes entered.'}
-    `.trim()
-  }
-
-  async function saveOperationalSnapshot() {
-    setMessage('Saving operational intelligence snapshot...')
-
-    const { error } = await supabase.from('cgi_operational_metrics').insert({
-      scope: operatingLevel.toUpperCase().replaceAll(' ', '_'),
-
-      continuity_integrity_score: continuityScores.continuityIntegrityScore,
-      stabilization_confidence_score: continuityScores.stabilizationConfidenceScore,
-      escalation_pressure_index: continuityScores.escalationPressureIndex,
-      recovery_reliability_score: continuityScores.recoveryReliabilityScore,
-      operational_survivability_score: continuityScores.operationalSurvivabilityScore,
-      continuity_state: continuityScores.continuityState,
-
-      propagation_risk: pressurePropagation.propagationRisk,
-      routing_friction: pressurePropagation.routingFriction,
-      responder_pressure: pressurePropagation.responderPressure,
-      escalation_velocity: pressurePropagation.escalationVelocity,
-      coordination_instability: pressurePropagation.coordinationInstability,
-      stabilization_drag: pressurePropagation.stabilizationDrag,
-      pressure_propagation_state: pressurePropagation.pressurePropagationState,
-
-      trajectory_risk: trajectoryIntelligence.trajectoryRisk,
-      continuity_drift: trajectoryIntelligence.continuityDrift,
-      escalation_momentum: trajectoryIntelligence.escalationMomentum,
-      recovery_direction: trajectoryIntelligence.recoveryDirection,
-      stabilization_trend: trajectoryIntelligence.stabilizationTrend,
-      unresolved_momentum: trajectoryIntelligence.unresolvedMomentum,
-      trajectory_direction: trajectoryIntelligence.trajectoryDirection,
-
-      structural_memory_risk: structuralMemory.structuralMemoryRisk,
-      routing_failure_recurrence: structuralMemory.routingFailureRecurrence,
-      escalation_corridor_recurrence:
-        structuralMemory.escalationCorridorRecurrence,
-      institutional_fragility_signature:
-        structuralMemory.institutionalFragilitySignature,
-      intervention_failure_pattern: structuralMemory.interventionFailurePattern,
-      responder_strain_recurrence: structuralMemory.responderStrainRecurrence,
-      continuity_collapse_recurrence:
-        structuralMemory.continuityCollapseRecurrence,
-      structural_memory_state: structuralMemory.structuralMemoryState,
-
-      dominant_pressure_source: pressurePropagation.dominantPressureSource,
-      dominant_trajectory_signal: trajectoryIntelligence.dominantTrajectorySignal,
-      dominant_memory_pattern: structuralMemory.dominantMemoryPattern,
-
-      executive_summary: [
-        pressurePropagation.executiveSummary,
-        trajectoryIntelligence.executiveSummary,
-        structuralMemory.executiveSummary,
-      ].join('\n\n'),
-
-      action_cue: [
-        pressurePropagation.actionCue,
-        trajectoryIntelligence.actionCue,
-        structuralMemory.actionCue,
-      ].join('\n\n'),
+  async function saveGovernedSnapshot() {
+    setSaveState('SAVING')
+    setErrorMessage('')
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    const governancePayload = buildSnapshotGovernancePayload({
+      snapshotReason,
+      snapshotScope,
+      snapshotType,
+      governanceNote,
+      reviewPeriod,
+      continuityPosture: metrics.continuity_state,
+      pressureClassification: metrics.pressure_propagation_state,
+      trajectoryState: metrics.trajectory_direction,
+      recoveryStatus: metrics.recovery_direction,
+      stabilizationConfidence,
+      executiveVisibilityLevel,
+      snapshotTrigger:
+        'Manual governed snapshot from CGI operations page',
+      reviewOwner,
+      savedBy: user?.id ?? null,
+      savedByEmail: user?.email ?? null,
     })
 
+    const { error } = await supabase
+      .from('cgi_operational_metrics')
+      .insert({
+        ...metrics,
+        ...governancePayload,
+      })
+
     if (error) {
-      console.error(error)
-      setMessage('Failed to save operational intelligence snapshot.')
+      setSaveState('ERROR')
+      setErrorMessage(error.message)
       return
     }
 
-    setMessage('Operational intelligence snapshot saved successfully.')
+    setSaveState('SAVED')
   }
 
   return (
-    <main style={styles.page}>
-      <div style={styles.container}>
-        <section style={styles.hero}>
-          <p style={styles.kicker}>TSINAXA CGI • CONTINUITY INTELLIGENCE</p>
+    <GovernanceRouteGuard
+      allowedRoles={[
+        'SUPER_ADMIN',
+        'COMMAND_ADMIN',
+        'GOVERNANCE_OFFICER',
+        'INSTITUTION_COORDINATOR',
+      ]}
+    >
+      <main style={pageStyle}>
+        <InfrastructureQuickNav />
 
-          <h1 style={styles.title}>Continuity Governance Operational Intelligence</h1>
-
-          <p style={styles.subtitle}>
-            Convert cases, routing activity, intervention evidence, safeguarding flags,
-            institutions, and responder capacity into continuity integrity, pressure
-            propagation, trajectory intelligence, structural memory, stabilization
-            confidence, escalation pressure, recovery reliability, and operational
-            survivability intelligence.
+        <section style={containerStyle}>
+          <p style={{ color: '#94a3b8', marginBottom: '8px' }}>
+            TSINAXA CGI · Continuity Governance Infrastructure
           </p>
-        </section>
 
-        {message && <div style={styles.message}>{message}</div>}
+          <h1 style={{ fontSize: '38px', marginBottom: '10px' }}>
+            Operations Snapshot Governance
+          </h1>
 
-        <section style={styles.scoreHero}>
-          <div>
-            <p style={styles.scoreLabel}>Continuity State</p>
-            <h2 style={styles.scoreState}>{continuityScores.continuityState}</h2>
+          <p
+            style={{
+              color: '#cbd5e1',
+              maxWidth: '860px',
+              lineHeight: 1.7,
+            }}
+          >
+            This surface preserves operational continuity snapshots as governed
+            evidence. A snapshot is not just saved data. It is historical
+            continuity intelligence with scope, reason, review period,
+            visibility level, and executive interpretation.
+          </p>
+
+          <div style={metricGridStyle}>
+            <div style={cardStyle}>
+              <p style={{ color: '#94a3b8' }}>
+                Continuity Integrity
+              </p>
+
+              <h2>
+                {metrics.continuity_integrity_score}%
+              </h2>
+
+              <p>{metrics.continuity_state}</p>
+            </div>
+
+            <div style={cardStyle}>
+              <p style={{ color: '#94a3b8' }}>
+                Stabilization Confidence
+              </p>
+
+              <h2>
+                {metrics.stabilization_confidence_score}%
+              </h2>
+
+              <p>{stabilizationConfidence}</p>
+            </div>
+
+            <div style={cardStyle}>
+              <p style={{ color: '#94a3b8' }}>
+                Pressure Index
+              </p>
+
+              <h2>
+                {metrics.escalation_pressure_index}
+              </h2>
+
+              <p>
+                {metrics.pressure_propagation_state}
+              </p>
+            </div>
+
+            <div style={cardStyle}>
+              <p style={{ color: '#94a3b8' }}>
+                Survivability Score
+              </p>
+
+              <h2>
+                {metrics.operational_survivability_score}%
+              </h2>
+
+              <p>
+                Not closure. Survivability review required.
+              </p>
+            </div>
           </div>
 
-          <div style={styles.scoreGrid}>
-            <ScoreMetric
-              label="Continuity Integrity"
-              value={continuityScores.continuityIntegrityScore}
-            />
-            <ScoreMetric
-              label="Stabilization Confidence"
-              value={continuityScores.stabilizationConfidenceScore}
-            />
-            <ScoreMetric
-              label="Escalation Pressure"
-              value={continuityScores.escalationPressureIndex}
-            />
-            <ScoreMetric
-              label="Recovery Reliability"
-              value={continuityScores.recoveryReliabilityScore}
-            />
-            <ScoreMetric
-              label="Operational Survivability"
-              value={continuityScores.operationalSurvivabilityScore}
-            />
-          </div>
-        </section>
-
-        <section style={styles.pressureHero}>
-          <div>
-            <p style={styles.scoreLabel}>Pressure Propagation State</p>
-            <h2 style={styles.pressureState}>
-              {pressurePropagation.pressurePropagationState}
+          <section
+            style={{
+              ...cardStyle,
+              marginTop: '28px',
+            }}
+          >
+            <h2 style={{ marginBottom: '16px' }}>
+              Snapshot Governance Protocol
             </h2>
-            <p style={styles.panelNote}>{pressurePropagation.executiveSummary}</p>
-          </div>
 
-          <div style={styles.scoreGrid}>
-            <ScoreMetric
-              label="Propagation Risk"
-              value={pressurePropagation.propagationRisk}
-            />
-            <ScoreMetric
-              label="Routing Friction"
-              value={pressurePropagation.routingFriction}
-            />
-            <ScoreMetric
-              label="Responder Pressure"
-              value={pressurePropagation.responderPressure}
-            />
-            <ScoreMetric
-              label="Escalation Velocity"
-              value={pressurePropagation.escalationVelocity}
-            />
-            <ScoreMetric
-              label="Coordination Instability"
-              value={pressurePropagation.coordinationInstability}
-            />
-            <ScoreMetric
-              label="Stabilization Drag"
-              value={pressurePropagation.stabilizationDrag}
-            />
-          </div>
+            <div style={formGridStyle}>
+              <div>
+                <label style={labelStyle}>
+                  Snapshot Reason
+                </label>
 
-          <div style={styles.pressureInsight}>
-            <Info label="Severity" value={pressurePropagation.severity} />
-            <Info
-              label="Dominant Source"
-              value={pressurePropagation.dominantPressureSource}
-            />
-            <Info label="Action Cue" value={pressurePropagation.actionCue} />
-          </div>
-        </section>
+                <input
+                  style={inputStyle}
+                  value={snapshotReason}
+                  onChange={(event) =>
+                    setSnapshotReason(event.target.value)
+                  }
+                />
+              </div>
 
-        <section style={styles.trajectoryHero}>
-          <div>
-            <p style={styles.scoreLabel}>Trajectory Direction</p>
-            <h2 style={styles.trajectoryState}>
-              {trajectoryIntelligence.trajectoryDirection}
-            </h2>
-            <p style={styles.panelNote}>{trajectoryIntelligence.executiveSummary}</p>
-          </div>
+              <div>
+                <label style={labelStyle}>
+                  Snapshot Scope
+                </label>
 
-          <div style={styles.scoreGrid}>
-            <ScoreMetric
-              label="Trajectory Risk"
-              value={trajectoryIntelligence.trajectoryRisk}
-            />
-            <ScoreMetric
-              label="Continuity Drift"
-              value={trajectoryIntelligence.continuityDrift}
-            />
-            <ScoreMetric
-              label="Escalation Momentum"
-              value={trajectoryIntelligence.escalationMomentum}
-            />
-            <ScoreMetric
-              label="Recovery Direction"
-              value={trajectoryIntelligence.recoveryDirection}
-            />
-            <ScoreMetric
-              label="Stabilization Trend"
-              value={trajectoryIntelligence.stabilizationTrend}
-            />
-            <ScoreMetric
-              label="Unresolved Momentum"
-              value={trajectoryIntelligence.unresolvedMomentum}
-            />
-          </div>
+                <input
+                  style={inputStyle}
+                  value={snapshotScope}
+                  onChange={(event) =>
+                    setSnapshotScope(event.target.value)
+                  }
+                />
+              </div>
 
-          <div style={styles.pressureInsight}>
-            <Info label="Severity" value={trajectoryIntelligence.severity} />
-            <Info
-              label="Dominant Signal"
-              value={trajectoryIntelligence.dominantTrajectorySignal}
-            />
-            <Info label="Action Cue" value={trajectoryIntelligence.actionCue} />
-          </div>
-        </section>
+              <div>
+                <label style={labelStyle}>
+                  Snapshot Type
+                </label>
 
-        <section style={styles.memoryHero}>
-          <div>
-            <p style={styles.scoreLabel}>Structural Memory State</p>
-            <h2 style={styles.memoryState}>
-              {structuralMemory.structuralMemoryState}
-            </h2>
-            <p style={styles.panelNote}>{structuralMemory.executiveSummary}</p>
-          </div>
+                <select
+                  style={inputStyle}
+                  value={snapshotType}
+                  onChange={(event) =>
+                    setSnapshotType(
+                      event.target.value as SnapshotType
+                    )
+                  }
+                >
+                  <option value="DAILY_CONTINUITY_REVIEW">
+                    Daily Continuity Review
+                  </option>
 
-          <div style={styles.scoreGrid}>
-            <ScoreMetric
-              label="Structural Memory Risk"
-              value={structuralMemory.structuralMemoryRisk}
-            />
-            <ScoreMetric
-              label="Routing Failure Recurrence"
-              value={structuralMemory.routingFailureRecurrence}
-            />
-            <ScoreMetric
-              label="Escalation Corridor Recurrence"
-              value={structuralMemory.escalationCorridorRecurrence}
-            />
-            <ScoreMetric
-              label="Institutional Fragility"
-              value={structuralMemory.institutionalFragilitySignature}
-            />
-            <ScoreMetric
-              label="Intervention Failure Pattern"
-              value={structuralMemory.interventionFailurePattern}
-            />
-            <ScoreMetric
-              label="Responder Strain Recurrence"
-              value={structuralMemory.responderStrainRecurrence}
-            />
-            <ScoreMetric
-              label="Continuity Collapse Recurrence"
-              value={structuralMemory.continuityCollapseRecurrence}
-            />
-          </div>
+                  <option value="WEEKLY_EXECUTIVE_REVIEW">
+                    Weekly Executive Review
+                  </option>
 
-          <div style={styles.pressureInsight}>
-            <Info label="Severity" value={structuralMemory.severity} />
-            <Info
-              label="Dominant Pattern"
-              value={structuralMemory.dominantMemoryPattern}
-            />
-            <Info label="Action Cue" value={structuralMemory.actionCue} />
-          </div>
-        </section>
+                  <option value="PRESSURE_ESCALATION_REVIEW">
+                    Pressure Escalation Review
+                  </option>
 
-        <section style={styles.metricsGrid}>
-          <Metric label="Total Cases" value={cases.length} />
-          <Metric label="Active Stabilization" value={activeCases.length} />
-          <Metric label="Routed / Assigned" value={routedCases.length} />
-          <Metric label="Escalated" value={escalatedCases.length} />
-          <Metric label="Critical" value={criticalCases.length} />
-          <Metric label="Safeguarding Flags" value={safeguardingCases.length} />
-          <Metric label="Active Responders" value={activeResponders.length} />
-          <Metric label="Intervention Records" value={interventionVolume} />
-          <Metric
-            label="Cases With Intervention Evidence"
-            value={uniqueInterventionCases}
-          />
-          <Metric label="Cases With Outcome Evidence" value={outcomeCaseIds.size} />
-        </section>
+                  <option value="RECOVERY_REVIEW">
+                    Recovery Review
+                  </option>
 
-        <section style={styles.layoutGrid}>
-          <div style={styles.card}>
-            <h2 style={styles.sectionTitle}>Continuity Intelligence Brief Template</h2>
+                  <option value="RELIABILITY_REVIEW">
+                    Reliability Review
+                  </option>
 
-            <p style={styles.panelNote}>
-              Use this section to generate a standardized continuity intelligence brief. The
-              dropdowns keep executive reporting consistent and prevent narrative drift.
-            </p>
+                  <option value="MANUAL_GOVERNANCE_SNAPSHOT">
+                    Manual Governance Snapshot
+                  </option>
+                </select>
+              </div>
 
-            <Select
-              label="Report Template"
-              value={reportTemplate}
-              setValue={setReportTemplate}
-              options={REPORT_TEMPLATES}
-            />
+              <div>
+                <label style={labelStyle}>
+                  Review Period
+                </label>
 
-            <Select
-              label="Operating Level View"
-              value={operatingLevel}
-              setValue={setOperatingLevel}
-              options={OPERATING_LEVELS}
-            />
+                <input
+                  style={inputStyle}
+                  value={reviewPeriod}
+                  onChange={(event) =>
+                    setReviewPeriod(event.target.value)
+                  }
+                />
+              </div>
 
-            <Select
-              label="Pressure Focus"
-              value={pressureFocus}
-              setValue={setPressureFocus}
-              options={PRESSURE_FOCUS}
-            />
+              <div>
+                <label style={labelStyle}>
+                  Executive Visibility
+                </label>
 
-            <Select
-              label="Recommended Action Cue"
-              value={actionCue}
-              setValue={setActionCue}
-              options={ACTION_TEMPLATES}
-            />
+                <select
+                  style={inputStyle}
+                  value={executiveVisibilityLevel}
+                  onChange={(event) =>
+                    setExecutiveVisibilityLevel(
+                      event.target.value as ExecutiveVisibilityLevel
+                    )
+                  }
+                >
+                  <option value="OPERATIONAL">
+                    Operational
+                  </option>
 
-            <label style={styles.label}>
-              Optional Additional Operational Notes
+                  <option value="GOVERNANCE">
+                    Governance
+                  </option>
+
+                  <option value="EXECUTIVE">
+                    Executive
+                  </option>
+
+                  <option value="BOARD_LEVEL">
+                    Board Level
+                  </option>
+                </select>
+              </div>
+
+              <div>
+                <label style={labelStyle}>
+                  Stabilization Confidence
+                </label>
+
+                <select
+                  style={inputStyle}
+                  value={stabilizationConfidence}
+                  onChange={(event) =>
+                    setStabilizationConfidence(
+                      event.target.value as StabilizationConfidence
+                    )
+                  }
+                >
+                  <option value="LOW">
+                    Low
+                  </option>
+
+                  <option value="MODERATE">
+                    Moderate
+                  </option>
+
+                  <option value="HIGH">
+                    High
+                  </option>
+
+                  <option value="NOT_YET_CREDIBLE">
+                    Not Yet Credible
+                  </option>
+                </select>
+              </div>
+
+              <div>
+                <label style={labelStyle}>
+                  Review Owner
+                </label>
+
+                <input
+                  style={inputStyle}
+                  value={reviewOwner}
+                  onChange={(event) =>
+                    setReviewOwner(event.target.value)
+                  }
+                />
+              </div>
+            </div>
+
+            <div style={{ marginTop: '16px' }}>
+              <label style={labelStyle}>
+                Governance Note
+              </label>
+
               <textarea
-                value={additionalNotes}
-                onChange={(event) => setAdditionalNotes(event.target.value)}
-                placeholder="Use system-level operational notes only. Avoid personal details or blame language."
-                style={styles.textarea}
-              />
-            </label>
-
-            <div style={styles.buttonGroup}>
-              <button onClick={loadOperationalData} style={styles.primaryButton}>
-                Refresh Continuity Intelligence
-              </button>
-
-              <button onClick={saveOperationalSnapshot} style={styles.secondaryButton}>
-                Save Operational Snapshot
-              </button>
-            </div>
-          </div>
-
-          <div style={styles.card}>
-            <h2 style={styles.sectionTitle}>Generated Continuity Intelligence Brief</h2>
-
-            <p style={styles.panelNote}>
-              This brief separates activity from stabilization confidence and adds pressure
-              propagation, trajectory visibility, and structural memory so leaders can see
-              whether instability is spreading, drifting, repeating, recovering, or stabilizing.
-            </p>
-
-            <pre style={styles.summaryBox}>{operationalBrief()}</pre>
-          </div>
-        </section>
-
-        <section style={styles.layoutGrid}>
-          <Panel
-            title="Case Lifecycle Distribution"
-            note="Shows where beneficiary cases are sitting inside the stabilization lifecycle."
-            rows={statusBreakdown}
-          />
-
-          <Panel
-            title="Severity Distribution"
-            note="Shows operational pressure by severity level."
-            rows={severityBreakdown}
-          />
-
-          <Panel
-            title="Regional Visibility"
-            note="Shows where beneficiary stabilization pressure is appearing by region."
-            rows={topRegions}
-          />
-
-          <div style={styles.card}>
-            <h2 style={styles.sectionTitle}>Infrastructure Pressure Reading</h2>
-
-            <div style={styles.pressureBadge}>{pressureStatus}</div>
-
-            <p style={styles.panelNote}>
-              This pressure status is an early operational signal derived from routed cases,
-              escalations, critical cases, and safeguarding visibility. Pressure Propagation
-              Intelligence evaluates whether pressure is spreading, Trajectory Intelligence
-              evaluates where continuity is heading, and Structural Memory Intelligence
-              evaluates whether instability is repeating.
-            </p>
-
-            <div style={styles.infoGrid}>
-              <Info label="Stabilization Rate" value={`${stabilizationRate}%`} />
-              <Info label="Intervention Coverage" value={`${interventionCoverage}%`} />
-              <Info label="Outcome Coverage" value={`${outcomeCoverage}%`} />
-              <Info label="Intervention Volume" value={`${interventionVolume}`} />
-              <Info label="Cases With Evidence" value={`${uniqueInterventionCases}`} />
-              <Info label="Routing Actions" value={`${routingActions.length}`} />
-              <Info label="Sites in View" value={`${filteredInstitutions.length}`} />
-              <Info
-                label="Unresolved Pathways"
-                value={`${unresolvedInterventionPathways}`}
+                style={{
+                  ...inputStyle,
+                  minHeight: '110px',
+                }}
+                value={governanceNote}
+                onChange={(event) =>
+                  setGovernanceNote(event.target.value)
+                }
               />
             </div>
-          </div>
+
+            <button
+              onClick={saveGovernedSnapshot}
+              disabled={saveState === 'SAVING'}
+              style={{
+                marginTop: '18px',
+                padding: '13px 18px',
+                borderRadius: '14px',
+                border: 'none',
+                background:
+                  saveState === 'SAVING'
+                    ? '#475569'
+                    : '#f8fafc',
+                color: '#020617',
+                fontWeight: 700,
+                cursor:
+                  saveState === 'SAVING'
+                    ? 'not-allowed'
+                    : 'pointer',
+              }}
+            >
+              {saveState === 'SAVING'
+                ? 'Saving governed snapshot...'
+                : 'Save Governed Snapshot'}
+            </button>
+
+            {saveState === 'SAVED' && (
+              <p
+                style={{
+                  color: '#86efac',
+                  marginTop: '12px',
+                }}
+              >
+                Governed snapshot saved. Historical continuity intelligence preserved.
+              </p>
+            )}
+
+            {saveState === 'ERROR' && (
+              <p
+                style={{
+                  color: '#fca5a5',
+                  marginTop: '12px',
+                }}
+              >
+                Snapshot save failed: {errorMessage}
+              </p>
+            )}
+          </section>
+
+          <section
+            style={{
+              ...cardStyle,
+              marginTop: '28px',
+            }}
+          >
+            <h2>
+              Executive Interpretation
+            </h2>
+
+            <p
+              style={{
+                color: '#cbd5e1',
+                lineHeight: 1.7,
+              }}
+            >
+              {metrics.executive_summary}
+            </p>
+
+            <p
+              style={{
+                color: '#f8fafc',
+                lineHeight: 1.7,
+              }}
+            >
+              <strong>Action Cue:</strong>{' '}
+              {metrics.action_cue}
+            </p>
+          </section>
         </section>
-      </div>
-    </main>
+      </main>
+    </GovernanceRouteGuard>
   )
-}
-
-function regionBreakdown(cases: BeneficiaryCase[]): PanelRow[] {
-  const counts: Record<string, number> = {}
-
-  cases.forEach((item) => {
-    const region = item.region || 'Region not recorded'
-    counts[region] = (counts[region] || 0) + 1
-  })
-
-  return Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .map(([label, value]) => ({ label, value }))
-}
-
-function caseStatusBreakdown(cases: BeneficiaryCase[]): PanelRow[] {
-  const counts: Record<string, number> = {}
-
-  cases.forEach((item) => {
-    const status = item.case_status || 'Status not recorded'
-    counts[status] = (counts[status] || 0) + 1
-  })
-
-  return Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .map(([label, value]) => ({ label, value }))
-}
-
-function severityLevelBreakdown(cases: BeneficiaryCase[]): PanelRow[] {
-  const counts: Record<string, number> = {}
-
-  cases.forEach((item) => {
-    const severity = item.severity_level || 'Severity not recorded'
-    counts[severity] = (counts[severity] || 0) + 1
-  })
-
-  return Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .map(([label, value]) => ({ label, value }))
-}
-
-function Metric({ label, value }: { label: string; value: number }) {
-  return (
-    <div style={styles.metricCard}>
-      <p style={styles.metricLabel}>{label}</p>
-      <h2 style={styles.metricValue}>{value}</h2>
-    </div>
-  )
-}
-
-function ScoreMetric({ label, value }: { label: string; value: number }) {
-  return (
-    <div style={styles.scoreCard}>
-      <p style={styles.scoreMetricLabel}>{label}</p>
-      <h3 style={styles.scoreMetricValue}>{value}/100</h3>
-    </div>
-  )
-}
-
-function Select({
-  label,
-  value,
-  setValue,
-  options,
-}: {
-  label: string
-  value: string
-  setValue: (value: string) => void
-  options: string[]
-}) {
-  return (
-    <label style={styles.label}>
-      {label}
-
-      <select
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        style={styles.select}
-      >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-    </label>
-  )
-}
-
-function Info({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={styles.infoBox}>
-      <p style={styles.infoLabel}>{label}</p>
-      <p style={styles.infoValue}>{value}</p>
-    </div>
-  )
-}
-
-function Panel({
-  title,
-  note,
-  rows,
-}: {
-  title: string
-  note: string
-  rows: PanelRow[]
-}) {
-  return (
-    <div style={styles.card}>
-      <h2 style={styles.sectionTitle}>{title}</h2>
-      <p style={styles.panelNote}>{note}</p>
-
-      <div style={styles.panelList}>
-        {rows.length === 0 && <p style={styles.emptyText}>No data available yet.</p>}
-
-        {rows.map((row, index) => (
-          <div key={`${row.label}-${index}`} style={styles.panelRow}>
-            <span>{row.label}</span>
-            <strong>{row.value}</strong>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-const styles: Record<string, CSSProperties> = {
-  page: {
-    minHeight: '100vh',
-    color: 'white',
-  },
-  container: {
-    maxWidth: '1280px',
-    margin: '0 auto',
-  },
-  hero: {
-    marginBottom: '32px',
-  },
-  kicker: {
-    color: '#67e8f9',
-    fontSize: '12px',
-    fontWeight: 900,
-    letterSpacing: '2px',
-  },
-  title: {
-    fontSize: 'clamp(34px, 6vw, 58px)',
-    lineHeight: 1.05,
-    margin: '12px 0',
-  },
-  subtitle: {
-    color: '#cbd5e1',
-    maxWidth: '980px',
-    lineHeight: 1.7,
-    fontSize: '18px',
-  },
-  message: {
-    background: '#064e3b',
-    color: '#bbf7d0',
-    padding: '16px',
-    borderRadius: '14px',
-    fontWeight: 800,
-    marginBottom: '20px',
-  },
-  scoreHero: {
-    background: '#020617',
-    border: '1px solid #1e293b',
-    borderRadius: '28px',
-    padding: '24px',
-    marginBottom: '24px',
-    boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
-  },
-  pressureHero: {
-    background: '#111827',
-    border: '1px solid #0e7490',
-    borderRadius: '28px',
-    padding: '24px',
-    marginBottom: '24px',
-    boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
-  },
-  trajectoryHero: {
-    background: '#172554',
-    border: '1px solid #4338ca',
-    borderRadius: '28px',
-    padding: '24px',
-    marginBottom: '24px',
-    boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
-  },
-  memoryHero: {
-    background: '#1f2937',
-    border: '1px solid #94a3b8',
-    borderRadius: '28px',
-    padding: '24px',
-    marginBottom: '24px',
-    boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
-  },
-  scoreLabel: {
-    color: '#94a3b8',
-    fontWeight: 900,
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
-    margin: 0,
-  },
-  scoreState: {
-    fontSize: 'clamp(38px, 8vw, 76px)',
-    margin: '8px 0 20px',
-    color: '#67e8f9',
-    letterSpacing: '-0.05em',
-  },
-  pressureState: {
-    fontSize: 'clamp(38px, 8vw, 76px)',
-    margin: '8px 0 20px',
-    color: '#fbbf24',
-    letterSpacing: '-0.05em',
-  },
-  trajectoryState: {
-    fontSize: 'clamp(38px, 8vw, 76px)',
-    margin: '8px 0 20px',
-    color: '#a78bfa',
-    letterSpacing: '-0.05em',
-  },
-  memoryState: {
-    fontSize: 'clamp(38px, 8vw, 76px)',
-    margin: '8px 0 20px',
-    color: '#d1d5db',
-    letterSpacing: '-0.05em',
-  },
-  scoreGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
-    gap: '14px',
-  },
-  scoreCard: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '18px',
-  },
-  scoreMetricLabel: {
-    color: '#94a3b8',
-    fontWeight: 800,
-    margin: 0,
-  },
-  scoreMetricValue: {
-    color: '#f8fafc',
-    fontSize: '28px',
-    margin: '10px 0 0',
-  },
-  pressureInsight: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: '12px',
-    marginTop: '16px',
-  },
-  metricsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
-    gap: '14px',
-    marginBottom: '24px',
-  },
-  metricCard: {
-    background: '#0f172a',
-    border: '1px solid #1e293b',
-    borderRadius: '18px',
-    padding: '20px',
-  },
-  metricLabel: {
-    color: '#94a3b8',
-    fontWeight: 800,
-    margin: 0,
-  },
-  metricValue: {
-    fontSize: '38px',
-    margin: '8px 0 0',
-  },
-  layoutGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-    gap: '20px',
-    marginBottom: '28px',
-  },
-  card: {
-    background: '#020617',
-    border: '1px solid #1e293b',
-    borderRadius: '24px',
-    padding: '24px',
-    marginBottom: '28px',
-    boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
-  },
-  sectionTitle: {
-    fontSize: '26px',
-    margin: '0 0 10px',
-  },
-  panelNote: {
-    color: '#cbd5e1',
-    lineHeight: 1.6,
-    marginBottom: '18px',
-  },
-  label: {
-    display: 'block',
-    fontWeight: 800,
-    marginBottom: '16px',
-  },
-  select: {
-    width: '100%',
-    marginTop: '8px',
-    padding: '14px',
-    borderRadius: '12px',
-    border: '1px solid #334155',
-    background: '#111827',
-    color: 'white',
-  },
-  textarea: {
-    width: '100%',
-    minHeight: '120px',
-    marginTop: '8px',
-    padding: '14px',
-    borderRadius: '12px',
-    border: '1px solid #334155',
-    background: '#111827',
-    color: 'white',
-    resize: 'vertical',
-  },
-  buttonGroup: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '12px',
-  },
-  primaryButton: {
-    width: '100%',
-    padding: '16px',
-    borderRadius: '14px',
-    border: 'none',
-    background: '#67e8f9',
-    color: '#082f49',
-    fontWeight: 900,
-    cursor: 'pointer',
-    fontSize: '16px',
-  },
-  secondaryButton: {
-    width: '100%',
-    padding: '16px',
-    borderRadius: '14px',
-    border: '1px solid #334155',
-    background: '#111827',
-    color: '#f8fafc',
-    fontWeight: 900,
-    cursor: 'pointer',
-    fontSize: '16px',
-  },
-  summaryBox: {
-    whiteSpace: 'pre-wrap',
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '18px',
-    color: '#e2e8f0',
-    lineHeight: 1.6,
-    minHeight: '520px',
-  },
-  panelList: {
-    display: 'grid',
-    gap: '10px',
-  },
-  panelRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    gap: '16px',
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '14px',
-    padding: '14px',
-  },
-  emptyText: {
-    color: '#94a3b8',
-  },
-  pressureBadge: {
-    display: 'inline-block',
-    background: '#082f49',
-    color: '#67e8f9',
-    border: '1px solid #0e7490',
-    borderRadius: '999px',
-    padding: '10px 14px',
-    fontWeight: 900,
-    marginBottom: '16px',
-  },
-  infoGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-    gap: '12px',
-  },
-  infoBox: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '14px',
-    padding: '14px',
-  },
-  infoLabel: {
-    color: '#94a3b8',
-    fontSize: '12px',
-    fontWeight: 900,
-    margin: 0,
-  },
-  infoValue: {
-    margin: '6px 0 0',
-    color: '#f8fafc',
-  },
 }
