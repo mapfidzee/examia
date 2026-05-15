@@ -6,6 +6,7 @@ import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { evaluateContinuityIntelligence } from '../lib/continuityIntelligence'
 import { evaluatePressurePropagation } from '../lib/pressurePropagation'
 import { evaluateTrajectoryIntelligence } from '../lib/trajectoryIntelligence'
+import { evaluateStructuralMemory } from '../lib/structuralMemory'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -85,6 +86,7 @@ const REPORT_TEMPLATES = [
   'Institutional routing pressure brief',
   'Intervention completion reliability brief',
   'Trajectory intelligence brief',
+  'Structural memory intelligence brief',
 ]
 
 const OPERATING_LEVELS = [
@@ -112,6 +114,10 @@ const PRESSURE_FOCUS = [
   'Continuity drift',
   'Escalation momentum',
   'Recovery direction',
+  'Structural memory risk',
+  'Routing failure recurrence',
+  'Escalation corridor recurrence',
+  'Institutional fragility signature',
 ]
 
 const ACTION_TEMPLATES = [
@@ -125,6 +131,7 @@ const ACTION_TEMPLATES = [
   'Review routing delays, responder load, and intervention gaps before pressure becomes systemic.',
   'Activate command review, inspect unresolved pathways, and prioritize high-severity or safeguarding-linked cases.',
   'Strengthen routing ownership, intervention completion, and outcome confirmation to restore clear stabilization direction.',
+  'Review repeated routing gaps, escalation corridors, intervention failures, and weak recovery patterns before they harden into systemic fragility.',
 ]
 
 export default function OperationsPage() {
@@ -290,6 +297,7 @@ function OperationsContent() {
       item.intervention_status ||
       (item.intervention_summary ? 'COMPLETED' : 'PENDING'),
     responder_id: item.responder_id || item.assigned_responder_id,
+    assigned_responder_id: item.assigned_responder_id,
     created_at: item.created_at,
     completed_at: item.completed_at,
   }))
@@ -306,6 +314,16 @@ function OperationsContent() {
       recovery_status:
         item.case_status === 'STABILIZED' ? 'RECOVERING' : 'UNDER_REVIEW',
     }))
+
+  const mappedResponders = responders.map((item) => ({
+    id: item.id,
+    governance_status:
+      item.governance_status || item.responder_status || item.operational_status,
+    responder_status: item.responder_status || item.operational_status,
+    operational_status: item.operational_status,
+    trust_score: item.trust_score,
+    active_case_count: item.active_case_count,
+  }))
 
   const continuityScores = evaluateContinuityIntelligence({
     totalCases: cases.length,
@@ -326,14 +344,7 @@ function OperationsContent() {
     routingActions: mappedRoutingActions,
     interventions: mappedInterventions,
     outcomes: mappedOutcomes,
-    responders: responders.map((item) => ({
-      id: item.id,
-      governance_status:
-        item.governance_status || item.responder_status || item.operational_status,
-      responder_status: item.responder_status || item.operational_status,
-      trust_score: item.trust_score,
-      active_case_count: item.active_case_count,
-    })),
+    responders: mappedResponders,
   })
 
   const trajectoryIntelligence = evaluateTrajectoryIntelligence({
@@ -341,6 +352,14 @@ function OperationsContent() {
     routingActions: mappedRoutingActions,
     interventions: mappedInterventions,
     outcomes: mappedOutcomes,
+  })
+
+  const structuralMemory = evaluateStructuralMemory({
+    cases,
+    routingActions: mappedRoutingActions,
+    interventions: mappedInterventions,
+    outcomes: mappedOutcomes,
+    responders: mappedResponders,
   })
 
   const topRegions = regionBreakdown(cases)
@@ -372,17 +391,26 @@ ${pressurePropagation.pressurePropagationState}
 Trajectory Direction:
 ${trajectoryIntelligence.trajectoryDirection}
 
-Trajectory Severity:
-${trajectoryIntelligence.severity}
-
-Dominant Trajectory Signal:
-${trajectoryIntelligence.dominantTrajectorySignal}
+Structural Memory State:
+${structuralMemory.structuralMemoryState}
 
 Pressure Propagation Severity:
 ${pressurePropagation.severity}
 
+Trajectory Severity:
+${trajectoryIntelligence.severity}
+
+Structural Memory Severity:
+${structuralMemory.severity}
+
 Dominant Pressure Source:
 ${pressurePropagation.dominantPressureSource}
+
+Dominant Trajectory Signal:
+${trajectoryIntelligence.dominantTrajectorySignal}
+
+Dominant Structural Memory Pattern:
+${structuralMemory.dominantMemoryPattern}
 
 Continuity Intelligence Scores:
 Continuity Integrity Score: ${continuityScores.continuityIntegrityScore}/100
@@ -406,6 +434,15 @@ Escalation Momentum: ${trajectoryIntelligence.escalationMomentum}/100
 Recovery Direction: ${trajectoryIntelligence.recoveryDirection}/100
 Stabilization Trend: ${trajectoryIntelligence.stabilizationTrend}/100
 Unresolved Momentum: ${trajectoryIntelligence.unresolvedMomentum}/100
+
+Structural Memory Intelligence:
+Structural Memory Risk: ${structuralMemory.structuralMemoryRisk}/100
+Routing Failure Recurrence: ${structuralMemory.routingFailureRecurrence}/100
+Escalation Corridor Recurrence: ${structuralMemory.escalationCorridorRecurrence}/100
+Institutional Fragility Signature: ${structuralMemory.institutionalFragilitySignature}/100
+Intervention Failure Pattern: ${structuralMemory.interventionFailurePattern}/100
+Responder Strain Recurrence: ${structuralMemory.responderStrainRecurrence}/100
+Continuity Collapse Recurrence: ${structuralMemory.continuityCollapseRecurrence}/100
 
 Core Metrics:
 Total Beneficiary Cases: ${cases.length}
@@ -431,21 +468,94 @@ ${pressurePropagation.executiveSummary}
 Trajectory Interpretation:
 ${trajectoryIntelligence.executiveSummary}
 
+Structural Memory Interpretation:
+${structuralMemory.executiveSummary}
+
 Recommended Pressure Action Cue:
 ${pressurePropagation.actionCue}
 
 Recommended Trajectory Action Cue:
 ${trajectoryIntelligence.actionCue}
 
+Recommended Structural Memory Action Cue:
+${structuralMemory.actionCue}
+
 Selected Governance Action Cue:
 ${actionCue}
 
 Governance-Safe Interpretation:
-This brief separates operational activity from continuity confidence. It does not assume that routing, intervention, or outcome documentation automatically means stabilization is durable. CGI evaluates continuity integrity, stabilization confidence, pressure propagation, trajectory direction, escalation velocity, routing friction, recovery reliability, and operational survivability so leaders can see whether the system is merely busy, spreading instability, drifting, recovering, or actually stabilizing.
+This brief separates operational activity from continuity confidence. It does not assume that routing, intervention, or outcome documentation automatically means stabilization is durable. CGI evaluates continuity integrity, stabilization confidence, pressure propagation, trajectory direction, structural memory, escalation velocity, routing friction, recovery reliability, and operational survivability so leaders can see whether the system is merely busy, spreading instability, drifting, repeating instability, recovering, or actually stabilizing.
 
 Additional Operational Notes:
 ${additionalNotes.trim() || 'No additional operational notes entered.'}
     `.trim()
+  }
+
+  async function saveOperationalSnapshot() {
+    setMessage('Saving operational intelligence snapshot...')
+
+    const { error } = await supabase.from('cgi_operational_metrics').insert({
+      scope: operatingLevel.toUpperCase().replaceAll(' ', '_'),
+
+      continuity_integrity_score: continuityScores.continuityIntegrityScore,
+      stabilization_confidence_score: continuityScores.stabilizationConfidenceScore,
+      escalation_pressure_index: continuityScores.escalationPressureIndex,
+      recovery_reliability_score: continuityScores.recoveryReliabilityScore,
+      operational_survivability_score: continuityScores.operationalSurvivabilityScore,
+      continuity_state: continuityScores.continuityState,
+
+      propagation_risk: pressurePropagation.propagationRisk,
+      routing_friction: pressurePropagation.routingFriction,
+      responder_pressure: pressurePropagation.responderPressure,
+      escalation_velocity: pressurePropagation.escalationVelocity,
+      coordination_instability: pressurePropagation.coordinationInstability,
+      stabilization_drag: pressurePropagation.stabilizationDrag,
+      pressure_propagation_state: pressurePropagation.pressurePropagationState,
+
+      trajectory_risk: trajectoryIntelligence.trajectoryRisk,
+      continuity_drift: trajectoryIntelligence.continuityDrift,
+      escalation_momentum: trajectoryIntelligence.escalationMomentum,
+      recovery_direction: trajectoryIntelligence.recoveryDirection,
+      stabilization_trend: trajectoryIntelligence.stabilizationTrend,
+      unresolved_momentum: trajectoryIntelligence.unresolvedMomentum,
+      trajectory_direction: trajectoryIntelligence.trajectoryDirection,
+
+      structural_memory_risk: structuralMemory.structuralMemoryRisk,
+      routing_failure_recurrence: structuralMemory.routingFailureRecurrence,
+      escalation_corridor_recurrence:
+        structuralMemory.escalationCorridorRecurrence,
+      institutional_fragility_signature:
+        structuralMemory.institutionalFragilitySignature,
+      intervention_failure_pattern: structuralMemory.interventionFailurePattern,
+      responder_strain_recurrence: structuralMemory.responderStrainRecurrence,
+      continuity_collapse_recurrence:
+        structuralMemory.continuityCollapseRecurrence,
+      structural_memory_state: structuralMemory.structuralMemoryState,
+
+      dominant_pressure_source: pressurePropagation.dominantPressureSource,
+      dominant_trajectory_signal: trajectoryIntelligence.dominantTrajectorySignal,
+      dominant_memory_pattern: structuralMemory.dominantMemoryPattern,
+
+      executive_summary: [
+        pressurePropagation.executiveSummary,
+        trajectoryIntelligence.executiveSummary,
+        structuralMemory.executiveSummary,
+      ].join('\n\n'),
+
+      action_cue: [
+        pressurePropagation.actionCue,
+        trajectoryIntelligence.actionCue,
+        structuralMemory.actionCue,
+      ].join('\n\n'),
+    })
+
+    if (error) {
+      console.error(error)
+      setMessage('Failed to save operational intelligence snapshot.')
+      return
+    }
+
+    setMessage('Operational intelligence snapshot saved successfully.')
   }
 
   return (
@@ -459,8 +569,9 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
           <p style={styles.subtitle}>
             Convert cases, routing activity, intervention evidence, safeguarding flags,
             institutions, and responder capacity into continuity integrity, pressure
-            propagation, trajectory intelligence, stabilization confidence, escalation
-            pressure, recovery reliability, and operational survivability intelligence.
+            propagation, trajectory intelligence, structural memory, stabilization
+            confidence, escalation pressure, recovery reliability, and operational
+            survivability intelligence.
           </p>
         </section>
 
@@ -588,6 +699,56 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
           </div>
         </section>
 
+        <section style={styles.memoryHero}>
+          <div>
+            <p style={styles.scoreLabel}>Structural Memory State</p>
+            <h2 style={styles.memoryState}>
+              {structuralMemory.structuralMemoryState}
+            </h2>
+            <p style={styles.panelNote}>{structuralMemory.executiveSummary}</p>
+          </div>
+
+          <div style={styles.scoreGrid}>
+            <ScoreMetric
+              label="Structural Memory Risk"
+              value={structuralMemory.structuralMemoryRisk}
+            />
+            <ScoreMetric
+              label="Routing Failure Recurrence"
+              value={structuralMemory.routingFailureRecurrence}
+            />
+            <ScoreMetric
+              label="Escalation Corridor Recurrence"
+              value={structuralMemory.escalationCorridorRecurrence}
+            />
+            <ScoreMetric
+              label="Institutional Fragility"
+              value={structuralMemory.institutionalFragilitySignature}
+            />
+            <ScoreMetric
+              label="Intervention Failure Pattern"
+              value={structuralMemory.interventionFailurePattern}
+            />
+            <ScoreMetric
+              label="Responder Strain Recurrence"
+              value={structuralMemory.responderStrainRecurrence}
+            />
+            <ScoreMetric
+              label="Continuity Collapse Recurrence"
+              value={structuralMemory.continuityCollapseRecurrence}
+            />
+          </div>
+
+          <div style={styles.pressureInsight}>
+            <Info label="Severity" value={structuralMemory.severity} />
+            <Info
+              label="Dominant Pattern"
+              value={structuralMemory.dominantMemoryPattern}
+            />
+            <Info label="Action Cue" value={structuralMemory.actionCue} />
+          </div>
+        </section>
+
         <section style={styles.metricsGrid}>
           <Metric label="Total Cases" value={cases.length} />
           <Metric label="Active Stabilization" value={activeCases.length} />
@@ -651,9 +812,15 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
               />
             </label>
 
-            <button onClick={loadOperationalData} style={styles.primaryButton}>
-              Refresh Continuity Intelligence
-            </button>
+            <div style={styles.buttonGroup}>
+              <button onClick={loadOperationalData} style={styles.primaryButton}>
+                Refresh Continuity Intelligence
+              </button>
+
+              <button onClick={saveOperationalSnapshot} style={styles.secondaryButton}>
+                Save Operational Snapshot
+              </button>
+            </div>
           </div>
 
           <div style={styles.card}>
@@ -661,8 +828,8 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
 
             <p style={styles.panelNote}>
               This brief separates activity from stabilization confidence and adds pressure
-              propagation plus trajectory visibility so leaders can see whether instability
-              is spreading, drifting, recovering, or stabilizing.
+              propagation, trajectory visibility, and structural memory so leaders can see
+              whether instability is spreading, drifting, repeating, recovering, or stabilizing.
             </p>
 
             <pre style={styles.summaryBox}>{operationalBrief()}</pre>
@@ -696,8 +863,9 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
             <p style={styles.panelNote}>
               This pressure status is an early operational signal derived from routed cases,
               escalations, critical cases, and safeguarding visibility. Pressure Propagation
-              Intelligence evaluates whether pressure is spreading, while Trajectory
-              Intelligence evaluates where continuity is heading.
+              Intelligence evaluates whether pressure is spreading, Trajectory Intelligence
+              evaluates where continuity is heading, and Structural Memory Intelligence
+              evaluates whether instability is repeating.
             </p>
 
             <div style={styles.infoGrid}>
@@ -905,6 +1073,14 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: '24px',
     boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
   },
+  memoryHero: {
+    background: '#1f2937',
+    border: '1px solid #94a3b8',
+    borderRadius: '28px',
+    padding: '24px',
+    marginBottom: '24px',
+    boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
+  },
   scoreLabel: {
     color: '#94a3b8',
     fontWeight: 900,
@@ -928,6 +1104,12 @@ const styles: Record<string, CSSProperties> = {
     fontSize: 'clamp(38px, 8vw, 76px)',
     margin: '8px 0 20px',
     color: '#a78bfa',
+    letterSpacing: '-0.05em',
+  },
+  memoryState: {
+    fontSize: 'clamp(38px, 8vw, 76px)',
+    margin: '8px 0 20px',
+    color: '#d1d5db',
     letterSpacing: '-0.05em',
   },
   scoreGrid: {
@@ -1026,6 +1208,11 @@ const styles: Record<string, CSSProperties> = {
     color: 'white',
     resize: 'vertical',
   },
+  buttonGroup: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '12px',
+  },
   primaryButton: {
     width: '100%',
     padding: '16px',
@@ -1033,6 +1220,17 @@ const styles: Record<string, CSSProperties> = {
     border: 'none',
     background: '#67e8f9',
     color: '#082f49',
+    fontWeight: 900,
+    cursor: 'pointer',
+    fontSize: '16px',
+  },
+  secondaryButton: {
+    width: '100%',
+    padding: '16px',
+    borderRadius: '14px',
+    border: '1px solid #334155',
+    background: '#111827',
+    color: '#f8fafc',
     fontWeight: 900,
     cursor: 'pointer',
     fontSize: '16px',
