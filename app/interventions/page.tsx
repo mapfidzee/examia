@@ -1,14 +1,15 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import type { CSSProperties } from 'react'
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
+import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import {
   evaluateInterventionLifecycle,
   type ContinuityRisk,
 } from '../../lib/lifecycleGovernance'
 import { logAuditEvent } from '../../lib/auditLogger'
 import { supabase } from '../../lib/supabase'
+import { useEffect, useState } from 'react'
+import type { CSSProperties } from 'react'
 
 type BeneficiaryCase = {
   id: string
@@ -86,7 +87,9 @@ export default function InterventionCompletionPage() {
         'RESPONDER',
       ]}
     >
-      <InterventionCompletionContent />
+      <CGIGovernanceShell>
+        <InterventionCompletionContent />
+      </CGIGovernanceShell>
     </GovernanceRouteGuard>
   )
 }
@@ -200,7 +203,7 @@ Governance Statement:
 This intervention record documents support delivery, stabilization progress, continuity risk, and follow-up needs. It does not blame the beneficiary, family, responder, school, institution, or partner. It exists to support governed stabilization, safe coordination, accountable intervention continuity, and lifecycle movement.
 
 Lifecycle Principle:
-Intervention is not recovery. EXAMIA records the intervention, evaluates continuity risk, and keeps recovery monitoring active until stabilization is confirmed.
+Intervention is not recovery. TSINAXA CGI records the intervention, evaluates continuity risk, and keeps recovery monitoring active until stabilization is confirmed.
     `.trim()
   }
 
@@ -259,7 +262,7 @@ Intervention is not recovery. EXAMIA records the intervention, evaluates continu
       case_id: selectedCaseId,
       event_type: lifecycleDecision.timelineEventType,
       event_summary: `${lifecycleDecision.timelineSummary} Completion: ${completionStatus}. Continuity risk: ${continuityRisk}. Stabilization confidence: ${lifecycleDecision.stabilizationConfidence}.`,
-      actor: 'EXAMIA LIS Lifecycle Governance Intervention',
+      actor: 'TSINAXA CGI Lifecycle Governance Intervention',
     })
 
     if (timelineError) {
@@ -316,7 +319,7 @@ Intervention is not recovery. EXAMIA records the intervention, evaluates continu
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.hero}>
-          <p style={styles.kicker}>EXAMIA LIS • LIFECYCLE INTERVENTION INTELLIGENCE</p>
+          <p style={styles.kicker}>TSINAXA CGI • INTERVENTION GOVERNANCE</p>
 
           <h1 style={styles.title}>Intervention Completion Evidence</h1>
 
@@ -499,9 +502,7 @@ function Select({
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    background: 'linear-gradient(180deg, #020617 0%, #0f172a 100%)',
     color: 'white',
-    padding: '56px 18px',
   },
   container: {
     maxWidth: '1240px',
