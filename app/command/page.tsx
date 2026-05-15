@@ -1,9 +1,11 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
+import { evaluateContinuityIntelligence } from '../lib/continuityIntelligence'
+import { evaluatePressurePropagation } from '../lib/pressurePropagation'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -12,29 +14,51 @@ type BeneficiaryCase = {
   severity_level: string
   safeguarding_flag: boolean
   region: string | null
+  institution_id?: string | null
+  institution_name?: string | null
+  created_at?: string | null
+  updated_at?: string | null
 }
 
 type RoutingAction = {
   id: string
   case_id: string
+  routing_status?: string | null
+  routing_priority?: string | null
+  routing_reason?: string | null
+  institution_id?: string | null
   assigned_responder_id?: string | null
+  created_at?: string | null
 }
 
 type InterventionRecord = {
   id: string
   case_id: string
+  intervention_type?: string | null
+  intervention_status?: string | null
+  assigned_responder_id?: string | null
+  responder_id?: string | null
+  created_at?: string | null
+  completed_at?: string | null
 }
 
 type OutcomeRecord = {
   id: string
   case_id: string
   outcome_status?: string | null
+  stabilization_status?: string | null
+  recovery_status?: string | null
+  created_at?: string | null
 }
 
 type Responder = {
   id: string
   full_name: string
   operational_status: string
+  governance_status?: string | null
+  responder_status?: string | null
+  trust_score?: number | null
+  active_case_count?: number | null
 }
 
 type Institution = {
@@ -71,11 +95,13 @@ const COMMAND_REPORT_TEMPLATES = [
   'Ministry operational command brief',
   'Safeguarding visibility command brief',
   'Recovery and continuity command brief',
+  'Pressure propagation command brief',
 ]
 
 const COMMAND_FOCUS_OPTIONS = [
   'Overall continuity command view',
   'Operational disruption visibility',
+  'Pressure propagation visibility',
   'Recovery and continuity visibility',
   'Routing and bottleneck visibility',
   'Safeguarding coordination visibility',
@@ -95,7 +121,7 @@ function getCommandGuidance(status: string) {
   if (status === 'STABLE_COMMAND_STATUS') {
     return {
       interpretation:
-        'Operational continuity appears controlled. Continue monitoring unresolved pathways, recovery movement, and governance integrity.',
+        'Operational continuity appears controlled. Continue monitoring unresolved pathways, recovery movement, pressure propagation, and governance integrity.',
       action:
         'Maintain standard continuity monitoring and continue routine coordination review.',
       monitoring: 'Stable command monitoring remains active.',
@@ -105,9 +131,9 @@ function getCommandGuidance(status: string) {
   if (status === 'WATCH_COMMAND_STATUS') {
     return {
       interpretation:
-        'Early continuity pressure is visible. Leaders should monitor routing pressure, recovery movement, unresolved pathways, and safeguarding signals.',
+        'Early continuity pressure is visible. Leaders should monitor routing pressure, recovery movement, pressure propagation, unresolved pathways, and safeguarding signals.',
       action:
-        'Review active pathways, responder distribution, and stabilization conversion before pressure increases.',
+        'Review active pathways, responder distribution, stabilization conversion, and propagation signals before pressure increases.',
       monitoring: 'Watch-level command monitoring remains active.',
     }
   }
@@ -115,18 +141,18 @@ function getCommandGuidance(status: string) {
   if (status === 'ELEVATED_COMMAND_STATUS') {
     return {
       interpretation:
-        'Multiple continuity pressure signals are visible. Routing concentration, recovery weakness, bottlenecks, or safeguarding pressure may require coordinated action.',
+        'Multiple continuity pressure signals are visible. Routing concentration, pressure spread, recovery weakness, bottlenecks, or safeguarding pressure may require coordinated action.',
       action:
-        'Prioritize command review, rebalance responder load, strengthen recovery pathways, and verify governance traceability.',
+        'Prioritize command review, rebalance responder load, inspect propagation sources, strengthen recovery pathways, and verify governance traceability.',
       monitoring: 'Elevated command monitoring remains active.',
     }
   }
 
   return {
     interpretation:
-      'Critical continuity pressure is visible. Unresolved disruption, recovery weakness, safeguarding pressure, or bottlenecks may be threatening institutional stability.',
+      'Critical continuity pressure is visible. Unresolved disruption, pressure propagation, recovery weakness, safeguarding pressure, or bottlenecks may be threatening institutional stability.',
     action:
-      'Activate governance escalation, redistribute stabilization load, review stuck pathways, and confirm recovery ownership.',
+      'Activate governance escalation, redistribute stabilization load, review stuck pathways, inspect propagation corridors, and confirm recovery ownership.',
     monitoring: 'Critical command escalation monitoring is active.',
   }
 }
@@ -196,19 +222,31 @@ function CommandCenterContent() {
     const totalCases = cases.length
 
     const activeCases = cases.filter((item) =>
-      ACTIVE_CASE_STATUSES.includes(item.case_status)
+      ACTIVE_CASE_STATUSES.includes(item.case_status),
     ).length
+
+    const routedCases = cases.filter((item) =>
+      ['ROUTED', 'RESPONDER_ASSIGNED'].includes(item.case_status),
+    ).length
+
     const stabilizedCases = cases.filter((item) => item.case_status === 'STABILIZED').length
     const escalatedCases = cases.filter((item) => item.case_status === 'ESCALATED').length
     const criticalCases = cases.filter((item) => item.severity_level === 'CRITICAL').length
     const safeguardingFlags = cases.filter((item) => item.safeguarding_flag).length
 
-    const activeResponders = responders.filter(
-      (item) => item.operational_status === 'ACTIVE'
+    const activeResponders = responders.filter((item) =>
+      ['ACTIVE', 'VERIFIED'].includes(
+        String(
+          item.governance_status ||
+            item.responder_status ||
+            item.operational_status ||
+            '',
+        ).toUpperCase(),
+      ),
     ).length
 
     const activeInstitutions = institutions.filter(
-      (item) => item.coordination_status === 'ACTIVE'
+      (item) => item.coordination_status === 'ACTIVE',
     ).length
 
     const outcomeCaseIds = new Set(outcomes.map((item) => item.case_id))
@@ -228,29 +266,29 @@ function CommandCenterContent() {
       totalCases === 0 ? 0 : Math.round((stabilizedCases / totalCases) * 100)
 
     const activeWithoutRouting = cases.filter(
-      (item) => ACTIVE_CASE_STATUSES.includes(item.case_status) && !routedCaseIds.has(item.id)
+      (item) => ACTIVE_CASE_STATUSES.includes(item.case_status) && !routedCaseIds.has(item.id),
     ).length
 
     const routedWithoutResponder = routingActions.filter(
-      (item) => !item.assigned_responder_id
+      (item) => !item.assigned_responder_id,
     ).length
 
     const unresolvedInterventionPathways = cases.filter(
       (item) =>
         ACTIVE_CASE_STATUSES.includes(item.case_status) &&
         interventionCaseIds.has(item.id) &&
-        !outcomeCaseIds.has(item.id)
+        !outcomeCaseIds.has(item.id),
     ).length
 
     const stalledCases = cases.filter(
       (item) =>
         ACTIVE_CASE_STATUSES.includes(item.case_status) &&
         outcomeCaseIds.has(item.id) &&
-        item.case_status !== 'STABILIZED'
+        item.case_status !== 'STABILIZED',
     ).length
 
     const activeWithoutOutcome = cases.filter(
-      (item) => ACTIVE_CASE_STATUSES.includes(item.case_status) && !outcomeCaseIds.has(item.id)
+      (item) => ACTIVE_CASE_STATUSES.includes(item.case_status) && !outcomeCaseIds.has(item.id),
     ).length
 
     const responderLoadMap: Record<string, number> = {}
@@ -274,6 +312,59 @@ function CommandCenterContent() {
       .map(([label, value]) => ({ label, value }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 5)
+
+    const continuityScores = evaluateContinuityIntelligence({
+      totalCases,
+      activeCases,
+      routedCases,
+      interventionCases: uniqueInterventionCases,
+      outcomeCases: uniqueOutcomeCases,
+      stabilizedCases,
+      escalatedCases,
+      criticalCases,
+      safeguardingCases: safeguardingFlags,
+      unresolvedInterventionPathways,
+      routedWithoutResponder,
+    })
+
+    const pressurePropagation = evaluatePressurePropagation({
+      cases,
+      routingActions: routingActions.map((item) => ({
+        id: item.id,
+        case_id: item.case_id,
+        routing_status: item.routing_status,
+        priority_level: item.routing_priority,
+        routing_decision: item.routing_reason,
+        responder_id: item.assigned_responder_id,
+        institution_id: item.institution_id,
+        created_at: item.created_at,
+      })),
+      interventions: interventions.map((item) => ({
+        id: item.id,
+        case_id: item.case_id,
+        intervention_type: item.intervention_type,
+        intervention_status: item.intervention_status || 'PENDING',
+        responder_id: item.responder_id || item.assigned_responder_id,
+        created_at: item.created_at,
+        completed_at: item.completed_at,
+      })),
+      outcomes: outcomes.map((item) => ({
+        id: item.id,
+        case_id: item.case_id,
+        outcome_status: item.outcome_status,
+        stabilization_status: item.stabilization_status,
+        recovery_status: item.recovery_status,
+        created_at: item.created_at,
+      })),
+      responders: responders.map((item) => ({
+        id: item.id,
+        governance_status:
+          item.governance_status || item.responder_status || item.operational_status,
+        responder_status: item.responder_status || item.operational_status,
+        trust_score: item.trust_score,
+        active_case_count: item.active_case_count,
+      })),
+    })
 
     const predictiveStatus =
       escalatedCases >= 3 || safeguardingFlags >= 3
@@ -325,21 +416,19 @@ function CommandCenterContent() {
           ? 'GOVERNANCE_REVIEW_REQUIRED'
           : 'GOVERNANCE_TRACEABILITY_STABLE'
 
-    const reliabilityScore = Math.max(
-      0,
-      Math.min(
-        100,
-        Math.round(
-          stabilizationRate * 0.35 +
-            interventionCoverage * 0.25 +
-            outcomeCoverage * 0.25 +
-            (governanceIntegrityStatus === 'GOVERNANCE_TRACEABILITY_STABLE' ? 15 : 0) -
-            (totalCases === 0 ? 0 : Math.round((escalatedCases / totalCases) * 100)) * 0.1
-        )
-      )
-    )
+    const reliabilityScore = continuityScores.recoveryReliabilityScore
+
+    const pressureRiskPoints =
+      pressurePropagation.pressurePropagationState === 'CASCADE_RISK'
+        ? 4
+        : pressurePropagation.pressurePropagationState === 'SPREADING'
+          ? 3
+          : pressurePropagation.pressurePropagationState === 'BUILDING'
+            ? 1
+            : 0
 
     const riskPoints =
+      pressureRiskPoints +
       (predictiveStatus === 'HIGH_FORECAST_PRESSURE'
         ? 3
         : predictiveStatus === 'MODERATE_FORECAST_PRESSURE'
@@ -378,15 +467,31 @@ function CommandCenterContent() {
           : 0)
 
     const commandStatus =
-      riskPoints >= 10
+      riskPoints >= 12
         ? 'CRITICAL_COMMAND_STATUS'
-        : riskPoints >= 7
+        : riskPoints >= 8
           ? 'ELEVATED_COMMAND_STATUS'
           : riskPoints >= 3
             ? 'WATCH_COMMAND_STATUS'
             : 'STABLE_COMMAND_STATUS'
 
     const operationalSignals: CommandSignal[] = [
+      {
+        label: 'Pressure Propagation',
+        status: pressurePropagation.pressurePropagationState,
+        interpretation: pressurePropagation.executiveSummary,
+        action: pressurePropagation.actionCue,
+      },
+      {
+        label: 'Continuity State',
+        status: continuityScores.continuityState,
+        interpretation:
+          'Continuity intelligence separates activity from stabilization confidence, recovery reliability, escalation pressure, and survivability.',
+        action:
+          continuityScores.operationalSurvivabilityScore < 60
+            ? 'Review continuity integrity, unresolved pathways, and survivability risk.'
+            : 'Maintain continuity monitoring and verify recovery durability.',
+      },
       {
         label: 'Operational Stability',
         status: commandStatus,
@@ -444,6 +549,7 @@ function CommandCenterContent() {
     return {
       totalCases,
       activeCases,
+      routedCases,
       stabilizedCases,
       escalatedCases,
       criticalCases,
@@ -470,12 +576,20 @@ function CommandCenterContent() {
       commandStatus,
       regionalPressureItems,
       operationalSignals,
+      continuityScores,
+      pressurePropagation,
     }
   }, [cases, routingActions, interventions, outcomes, responders, institutions])
 
   const commandGuidance = getCommandGuidance(intelligence.commandStatus)
 
   const continuityRiskZones: CommandSignal[] = [
+    {
+      label: 'Dominant Pressure Source',
+      status: intelligence.pressurePropagation.dominantPressureSource,
+      interpretation: `The leading pressure source is ${intelligence.pressurePropagation.dominantPressureSource}.`,
+      action: intelligence.pressurePropagation.actionCue,
+    },
     {
       label: 'Unresolved Intervention Pathways',
       status: intelligence.unresolvedInterventionPathways > 0 ? 'REVIEW_REQUIRED' : 'CONTROLLED',
@@ -520,9 +634,22 @@ ${commandScope}
 Overall Command Status:
 ${intelligence.commandStatus}
 
+Continuity State:
+${intelligence.continuityScores.continuityState}
+
+Pressure Propagation State:
+${intelligence.pressurePropagation.pressurePropagationState}
+
+Pressure Propagation Severity:
+${intelligence.pressurePropagation.severity}
+
+Dominant Pressure Source:
+${intelligence.pressurePropagation.dominantPressureSource}
+
 Core Command Metrics:
 Total Cases: ${intelligence.totalCases}
 Active Continuity Cases: ${intelligence.activeCases}
+Routed Cases: ${intelligence.routedCases}
 Stabilized Cases: ${intelligence.stabilizedCases}
 Escalated Cases: ${intelligence.escalatedCases}
 Critical Cases: ${intelligence.criticalCases}
@@ -533,6 +660,21 @@ Intervention Coverage: ${intelligence.interventionCoverage}%
 Outcome Coverage: ${intelligence.outcomeCoverage}%
 Stabilization Rate: ${intelligence.stabilizationRate}%
 Reliability Score: ${intelligence.reliabilityScore}/100
+
+Continuity Intelligence Scores:
+Continuity Integrity Score: ${intelligence.continuityScores.continuityIntegrityScore}/100
+Stabilization Confidence Score: ${intelligence.continuityScores.stabilizationConfidenceScore}/100
+Escalation Pressure Index: ${intelligence.continuityScores.escalationPressureIndex}/100
+Recovery Reliability Score: ${intelligence.continuityScores.recoveryReliabilityScore}/100
+Operational Survivability Score: ${intelligence.continuityScores.operationalSurvivabilityScore}/100
+
+Pressure Propagation Intelligence:
+Propagation Risk: ${intelligence.pressurePropagation.propagationRisk}/100
+Routing Friction: ${intelligence.pressurePropagation.routingFriction}/100
+Responder Pressure: ${intelligence.pressurePropagation.responderPressure}/100
+Escalation Velocity: ${intelligence.pressurePropagation.escalationVelocity}/100
+Coordination Instability: ${intelligence.pressurePropagation.coordinationInstability}/100
+Stabilization Drag: ${intelligence.pressurePropagation.stabilizationDrag}/100
 
 Executive Command Signals:
 Predictive Status: ${intelligence.predictiveStatus}
@@ -550,14 +692,20 @@ Routed Without Responder Ownership: ${intelligence.routedWithoutResponder}
 Active Without Outcome Confirmation: ${intelligence.activeWithoutOutcome}
 Stalled Stabilization Cases: ${intelligence.stalledCases}
 
+Pressure Interpretation:
+${intelligence.pressurePropagation.executiveSummary}
+
 Governance Interpretation:
 ${commandGuidance.interpretation}
 
 Recommended Command Action:
 ${commandGuidance.action}
 
+Pressure Propagation Action:
+${intelligence.pressurePropagation.actionCue}
+
 Governance-Safe Command Meaning:
-This command brief consolidates operational disruption visibility, continuity risk, routing ownership, bottleneck pressure, recovery movement, intervention coverage, outcome coverage, safeguarding visibility, regional pressure, governance integrity, and institutional memory into one executive command view. It supports system-level action without assigning blame to responders, institutions, beneficiaries, families, or partners.
+This command brief consolidates operational disruption visibility, continuity risk, pressure propagation, routing ownership, bottleneck pressure, recovery movement, intervention coverage, outcome coverage, safeguarding visibility, regional pressure, governance integrity, and institutional memory into one executive command view. It supports system-level action without assigning blame to responders, institutions, beneficiaries, families, or partners.
 
 Monitoring Note:
 ${commandGuidance.monitoring}
@@ -576,8 +724,9 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
 
           <p style={styles.subtitle}>
             Govern what happens after visible disruption enters an institutional pathway:
-            routing, response ownership, evidence, recovery, escalation, accountability,
-            and institutional memory until stabilization is confirmed.
+            routing, response ownership, pressure propagation, evidence, recovery,
+            escalation, accountability, and institutional memory until stabilization is
+            confirmed.
           </p>
 
           <div style={styles.commandBanner}>
@@ -590,23 +739,46 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
 
         <section style={styles.metricsGrid}>
           <Metric label="Command Status" value={intelligence.commandStatus} />
+          <Metric label="Continuity State" value={intelligence.continuityScores.continuityState} />
+          <Metric
+            label="Pressure State"
+            value={intelligence.pressurePropagation.pressurePropagationState}
+          />
+          <Metric
+            label="Propagation Risk"
+            value={`${intelligence.pressurePropagation.propagationRisk}/100`}
+          />
           <Metric label="Recovery Status" value={intelligence.recoveryStatus} />
           <Metric label="Governance Integrity" value={intelligence.governanceIntegrityStatus} />
           <Metric label="Reliability Score" value={`${intelligence.reliabilityScore}/100`} />
+          <Metric
+            label="Survivability Score"
+            value={`${intelligence.continuityScores.operationalSurvivabilityScore}/100`}
+          />
+        </section>
+
+        <section style={styles.metricsGrid}>
+          <Metric label="Routing Friction" value={`${intelligence.pressurePropagation.routingFriction}/100`} />
+          <Metric label="Responder Pressure" value={`${intelligence.pressurePropagation.responderPressure}/100`} />
+          <Metric label="Escalation Velocity" value={`${intelligence.pressurePropagation.escalationVelocity}/100`} />
+          <Metric
+            label="Coordination Instability"
+            value={`${intelligence.pressurePropagation.coordinationInstability}/100`}
+          />
+          <Metric label="Stabilization Drag" value={`${intelligence.pressurePropagation.stabilizationDrag}/100`} />
           <Metric label="Active Cases" value={intelligence.activeCases.toString()} />
           <Metric label="Critical Cases" value={intelligence.criticalCases.toString()} />
           <Metric label="Safeguarding Flags" value={intelligence.safeguardingFlags.toString()} />
-          <Metric label="Stabilization Rate" value={`${intelligence.stabilizationRate}%`} />
         </section>
 
         <section style={styles.sectionGrid}>
-          <Panel title="Operational Stability Overview" note="Executive view of continuity posture.">
+          <Panel title="Operational Stability Overview" note="Executive view of continuity posture and pressure propagation.">
             {intelligence.operationalSignals.map((signal) => (
               <SignalCard key={signal.label} signal={signal} />
             ))}
           </Panel>
 
-          <Panel title="Continuity Risk Zones" note="Where disruption risks disappearing after notice.">
+          <Panel title="Continuity Risk Zones" note="Where disruption risks spreading or disappearing after notice.">
             {continuityRiskZones.map((signal) => (
               <SignalCard key={signal.label} signal={signal} />
             ))}
@@ -668,8 +840,14 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
             <h3 style={styles.alignedTitle}>Auto-Aligned Command Interpretation</h3>
             <p style={styles.alignedText}>{commandGuidance.interpretation}</p>
 
+            <h3 style={styles.alignedTitle}>Auto-Aligned Pressure Interpretation</h3>
+            <p style={styles.alignedText}>{intelligence.pressurePropagation.executiveSummary}</p>
+
             <h3 style={styles.alignedTitle}>Auto-Aligned Command Action</h3>
             <p style={styles.alignedText}>{commandGuidance.action}</p>
+
+            <h3 style={styles.alignedTitle}>Auto-Aligned Pressure Action</h3>
+            <p style={styles.alignedText}>{intelligence.pressurePropagation.actionCue}</p>
 
             <h3 style={styles.alignedTitle}>Auto-Aligned Monitoring Note</h3>
             <p style={styles.alignedText}>{commandGuidance.monitoring}</p>
@@ -718,7 +896,7 @@ function Panel({
 }: {
   title: string
   note: string
-  children: React.ReactNode
+  children: ReactNode
 }) {
   return (
     <section style={styles.card}>
