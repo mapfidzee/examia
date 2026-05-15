@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -100,6 +101,14 @@ const ACTION_TEMPLATES = [
 ]
 
 export default function OperationsPage() {
+  return (
+    <CGIGovernanceShell>
+      <OperationsContent />
+    </CGIGovernanceShell>
+  )
+}
+
+function OperationsContent() {
   const [cases, setCases] = useState<BeneficiaryCase[]>([])
   const [institutions, setInstitutions] = useState<Institution[]>([])
   const [responders, setResponders] = useState<Responder[]>([])
@@ -214,7 +223,7 @@ export default function OperationsPage() {
 
   function operationalBrief() {
     return `
-EXAMIA LIS OPERATIONAL INTELLIGENCE BRIEF
+TSINAXA CGI OPERATIONAL INTELLIGENCE BRIEF
 
 Report Template:
 ${reportTemplate}
@@ -257,14 +266,14 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.hero}>
-          <p style={styles.kicker}>EXAMIA LIS • OPERATIONAL INTELLIGENCE</p>
+          <p style={styles.kicker}>TSINAXA CGI • OPERATIONAL INTELLIGENCE</p>
 
-          <h1 style={styles.title}>National Learning Stabilization Intelligence</h1>
+          <h1 style={styles.title}>Continuity Governance Operational Intelligence</h1>
 
           <p style={styles.subtitle}>
-            Convert beneficiary cases, routing activity, intervention evidence, safeguarding
-            flags, institutions, and responder capacity into governed operational visibility
-            for districts, NGOs, regional teams, and ministries.
+            Convert cases, routing activity, intervention evidence, safeguarding flags,
+            institutions, and responder capacity into governed operational visibility for
+            command review, stabilization pressure, and continuity governance.
           </p>
         </section>
 
@@ -279,10 +288,7 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
           <Metric label="Safeguarding Flags" value={safeguardingCases.length} />
           <Metric label="Active Responders" value={activeResponders.length} />
           <Metric label="Intervention Records" value={interventionVolume} />
-          <Metric
-            label="Cases With Intervention Evidence"
-            value={uniqueInterventionCases}
-          />
+          <Metric label="Cases With Intervention Evidence" value={uniqueInterventionCases} />
         </section>
 
         <section style={styles.layoutGrid}>
@@ -291,7 +297,7 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
 
             <p style={styles.panelNote}>
               Use this section to generate a standardized operational brief. The dropdowns
-              keep national reporting consistent and prevent narrative drift.
+              keep executive reporting consistent and prevent narrative drift.
             </p>
 
             <Select
@@ -341,8 +347,8 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
             <h2 style={styles.sectionTitle}>Generated Operational Brief</h2>
 
             <p style={styles.panelNote}>
-              This brief can be used for district review, NGO coordination, ministry
-              visibility, or internal operational governance.
+              This brief can be used for command review, institutional coordination,
+              executive visibility, and operational governance.
             </p>
 
             <pre style={styles.summaryBox}>{operationalBrief()}</pre>
@@ -512,9 +518,7 @@ function Panel({
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    background: 'linear-gradient(180deg, #020617 0%, #0f172a 100%)',
     color: 'white',
-    padding: '56px 18px',
   },
   container: {
     maxWidth: '1280px',
