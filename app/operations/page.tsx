@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { evaluateContinuityIntelligence } from '../lib/continuityIntelligence'
+import { evaluatePressurePropagation } from '../lib/pressurePropagation'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -16,9 +17,12 @@ type BeneficiaryCase = {
   instability_signals: string[] | null
   region: string | null
   institution_name: string | null
+  institution_id?: string | null
   safeguarding_flag: boolean
   intervention_summary: string | null
   outcome_summary: string | null
+  created_at?: string | null
+  updated_at?: string | null
 }
 
 type Institution = {
@@ -35,9 +39,12 @@ type Responder = {
   id: string
   full_name: string
   operational_status: string
+  governance_status?: string | null
+  responder_status?: string | null
   response_domains: string[] | null
   region: string | null
   trust_score: number | null
+  active_case_count?: number | null
 }
 
 type RoutingAction = {
@@ -48,6 +55,7 @@ type RoutingAction = {
   routing_reason: string | null
   institution_id: string | null
   assigned_responder_id: string | null
+  created_at?: string | null
 }
 
 type CaseIntervention = {
@@ -55,6 +63,11 @@ type CaseIntervention = {
   case_id: string
   intervention_type: string | null
   intervention_summary: string | null
+  intervention_status?: string | null
+  responder_id?: string | null
+  assigned_responder_id?: string | null
+  created_at?: string | null
+  completed_at?: string | null
 }
 
 type PanelRow = {
@@ -89,6 +102,10 @@ const PRESSURE_FOCUS = [
   'Institutional coordination load',
   'Intervention reliability',
   'Regional instability visibility',
+  'Pressure propagation risk',
+  'Routing friction',
+  'Coordination instability',
+  'Stabilization drag',
 ]
 
 const ACTION_TEMPLATES = [
@@ -99,6 +116,8 @@ const ACTION_TEMPLATES = [
   'Strengthen district coordination where escalation pressure is visible.',
   'Review institution load and rebalance coordination responsibility.',
   'Improve intervention completion evidence and follow-up discipline.',
+  'Review routing delays, responder load, and intervention gaps before pressure becomes systemic.',
+  'Activate command review, inspect unresolved pathways, and prioritize high-severity or safeguarding-linked cases.',
 ]
 
 export default function OperationsPage() {
@@ -117,14 +136,14 @@ function OperationsContent() {
   const [interventions, setInterventions] = useState<CaseIntervention[]>([])
 
   const [reportTemplate, setReportTemplate] = useState(
-    'District operational stability brief'
+    'District operational stability brief',
   )
   const [operatingLevel, setOperatingLevel] = useState('All levels')
   const [pressureFocus, setPressureFocus] = useState(
-    'Overall stabilization pressure'
+    'Overall stabilization pressure',
   )
   const [actionCue, setActionCue] = useState(
-    'Maintain monitoring; pressure remains within manageable range.'
+    'Maintain monitoring; pressure remains within manageable range.',
   )
   const [additionalNotes, setAdditionalNotes] = useState('')
   const [message, setMessage] = useState('')
@@ -176,25 +195,33 @@ function OperationsContent() {
       'RESPONDER_ASSIGNED',
       'INTERVENTION_ACTIVE',
       'STABILIZING',
-    ].includes(item.case_status)
+    ].includes(item.case_status),
   )
 
   const routedCases = cases.filter((item) =>
-    ['ROUTED', 'RESPONDER_ASSIGNED'].includes(item.case_status)
+    ['ROUTED', 'RESPONDER_ASSIGNED'].includes(item.case_status),
   )
 
   const stabilizedCases = cases.filter((item) => item.case_status === 'STABILIZED')
   const escalatedCases = cases.filter((item) => item.case_status === 'ESCALATED')
   const criticalCases = cases.filter((item) => item.severity_level === 'CRITICAL')
   const safeguardingCases = cases.filter((item) => item.safeguarding_flag)
-  const activeResponders = responders.filter(
-    (item) => item.operational_status === 'ACTIVE'
+
+  const activeResponders = responders.filter((item) =>
+    ['ACTIVE', 'VERIFIED'].includes(
+      String(
+        item.governance_status ||
+          item.responder_status ||
+          item.operational_status ||
+          '',
+      ).toUpperCase(),
+    ),
   )
 
   const interventionCaseIds = new Set(interventions.map((item) => item.case_id))
 
   const outcomeCaseIds = new Set(
-    cases.filter((item) => item.outcome_summary).map((item) => item.id)
+    cases.filter((item) => item.outcome_summary).map((item) => item.id),
   )
 
   const uniqueInterventionCases = interventionCaseIds.size
@@ -229,11 +256,11 @@ function OperationsContent() {
     (item) =>
       interventionCaseIds.has(item.id) &&
       !outcomeCaseIds.has(item.id) &&
-      item.case_status !== 'STABILIZED'
+      item.case_status !== 'STABILIZED',
   ).length
 
   const routedWithoutResponder = routingActions.filter(
-    (item) => !item.assigned_responder_id
+    (item) => !item.assigned_responder_id,
   ).length
 
   const continuityScores = evaluateContinuityIntelligence({
@@ -250,13 +277,58 @@ function OperationsContent() {
     routedWithoutResponder,
   })
 
+  const pressurePropagation = evaluatePressurePropagation({
+    cases,
+    routingActions: routingActions.map((item) => ({
+      id: item.id,
+      case_id: item.case_id,
+      routing_status: item.routing_status,
+      priority_level: item.routing_priority,
+      routing_decision: item.routing_reason,
+      responder_id: item.assigned_responder_id,
+      institution_id: item.institution_id,
+      created_at: item.created_at,
+    })),
+    interventions: interventions.map((item) => ({
+      id: item.id,
+      case_id: item.case_id,
+      intervention_type: item.intervention_type,
+      intervention_status:
+        item.intervention_status ||
+        (item.intervention_summary ? 'COMPLETED' : 'PENDING'),
+      responder_id: item.responder_id || item.assigned_responder_id,
+      created_at: item.created_at,
+      completed_at: item.completed_at,
+    })),
+    outcomes: cases
+      .filter((item) => item.outcome_summary)
+      .map((item) => ({
+        id: `case-outcome-${item.id}`,
+        case_id: item.id,
+        outcome_status:
+          item.case_status === 'STABILIZED' ? 'STABILIZED' : 'OUTCOME_RECORDED',
+        stabilization_status:
+          item.case_status === 'STABILIZED' ? 'STABILIZED' : 'PARTIAL',
+        recovery_status:
+          item.case_status === 'STABILIZED' ? 'STABILIZED' : 'UNDER_REVIEW',
+      })),
+    responders: responders.map((item) => ({
+      id: item.id,
+      governance_status:
+        item.governance_status || item.responder_status || item.operational_status,
+      responder_status: item.responder_status || item.operational_status,
+      trust_score: item.trust_score,
+      active_case_count: item.active_case_count,
+    })),
+  })
+
   const topRegions = regionBreakdown(cases)
   const statusBreakdown = caseStatusBreakdown(cases)
   const severityBreakdown = severityLevelBreakdown(cases)
 
   function operationalBrief() {
     return `
-TSINAXA CGI CONTINUITY INTELLIGENCE BRIEF
+TSINAXA CGI CONTINUITY GOVERNANCE INTELLIGENCE BRIEF
 
 Report Template:
 ${reportTemplate}
@@ -273,12 +345,29 @@ ${pressureStatus}
 Continuity State:
 ${continuityScores.continuityState}
 
+Pressure Propagation State:
+${pressurePropagation.pressurePropagationState}
+
+Pressure Propagation Severity:
+${pressurePropagation.severity}
+
+Dominant Pressure Source:
+${pressurePropagation.dominantPressureSource}
+
 Continuity Intelligence Scores:
 Continuity Integrity Score: ${continuityScores.continuityIntegrityScore}/100
 Stabilization Confidence Score: ${continuityScores.stabilizationConfidenceScore}/100
 Escalation Pressure Index: ${continuityScores.escalationPressureIndex}/100
 Recovery Reliability Score: ${continuityScores.recoveryReliabilityScore}/100
 Operational Survivability Score: ${continuityScores.operationalSurvivabilityScore}/100
+
+Pressure Propagation Intelligence:
+Propagation Risk: ${pressurePropagation.propagationRisk}/100
+Routing Friction: ${pressurePropagation.routingFriction}/100
+Responder Pressure: ${pressurePropagation.responderPressure}/100
+Escalation Velocity: ${pressurePropagation.escalationVelocity}/100
+Coordination Instability: ${pressurePropagation.coordinationInstability}/100
+Stabilization Drag: ${pressurePropagation.stabilizationDrag}/100
 
 Core Metrics:
 Total Beneficiary Cases: ${cases.length}
@@ -298,11 +387,17 @@ Outcome Coverage: ${outcomeCoverage}%
 Unresolved Intervention Pathways: ${unresolvedInterventionPathways}
 Routed Without Responder Ownership: ${routedWithoutResponder}
 
+Pressure Interpretation:
+${pressurePropagation.executiveSummary}
+
 Recommended Action Cue:
+${pressurePropagation.actionCue}
+
+Selected Governance Action Cue:
 ${actionCue}
 
 Governance-Safe Interpretation:
-This brief separates operational activity from continuity confidence. It does not assume that routing, intervention, or outcome documentation automatically means stabilization is durable. CGI evaluates continuity integrity, stabilization confidence, escalation pressure, recovery reliability, and operational survivability so leaders can see whether the system is merely busy or actually stabilizing.
+This brief separates operational activity from continuity confidence. It does not assume that routing, intervention, or outcome documentation automatically means stabilization is durable. CGI evaluates continuity integrity, stabilization confidence, pressure propagation, escalation velocity, routing friction, recovery reliability, and operational survivability so leaders can see whether the system is merely busy or actually stabilizing.
 
 Additional Operational Notes:
 ${additionalNotes.trim() || 'No additional operational notes entered.'}
@@ -319,9 +414,9 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
 
           <p style={styles.subtitle}>
             Convert cases, routing activity, intervention evidence, safeguarding flags,
-            institutions, and responder capacity into continuity integrity, stabilization
-            confidence, escalation pressure, recovery reliability, and operational
-            survivability intelligence.
+            institutions, and responder capacity into continuity integrity, pressure
+            propagation, stabilization confidence, escalation pressure, recovery
+            reliability, and operational survivability intelligence.
           </p>
         </section>
 
@@ -357,6 +452,52 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
           </div>
         </section>
 
+        <section style={styles.pressureHero}>
+          <div>
+            <p style={styles.scoreLabel}>Pressure Propagation State</p>
+            <h2 style={styles.pressureState}>
+              {pressurePropagation.pressurePropagationState}
+            </h2>
+            <p style={styles.panelNote}>{pressurePropagation.executiveSummary}</p>
+          </div>
+
+          <div style={styles.scoreGrid}>
+            <ScoreMetric
+              label="Propagation Risk"
+              value={pressurePropagation.propagationRisk}
+            />
+            <ScoreMetric
+              label="Routing Friction"
+              value={pressurePropagation.routingFriction}
+            />
+            <ScoreMetric
+              label="Responder Pressure"
+              value={pressurePropagation.responderPressure}
+            />
+            <ScoreMetric
+              label="Escalation Velocity"
+              value={pressurePropagation.escalationVelocity}
+            />
+            <ScoreMetric
+              label="Coordination Instability"
+              value={pressurePropagation.coordinationInstability}
+            />
+            <ScoreMetric
+              label="Stabilization Drag"
+              value={pressurePropagation.stabilizationDrag}
+            />
+          </div>
+
+          <div style={styles.pressureInsight}>
+            <Info label="Severity" value={pressurePropagation.severity} />
+            <Info
+              label="Dominant Source"
+              value={pressurePropagation.dominantPressureSource}
+            />
+            <Info label="Action Cue" value={pressurePropagation.actionCue} />
+          </div>
+        </section>
+
         <section style={styles.metricsGrid}>
           <Metric label="Total Cases" value={cases.length} />
           <Metric label="Active Stabilization" value={activeCases.length} />
@@ -366,7 +507,10 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
           <Metric label="Safeguarding Flags" value={safeguardingCases.length} />
           <Metric label="Active Responders" value={activeResponders.length} />
           <Metric label="Intervention Records" value={interventionVolume} />
-          <Metric label="Cases With Intervention Evidence" value={uniqueInterventionCases} />
+          <Metric
+            label="Cases With Intervention Evidence"
+            value={uniqueInterventionCases}
+          />
           <Metric label="Cases With Outcome Evidence" value={outcomeCaseIds.size} />
         </section>
 
@@ -426,8 +570,8 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
             <h2 style={styles.sectionTitle}>Generated Continuity Intelligence Brief</h2>
 
             <p style={styles.panelNote}>
-              This brief separates activity from stabilization confidence so leaders can
-              see whether continuity is actually holding.
+              This brief separates activity from stabilization confidence and adds pressure
+              propagation visibility so leaders can see whether instability is spreading.
             </p>
 
             <pre style={styles.summaryBox}>{operationalBrief()}</pre>
@@ -460,9 +604,9 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
 
             <p style={styles.panelNote}>
               This pressure status is an early operational signal derived from routed cases,
-              escalations, critical cases, and safeguarding visibility. The continuity
-              scores above go deeper by evaluating whether stabilization is actually
-              becoming reliable.
+              escalations, critical cases, and safeguarding visibility. Pressure Propagation
+              Intelligence goes deeper by evaluating whether pressure is spreading across
+              routing, responders, coordination, and stabilization pathways.
             </p>
 
             <div style={styles.infoGrid}>
@@ -654,6 +798,14 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: '24px',
     boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
   },
+  pressureHero: {
+    background: '#111827',
+    border: '1px solid #0e7490',
+    borderRadius: '28px',
+    padding: '24px',
+    marginBottom: '24px',
+    boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
+  },
   scoreLabel: {
     color: '#94a3b8',
     fontWeight: 900,
@@ -665,6 +817,12 @@ const styles: Record<string, CSSProperties> = {
     fontSize: 'clamp(38px, 8vw, 76px)',
     margin: '8px 0 20px',
     color: '#67e8f9',
+    letterSpacing: '-0.05em',
+  },
+  pressureState: {
+    fontSize: 'clamp(38px, 8vw, 76px)',
+    margin: '8px 0 20px',
+    color: '#fbbf24',
     letterSpacing: '-0.05em',
   },
   scoreGrid: {
@@ -687,6 +845,12 @@ const styles: Record<string, CSSProperties> = {
     color: '#f8fafc',
     fontSize: '28px',
     margin: '10px 0 0',
+  },
+  pressureInsight: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gap: '12px',
+    marginTop: '16px',
   },
   metricsGrid: {
     display: 'grid',
