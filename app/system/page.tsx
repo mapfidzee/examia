@@ -9,8 +9,6 @@ type CgiOperationalMetric = {
   id: string
   created_at: string
   scope: string
-  region: string | null
-  institution_id: string | null
 
   continuity_integrity_score: number
   stabilization_confidence_score: number
@@ -47,8 +45,6 @@ type CgiOperationalMetric = {
   dominant_pressure_source: string | null
   dominant_trajectory_signal: string | null
   dominant_memory_pattern: string | null
-  executive_summary: string | null
-  action_cue: string | null
 }
 
 type StabilityState =
@@ -69,6 +65,14 @@ type BoardZone = {
 }
 
 const SAMPLE_LIMIT = 120
+
+const DOCTRINE = [
+  'Detection is not stabilization.',
+  'Routing is not intervention.',
+  'Intervention is not recovery.',
+  'Outcome is not continuity.',
+  'Closure is not survivability.',
+]
 
 export default function SystemPage() {
   return (
@@ -106,16 +110,16 @@ function ExecutiveStabilityBoard() {
   }
 
   const board = useMemo(() => {
-    const ordered = [...metrics].sort(
+    const sortedMetrics = [...metrics].sort(
       (a, b) =>
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     )
 
-    const latest = ordered[ordered.length - 1] || null
-    const previous = ordered[ordered.length - 2] || null
+    const latest = sortedMetrics[sortedMetrics.length - 1] || null
+    const prior = sortedMetrics[sortedMetrics.length - 2] || null
 
-    const earlyWindow = ordered.slice(0, 5)
-    const recentWindow = ordered.slice(-5)
+    const recentWindow = sortedMetrics.slice(-5)
+    const baselineWindow = sortedMetrics.slice(0, 5)
 
     const continuityConfidence = average([
       average(metrics.map((item) => item.continuity_integrity_score)),
@@ -145,7 +149,10 @@ function ExecutiveStabilityBoard() {
     const reliabilityConfidence = average([
       average(metrics.map((item) => item.recovery_reliability_score)),
       average(metrics.map((item) => item.operational_survivability_score)),
-      100 - calculateVolatility(metrics.map((item) => item.recovery_reliability_score)),
+      100 -
+        calculateVolatility(
+          metrics.map((item) => item.recovery_reliability_score),
+        ),
     ])
 
     const structuralMemorySeverity = average([
@@ -167,24 +174,20 @@ function ExecutiveStabilityBoard() {
       100 - average(metrics.map((item) => item.stabilization_trend)),
     ])
 
-    const earlyStability = average(
-      earlyWindow.map((item) =>
-        stabilityScoreFromSnapshot(item),
-      ),
+    const baselineStability = average(
+      baselineWindow.map((item) => stabilityScoreFromSnapshot(item)),
     )
 
     const recentStability = average(
-      recentWindow.map((item) =>
-        stabilityScoreFromSnapshot(item),
-      ),
+      recentWindow.map((item) => stabilityScoreFromSnapshot(item)),
     )
 
     const stabilityVelocity =
-      metrics.length < 2 ? 0 : Math.round(recentStability - earlyStability)
+      metrics.length < 2 ? 0 : Math.round(recentStability - baselineStability)
 
     const latestStabilityMovement =
-      latest && previous
-        ? stabilityScoreFromSnapshot(latest) - stabilityScoreFromSnapshot(previous)
+      latest && prior
+        ? stabilityScoreFromSnapshot(latest) - stabilityScoreFromSnapshot(prior)
         : 0
 
     const instabilityLoad = average([
@@ -233,9 +236,8 @@ function ExecutiveStabilityBoard() {
       'Negative stability movement': Math.max(-stabilityVelocity, 0),
     })
 
-    const executiveInterpretation = getExecutiveInterpretation(
-      executiveStabilityState,
-    )
+    const executiveInterpretation =
+      getExecutiveInterpretation(executiveStabilityState)
 
     const executiveActionPriorities = getExecutiveActionPriorities({
       pressureSeverity,
@@ -365,9 +367,7 @@ function ExecutiveStabilityBoard() {
     ]
 
     return {
-      ordered,
       latest,
-      previous,
       continuityConfidence,
       operationalSurvivability,
       pressureSeverity,
@@ -375,8 +375,6 @@ function ExecutiveStabilityBoard() {
       reliabilityConfidence,
       structuralMemorySeverity,
       trajectoryPressure,
-      earlyStability,
-      recentStability,
       stabilityVelocity,
       latestStabilityMovement,
       instabilityLoad,
@@ -391,6 +389,13 @@ function ExecutiveStabilityBoard() {
 
   const brief = `
 TSINAXA CGI EXECUTIVE STABILITY BOARD
+
+Infrastructure Identity:
+TSINAXA CGI
+Continuity Governance Infrastructure
+
+Enterprise Subtitle:
+Executive Continuity Intelligence Infrastructure
 
 Executive Stability State:
 ${board.executiveStabilityState}
@@ -440,6 +445,9 @@ ${board.executiveInterpretation}
 Executive Action Priorities:
 ${board.executiveActionPriorities.map((item, index) => `${index + 1}. ${item}`).join('\n')}
 
+Locked Doctrine:
+${DOCTRINE.join('\n')}
+
 Governance-Safe Meaning:
 This TSINAXA CGI Executive Stability Board is not workflow software, task management, incident tracking, or a generic dashboard. It is continuity command intelligence. It shows whether visible instability is stabilizing, drifting, propagating, recovering, repeating, or approaching survivability risk.
   `.trim()
@@ -448,15 +456,27 @@ This TSINAXA CGI Executive Stability Board is not workflow software, task manage
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.hero}>
-          <p style={styles.kicker}>TSINAXA CGI • EXECUTIVE STABILITY BOARD</p>
+          <p style={styles.kicker}>TSINAXA CGI</p>
 
-          <h1 style={styles.title}>Executive Stability Board</h1>
+          <h1 style={styles.title}>Continuity Governance Infrastructure</h1>
+
+          <p style={styles.enterpriseSubtitle}>
+            Executive Continuity Intelligence Infrastructure
+          </p>
 
           <p style={styles.subtitle}>
             One executive surface for continuity posture visibility. This board shows
             whether continuity is stabilizing, drifting, propagating, recovering,
             repeating, or approaching survivability risk.
           </p>
+
+          <div style={styles.doctrineGrid}>
+            {DOCTRINE.map((item) => (
+              <div key={item} style={styles.doctrineCard}>
+                {item}
+              </div>
+            ))}
+          </div>
         </section>
 
         {message && <div style={styles.message}>{message}</div>}
@@ -693,10 +713,7 @@ function getExecutiveStabilityState(input: {
 }): StabilityState {
   if (input.count < 3) return 'INSUFFICIENT_HISTORY'
 
-  if (
-    input.operationalSurvivability < 35 ||
-    input.instabilityLoad >= 75
-  ) {
+  if (input.operationalSurvivability < 35 || input.instabilityLoad >= 75) {
     return 'SURVIVABILITY_RISK_RISING'
   }
 
@@ -891,9 +908,9 @@ const styles: Record<string, CSSProperties> = {
   },
   kicker: {
     color: '#67e8f9',
-    fontSize: '12px',
+    fontSize: '13px',
     fontWeight: 900,
-    letterSpacing: '2px',
+    letterSpacing: '3px',
   },
   title: {
     fontSize: 'clamp(38px, 7vw, 72px)',
@@ -901,11 +918,32 @@ const styles: Record<string, CSSProperties> = {
     margin: '12px 0',
     letterSpacing: '-0.05em',
   },
+  enterpriseSubtitle: {
+    color: '#a7f3d0',
+    fontSize: 'clamp(20px, 4vw, 34px)',
+    fontWeight: 900,
+    margin: '0 0 16px',
+  },
   subtitle: {
     color: '#cbd5e1',
     maxWidth: '980px',
     lineHeight: 1.7,
     fontSize: '18px',
+  },
+  doctrineGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+    gap: '12px',
+    marginTop: '22px',
+  },
+  doctrineCard: {
+    background: '#020617',
+    border: '1px solid #334155',
+    borderRadius: '16px',
+    padding: '14px',
+    color: '#cffafe',
+    fontWeight: 800,
+    lineHeight: 1.4,
   },
   message: {
     background: '#064e3b',
