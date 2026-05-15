@@ -3,39 +3,39 @@ import Link from "next/link";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "EXAMIA | Governed Continuity Infrastructure",
+  title: "TSINAXA CGI | Continuity Governance Infrastructure",
   description:
-    "EXAMIA prevents operational disruption from disappearing after it is noticed.",
+    "Executive continuity intelligence infrastructure for pressure visibility, trajectory monitoring, recovery governance, reliability assessment, and institutional survivability.",
 };
 
 const commandLinks = [
+  { label: "Stability Board", href: "/system" },
   { label: "Command", href: "/command" },
   { label: "Audit", href: "/audit" },
   { label: "Governance", href: "/governance" },
-  { label: "Timeline", href: "/timeline" },
 ];
 
 const operationLinks = [
+  { label: "Operations", href: "/operations" },
   { label: "Cases", href: "/cases" },
   { label: "Routing", href: "/routing" },
   { label: "Interventions", href: "/interventions" },
   { label: "Outcomes", href: "/outcomes" },
-  { label: "Recovery", href: "/recovery" },
 ];
 
 const intelligenceLinks = [
   { label: "Pressure", href: "/pressure" },
-  { label: "Bottlenecks", href: "/bottlenecks" },
   { label: "Trajectory", href: "/trajectory" },
   { label: "Predictive", href: "/predictive" },
   { label: "Reliability", href: "/reliability" },
+  { label: "Recovery", href: "/recovery" },
 ];
 
 const systemLinks = [
-  { label: "System", href: "/system" },
   { label: "Infrastructure", href: "/infrastructure" },
+  { label: "Bottlenecks", href: "/bottlenecks" },
+  { label: "Timeline", href: "/timeline" },
   { label: "Domains", href: "/domains" },
-  { label: "Case Flow", href: "/case-flow" },
   { label: "Action Cues", href: "/action-cues" },
 ];
 
@@ -75,30 +75,36 @@ function ExecutiveShell({ children }: { children: React.ReactNode }) {
           <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.28em] text-cyan-300">
-                EXAMIA LIS
+                TSINAXA CGI
               </p>
 
               <h1 className="mt-2 text-2xl font-black tracking-tight text-white md:text-3xl">
-                Governed Continuity Infrastructure
+                Continuity Governance Infrastructure
               </h1>
 
+              <p className="mt-2 text-base font-black text-emerald-200">
+                Executive Continuity Intelligence Infrastructure
+              </p>
+
               <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-300">
-                Prevents operational disruption from disappearing after it is
-                noticed. TSINAXA detects hidden structural strain. EXAMIA
-                governs the response after visible disruption enters the
-                pathway.
+                Governs visible instability until stabilization credibility is
+                achieved. Preserves pressure, trajectory, recovery, reliability,
+                survivability, executive action, and institutional memory.
               </p>
             </div>
 
             <div className="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-5 py-4">
               <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-cyan-200">
-                Operational Oversight
+                Executive Oversight
               </p>
+
               <p className="mt-2 text-sm font-bold text-white">
-                Continuity • Stabilization • Recovery
+                Continuity • Recovery • Survivability
               </p>
+
               <p className="mt-1 text-xs text-slate-300">
-                Institutional coordination with governed audit visibility.
+                Command visibility for pressure, trajectory, recovery, reliability,
+                and institutional survivability.
               </p>
             </div>
           </div>
