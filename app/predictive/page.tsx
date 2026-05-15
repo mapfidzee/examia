@@ -2,337 +2,730 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { supabase } from '../../lib/supabase'
 
-type BeneficiaryCase = {
+type CgiOperationalMetric = {
   id: string
-  case_status: string
-  severity_level: string
-  safeguarding_flag: boolean
-  assigned_responder_id?: string | null
-  region?: string | null
+  created_at: string
+  scope: string
+  region: string | null
+  institution_id: string | null
+  continuity_integrity_score: number
+  stabilization_confidence_score: number
+  escalation_pressure_index: number
+  recovery_reliability_score: number
+  operational_survivability_score: number
+  continuity_state: string
+  propagation_risk: number
+  routing_friction: number
+  responder_pressure: number
+  escalation_velocity: number
+  coordination_instability: number
+  stabilization_drag: number
+  pressure_propagation_state: string
+  trajectory_risk: number
+  continuity_drift: number
+  escalation_momentum: number
+  recovery_direction: number
+  stabilization_trend: number
+  unresolved_momentum: number
+  trajectory_direction: string
+  structural_memory_risk: number
+  routing_failure_recurrence: number
+  escalation_corridor_recurrence: number
+  institutional_fragility_signature: number
+  intervention_failure_pattern: number
+  responder_strain_recurrence: number
+  continuity_collapse_recurrence: number
+  structural_memory_state: string
+  dominant_pressure_source: string | null
+  dominant_trajectory_signal: string | null
+  dominant_memory_pattern: string | null
+  executive_summary: string | null
+  action_cue: string | null
 }
 
-type RoutingAction = {
-  id: string
-  assigned_responder_id?: string | null
-  institution_id?: string | null
+type PredictionState =
+  | 'INSUFFICIENT_HISTORY'
+  | 'LOW_NEAR_TERM_RISK'
+  | 'WATCH_RISK'
+  | 'RISING_INSTABILITY'
+  | 'HIGH_COLLAPSE_RISK'
+
+type PanelRow = {
+  label: string
+  value: string
 }
 
-type InterventionRecord = {
-  id: string
-  case_id: string
-}
+const SAMPLE_LIMIT = 120
 
-type OutcomeRecord = {
-  id: string
-  case_id: string
-  outcome_status?: string | null
-}
-
-type Institution = {
-  id: string
-  institution_name: string
-}
-
-type Responder = {
-  id: string
-  full_name: string
-  operational_status: string
-}
-
-const REPORT_TEMPLATES = [
-  'Predictive stabilization pressure brief',
-  'Regional continuity forecasting brief',
-  'Responder saturation forecasting brief',
-  'Safeguarding accumulation forecasting brief',
-  'Institution coordination forecasting brief',
-]
-
-const FORECAST_FOCUS = [
-  'Escalation forecasting',
-  'Continuity risk forecasting',
-  'Responder saturation visibility',
-  'Institution coordination pressure',
-  'Regional destabilization visibility',
-]
-
-const OPERATING_SCOPE = [
-  'National view',
-  'Regional view',
-  'District view',
-  'Institution-focused',
-  'Responder-focused',
-]
-
-const GOVERNANCE_INTERPRETATIONS = [
-  'Forecast signals remain manageable with continued monitoring.',
-  'Pressure accumulation patterns require operational review.',
-  'Emerging instability signals suggest increased coordination pressure.',
-  'Forecast patterns suggest continuity weakening.',
-]
-
-const RECOMMENDED_ACTIONS = [
-  'Maintain monitoring and continue stabilization coordination.',
-  'Increase responder coordination monitoring.',
-  'Review stabilization bottlenecks across coordination sites.',
-  'Increase safeguarding visibility review.',
-  'Prioritize continuity stabilization review.',
-]
-
-export default function PredictiveIntelligencePage() {
-  const [cases, setCases] = useState<BeneficiaryCase[]>([])
-  const [routingActions, setRoutingActions] = useState<RoutingAction[]>([])
-  const [interventions, setInterventions] = useState<InterventionRecord[]>([])
-  const [outcomes, setOutcomes] = useState<OutcomeRecord[]>([])
-  const [institutions, setInstitutions] = useState<Institution[]>([])
-  const [responders, setResponders] = useState<Responder[]>([])
-
-  const [reportTemplate, setReportTemplate] = useState(REPORT_TEMPLATES[0])
-  const [forecastFocus, setForecastFocus] = useState(FORECAST_FOCUS[0])
-  const [operatingScope, setOperatingScope] = useState(OPERATING_SCOPE[0])
-  const [governanceInterpretation, setGovernanceInterpretation] = useState(
-    GOVERNANCE_INTERPRETATIONS[0]
+export default function PredictivePage() {
+  return (
+    <CGIGovernanceShell>
+      <PredictiveContent />
+    </CGIGovernanceShell>
   )
-  const [recommendedAction, setRecommendedAction] = useState(RECOMMENDED_ACTIONS[0])
-  const [additionalNotes, setAdditionalNotes] = useState('')
+}
+
+function PredictiveContent() {
+  const [metrics, setMetrics] = useState<CgiOperationalMetric[]>([])
   const [message, setMessage] = useState('')
 
   useEffect(() => {
-    loadAll()
+    loadPredictiveMetrics()
   }, [])
 
-  async function loadAll() {
-    const [
-      casesResult,
-      routingResult,
-      interventionsResult,
-      outcomesResult,
-      institutionsResult,
-      respondersResult,
-    ] = await Promise.all([
-      supabase.from('beneficiary_cases').select('*'),
-      supabase.from('case_routing_actions').select('*'),
-      supabase.from('case_interventions').select('*'),
-      supabase.from('case_outcomes').select('*'),
-      supabase.from('institutions').select('*'),
-      supabase.from('responders').select('*'),
-    ])
+  async function loadPredictiveMetrics() {
+    setMessage('Loading persisted CGI predictive metrics...')
 
-    if (casesResult.error) console.error(casesResult.error)
-    if (routingResult.error) console.error(routingResult.error)
-    if (interventionsResult.error) console.error(interventionsResult.error)
-    if (outcomesResult.error) console.error(outcomesResult.error)
-    if (institutionsResult.error) console.error(institutionsResult.error)
-    if (respondersResult.error) console.error(respondersResult.error)
+    const { data, error } = await supabase
+      .from('cgi_operational_metrics')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(SAMPLE_LIMIT)
 
-    setCases(casesResult.data || [])
-    setRoutingActions(routingResult.data || [])
-    setInterventions(interventionsResult.data || [])
-    setOutcomes(outcomesResult.data || [])
-    setInstitutions(institutionsResult.data || [])
-    setResponders(respondersResult.data || [])
-    setMessage('Predictive coordination intelligence refreshed.')
+    if (error) {
+      console.error(error)
+      setMessage('Failed to load persisted CGI predictive metrics.')
+      return
+    }
+
+    setMetrics(data || [])
+    setMessage('Persisted CGI predictive metrics loaded.')
   }
 
-  const activeCases = cases.filter((item) =>
-    [
-      'NEED_DETECTED',
-      'UNDER_ASSESSMENT',
-      'ROUTED',
-      'RESPONDER_ASSIGNED',
-      'INTERVENTION_ACTIVE',
-      'STABILIZING',
-    ].includes(item.case_status)
-  ).length
+  const prediction = useMemo(() => {
+    const ordered = [...metrics].sort(
+      (a, b) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    )
 
-  const escalatedCases = cases.filter((item) => item.case_status === 'ESCALATED').length
-  const safeguardingFlags = cases.filter((item) => item.safeguarding_flag).length
-  const stabilizedCases = cases.filter((item) => item.case_status === 'STABILIZED').length
-  const activeResponders = responders.filter(
-    (item) => item.operational_status === 'ACTIVE'
-  ).length
+    const latest = ordered[ordered.length - 1] || null
+    const previous = ordered[ordered.length - 2] || null
 
-  const interventionCoverage =
-    cases.length > 0
-      ? Math.round(
-          (new Set(interventions.map((item) => item.case_id)).size / cases.length) * 100
-        )
-      : 0
+    const earlyWindow = ordered.slice(0, 5)
+    const recentWindow = ordered.slice(-5)
 
-  const outcomeCoverage =
-    cases.length > 0
-      ? Math.round((new Set(outcomes.map((item) => item.case_id)).size / cases.length) * 100)
-      : 0
+    const averagePropagationRisk = average(metrics.map((item) => item.propagation_risk))
+    const averageTrajectoryRisk = average(metrics.map((item) => item.trajectory_risk))
+    const averageMemoryRisk = average(metrics.map((item) => item.structural_memory_risk))
+    const averageEscalationPressure = average(
+      metrics.map((item) => item.escalation_pressure_index),
+    )
+    const averageContinuityIntegrity = average(
+      metrics.map((item) => item.continuity_integrity_score),
+    )
+    const averageStabilizationConfidence = average(
+      metrics.map((item) => item.stabilization_confidence_score),
+    )
+    const averageReliability = average(
+      metrics.map((item) => item.recovery_reliability_score),
+    )
+    const averageSurvivability = average(
+      metrics.map((item) => item.operational_survivability_score),
+    )
 
-  const stabilizationRate =
-    cases.length > 0 ? Math.round((stabilizedCases / cases.length) * 100) : 0
+    const earlyRisk = average(
+      earlyWindow.map((item) =>
+        average([
+          item.propagation_risk,
+          item.trajectory_risk,
+          item.structural_memory_risk,
+          item.escalation_pressure_index,
+        ]),
+      ),
+    )
 
-  const responderLoadRisk =
-    activeResponders > 0 && routingActions.length > activeResponders * 2
-      ? 'ELEVATED'
-      : 'CONTROLLED'
+    const recentRisk = average(
+      recentWindow.map((item) =>
+        average([
+          item.propagation_risk,
+          item.trajectory_risk,
+          item.structural_memory_risk,
+          item.escalation_pressure_index,
+        ]),
+      ),
+    )
 
-  const continuityRisk =
-    activeCases > stabilizedCases ? 'CONTINUITY_PRESSURE_VISIBLE' : 'CONTINUITY_STABLE'
+    const riskVelocity = metrics.length < 2 ? 0 : recentRisk - earlyRisk
 
-  const safeguardingRisk =
-    safeguardingFlags >= 2
-      ? 'SAFEGUARDING_ACCUMULATION_VISIBLE'
-      : 'SAFEGUARDING_MONITORED'
+    const earlyReliability = average(
+      earlyWindow.map((item) =>
+        average([
+          item.continuity_integrity_score,
+          item.stabilization_confidence_score,
+          item.recovery_reliability_score,
+          item.operational_survivability_score,
+        ]),
+      ),
+    )
 
-  const predictiveStatus = useMemo(() => {
-    if (escalatedCases >= 3 || safeguardingFlags >= 3) {
-      return 'HIGH_FORECAST_PRESSURE'
+    const recentReliability = average(
+      recentWindow.map((item) =>
+        average([
+          item.continuity_integrity_score,
+          item.stabilization_confidence_score,
+          item.recovery_reliability_score,
+          item.operational_survivability_score,
+        ]),
+      ),
+    )
+
+    const reliabilityVelocity =
+      metrics.length < 2 ? 0 : recentReliability - earlyReliability
+
+    const latestRiskMovement =
+      latest && previous
+        ? average([
+            latest.propagation_risk - previous.propagation_risk,
+            latest.trajectory_risk - previous.trajectory_risk,
+            latest.structural_memory_risk - previous.structural_memory_risk,
+            latest.escalation_pressure_index - previous.escalation_pressure_index,
+          ])
+        : 0
+
+    const latestReliabilityMovement =
+      latest && previous
+        ? average([
+            latest.continuity_integrity_score - previous.continuity_integrity_score,
+            latest.stabilization_confidence_score -
+              previous.stabilization_confidence_score,
+            latest.recovery_reliability_score - previous.recovery_reliability_score,
+            latest.operational_survivability_score -
+              previous.operational_survivability_score,
+          ])
+        : 0
+
+    const volatility = calculateVolatility(
+      metrics.map((item) =>
+        average([
+          item.propagation_risk,
+          item.trajectory_risk,
+          item.structural_memory_risk,
+          item.escalation_pressure_index,
+        ]),
+      ),
+    )
+
+    const instabilityLoad = average([
+      averagePropagationRisk,
+      averageTrajectoryRisk,
+      averageMemoryRisk,
+      averageEscalationPressure,
+      100 - averageContinuityIntegrity,
+      100 - averageStabilizationConfidence,
+      100 - averageReliability,
+      100 - averageSurvivability,
+    ])
+
+    const predictiveRiskScore = clamp(
+      instabilityLoad * 0.34 +
+        Math.max(riskVelocity, 0) * 0.2 +
+        Math.max(-reliabilityVelocity, 0) * 0.2 +
+        volatility * 0.16 +
+        Math.max(latestRiskMovement, 0) * 0.05 +
+        Math.max(-latestReliabilityMovement, 0) * 0.05,
+    )
+
+    const predictionState = getPredictionState({
+      count: metrics.length,
+      predictiveRiskScore,
+      riskVelocity,
+      reliabilityVelocity,
+      volatility,
+      latest,
+    })
+
+    const forecastHorizon = getForecastHorizon(predictionState)
+    const dominantForecastDriver = strongestDriver({
+      'Pressure propagation risk': averagePropagationRisk,
+      'Trajectory risk': averageTrajectoryRisk,
+      'Structural memory risk': averageMemoryRisk,
+      'Escalation pressure': averageEscalationPressure,
+      'Continuity weakness': 100 - averageContinuityIntegrity,
+      'Stabilization weakness': 100 - averageStabilizationConfidence,
+      'Recovery reliability weakness': 100 - averageReliability,
+      'Survivability weakness': 100 - averageSurvivability,
+      'Risk velocity': Math.max(riskVelocity, 0),
+      'Reliability decline': Math.max(-reliabilityVelocity, 0),
+      Volatility: volatility,
+    })
+
+    const executiveSummary = getExecutiveSummary(predictionState)
+    const actionCue = getActionCue(predictionState)
+
+    return {
+      ordered,
+      latest,
+      previous,
+      averagePropagationRisk,
+      averageTrajectoryRisk,
+      averageMemoryRisk,
+      averageEscalationPressure,
+      averageContinuityIntegrity,
+      averageStabilizationConfidence,
+      averageReliability,
+      averageSurvivability,
+      earlyRisk,
+      recentRisk,
+      riskVelocity,
+      earlyReliability,
+      recentReliability,
+      reliabilityVelocity,
+      latestRiskMovement,
+      latestReliabilityMovement,
+      volatility,
+      instabilityLoad,
+      predictiveRiskScore,
+      predictionState,
+      forecastHorizon,
+      dominantForecastDriver,
+      executiveSummary,
+      actionCue,
     }
+  }, [metrics])
 
-    if (activeCases >= Math.max(stabilizedCases, 1) || responderLoadRisk === 'ELEVATED') {
-      return 'MODERATE_FORECAST_PRESSURE'
-    }
+  const latestRows: PanelRow[] = prediction.latest
+    ? [
+        {
+          label: 'Latest Continuity State',
+          value: prediction.latest.continuity_state,
+        },
+        {
+          label: 'Latest Pressure State',
+          value: prediction.latest.pressure_propagation_state,
+        },
+        {
+          label: 'Latest Trajectory Direction',
+          value: prediction.latest.trajectory_direction,
+        },
+        {
+          label: 'Latest Structural Memory State',
+          value: prediction.latest.structural_memory_state,
+        },
+        {
+          label: 'Dominant Pressure Source',
+          value:
+            prediction.latest.dominant_pressure_source ||
+            'No pressure source recorded',
+        },
+        {
+          label: 'Dominant Trajectory Signal',
+          value:
+            prediction.latest.dominant_trajectory_signal ||
+            'No trajectory signal recorded',
+        },
+        {
+          label: 'Dominant Memory Pattern',
+          value:
+            prediction.latest.dominant_memory_pattern ||
+            'No memory pattern recorded',
+        },
+      ]
+    : []
 
-    return 'CONTROLLED_FORECAST_PRESSURE'
-  }, [activeCases, stabilizedCases, escalatedCases, safeguardingFlags, responderLoadRisk])
+  const forecastRows: PanelRow[] = [
+    {
+      label: 'Forecast Horizon',
+      value: prediction.forecastHorizon,
+    },
+    {
+      label: 'Dominant Forecast Driver',
+      value: prediction.dominantForecastDriver,
+    },
+    {
+      label: 'Risk Velocity',
+      value: formatDelta(prediction.riskVelocity),
+    },
+    {
+      label: 'Reliability Velocity',
+      value: formatDelta(prediction.reliabilityVelocity),
+    },
+    {
+      label: 'Latest Risk Movement',
+      value: formatDelta(prediction.latestRiskMovement),
+    },
+    {
+      label: 'Latest Reliability Movement',
+      value: formatDelta(prediction.latestReliabilityMovement),
+    },
+    {
+      label: 'Volatility',
+      value: `${prediction.volatility}/100`,
+    },
+  ]
 
-  const generatedBrief = `
-EXAMIA LIS PREDICTIVE COORDINATION INTELLIGENCE BRIEF
+  const brief = `
+TSINAXA CGI PREDICTIVE INTELLIGENCE BRIEF
 
-Report Template:
-${reportTemplate}
+Prediction State:
+${prediction.predictionState}
 
-Forecast Focus:
-${forecastFocus}
+Forecast Horizon:
+${prediction.forecastHorizon}
 
-Operating Scope:
-${operatingScope}
+Snapshots Reviewed:
+${metrics.length}
 
-Predictive Coordination Status:
-${predictiveStatus}
+Predictive Risk Score:
+${prediction.predictiveRiskScore}/100
 
-Forecast Metrics:
-Total Cases: ${cases.length}
-Active Stabilization Cases: ${activeCases}
-Escalated Cases: ${escalatedCases}
-Safeguarding Flags: ${safeguardingFlags}
-Routing Actions: ${routingActions.length}
-Intervention Coverage: ${interventionCoverage}%
-Outcome Coverage: ${outcomeCoverage}%
-Stabilization Rate: ${stabilizationRate}%
-Coordination Sites: ${institutions.length}
-Active Responders: ${activeResponders}
+Dominant Forecast Driver:
+${prediction.dominantForecastDriver}
 
-Predictive Signals:
-Responder Saturation Risk: ${responderLoadRisk}
-Continuity Risk: ${continuityRisk}
-Safeguarding Forecast Signal: ${safeguardingRisk}
+Recent Risk Average:
+${prediction.recentRisk}/100
 
-Governance Interpretation:
-${governanceInterpretation}
+Early Risk Average:
+${prediction.earlyRisk}/100
+
+Risk Velocity:
+${prediction.riskVelocity}
+
+Recent Reliability Average:
+${prediction.recentReliability}/100
+
+Early Reliability Average:
+${prediction.earlyReliability}/100
+
+Reliability Velocity:
+${prediction.reliabilityVelocity}
+
+Volatility:
+${prediction.volatility}/100
+
+Instability Load:
+${prediction.instabilityLoad}/100
+
+Average Propagation Risk:
+${prediction.averagePropagationRisk}/100
+
+Average Trajectory Risk:
+${prediction.averageTrajectoryRisk}/100
+
+Average Structural Memory Risk:
+${prediction.averageMemoryRisk}/100
+
+Average Escalation Pressure:
+${prediction.averageEscalationPressure}/100
+
+Average Continuity Integrity:
+${prediction.averageContinuityIntegrity}/100
+
+Average Stabilization Confidence:
+${prediction.averageStabilizationConfidence}/100
+
+Average Recovery Reliability:
+${prediction.averageReliability}/100
+
+Average Survivability:
+${prediction.averageSurvivability}/100
+
+Executive Interpretation:
+${prediction.executiveSummary}
 
 Recommended Action:
-${recommendedAction}
+${prediction.actionCue}
 
 Governance-Safe Meaning:
-This predictive intelligence brief identifies early stabilization pressure, continuity weakening, responder saturation patterns, safeguarding accumulation signals, and coordination instability before operational collapse. It supports governance-safe forecasting and stabilization strengthening without assigning blame to institutions, responders, beneficiaries, or partners.
-
-Additional Operational Notes:
-${additionalNotes.trim() || 'No additional operational notes entered.'}
+This predictive view uses persisted CGI operational metric snapshots to forecast whether visible continuity instability is likely to remain controlled, enter watch status, rise toward instability, or approach collapse risk. It does not judge people. It reads system-level historical patterns.
   `.trim()
 
   return (
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.hero}>
-          <p style={styles.kicker}>EXAMIA LIS • PREDICTIVE INTELLIGENCE</p>
+          <p style={styles.kicker}>TSINAXA CGI • PREDICTIVE INTELLIGENCE</p>
 
-          <h1 style={styles.title}>Predictive Stabilization Infrastructure</h1>
+          <h1 style={styles.title}>Continuity Predictive Intelligence</h1>
 
           <p style={styles.subtitle}>
-            Detect rising stabilization pressure, responder saturation, continuity weakening,
-            safeguarding accumulation, and coordination bottlenecks before escalation occurs.
+            Use persisted CGI operational metric snapshots to forecast whether continuity
+            instability is likely to remain controlled, require watch, rise toward
+            instability, or approach collapse risk.
           </p>
         </section>
 
         {message && <div style={styles.message}>{message}</div>}
 
-        <section style={styles.metricsGrid}>
-          <Metric label="Predictive Status" value={predictiveStatus} />
-          <Metric label="Active Cases" value={activeCases} />
-          <Metric label="Safeguarding Flags" value={safeguardingFlags} />
-          <Metric label="Intervention Coverage" value={`${interventionCoverage}%`} />
-          <Metric label="Outcome Coverage" value={`${outcomeCoverage}%`} />
-          <Metric label="Stabilization Rate" value={`${stabilizationRate}%`} />
-        </section>
+        <section style={styles.predictiveHero}>
+          <div>
+            <p style={styles.scoreLabel}>Prediction State</p>
+            <h2 style={styles.predictionState}>{prediction.predictionState}</h2>
+            <p style={styles.panelNote}>{prediction.executiveSummary}</p>
+          </div>
 
-        <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Predictive Coordination Brief Template</h2>
-
-          <p style={styles.helperText}>
-            Use dropdown templates to keep predictive coordination intelligence standardized,
-            governance-safe, and operationally coherent.
-          </p>
-
-          <div style={styles.grid}>
-            <Select
-              label="Report Template"
-              value={reportTemplate}
-              setValue={setReportTemplate}
-              options={REPORT_TEMPLATES}
+          <div style={styles.scoreGrid}>
+            <ScoreMetric
+              label="Predictive Risk Score"
+              value={prediction.predictiveRiskScore}
             />
-
-            <Select
-              label="Forecast Focus"
-              value={forecastFocus}
-              setValue={setForecastFocus}
-              options={FORECAST_FOCUS}
+            <ScoreMetric
+              label="Instability Load"
+              value={prediction.instabilityLoad}
             />
-
-            <Select
-              label="Operating Scope"
-              value={operatingScope}
-              setValue={setOperatingScope}
-              options={OPERATING_SCOPE}
+            <ScoreMetric label="Risk Velocity" value={prediction.riskVelocity} />
+            <ScoreMetric
+              label="Reliability Velocity"
+              value={prediction.reliabilityVelocity}
             />
-
-            <Select
-              label="Governance Interpretation"
-              value={governanceInterpretation}
-              setValue={setGovernanceInterpretation}
-              options={GOVERNANCE_INTERPRETATIONS}
-            />
-
-            <Select
-              label="Recommended Action"
-              value={recommendedAction}
-              setValue={setRecommendedAction}
-              options={RECOMMENDED_ACTIONS}
+            <ScoreMetric label="Volatility" value={prediction.volatility} />
+            <ScoreMetric
+              label="Recent Risk Average"
+              value={prediction.recentRisk}
             />
           </div>
 
-          <label style={styles.label}>
-            Optional Additional Operational Notes
-            <textarea
-              value={additionalNotes}
-              onChange={(event) => setAdditionalNotes(event.target.value)}
-              style={styles.textarea}
-              placeholder="Use operational language only. Avoid blame or unnecessary personal details."
-            />
-          </label>
+          <div style={styles.actionBox}>
+            <strong>Recommended Action:</strong>
+            <span>{prediction.actionCue}</span>
+          </div>
+        </section>
 
-          <button style={styles.primaryButton} onClick={loadAll}>
-            Refresh Predictive Intelligence
+        <section style={styles.metricsGrid}>
+          <Metric label="Snapshots Reviewed" value={metrics.length} />
+          <Metric label="Forecast Horizon" value={prediction.forecastHorizon} />
+          <Metric
+            label="Dominant Forecast Driver"
+            value={prediction.dominantForecastDriver}
+          />
+          <Metric
+            label="Average Propagation Risk"
+            value={`${prediction.averagePropagationRisk}/100`}
+          />
+          <Metric
+            label="Average Trajectory Risk"
+            value={`${prediction.averageTrajectoryRisk}/100`}
+          />
+          <Metric
+            label="Average Memory Risk"
+            value={`${prediction.averageMemoryRisk}/100`}
+          />
+          <Metric
+            label="Average Escalation Pressure"
+            value={`${prediction.averageEscalationPressure}/100`}
+          />
+          <Metric
+            label="Average Survivability"
+            value={`${prediction.averageSurvivability}/100`}
+          />
+        </section>
+
+        <section style={styles.layoutGrid}>
+          <Panel
+            title="Latest Persisted State"
+            note="Most recent saved operational intelligence snapshot."
+            rows={latestRows}
+          />
+
+          <Panel
+            title="Forecast Drivers"
+            note="Signals used to interpret near-term continuity risk."
+            rows={forecastRows}
+          />
+        </section>
+
+        <section style={styles.card}>
+          <h2 style={styles.sectionTitle}>Recent Predictive Snapshot Trail</h2>
+
+          <p style={styles.panelNote}>
+            Latest saved rows from <code>cgi_operational_metrics</code>. These are
+            historical predictive inputs, not live recalculations.
+          </p>
+
+          <div style={styles.tableWrap}>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Created</th>
+                  <th style={styles.th}>Scope</th>
+                  <th style={styles.th}>Continuity</th>
+                  <th style={styles.th}>Pressure</th>
+                  <th style={styles.th}>Trajectory</th>
+                  <th style={styles.th}>Memory</th>
+                  <th style={styles.th}>Risk</th>
+                  <th style={styles.th}>Reliability</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {metrics.length === 0 && (
+                  <tr>
+                    <td style={styles.td} colSpan={8}>
+                      No persisted CGI operational metrics found yet.
+                    </td>
+                  </tr>
+                )}
+
+                {metrics.slice(0, 12).map((item) => (
+                  <tr key={item.id}>
+                    <td style={styles.td}>{formatDate(item.created_at)}</td>
+                    <td style={styles.td}>{item.scope}</td>
+                    <td style={styles.td}>{item.continuity_state}</td>
+                    <td style={styles.td}>{item.pressure_propagation_state}</td>
+                    <td style={styles.td}>{item.trajectory_direction}</td>
+                    <td style={styles.td}>{item.structural_memory_state}</td>
+                    <td style={styles.td}>
+                      {average([
+                        item.propagation_risk,
+                        item.trajectory_risk,
+                        item.structural_memory_risk,
+                        item.escalation_pressure_index,
+                      ])}
+                      /100
+                    </td>
+                    <td style={styles.td}>{item.recovery_reliability_score}/100</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <button onClick={loadPredictiveMetrics} style={styles.primaryButton}>
+            Refresh Predictive Metrics
           </button>
         </section>
 
         <section style={styles.card}>
           <h2 style={styles.sectionTitle}>Generated Predictive Brief</h2>
-
-          <div style={styles.generatedBox}>
-            <pre style={styles.pre}>{generatedBrief}</pre>
-          </div>
+          <pre style={styles.summaryBox}>{brief}</pre>
         </section>
       </div>
     </main>
   )
+}
+
+function average(values: number[]) {
+  const valid = values.filter((value) => Number.isFinite(value))
+
+  if (valid.length === 0) return 0
+
+  return Math.round(valid.reduce((sum, value) => sum + value, 0) / valid.length)
+}
+
+function clamp(value: number) {
+  return Math.max(0, Math.min(100, Math.round(value)))
+}
+
+function calculateVolatility(values: number[]) {
+  const valid = values.filter((value) => Number.isFinite(value))
+
+  if (valid.length < 2) return 0
+
+  const mean = average(valid)
+
+  const variance =
+    valid.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) /
+    valid.length
+
+  return Math.min(100, Math.round(Math.sqrt(variance)))
+}
+
+function getPredictionState(input: {
+  count: number
+  predictiveRiskScore: number
+  riskVelocity: number
+  reliabilityVelocity: number
+  volatility: number
+  latest: CgiOperationalMetric | null
+}): PredictionState {
+  if (input.count < 3) return 'INSUFFICIENT_HISTORY'
+
+  if (
+    input.predictiveRiskScore >= 75 ||
+    input.riskVelocity >= 18 ||
+    input.reliabilityVelocity <= -18 ||
+    input.latest?.continuity_state === 'UNSTABLE'
+  ) {
+    return 'HIGH_COLLAPSE_RISK'
+  }
+
+  if (
+    input.predictiveRiskScore >= 55 ||
+    input.riskVelocity >= 10 ||
+    input.reliabilityVelocity <= -10 ||
+    input.volatility >= 28
+  ) {
+    return 'RISING_INSTABILITY'
+  }
+
+  if (
+    input.predictiveRiskScore >= 35 ||
+    input.riskVelocity >= 5 ||
+    input.reliabilityVelocity <= -5 ||
+    input.volatility >= 18
+  ) {
+    return 'WATCH_RISK'
+  }
+
+  return 'LOW_NEAR_TERM_RISK'
+}
+
+function getForecastHorizon(state: PredictionState) {
+  if (state === 'INSUFFICIENT_HISTORY') return 'More snapshots required'
+  if (state === 'HIGH_COLLAPSE_RISK') return 'Immediate command review'
+  if (state === 'RISING_INSTABILITY') return 'Near-term risk window'
+  if (state === 'WATCH_RISK') return 'Watch window'
+  return 'Routine monitoring window'
+}
+
+function getExecutiveSummary(state: PredictionState) {
+  if (state === 'INSUFFICIENT_HISTORY') {
+    return 'There are not enough persisted snapshots yet to make a reliable predictive judgment. Continue saving operational snapshots across meaningful operating periods.'
+  }
+
+  if (state === 'HIGH_COLLAPSE_RISK') {
+    return 'Predictive intelligence shows high collapse risk. Risk velocity, reliability decline, or unstable continuity signals suggest command review should happen immediately.'
+  }
+
+  if (state === 'RISING_INSTABILITY') {
+    return 'Predictive intelligence shows rising instability. Risk is increasing faster than stabilization confidence or reliability is improving.'
+  }
+
+  if (state === 'WATCH_RISK') {
+    return 'Predictive intelligence shows watch-level risk. The system is not collapsing, but instability signals need closer monitoring.'
+  }
+
+  return 'Predictive intelligence shows low near-term risk. Current persisted snapshots do not show major rising instability.'
+}
+
+function getActionCue(state: PredictionState) {
+  if (state === 'INSUFFICIENT_HISTORY') {
+    return 'Save more operational snapshots before relying on forecast signals.'
+  }
+
+  if (state === 'HIGH_COLLAPSE_RISK') {
+    return 'Activate command review, inspect risk velocity, and prioritize pressure, trajectory, structural memory, and reliability weak points.'
+  }
+
+  if (state === 'RISING_INSTABILITY') {
+    return 'Review rising risk drivers and intervene before instability becomes operational collapse.'
+  }
+
+  if (state === 'WATCH_RISK') {
+    return 'Increase monitoring frequency and compare upcoming snapshots against current risk velocity.'
+  }
+
+  return 'Maintain routine monitoring and continue saving snapshots to detect early movement.'
+}
+
+function strongestDriver(scores: Record<string, number>) {
+  return (
+    Object.entries(scores).sort((a, b) => b[1] - a[1])[0]?.[0] ||
+    'No dominant forecast driver detected'
+  )
+}
+
+function formatDelta(value: number) {
+  if (value > 0) return `+${value}`
+  return `${value}`
+}
+
+function formatDate(value: string) {
+  if (!value) return 'Not recorded'
+
+  return new Date(value).toLocaleString()
 }
 
 function Metric({ label, value }: { label: string; value: string | number }) {
@@ -344,44 +737,50 @@ function Metric({ label, value }: { label: string; value: string | number }) {
   )
 }
 
-function Select({
-  label,
-  value,
-  setValue,
-  options,
+function ScoreMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div style={styles.scoreCard}>
+      <p style={styles.scoreMetricLabel}>{label}</p>
+      <h3 style={styles.scoreMetricValue}>{value}/100</h3>
+    </div>
+  )
+}
+
+function Panel({
+  title,
+  note,
+  rows,
 }: {
-  label: string
-  value: string
-  setValue: (value: string) => void
-  options: string[]
+  title: string
+  note: string
+  rows: PanelRow[]
 }) {
   return (
-    <label style={styles.label}>
-      {label}
-      <select
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        style={styles.select}
-      >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
+    <div style={styles.card}>
+      <h2 style={styles.sectionTitle}>{title}</h2>
+      <p style={styles.panelNote}>{note}</p>
+
+      <div style={styles.panelList}>
+        {rows.length === 0 && <p style={styles.emptyText}>No data available yet.</p>}
+
+        {rows.map((row, index) => (
+          <div key={`${row.label}-${index}`} style={styles.panelRow}>
+            <span>{row.label}</span>
+            <strong>{row.value}</strong>
+          </div>
         ))}
-      </select>
-    </label>
+      </div>
+    </div>
   )
 }
 
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    background: 'linear-gradient(180deg, #020617 0%, #0f172a 100%)',
     color: 'white',
-    padding: '56px 18px',
   },
   container: {
-    maxWidth: '1240px',
+    maxWidth: '1280px',
     margin: '0 auto',
   },
   hero: {
@@ -389,32 +788,93 @@ const styles: Record<string, CSSProperties> = {
   },
   kicker: {
     color: '#67e8f9',
+    fontSize: '12px',
     fontWeight: 900,
     letterSpacing: '2px',
-    fontSize: '12px',
   },
   title: {
-    fontSize: 'clamp(34px, 6vw, 56px)',
+    fontSize: 'clamp(34px, 6vw, 58px)',
     lineHeight: 1.05,
     margin: '12px 0',
   },
   subtitle: {
     color: '#cbd5e1',
-    maxWidth: '920px',
+    maxWidth: '980px',
     lineHeight: 1.7,
     fontSize: '18px',
   },
+  message: {
+    background: '#064e3b',
+    color: '#bbf7d0',
+    padding: '16px',
+    borderRadius: '14px',
+    fontWeight: 800,
+    marginBottom: '20px',
+  },
+  predictiveHero: {
+    background: '#020617',
+    border: '1px solid #f97316',
+    borderRadius: '28px',
+    padding: '24px',
+    marginBottom: '24px',
+    boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
+  },
+  scoreLabel: {
+    color: '#94a3b8',
+    fontWeight: 900,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    margin: 0,
+  },
+  predictionState: {
+    fontSize: 'clamp(36px, 7vw, 68px)',
+    margin: '8px 0 20px',
+    color: '#fdba74',
+    letterSpacing: '-0.05em',
+  },
+  scoreGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
+    gap: '14px',
+  },
+  scoreCard: {
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '18px',
+    padding: '18px',
+  },
+  scoreMetricLabel: {
+    color: '#94a3b8',
+    fontWeight: 800,
+    margin: 0,
+  },
+  scoreMetricValue: {
+    color: '#f8fafc',
+    fontSize: '28px',
+    margin: '10px 0 0',
+  },
+  actionBox: {
+    display: 'grid',
+    gap: '8px',
+    background: '#431407',
+    border: '1px solid #f97316',
+    borderRadius: '18px',
+    padding: '18px',
+    marginTop: '16px',
+    color: '#ffedd5',
+  },
   metricsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: '16px',
-    marginBottom: '28px',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+    gap: '14px',
+    marginBottom: '24px',
   },
   metricCard: {
     background: '#0f172a',
     border: '1px solid #1e293b',
     borderRadius: '18px',
     padding: '20px',
+    overflow: 'hidden',
   },
   metricLabel: {
     color: '#94a3b8',
@@ -422,10 +882,15 @@ const styles: Record<string, CSSProperties> = {
     margin: 0,
   },
   metricValue: {
-    fontSize: '26px',
-    marginTop: '12px',
-    lineHeight: 1.2,
-    wordBreak: 'break-word',
+    fontSize: 'clamp(22px, 4vw, 34px)',
+    margin: '8px 0 0',
+    overflowWrap: 'anywhere',
+  },
+  layoutGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+    gap: '20px',
+    marginBottom: '28px',
   },
   card: {
     background: '#020617',
@@ -433,45 +898,55 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: '24px',
     padding: '24px',
     marginBottom: '28px',
+    boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
   },
   sectionTitle: {
-    fontSize: '28px',
-    marginBottom: '10px',
+    fontSize: '26px',
+    margin: '0 0 10px',
   },
-  helperText: {
+  panelNote: {
     color: '#cbd5e1',
-    marginBottom: '22px',
     lineHeight: 1.6,
-  },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-    gap: '18px',
-  },
-  label: {
-    display: 'block',
-    fontWeight: 800,
     marginBottom: '18px',
   },
-  select: {
-    width: '100%',
-    marginTop: '8px',
-    padding: '14px',
-    borderRadius: '12px',
-    border: '1px solid #334155',
-    background: '#111827',
-    color: 'white',
+  panelList: {
+    display: 'grid',
+    gap: '10px',
   },
-  textarea: {
-    width: '100%',
-    minHeight: '120px',
-    marginTop: '8px',
-    padding: '14px',
-    borderRadius: '12px',
+  panelRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: '16px',
+    background: '#0f172a',
     border: '1px solid #334155',
-    background: '#111827',
-    color: 'white',
-    resize: 'vertical',
+    borderRadius: '14px',
+    padding: '14px',
+  },
+  emptyText: {
+    color: '#94a3b8',
+  },
+  tableWrap: {
+    overflowX: 'auto',
+    marginBottom: '20px',
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    minWidth: '900px',
+  },
+  th: {
+    textAlign: 'left',
+    color: '#94a3b8',
+    borderBottom: '1px solid #334155',
+    padding: '12px',
+    fontSize: '12px',
+    textTransform: 'uppercase',
+  },
+  td: {
+    borderBottom: '1px solid #1e293b',
+    padding: '12px',
+    color: '#e2e8f0',
+    verticalAlign: 'top',
   },
   primaryButton: {
     width: '100%',
@@ -484,24 +959,14 @@ const styles: Record<string, CSSProperties> = {
     cursor: 'pointer',
     fontSize: '16px',
   },
-  generatedBox: {
+  summaryBox: {
+    whiteSpace: 'pre-wrap',
     background: '#0f172a',
-    border: '1px solid #1e293b',
+    border: '1px solid #334155',
     borderRadius: '18px',
     padding: '18px',
-  },
-  pre: {
-    whiteSpace: 'pre-wrap',
-    lineHeight: 1.7,
-    fontSize: '14px',
-    margin: 0,
-  },
-  message: {
-    background: '#064e3b',
-    color: '#bbf7d0',
-    padding: '16px',
-    borderRadius: '14px',
-    fontWeight: 800,
-    marginBottom: '20px',
+    color: '#e2e8f0',
+    lineHeight: 1.6,
+    minHeight: '360px',
   },
 }
