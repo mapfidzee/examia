@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
+import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { evaluateOutcomeLifecycle } from '../../lib/lifecycleGovernance'
 import { supabase } from '../../lib/supabase'
 
@@ -71,7 +72,9 @@ export default function OutcomesPage() {
         'INSTITUTION_COORDINATOR',
       ]}
     >
-      <OutcomesContent />
+      <CGIGovernanceShell>
+        <OutcomesContent />
+      </CGIGovernanceShell>
     </GovernanceRouteGuard>
   )
 }
@@ -131,7 +134,7 @@ function OutcomesContent() {
     })
 
     return `
-EXAMIA LIS STRUCTURED OUTCOME RECORD
+TSINAXA CGI STRUCTURED OUTCOME RECORD
 
 Beneficiary Case:
 ${selectedCase.beneficiary_name} • ${selectedCase.support_domain}
@@ -172,7 +175,7 @@ Governance Interpretation:
 This outcome record summarizes stabilization progress, continuity outlook, intervention effectiveness, and operational follow-up requirements. It exists to support safe stabilization governance and coordinated continuity management without assigning blame to beneficiaries, responders, institutions, or families.
 
 Lifecycle Principle:
-Outcome is not automatically stabilization. EXAMIA confirms, monitors, or escalates based on recovery evidence and continuity outlook.
+Outcome is not automatically stabilization. TSINAXA CGI confirms, monitors, or escalates based on recovery evidence and continuity outlook.
     `.trim()
   }
 
@@ -228,7 +231,7 @@ Outcome is not automatically stabilization. EXAMIA confirms, monitors, or escala
       case_id: selectedCaseId,
       event_type: lifecycleDecision.timelineEventType,
       event_summary: `${lifecycleDecision.timelineSummary} Outcome status: ${outcomeStatus}. Continuity outlook: ${continuityOutlook}. Stabilization confidence: ${lifecycleDecision.stabilizationConfidence}.`,
-      actor: 'EXAMIA LIS Lifecycle Governance Outcome',
+      actor: 'TSINAXA CGI Lifecycle Governance Outcome',
     })
 
     if (timelineError) {
@@ -260,7 +263,7 @@ Outcome is not automatically stabilization. EXAMIA confirms, monitors, or escala
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.hero}>
-          <p style={styles.kicker}>EXAMIA LIS • LIFECYCLE OUTCOME INTELLIGENCE</p>
+          <p style={styles.kicker}>TSINAXA CGI • OUTCOME GOVERNANCE</p>
 
           <h1 style={styles.title}>Structured Stabilization Outcome Infrastructure</h1>
 
@@ -427,9 +430,7 @@ function Select({
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    background: 'linear-gradient(180deg, #020617 0%, #0f172a 100%)',
     color: 'white',
-    padding: '56px 18px',
   },
   container: {
     maxWidth: '1280px',
