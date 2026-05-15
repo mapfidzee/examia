@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
+import { evaluateContinuityIntelligence } from '../lib/continuityIntelligence'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -190,15 +191,22 @@ function OperationsContent() {
     (item) => item.operational_status === 'ACTIVE'
   )
 
-  const uniqueInterventionCases = new Set(
-    interventions.map((item) => item.case_id)
-  ).size
+  const interventionCaseIds = new Set(interventions.map((item) => item.case_id))
+
+  const outcomeCaseIds = new Set(
+    cases.filter((item) => item.outcome_summary).map((item) => item.id)
+  )
+
+  const uniqueInterventionCases = interventionCaseIds.size
 
   const stabilizationRate =
     cases.length > 0 ? Math.round((stabilizedCases.length / cases.length) * 100) : 0
 
   const interventionCoverage =
     cases.length > 0 ? Math.round((uniqueInterventionCases / cases.length) * 100) : 0
+
+  const outcomeCoverage =
+    cases.length > 0 ? Math.round((outcomeCaseIds.size / cases.length) * 100) : 0
 
   const interventionVolume = interventions.length
 
@@ -217,13 +225,38 @@ function OperationsContent() {
           ? 'MODERATE_PRESSURE'
           : 'STABLE'
 
+  const unresolvedInterventionPathways = cases.filter(
+    (item) =>
+      interventionCaseIds.has(item.id) &&
+      !outcomeCaseIds.has(item.id) &&
+      item.case_status !== 'STABILIZED'
+  ).length
+
+  const routedWithoutResponder = routingActions.filter(
+    (item) => !item.assigned_responder_id
+  ).length
+
+  const continuityScores = evaluateContinuityIntelligence({
+    totalCases: cases.length,
+    activeCases: activeCases.length,
+    routedCases: routedCases.length,
+    interventionCases: uniqueInterventionCases,
+    outcomeCases: outcomeCaseIds.size,
+    stabilizedCases: stabilizedCases.length,
+    escalatedCases: escalatedCases.length,
+    criticalCases: criticalCases.length,
+    safeguardingCases: safeguardingCases.length,
+    unresolvedInterventionPathways,
+    routedWithoutResponder,
+  })
+
   const topRegions = regionBreakdown(cases)
   const statusBreakdown = caseStatusBreakdown(cases)
   const severityBreakdown = severityLevelBreakdown(cases)
 
   function operationalBrief() {
     return `
-TSINAXA CGI OPERATIONAL INTELLIGENCE BRIEF
+TSINAXA CGI CONTINUITY INTELLIGENCE BRIEF
 
 Report Template:
 ${reportTemplate}
@@ -237,6 +270,16 @@ ${pressureFocus}
 System Pressure Status:
 ${pressureStatus}
 
+Continuity State:
+${continuityScores.continuityState}
+
+Continuity Intelligence Scores:
+Continuity Integrity Score: ${continuityScores.continuityIntegrityScore}/100
+Stabilization Confidence Score: ${continuityScores.stabilizationConfidenceScore}/100
+Escalation Pressure Index: ${continuityScores.escalationPressureIndex}/100
+Recovery Reliability Score: ${continuityScores.recoveryReliabilityScore}/100
+Operational Survivability Score: ${continuityScores.operationalSurvivabilityScore}/100
+
 Core Metrics:
 Total Beneficiary Cases: ${cases.length}
 Active Stabilization Cases: ${activeCases.length}
@@ -248,14 +291,18 @@ Active Responders: ${activeResponders.length}
 Coordination Sites in View: ${filteredInstitutions.length}
 Intervention Evidence Records: ${interventionVolume}
 Cases With Intervention Evidence: ${uniqueInterventionCases}
+Cases With Outcome Evidence: ${outcomeCaseIds.size}
 Stabilization Rate: ${stabilizationRate}%
 Intervention Coverage: ${interventionCoverage}%
+Outcome Coverage: ${outcomeCoverage}%
+Unresolved Intervention Pathways: ${unresolvedInterventionPathways}
+Routed Without Responder Ownership: ${routedWithoutResponder}
 
 Recommended Action Cue:
 ${actionCue}
 
 Governance-Safe Interpretation:
-This operational brief summarizes system pressure across beneficiary stabilization, routing, responder capacity, intervention evidence, institutional coordination, safeguarding visibility, and escalation load. It separates raw intervention activity from true case coverage so leaders can distinguish volume from actual stabilization reach. It does not evaluate individual blame. It supports district, NGO, regional, ministry, and coordination leaders in identifying where support pathways require strengthening.
+This brief separates operational activity from continuity confidence. It does not assume that routing, intervention, or outcome documentation automatically means stabilization is durable. CGI evaluates continuity integrity, stabilization confidence, escalation pressure, recovery reliability, and operational survivability so leaders can see whether the system is merely busy or actually stabilizing.
 
 Additional Operational Notes:
 ${additionalNotes.trim() || 'No additional operational notes entered.'}
@@ -266,18 +313,49 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.hero}>
-          <p style={styles.kicker}>TSINAXA CGI • OPERATIONAL INTELLIGENCE</p>
+          <p style={styles.kicker}>TSINAXA CGI • CONTINUITY INTELLIGENCE</p>
 
           <h1 style={styles.title}>Continuity Governance Operational Intelligence</h1>
 
           <p style={styles.subtitle}>
             Convert cases, routing activity, intervention evidence, safeguarding flags,
-            institutions, and responder capacity into governed operational visibility for
-            command review, stabilization pressure, and continuity governance.
+            institutions, and responder capacity into continuity integrity, stabilization
+            confidence, escalation pressure, recovery reliability, and operational
+            survivability intelligence.
           </p>
         </section>
 
         {message && <div style={styles.message}>{message}</div>}
+
+        <section style={styles.scoreHero}>
+          <div>
+            <p style={styles.scoreLabel}>Continuity State</p>
+            <h2 style={styles.scoreState}>{continuityScores.continuityState}</h2>
+          </div>
+
+          <div style={styles.scoreGrid}>
+            <ScoreMetric
+              label="Continuity Integrity"
+              value={continuityScores.continuityIntegrityScore}
+            />
+            <ScoreMetric
+              label="Stabilization Confidence"
+              value={continuityScores.stabilizationConfidenceScore}
+            />
+            <ScoreMetric
+              label="Escalation Pressure"
+              value={continuityScores.escalationPressureIndex}
+            />
+            <ScoreMetric
+              label="Recovery Reliability"
+              value={continuityScores.recoveryReliabilityScore}
+            />
+            <ScoreMetric
+              label="Operational Survivability"
+              value={continuityScores.operationalSurvivabilityScore}
+            />
+          </div>
+        </section>
 
         <section style={styles.metricsGrid}>
           <Metric label="Total Cases" value={cases.length} />
@@ -289,15 +367,16 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
           <Metric label="Active Responders" value={activeResponders.length} />
           <Metric label="Intervention Records" value={interventionVolume} />
           <Metric label="Cases With Intervention Evidence" value={uniqueInterventionCases} />
+          <Metric label="Cases With Outcome Evidence" value={outcomeCaseIds.size} />
         </section>
 
         <section style={styles.layoutGrid}>
           <div style={styles.card}>
-            <h2 style={styles.sectionTitle}>Operational Brief Template</h2>
+            <h2 style={styles.sectionTitle}>Continuity Intelligence Brief Template</h2>
 
             <p style={styles.panelNote}>
-              Use this section to generate a standardized operational brief. The dropdowns
-              keep executive reporting consistent and prevent narrative drift.
+              Use this section to generate a standardized continuity intelligence brief. The
+              dropdowns keep executive reporting consistent and prevent narrative drift.
             </p>
 
             <Select
@@ -339,16 +418,16 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
             </label>
 
             <button onClick={loadOperationalData} style={styles.primaryButton}>
-              Refresh Operational Intelligence
+              Refresh Continuity Intelligence
             </button>
           </div>
 
           <div style={styles.card}>
-            <h2 style={styles.sectionTitle}>Generated Operational Brief</h2>
+            <h2 style={styles.sectionTitle}>Generated Continuity Intelligence Brief</h2>
 
             <p style={styles.panelNote}>
-              This brief can be used for command review, institutional coordination,
-              executive visibility, and operational governance.
+              This brief separates activity from stabilization confidence so leaders can
+              see whether continuity is actually holding.
             </p>
 
             <pre style={styles.summaryBox}>{operationalBrief()}</pre>
@@ -380,18 +459,24 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
             <div style={styles.pressureBadge}>{pressureStatus}</div>
 
             <p style={styles.panelNote}>
-              This pressure status is a simple early operational signal derived from routed
-              cases, escalations, critical cases, and safeguarding visibility. It is not a
-              final audit score.
+              This pressure status is an early operational signal derived from routed cases,
+              escalations, critical cases, and safeguarding visibility. The continuity
+              scores above go deeper by evaluating whether stabilization is actually
+              becoming reliable.
             </p>
 
             <div style={styles.infoGrid}>
               <Info label="Stabilization Rate" value={`${stabilizationRate}%`} />
               <Info label="Intervention Coverage" value={`${interventionCoverage}%`} />
+              <Info label="Outcome Coverage" value={`${outcomeCoverage}%`} />
               <Info label="Intervention Volume" value={`${interventionVolume}`} />
               <Info label="Cases With Evidence" value={`${uniqueInterventionCases}`} />
               <Info label="Routing Actions" value={`${routingActions.length}`} />
               <Info label="Sites in View" value={`${filteredInstitutions.length}`} />
+              <Info
+                label="Unresolved Pathways"
+                value={`${unresolvedInterventionPathways}`}
+              />
             </div>
           </div>
         </section>
@@ -444,6 +529,15 @@ function Metric({ label, value }: { label: string; value: number }) {
     <div style={styles.metricCard}>
       <p style={styles.metricLabel}>{label}</p>
       <h2 style={styles.metricValue}>{value}</h2>
+    </div>
+  )
+}
+
+function ScoreMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div style={styles.scoreCard}>
+      <p style={styles.scoreMetricLabel}>{label}</p>
+      <h3 style={styles.scoreMetricValue}>{value}/100</h3>
     </div>
   )
 }
@@ -551,6 +645,48 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: '14px',
     fontWeight: 800,
     marginBottom: '20px',
+  },
+  scoreHero: {
+    background: '#020617',
+    border: '1px solid #1e293b',
+    borderRadius: '28px',
+    padding: '24px',
+    marginBottom: '24px',
+    boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
+  },
+  scoreLabel: {
+    color: '#94a3b8',
+    fontWeight: 900,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    margin: 0,
+  },
+  scoreState: {
+    fontSize: 'clamp(38px, 8vw, 76px)',
+    margin: '8px 0 20px',
+    color: '#67e8f9',
+    letterSpacing: '-0.05em',
+  },
+  scoreGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
+    gap: '14px',
+  },
+  scoreCard: {
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '18px',
+    padding: '18px',
+  },
+  scoreMetricLabel: {
+    color: '#94a3b8',
+    fontWeight: 800,
+    margin: 0,
+  },
+  scoreMetricValue: {
+    color: '#f8fafc',
+    fontSize: '28px',
+    margin: '10px 0 0',
   },
   metricsGrid: {
     display: 'grid',
