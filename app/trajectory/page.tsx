@@ -2,318 +2,772 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { supabase } from '../../lib/supabase'
 
-type BeneficiaryCase = {
+type CgiOperationalMetric = {
   id: string
-  case_status: string
-  safeguarding_flag: boolean
+  created_at: string
+  scope: string
+  region: string | null
+  institution_id: string | null
+
+  continuity_state: string
+  pressure_propagation_state: string
+  trajectory_direction: string
+  structural_memory_state: string
+
+  continuity_integrity_score: number
+  stabilization_confidence_score: number
+  escalation_pressure_index: number
+  recovery_reliability_score: number
+  operational_survivability_score: number
+
+  trajectory_risk: number
+  continuity_drift: number
+  escalation_momentum: number
+  recovery_direction: number
+  stabilization_trend: number
+  unresolved_momentum: number
+
+  propagation_risk: number
+  structural_memory_risk: number
+
+  dominant_pressure_source: string | null
+  dominant_trajectory_signal: string | null
+  dominant_memory_pattern: string | null
+  executive_summary: string | null
+  action_cue: string | null
 }
 
-type InterventionRecord = {
-  case_id: string
+type TrajectoryState =
+  | 'INSUFFICIENT_HISTORY'
+  | 'TRAJECTORY_RECOVERING'
+  | 'TRAJECTORY_HOLDING'
+  | 'TRAJECTORY_DRIFTING'
+  | 'TRAJECTORY_DETERIORATING'
+
+type PanelRow = {
+  label: string
+  value: string
 }
 
-type OutcomeRecord = {
-  case_id: string
-}
-
-type RoutingAction = {
-  case_id: string
-}
-
-const TRAJECTORY_REPORT_TEMPLATES = [
-  'Predictive stabilization trajectory brief',
-  'Regional continuity trajectory brief',
-  'District stabilization pathway brief',
-  'Responder continuity visibility brief',
-  'Safeguarding trajectory monitoring brief',
-]
-
-const TRAJECTORY_FOCUS_OPTIONS = [
-  'Stabilization continuity visibility',
-  'Escalation trajectory visibility',
-  'Responder continuity pressure',
-  'Safeguarding accumulation trajectory',
-  'Recovery strengthening visibility',
-]
-
-const TRAJECTORY_SCOPE_OPTIONS = [
-  'National view',
-  'Regional view',
-  'District view',
-  'Institution-focused',
-  'Responder-focused',
-]
-
-const GOVERNANCE_INTERPRETATIONS = [
-  'Trajectory signals remain stable with continued monitoring.',
-  'Continuity weakening is visible and requires coordination attention.',
-  'Escalation trajectory pressure is increasing.',
-  'Recovery strengthening signals are visible.',
-  'Fragmented stabilization continuity requires intervention review.',
-]
-
-const RECOMMENDED_ACTIONS = [
-  'Maintain stabilization monitoring.',
-  'Increase continuity coordination review.',
-  'Strengthen responder coordination pathways.',
-  'Increase safeguarding monitoring visibility.',
-  'Review intervention continuity for unstable trajectories.',
-]
-
-const GOVERNANCE_NOTE_TEMPLATES = [
-  'Continuity monitoring remains active.',
-  'No immediate escalation accumulation detected.',
-  'Forecast stabilization pressure remains manageable.',
-  'Coordination review recommended for fragmented continuity.',
-  'Safeguarding trajectory visibility remains active.',
-]
+const SAMPLE_LIMIT = 120
 
 export default function TrajectoryPage() {
-  const [cases, setCases] = useState<BeneficiaryCase[]>([])
-  const [interventions, setInterventions] = useState<InterventionRecord[]>([])
-  const [outcomes, setOutcomes] = useState<OutcomeRecord[]>([])
-  const [routingActions, setRoutingActions] = useState<RoutingAction[]>([])
+  return (
+    <CGIGovernanceShell>
+      <TrajectoryContent />
+    </CGIGovernanceShell>
+  )
+}
 
+function TrajectoryContent() {
+  const [metrics, setMetrics] = useState<CgiOperationalMetric[]>([])
   const [message, setMessage] = useState('')
 
-  const [reportTemplate, setReportTemplate] = useState(TRAJECTORY_REPORT_TEMPLATES[0])
-  const [trajectoryFocus, setTrajectoryFocus] = useState(TRAJECTORY_FOCUS_OPTIONS[0])
-  const [trajectoryScope, setTrajectoryScope] = useState(TRAJECTORY_SCOPE_OPTIONS[1])
-  const [governanceInterpretation, setGovernanceInterpretation] = useState(
-    GOVERNANCE_INTERPRETATIONS[0]
-  )
-  const [recommendedAction, setRecommendedAction] = useState(RECOMMENDED_ACTIONS[0])
-  const [governanceNote, setGovernanceNote] = useState(GOVERNANCE_NOTE_TEMPLATES[0])
-  const [additionalNotes, setAdditionalNotes] = useState('')
-
   useEffect(() => {
-    loadData()
+    loadTrajectoryMetrics()
   }, [])
 
-  async function loadData() {
-    const [casesResult, interventionsResult, outcomesResult, routingResult] =
-      await Promise.all([
-        supabase.from('beneficiary_cases').select('*'),
-        supabase.from('case_interventions').select('*'),
-        supabase.from('case_outcomes').select('*'),
-        supabase.from('case_routing_actions').select('*'),
-      ])
+  async function loadTrajectoryMetrics() {
+    setMessage('Loading persisted CGI trajectory metrics...')
 
-    if (casesResult.error) console.error(casesResult.error)
-    if (interventionsResult.error) console.error(interventionsResult.error)
-    if (outcomesResult.error) console.error(outcomesResult.error)
-    if (routingResult.error) console.error(routingResult.error)
+    const { data, error } = await supabase
+      .from('cgi_operational_metrics')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(SAMPLE_LIMIT)
 
-    setCases(casesResult.data || [])
-    setInterventions(interventionsResult.data || [])
-    setOutcomes(outcomesResult.data || [])
-    setRoutingActions(routingResult.data || [])
-    setMessage('Trajectory intelligence refreshed.')
+    if (error) {
+      console.error(error)
+      setMessage('Failed to load persisted CGI trajectory metrics.')
+      return
+    }
+
+    setMetrics(data || [])
+    setMessage('Persisted CGI trajectory metrics loaded.')
   }
 
-  const metrics = useMemo(() => {
-    const activeCases = cases.filter((item) =>
-      [
-        'NEED_DETECTED',
-        'UNDER_ASSESSMENT',
-        'ROUTED',
-        'RESPONDER_ASSIGNED',
-        'INTERVENTION_ACTIVE',
-        'STABILIZING',
-      ].includes(item.case_status)
-    ).length
+  const trajectory = useMemo(() => {
+    const ordered = [...metrics].sort(
+      (a, b) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    )
 
-    const stabilizedCases = cases.filter((item) => item.case_status === 'STABILIZED').length
-    const escalatedCases = cases.filter((item) => item.case_status === 'ESCALATED').length
-    const safeguardingFlags = cases.filter((item) => item.safeguarding_flag).length
+    const latest = ordered[ordered.length - 1] || null
+    const previous = ordered[ordered.length - 2] || null
 
-    const interventionCoverage =
-      cases.length === 0
+    const earlyWindow = ordered.slice(0, 5)
+    const recentWindow = ordered.slice(-5)
+
+    const averageTrajectoryRisk = average(metrics.map((item) => item.trajectory_risk))
+    const averageContinuityDrift = average(metrics.map((item) => item.continuity_drift))
+    const averageEscalationMomentum = average(
+      metrics.map((item) => item.escalation_momentum),
+    )
+    const averageRecoveryDirection = average(
+      metrics.map((item) => item.recovery_direction),
+    )
+    const averageStabilizationTrend = average(
+      metrics.map((item) => item.stabilization_trend),
+    )
+    const averageUnresolvedMomentum = average(
+      metrics.map((item) => item.unresolved_momentum),
+    )
+
+    const averageContinuityIntegrity = average(
+      metrics.map((item) => item.continuity_integrity_score),
+    )
+    const averageStabilizationConfidence = average(
+      metrics.map((item) => item.stabilization_confidence_score),
+    )
+    const averageRecoveryReliability = average(
+      metrics.map((item) => item.recovery_reliability_score),
+    )
+    const averageSurvivability = average(
+      metrics.map((item) => item.operational_survivability_score),
+    )
+
+    const earlyTrajectoryPressure = average(
+      earlyWindow.map((item) =>
+        average([
+          item.trajectory_risk,
+          item.continuity_drift,
+          item.escalation_momentum,
+          item.unresolved_momentum,
+          100 - item.recovery_direction,
+          100 - item.stabilization_trend,
+        ]),
+      ),
+    )
+
+    const recentTrajectoryPressure = average(
+      recentWindow.map((item) =>
+        average([
+          item.trajectory_risk,
+          item.continuity_drift,
+          item.escalation_momentum,
+          item.unresolved_momentum,
+          100 - item.recovery_direction,
+          100 - item.stabilization_trend,
+        ]),
+      ),
+    )
+
+    const trajectoryPressureVelocity =
+      metrics.length < 2
         ? 0
-        : Math.round(
-            (new Set(interventions.map((item) => item.case_id)).size / cases.length) * 100
-          )
+        : Math.round(recentTrajectoryPressure - earlyTrajectoryPressure)
 
-    const outcomeCoverage =
-      cases.length === 0
+    const earlyStabilizationMovement = average(
+      earlyWindow.map((item) =>
+        average([
+          item.recovery_direction,
+          item.stabilization_trend,
+          item.recovery_reliability_score,
+          item.operational_survivability_score,
+        ]),
+      ),
+    )
+
+    const recentStabilizationMovement = average(
+      recentWindow.map((item) =>
+        average([
+          item.recovery_direction,
+          item.stabilization_trend,
+          item.recovery_reliability_score,
+          item.operational_survivability_score,
+        ]),
+      ),
+    )
+
+    const stabilizationMovementVelocity =
+      metrics.length < 2
         ? 0
-        : Math.round((new Set(outcomes.map((item) => item.case_id)).size / cases.length) * 100)
+        : Math.round(recentStabilizationMovement - earlyStabilizationMovement)
 
-    const stabilizationRate =
-      cases.length === 0 ? 0 : Math.round((stabilizedCases / cases.length) * 100)
+    const latestTrajectoryMovement =
+      latest && previous
+        ? average([
+            latest.trajectory_risk - previous.trajectory_risk,
+            latest.continuity_drift - previous.continuity_drift,
+            latest.escalation_momentum - previous.escalation_momentum,
+            latest.unresolved_momentum - previous.unresolved_momentum,
+            previous.recovery_direction - latest.recovery_direction,
+            previous.stabilization_trend - latest.stabilization_trend,
+          ])
+        : 0
 
-    let trajectoryStatus = 'STABILIZING'
+    const latestStabilizationMovement =
+      latest && previous
+        ? average([
+            latest.recovery_direction - previous.recovery_direction,
+            latest.stabilization_trend - previous.stabilization_trend,
+            latest.recovery_reliability_score - previous.recovery_reliability_score,
+            latest.operational_survivability_score -
+              previous.operational_survivability_score,
+          ])
+        : 0
 
-    if (escalatedCases >= 1) {
-      trajectoryStatus = 'ESCALATION_RISK'
-    } else if (safeguardingFlags >= 1 && stabilizationRate < 50) {
-      trajectoryStatus = 'FRAGMENTED_CONTINUITY'
-    } else if (interventionCoverage >= 100 && stabilizationRate === 0) {
-      trajectoryStatus = 'SLOW_STABILIZATION'
-    } else if (stabilizationRate >= 50) {
-      trajectoryStatus = 'RECOVERY_STRENGTHENING'
-    }
+    const trajectoryVolatility = calculateVolatility(
+      metrics.map((item) =>
+        average([
+          item.trajectory_risk,
+          item.continuity_drift,
+          item.escalation_momentum,
+          item.unresolved_momentum,
+          100 - item.recovery_direction,
+          100 - item.stabilization_trend,
+        ]),
+      ),
+    )
+
+    const directionStrength = clamp(
+      average([
+        averageRecoveryDirection,
+        averageStabilizationTrend,
+        averageRecoveryReliability,
+        averageSurvivability,
+        averageContinuityIntegrity,
+        averageStabilizationConfidence,
+      ]),
+    )
+
+    const deteriorationLoad = clamp(
+      average([
+        averageTrajectoryRisk,
+        averageContinuityDrift,
+        averageEscalationMomentum,
+        averageUnresolvedMomentum,
+        metrics.length > 0
+          ? average(metrics.map((item) => item.propagation_risk))
+          : 0,
+        metrics.length > 0
+          ? average(metrics.map((item) => item.structural_memory_risk))
+          : 0,
+      ]),
+    )
+
+    const trajectoryState = getTrajectoryState({
+      count: metrics.length,
+      directionStrength,
+      deteriorationLoad,
+      trajectoryPressureVelocity,
+      stabilizationMovementVelocity,
+      trajectoryVolatility,
+      latest,
+    })
+
+    const dominantTrajectoryDriver = strongestDriver({
+      'Trajectory risk': averageTrajectoryRisk,
+      'Continuity drift': averageContinuityDrift,
+      'Escalation momentum': averageEscalationMomentum,
+      'Unresolved momentum': averageUnresolvedMomentum,
+      'Recovery weakness': 100 - averageRecoveryDirection,
+      'Stabilization weakness': 100 - averageStabilizationTrend,
+      'Reliability weakness': 100 - averageRecoveryReliability,
+      'Survivability weakness': 100 - averageSurvivability,
+      'Pressure velocity': Math.max(trajectoryPressureVelocity, 0),
+      'Stabilization decline': Math.max(-stabilizationMovementVelocity, 0),
+      Volatility: trajectoryVolatility,
+    })
+
+    const executiveSummary = getExecutiveSummary(trajectoryState)
+    const actionCue = getActionCue(trajectoryState)
 
     return {
-      activeCases,
-      stabilizedCases,
-      escalatedCases,
-      safeguardingFlags,
-      interventionCoverage,
-      outcomeCoverage,
-      stabilizationRate,
-      trajectoryStatus,
+      ordered,
+      latest,
+      previous,
+      averageTrajectoryRisk,
+      averageContinuityDrift,
+      averageEscalationMomentum,
+      averageRecoveryDirection,
+      averageStabilizationTrend,
+      averageUnresolvedMomentum,
+      averageContinuityIntegrity,
+      averageStabilizationConfidence,
+      averageRecoveryReliability,
+      averageSurvivability,
+      earlyTrajectoryPressure,
+      recentTrajectoryPressure,
+      trajectoryPressureVelocity,
+      earlyStabilizationMovement,
+      recentStabilizationMovement,
+      stabilizationMovementVelocity,
+      latestTrajectoryMovement,
+      latestStabilizationMovement,
+      trajectoryVolatility,
+      directionStrength,
+      deteriorationLoad,
+      trajectoryState,
+      dominantTrajectoryDriver,
+      executiveSummary,
+      actionCue,
     }
-  }, [cases, interventions, outcomes])
+  }, [metrics])
 
-  const generatedBrief = `
-EXAMIA LIS STABILIZATION TRAJECTORY INTELLIGENCE BRIEF
+  const latestRows: PanelRow[] = trajectory.latest
+    ? [
+        {
+          label: 'Latest Continuity State',
+          value: trajectory.latest.continuity_state,
+        },
+        {
+          label: 'Latest Trajectory Direction',
+          value: trajectory.latest.trajectory_direction,
+        },
+        {
+          label: 'Latest Pressure State',
+          value: trajectory.latest.pressure_propagation_state,
+        },
+        {
+          label: 'Latest Structural Memory State',
+          value: trajectory.latest.structural_memory_state,
+        },
+        {
+          label: 'Dominant Trajectory Signal',
+          value:
+            trajectory.latest.dominant_trajectory_signal ||
+            'No trajectory signal recorded',
+        },
+        {
+          label: 'Dominant Pressure Source',
+          value:
+            trajectory.latest.dominant_pressure_source ||
+            'No pressure source recorded',
+        },
+        {
+          label: 'Dominant Memory Pattern',
+          value:
+            trajectory.latest.dominant_memory_pattern ||
+            'No memory pattern recorded',
+        },
+      ]
+    : []
 
-Report Template:
-${reportTemplate}
+  const directionRows: PanelRow[] = [
+    {
+      label: 'Dominant Trajectory Driver',
+      value: trajectory.dominantTrajectoryDriver,
+    },
+    {
+      label: 'Trajectory Pressure Velocity',
+      value: formatDelta(trajectory.trajectoryPressureVelocity),
+    },
+    {
+      label: 'Stabilization Movement Velocity',
+      value: formatDelta(trajectory.stabilizationMovementVelocity),
+    },
+    {
+      label: 'Latest Trajectory Movement',
+      value: formatDelta(trajectory.latestTrajectoryMovement),
+    },
+    {
+      label: 'Latest Stabilization Movement',
+      value: formatDelta(trajectory.latestStabilizationMovement),
+    },
+    {
+      label: 'Trajectory Volatility',
+      value: `${trajectory.trajectoryVolatility}/100`,
+    },
+    {
+      label: 'Direction Strength',
+      value: `${trajectory.directionStrength}/100`,
+    },
+    {
+      label: 'Deterioration Load',
+      value: `${trajectory.deteriorationLoad}/100`,
+    },
+  ]
 
-Trajectory Focus:
-${trajectoryFocus}
+  const brief = `
+TSINAXA CGI TRAJECTORY INTELLIGENCE BRIEF
 
-Trajectory Scope:
-${trajectoryScope}
+Trajectory State:
+${trajectory.trajectoryState}
 
-Trajectory Status:
-${metrics.trajectoryStatus}
+Snapshots Reviewed:
+${metrics.length}
 
-Trajectory Metrics:
-Total Cases: ${cases.length}
-Active Stabilization Cases: ${metrics.activeCases}
-Stabilized Cases: ${metrics.stabilizedCases}
-Escalated Cases: ${metrics.escalatedCases}
-Safeguarding Flags: ${metrics.safeguardingFlags}
-Routing Actions: ${routingActions.length}
-Intervention Coverage: ${metrics.interventionCoverage}%
-Outcome Coverage: ${metrics.outcomeCoverage}%
-Stabilization Rate: ${metrics.stabilizationRate}%
+Dominant Trajectory Driver:
+${trajectory.dominantTrajectoryDriver}
 
-Governance Interpretation:
-${governanceInterpretation}
+Direction Strength:
+${trajectory.directionStrength}/100
 
-Recommended Stabilization Action:
-${recommendedAction}
+Deterioration Load:
+${trajectory.deteriorationLoad}/100
 
-Governance-Safe Operational Meaning:
-This trajectory intelligence brief identifies the direction of stabilization continuity across interventions, outcomes, safeguarding visibility, routing activity, and escalation accumulation. It supports early coordination visibility before operational fragmentation occurs. It does not assign blame to institutions, responders, beneficiaries, or coordination partners.
+Trajectory Pressure Velocity:
+${trajectory.trajectoryPressureVelocity}
 
-Governance-Safe Monitoring Note:
-${governanceNote}
+Stabilization Movement Velocity:
+${trajectory.stabilizationMovementVelocity}
 
-Additional Operational Notes:
-${additionalNotes.trim() || 'No additional operational notes entered.'}
+Latest Trajectory Movement:
+${trajectory.latestTrajectoryMovement}
+
+Latest Stabilization Movement:
+${trajectory.latestStabilizationMovement}
+
+Trajectory Volatility:
+${trajectory.trajectoryVolatility}/100
+
+Average Trajectory Risk:
+${trajectory.averageTrajectoryRisk}/100
+
+Average Continuity Drift:
+${trajectory.averageContinuityDrift}/100
+
+Average Escalation Momentum:
+${trajectory.averageEscalationMomentum}/100
+
+Average Recovery Direction:
+${trajectory.averageRecoveryDirection}/100
+
+Average Stabilization Trend:
+${trajectory.averageStabilizationTrend}/100
+
+Average Unresolved Momentum:
+${trajectory.averageUnresolvedMomentum}/100
+
+Average Continuity Integrity:
+${trajectory.averageContinuityIntegrity}/100
+
+Average Stabilization Confidence:
+${trajectory.averageStabilizationConfidence}/100
+
+Average Recovery Reliability:
+${trajectory.averageRecoveryReliability}/100
+
+Average Operational Survivability:
+${trajectory.averageSurvivability}/100
+
+Executive Interpretation:
+${trajectory.executiveSummary}
+
+Recommended Action:
+${trajectory.actionCue}
+
+Governance-Safe Meaning:
+This trajectory view uses persisted CGI operational metric snapshots. It does not judge people. It evaluates whether continuity direction is recovering, holding, drifting, or deteriorating across time.
   `.trim()
 
   return (
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.hero}>
-          <p style={styles.kicker}>EXAMIA LIS • TRAJECTORY INTELLIGENCE</p>
+          <p style={styles.kicker}>TSINAXA CGI • TRAJECTORY INTELLIGENCE</p>
 
-          <h1 style={styles.title}>Stabilization Trajectory Infrastructure</h1>
+          <h1 style={styles.title}>Continuity Trajectory Intelligence</h1>
 
           <p style={styles.subtitle}>
-            Detect stabilization direction, continuity weakening, escalation accumulation,
-            safeguarding trajectory pressure, and recovery strengthening before operational
-            fragmentation occurs.
+            Use persisted CGI operational metric snapshots to see whether continuity is
+            recovering, holding, drifting, or deteriorating across time.
           </p>
         </section>
 
         {message && <div style={styles.message}>{message}</div>}
 
+        <section style={styles.trajectoryHero}>
+          <div>
+            <p style={styles.scoreLabel}>Trajectory State</p>
+            <h2 style={styles.trajectoryState}>{trajectory.trajectoryState}</h2>
+            <p style={styles.panelNote}>{trajectory.executiveSummary}</p>
+          </div>
+
+          <div style={styles.scoreGrid}>
+            <ScoreMetric
+              label="Direction Strength"
+              value={trajectory.directionStrength}
+            />
+            <ScoreMetric
+              label="Deterioration Load"
+              value={trajectory.deteriorationLoad}
+            />
+            <ScoreMetric
+              label="Trajectory Risk"
+              value={trajectory.averageTrajectoryRisk}
+            />
+            <ScoreMetric
+              label="Continuity Drift"
+              value={trajectory.averageContinuityDrift}
+            />
+            <ScoreMetric
+              label="Recovery Direction"
+              value={trajectory.averageRecoveryDirection}
+            />
+            <ScoreMetric
+              label="Stabilization Trend"
+              value={trajectory.averageStabilizationTrend}
+            />
+          </div>
+
+          <div style={styles.actionBox}>
+            <strong>Recommended Action:</strong>
+            <span>{trajectory.actionCue}</span>
+          </div>
+        </section>
+
         <section style={styles.metricsGrid}>
-          <Metric label="Trajectory Status" value={metrics.trajectoryStatus} />
-          <Metric label="Active Cases" value={metrics.activeCases.toString()} />
-          <Metric label="Safeguarding Flags" value={metrics.safeguardingFlags.toString()} />
-          <Metric label="Intervention Coverage" value={`${metrics.interventionCoverage}%`} />
-          <Metric label="Outcome Coverage" value={`${metrics.outcomeCoverage}%`} />
-          <Metric label="Stabilization Rate" value={`${metrics.stabilizationRate}%`} />
+          <Metric label="Snapshots Reviewed" value={metrics.length} />
+          <Metric
+            label="Dominant Driver"
+            value={trajectory.dominantTrajectoryDriver}
+          />
+          <Metric
+            label="Trajectory Pressure Velocity"
+            value={formatDelta(trajectory.trajectoryPressureVelocity)}
+          />
+          <Metric
+            label="Stabilization Velocity"
+            value={formatDelta(trajectory.stabilizationMovementVelocity)}
+          />
+          <Metric
+            label="Latest Trajectory Movement"
+            value={formatDelta(trajectory.latestTrajectoryMovement)}
+          />
+          <Metric
+            label="Latest Stabilization Movement"
+            value={formatDelta(trajectory.latestStabilizationMovement)}
+          />
+          <Metric
+            label="Trajectory Volatility"
+            value={`${trajectory.trajectoryVolatility}/100`}
+          />
+          <Metric
+            label="Unresolved Momentum Avg"
+            value={`${trajectory.averageUnresolvedMomentum}/100`}
+          />
+        </section>
+
+        <section style={styles.metricsGrid}>
+          <Metric
+            label="Escalation Momentum Avg"
+            value={`${trajectory.averageEscalationMomentum}/100`}
+          />
+          <Metric
+            label="Continuity Integrity Avg"
+            value={`${trajectory.averageContinuityIntegrity}/100`}
+          />
+          <Metric
+            label="Stabilization Confidence Avg"
+            value={`${trajectory.averageStabilizationConfidence}/100`}
+          />
+          <Metric
+            label="Recovery Reliability Avg"
+            value={`${trajectory.averageRecoveryReliability}/100`}
+          />
+          <Metric
+            label="Survivability Avg"
+            value={`${trajectory.averageSurvivability}/100`}
+          />
+        </section>
+
+        <section style={styles.layoutGrid}>
+          <Panel
+            title="Latest Persisted Trajectory State"
+            note="Most recent saved trajectory snapshot."
+            rows={latestRows}
+          />
+
+          <Panel
+            title="Trajectory Direction Reading"
+            note="Shows whether continuity direction is strengthening, weakening, drifting, or volatile."
+            rows={directionRows}
+          />
         </section>
 
         <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Trajectory Intelligence Brief Template</h2>
+          <h2 style={styles.sectionTitle}>Recent Trajectory Snapshot Trail</h2>
 
-          <p style={styles.helper}>
-            Use standardized dropdowns to keep trajectory intelligence governance-safe,
-            operationally coherent, and nationally consistent.
+          <p style={styles.panelNote}>
+            Latest saved rows from <code>cgi_operational_metrics</code>. These are
+            historical trajectory records, not live recalculations.
           </p>
 
-          <Select
-            label="Report Template"
-            value={reportTemplate}
-            setValue={setReportTemplate}
-            options={TRAJECTORY_REPORT_TEMPLATES}
-          />
+          <div style={styles.tableWrap}>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Created</th>
+                  <th style={styles.th}>Scope</th>
+                  <th style={styles.th}>Trajectory</th>
+                  <th style={styles.th}>Risk</th>
+                  <th style={styles.th}>Drift</th>
+                  <th style={styles.th}>Escalation</th>
+                  <th style={styles.th}>Recovery</th>
+                  <th style={styles.th}>Stabilization</th>
+                </tr>
+              </thead>
 
-          <Select
-            label="Trajectory Focus"
-            value={trajectoryFocus}
-            setValue={setTrajectoryFocus}
-            options={TRAJECTORY_FOCUS_OPTIONS}
-          />
+              <tbody>
+                {metrics.length === 0 && (
+                  <tr>
+                    <td style={styles.td} colSpan={8}>
+                      No persisted CGI operational metrics found yet.
+                    </td>
+                  </tr>
+                )}
 
-          <Select
-            label="Trajectory Scope"
-            value={trajectoryScope}
-            setValue={setTrajectoryScope}
-            options={TRAJECTORY_SCOPE_OPTIONS}
-          />
+                {metrics.slice(0, 12).map((item) => (
+                  <tr key={item.id}>
+                    <td style={styles.td}>{formatDate(item.created_at)}</td>
+                    <td style={styles.td}>{item.scope}</td>
+                    <td style={styles.td}>{item.trajectory_direction}</td>
+                    <td style={styles.td}>{item.trajectory_risk}/100</td>
+                    <td style={styles.td}>{item.continuity_drift}/100</td>
+                    <td style={styles.td}>{item.escalation_momentum}/100</td>
+                    <td style={styles.td}>{item.recovery_direction}/100</td>
+                    <td style={styles.td}>{item.stabilization_trend}/100</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-          <Select
-            label="Governance Interpretation"
-            value={governanceInterpretation}
-            setValue={setGovernanceInterpretation}
-            options={GOVERNANCE_INTERPRETATIONS}
-          />
-
-          <Select
-            label="Recommended Stabilization Action"
-            value={recommendedAction}
-            setValue={setRecommendedAction}
-            options={RECOMMENDED_ACTIONS}
-          />
-
-          <Select
-            label="Governance-Safe Monitoring Note"
-            value={governanceNote}
-            setValue={setGovernanceNote}
-            options={GOVERNANCE_NOTE_TEMPLATES}
-          />
-
-          <label style={styles.label}>
-            Optional Additional Operational Notes
-            <textarea
-              value={additionalNotes}
-              onChange={(event) => setAdditionalNotes(event.target.value)}
-              placeholder="Use operational language only. Avoid blame or unnecessary personal details."
-              style={styles.textarea}
-            />
-          </label>
-
-          <button onClick={loadData} style={styles.button}>
-            Refresh Trajectory Intelligence
+          <button onClick={loadTrajectoryMetrics} style={styles.primaryButton}>
+            Refresh Trajectory Metrics
           </button>
         </section>
 
         <section style={styles.card}>
           <h2 style={styles.sectionTitle}>Generated Trajectory Brief</h2>
-
-          <div style={styles.briefBox}>
-            <pre style={styles.pre}>{generatedBrief}</pre>
-          </div>
+          <pre style={styles.summaryBox}>{brief}</pre>
         </section>
       </div>
     </main>
   )
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function average(values: number[]) {
+  const valid = values.filter((value) => Number.isFinite(value))
+
+  if (valid.length === 0) return 0
+
+  return Math.round(valid.reduce((sum, value) => sum + value, 0) / valid.length)
+}
+
+function clamp(value: number) {
+  return Math.max(0, Math.min(100, Math.round(value)))
+}
+
+function calculateVolatility(values: number[]) {
+  const valid = values.filter((value) => Number.isFinite(value))
+
+  if (valid.length < 2) return 0
+
+  const mean = average(valid)
+
+  const variance =
+    valid.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) /
+    valid.length
+
+  return Math.min(100, Math.round(Math.sqrt(variance)))
+}
+
+function strongestDriver(scores: Record<string, number>) {
+  return (
+    Object.entries(scores).sort((a, b) => b[1] - a[1])[0]?.[0] ||
+    'No dominant trajectory driver detected'
+  )
+}
+
+function getTrajectoryState(input: {
+  count: number
+  directionStrength: number
+  deteriorationLoad: number
+  trajectoryPressureVelocity: number
+  stabilizationMovementVelocity: number
+  trajectoryVolatility: number
+  latest: CgiOperationalMetric | null
+}): TrajectoryState {
+  if (input.count < 3) return 'INSUFFICIENT_HISTORY'
+
+  if (
+    input.deteriorationLoad >= 65 ||
+    input.trajectoryPressureVelocity >= 15 ||
+    input.stabilizationMovementVelocity <= -15 ||
+    input.latest?.trajectory_direction === 'DETERIORATING' ||
+    input.latest?.trajectory_direction === 'COLLAPSE_RISK'
+  ) {
+    return 'TRAJECTORY_DETERIORATING'
+  }
+
+  if (
+    input.deteriorationLoad >= 45 ||
+    input.trajectoryPressureVelocity >= 8 ||
+    input.stabilizationMovementVelocity <= -8 ||
+    input.trajectoryVolatility >= 25 ||
+    input.latest?.trajectory_direction === 'DRIFTING'
+  ) {
+    return 'TRAJECTORY_DRIFTING'
+  }
+
+  if (
+    input.directionStrength >= 60 &&
+    input.stabilizationMovementVelocity >= 5 &&
+    input.deteriorationLoad < 45
+  ) {
+    return 'TRAJECTORY_RECOVERING'
+  }
+
+  return 'TRAJECTORY_HOLDING'
+}
+
+function getExecutiveSummary(state: TrajectoryState) {
+  if (state === 'INSUFFICIENT_HISTORY') {
+    return 'There are not enough persisted snapshots yet to judge trajectory movement over time. Continue saving operational snapshots.'
+  }
+
+  if (state === 'TRAJECTORY_DETERIORATING') {
+    return 'Trajectory intelligence shows deterioration. Continuity pressure is rising, stabilization direction is weakening, or the latest state is moving toward collapse risk.'
+  }
+
+  if (state === 'TRAJECTORY_DRIFTING') {
+    return 'Trajectory intelligence shows drift. Continuity has not collapsed, but recovery direction and stabilization trend are not yet strong enough.'
+  }
+
+  if (state === 'TRAJECTORY_RECOVERING') {
+    return 'Trajectory intelligence shows recovery movement. Stabilization direction, recovery reliability, or survivability are improving across persisted snapshots.'
+  }
+
+  return 'Trajectory intelligence is holding. Persisted snapshots do not show major recovery acceleration or major deterioration.'
+}
+
+function getActionCue(state: TrajectoryState) {
+  if (state === 'INSUFFICIENT_HISTORY') {
+    return 'Save more operational snapshots before relying on trajectory trend interpretation.'
+  }
+
+  if (state === 'TRAJECTORY_DETERIORATING') {
+    return 'Activate trajectory review and inspect drift, escalation momentum, unresolved momentum, recovery direction, and stabilization trend immediately.'
+  }
+
+  if (state === 'TRAJECTORY_DRIFTING') {
+    return 'Strengthen routing ownership, intervention completion, outcome confirmation, and recovery monitoring to restore direction.'
+  }
+
+  if (state === 'TRAJECTORY_RECOVERING') {
+    return 'Preserve current recovery discipline and continue confirming that stabilization remains durable.'
+  }
+
+  return 'Maintain monitoring and continue saving snapshots to detect whether trajectory begins recovering or deteriorating.'
+}
+
+function formatDelta(value: number) {
+  if (value > 0) return `+${value}`
+  return `${value}`
+}
+
+function formatDate(value: string) {
+  if (!value) return 'Not recorded'
+  return new Date(value).toLocaleString()
+}
+
+function Metric({ label, value }: { label: string; value: string | number }) {
   return (
     <div style={styles.metricCard}>
       <p style={styles.metricLabel}>{label}</p>
@@ -322,151 +776,218 @@ function Metric({ label, value }: { label: string; value: string }) {
   )
 }
 
-function Select({
-  label,
-  value,
-  setValue,
-  options,
+function ScoreMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div style={styles.scoreCard}>
+      <p style={styles.scoreMetricLabel}>{label}</p>
+      <h3 style={styles.scoreMetricValue}>{value}/100</h3>
+    </div>
+  )
+}
+
+function Panel({
+  title,
+  note,
+  rows,
 }: {
-  label: string
-  value: string
-  setValue: (value: string) => void
-  options: string[]
+  title: string
+  note: string
+  rows: PanelRow[]
 }) {
   return (
-    <label style={styles.label}>
-      {label}
-      <select value={value} onChange={(event) => setValue(event.target.value)} style={styles.select}>
-        {options.map((item) => (
-          <option key={item} value={item}>
-            {item}
-          </option>
+    <div style={styles.card}>
+      <h2 style={styles.sectionTitle}>{title}</h2>
+      <p style={styles.panelNote}>{note}</p>
+
+      <div style={styles.panelList}>
+        {rows.length === 0 && <p style={styles.emptyText}>No data available yet.</p>}
+
+        {rows.map((row, index) => (
+          <div key={`${row.label}-${index}`} style={styles.panelRow}>
+            <span>{row.label}</span>
+            <strong>{row.value}</strong>
+          </div>
         ))}
-      </select>
-    </label>
+      </div>
+    </div>
   )
 }
 
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    background: 'linear-gradient(180deg, #020617 0%, #0f172a 100%)',
     color: 'white',
-    padding: '56px 18px',
   },
-
   container: {
-    maxWidth: '1200px',
+    maxWidth: '1280px',
     margin: '0 auto',
   },
-
   hero: {
     marginBottom: '32px',
   },
-
   kicker: {
     color: '#67e8f9',
-    fontWeight: 900,
     fontSize: '12px',
+    fontWeight: 900,
     letterSpacing: '2px',
   },
-
   title: {
-    fontSize: 'clamp(34px, 6vw, 56px)',
+    fontSize: 'clamp(34px, 6vw, 58px)',
     lineHeight: 1.05,
     margin: '12px 0',
   },
-
   subtitle: {
     color: '#cbd5e1',
-    maxWidth: '900px',
+    maxWidth: '980px',
     lineHeight: 1.7,
     fontSize: '18px',
   },
-
   message: {
     background: '#064e3b',
     color: '#bbf7d0',
     padding: '16px',
     borderRadius: '14px',
     fontWeight: 800,
-    marginBottom: '24px',
+    marginBottom: '20px',
   },
-
+  trajectoryHero: {
+    background: '#020617',
+    border: '1px solid #a78bfa',
+    borderRadius: '28px',
+    padding: '24px',
+    marginBottom: '24px',
+    boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
+  },
+  scoreLabel: {
+    color: '#94a3b8',
+    fontWeight: 900,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    margin: 0,
+  },
+  trajectoryState: {
+    fontSize: 'clamp(36px, 7vw, 68px)',
+    margin: '8px 0 20px',
+    color: '#c4b5fd',
+    letterSpacing: '-0.05em',
+  },
+  scoreGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
+    gap: '14px',
+  },
+  scoreCard: {
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '18px',
+    padding: '18px',
+  },
+  scoreMetricLabel: {
+    color: '#94a3b8',
+    fontWeight: 800,
+    margin: 0,
+  },
+  scoreMetricValue: {
+    color: '#f8fafc',
+    fontSize: '28px',
+    margin: '10px 0 0',
+  },
+  actionBox: {
+    display: 'grid',
+    gap: '8px',
+    background: '#2e1065',
+    border: '1px solid #a78bfa',
+    borderRadius: '18px',
+    padding: '18px',
+    marginTop: '16px',
+    color: '#ede9fe',
+  },
   metricsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: '16px',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+    gap: '14px',
     marginBottom: '24px',
   },
-
   metricCard: {
     background: '#0f172a',
     border: '1px solid #1e293b',
     borderRadius: '18px',
     padding: '20px',
+    overflow: 'hidden',
   },
-
   metricLabel: {
     color: '#94a3b8',
     fontWeight: 800,
+    margin: 0,
   },
-
   metricValue: {
-    marginTop: '8px',
-    fontSize: '28px',
-    lineHeight: 1.2,
-    wordBreak: 'break-word',
+    fontSize: 'clamp(22px, 4vw, 34px)',
+    margin: '8px 0 0',
+    overflowWrap: 'anywhere',
   },
-
+  layoutGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+    gap: '20px',
+    marginBottom: '28px',
+  },
   card: {
     background: '#020617',
     border: '1px solid #1e293b',
     borderRadius: '24px',
     padding: '24px',
-    marginBottom: '24px',
+    marginBottom: '28px',
+    boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
   },
-
   sectionTitle: {
-    fontSize: '28px',
-    marginBottom: '12px',
+    fontSize: '26px',
+    margin: '0 0 10px',
   },
-
-  helper: {
+  panelNote: {
     color: '#cbd5e1',
     lineHeight: 1.6,
+    marginBottom: '18px',
+  },
+  panelList: {
+    display: 'grid',
+    gap: '10px',
+  },
+  panelRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: '16px',
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '14px',
+    padding: '14px',
+  },
+  emptyText: {
+    color: '#94a3b8',
+  },
+  tableWrap: {
+    overflowX: 'auto',
     marginBottom: '20px',
   },
-
-  label: {
-    display: 'block',
-    marginBottom: '18px',
-    fontWeight: 800,
-  },
-
-  select: {
+  table: {
     width: '100%',
-    marginTop: '8px',
-    padding: '14px',
-    borderRadius: '12px',
-    background: '#111827',
-    color: 'white',
-    border: '1px solid #334155',
+    borderCollapse: 'collapse',
+    minWidth: '900px',
   },
-
-  textarea: {
-    width: '100%',
-    minHeight: '120px',
-    marginTop: '8px',
-    padding: '14px',
-    borderRadius: '12px',
-    background: '#111827',
-    color: 'white',
-    border: '1px solid #334155',
-    resize: 'vertical',
+  th: {
+    textAlign: 'left',
+    color: '#94a3b8',
+    borderBottom: '1px solid #334155',
+    padding: '12px',
+    fontSize: '12px',
+    textTransform: 'uppercase',
   },
-
-  button: {
+  td: {
+    borderBottom: '1px solid #1e293b',
+    padding: '12px',
+    color: '#e2e8f0',
+    verticalAlign: 'top',
+  },
+  primaryButton: {
     width: '100%',
     padding: '16px',
     borderRadius: '14px',
@@ -477,19 +998,14 @@ const styles: Record<string, CSSProperties> = {
     cursor: 'pointer',
     fontSize: '16px',
   },
-
-  briefBox: {
+  summaryBox: {
+    whiteSpace: 'pre-wrap',
     background: '#0f172a',
     border: '1px solid #334155',
     borderRadius: '18px',
-    padding: '20px',
-    overflowX: 'auto',
-  },
-
-  pre: {
-    whiteSpace: 'pre-wrap',
-    lineHeight: 1.7,
-    margin: 0,
-    fontFamily: 'inherit',
+    padding: '18px',
+    color: '#e2e8f0',
+    lineHeight: 1.6,
+    minHeight: '360px',
   },
 }
