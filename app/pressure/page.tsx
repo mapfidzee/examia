@@ -2,357 +2,713 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { supabase } from '../../lib/supabase'
 
-type BeneficiaryCase = {
+type CgiOperationalMetric = {
   id: string
-  case_status: string
+  created_at: string
+  scope: string
   region: string | null
-  safeguarding_flag: boolean
-  assigned_responder_id?: string | null
+  institution_id: string | null
+
+  continuity_state: string
+  pressure_propagation_state: string
+  trajectory_direction: string
+  structural_memory_state: string
+
+  escalation_pressure_index: number
+  propagation_risk: number
+  routing_friction: number
+  responder_pressure: number
+  escalation_velocity: number
+  coordination_instability: number
+  stabilization_drag: number
+
+  recovery_reliability_score: number
+  operational_survivability_score: number
+  continuity_integrity_score: number
+  stabilization_confidence_score: number
+
+  dominant_pressure_source: string | null
+  dominant_trajectory_signal: string | null
+  dominant_memory_pattern: string | null
+  executive_summary: string | null
+  action_cue: string | null
 }
 
-type RoutingAction = {
-  id: string
-  case_id: string
-  assigned_responder_id?: string | null
+type PressureState =
+  | 'INSUFFICIENT_HISTORY'
+  | 'PRESSURE_CONTAINED'
+  | 'PRESSURE_BUILDING'
+  | 'PRESSURE_SPREADING'
+  | 'PRESSURE_CRITICAL'
+
+type PanelRow = {
+  label: string
+  value: string
 }
 
-type Responder = {
-  id: string
-  full_name: string
-  operational_status: string
-  region: string | null
-}
-
-const REPORT_TEMPLATES = [
-  'Predictive routing pressure brief',
-  'Regional coordination pressure brief',
-  'Responder saturation visibility brief',
-  'Continuity pressure monitoring brief',
-  'Safeguarding accumulation pressure brief',
-]
-
-const PRESSURE_FOCUS_OPTIONS = [
-  'Routing accumulation visibility',
-  'Responder saturation pressure',
-  'Regional continuity pressure',
-  'Safeguarding density accumulation',
-  'Coordination bottleneck visibility',
-]
-
-const OPERATING_SCOPE_OPTIONS = [
-  'National view',
-  'Regional view',
-  'District view',
-  'Responder-focused',
-  'Coordination-focused',
-]
-
-function getPressureInterpretation(status: string) {
-  if (status === 'LOW_ROUTING_PRESSURE') {
-    return {
-      interpretation:
-        'Routing pressure remains low and stabilization pathways appear balanced.',
-      action: 'Maintain standard coordination monitoring.',
-      monitoring: 'Low-pressure monitoring remains active.',
-    }
-  }
-
-  if (status === 'MODERATE_ROUTING_PRESSURE') {
-    return {
-      interpretation:
-        'Routing accumulation and responder concentration are becoming visible and should continue to be monitored.',
-      action: 'Maintain routing monitoring and review responder distribution.',
-      monitoring: 'Moderate-pressure monitoring remains active.',
-    }
-  }
-
-  if (status === 'HIGH_ROUTING_PRESSURE') {
-    return {
-      interpretation:
-        'Routing concentration and responder saturation pressure are visible and require coordination review before stabilization pathways weaken.',
-      action:
-        'Review routing distribution and expand stabilization coordination capacity.',
-      monitoring: 'High-pressure routing monitoring remains active.',
-    }
-  }
-
-  if (status === 'CRITICAL_ROUTING_PRESSURE') {
-    return {
-      interpretation:
-        'Critical routing accumulation and coordination bottleneck signals are visible. Stabilization continuity risk is increasing.',
-      action:
-        'Escalate coordination review immediately and redistribute stabilization load.',
-      monitoring: 'Critical-pressure monitoring escalation is active.',
-    }
-  }
-
-  return {
-    interpretation: 'Routing pressure visibility is active.',
-    action: 'Continue coordination monitoring.',
-    monitoring: 'Routing pressure monitoring remains active.',
-  }
-}
+const SAMPLE_LIMIT = 120
 
 export default function PressurePage() {
-  const [cases, setCases] = useState<BeneficiaryCase[]>([])
-  const [routingActions, setRoutingActions] = useState<RoutingAction[]>([])
-  const [responders, setResponders] = useState<Responder[]>([])
+  return (
+    <CGIGovernanceShell>
+      <PressureContent />
+    </CGIGovernanceShell>
+  )
+}
 
+function PressureContent() {
+  const [metrics, setMetrics] = useState<CgiOperationalMetric[]>([])
   const [message, setMessage] = useState('')
 
-  const [reportTemplate, setReportTemplate] = useState(REPORT_TEMPLATES[0])
-  const [pressureFocus, setPressureFocus] = useState(PRESSURE_FOCUS_OPTIONS[0])
-  const [operatingScope, setOperatingScope] = useState(OPERATING_SCOPE_OPTIONS[1])
-  const [additionalNotes, setAdditionalNotes] = useState('')
-
   useEffect(() => {
-    loadData()
+    loadPressureMetrics()
   }, [])
 
-  async function loadData() {
-    const [casesResult, routingResult, respondersResult] = await Promise.all([
-      supabase.from('beneficiary_cases').select('*'),
-      supabase.from('case_routing_actions').select('*'),
-      supabase.from('responders').select('*'),
-    ])
+  async function loadPressureMetrics() {
+    setMessage('Loading persisted CGI pressure metrics...')
 
-    if (casesResult.error) console.error(casesResult.error)
-    if (routingResult.error) console.error(routingResult.error)
-    if (respondersResult.error) console.error(respondersResult.error)
+    const { data, error } = await supabase
+      .from('cgi_operational_metrics')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(SAMPLE_LIMIT)
 
-    setCases(casesResult.data || [])
-    setRoutingActions(routingResult.data || [])
-    setResponders(respondersResult.data || [])
-    setMessage('Predictive routing pressure intelligence refreshed.')
+    if (error) {
+      console.error(error)
+      setMessage('Failed to load persisted CGI pressure metrics.')
+      return
+    }
+
+    setMetrics(data || [])
+    setMessage('Persisted CGI pressure metrics loaded.')
   }
 
-  const metrics = useMemo(() => {
-    const safeguardingFlags = cases.filter((item) => item.safeguarding_flag).length
+  const pressure = useMemo(() => {
+    const ordered = [...metrics].sort(
+      (a, b) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    )
 
-    const activeCases = cases.filter((item) =>
-      [
-        'NEED_DETECTED',
-        'UNDER_ASSESSMENT',
-        'ROUTED',
-        'RESPONDER_ASSIGNED',
-        'INTERVENTION_ACTIVE',
-        'STABILIZING',
-      ].includes(item.case_status)
-    ).length
+    const latest = ordered[ordered.length - 1] || null
+    const previous = ordered[ordered.length - 2] || null
 
-    const regionalLoadMap: Record<string, number> = {}
+    const earlyWindow = ordered.slice(0, 5)
+    const recentWindow = ordered.slice(-5)
 
-    cases.forEach((item) => {
-      const region = item.region || 'Unknown'
-      regionalLoadMap[region] = (regionalLoadMap[region] || 0) + 1
+    const averageEscalationPressure = average(
+      metrics.map((item) => item.escalation_pressure_index),
+    )
+
+    const averagePropagationRisk = average(
+      metrics.map((item) => item.propagation_risk),
+    )
+
+    const averageRoutingFriction = average(
+      metrics.map((item) => item.routing_friction),
+    )
+
+    const averageResponderPressure = average(
+      metrics.map((item) => item.responder_pressure),
+    )
+
+    const averageEscalationVelocity = average(
+      metrics.map((item) => item.escalation_velocity),
+    )
+
+    const averageCoordinationInstability = average(
+      metrics.map((item) => item.coordination_instability),
+    )
+
+    const averageStabilizationDrag = average(
+      metrics.map((item) => item.stabilization_drag),
+    )
+
+    const averageRecoveryReliability = average(
+      metrics.map((item) => item.recovery_reliability_score),
+    )
+
+    const averageSurvivability = average(
+      metrics.map((item) => item.operational_survivability_score),
+    )
+
+    const pressureLoad = average([
+      averageEscalationPressure,
+      averagePropagationRisk,
+      averageRoutingFriction,
+      averageResponderPressure,
+      averageEscalationVelocity,
+      averageCoordinationInstability,
+      averageStabilizationDrag,
+    ])
+
+    const earlyPressure = average(
+      earlyWindow.map((item) =>
+        average([
+          item.escalation_pressure_index,
+          item.propagation_risk,
+          item.routing_friction,
+          item.responder_pressure,
+          item.escalation_velocity,
+          item.coordination_instability,
+          item.stabilization_drag,
+        ]),
+      ),
+    )
+
+    const recentPressure = average(
+      recentWindow.map((item) =>
+        average([
+          item.escalation_pressure_index,
+          item.propagation_risk,
+          item.routing_friction,
+          item.responder_pressure,
+          item.escalation_velocity,
+          item.coordination_instability,
+          item.stabilization_drag,
+        ]),
+      ),
+    )
+
+    const pressureVelocity =
+      metrics.length < 2 ? 0 : Math.round(recentPressure - earlyPressure)
+
+    const latestPressureMovement =
+      latest && previous
+        ? average([
+            latest.escalation_pressure_index - previous.escalation_pressure_index,
+            latest.propagation_risk - previous.propagation_risk,
+            latest.routing_friction - previous.routing_friction,
+            latest.responder_pressure - previous.responder_pressure,
+            latest.escalation_velocity - previous.escalation_velocity,
+            latest.coordination_instability - previous.coordination_instability,
+            latest.stabilization_drag - previous.stabilization_drag,
+          ])
+        : 0
+
+    const pressureVolatility = calculateVolatility(
+      metrics.map((item) =>
+        average([
+          item.escalation_pressure_index,
+          item.propagation_risk,
+          item.routing_friction,
+          item.responder_pressure,
+          item.escalation_velocity,
+          item.coordination_instability,
+          item.stabilization_drag,
+        ]),
+      ),
+    )
+
+    const pressureContainmentScore = clamp(
+      averageRecoveryReliability * 0.35 +
+        averageSurvivability * 0.35 +
+        (100 - pressureLoad) * 0.3,
+    )
+
+    const pressureConcentrationScore = strongestScore({
+      'Escalation pressure': averageEscalationPressure,
+      'Propagation risk': averagePropagationRisk,
+      'Routing friction': averageRoutingFriction,
+      'Responder pressure': averageResponderPressure,
+      'Escalation velocity': averageEscalationVelocity,
+      'Coordination instability': averageCoordinationInstability,
+      'Stabilization drag': averageStabilizationDrag,
+    }).score
+
+    const pressureSpreadScore = clamp(
+      average([
+        averagePropagationRisk,
+        averageCoordinationInstability,
+        averageEscalationVelocity,
+        averageStabilizationDrag,
+      ]),
+    )
+
+    const pressureState = getPressureState({
+      count: metrics.length,
+      pressureLoad,
+      pressureVelocity,
+      pressureVolatility,
+      pressureContainmentScore,
+      latest,
     })
 
-    const responderLoadMap: Record<string, number> = {}
+    const dominantPressureDriver = strongestScore({
+      'Escalation pressure': averageEscalationPressure,
+      'Propagation risk': averagePropagationRisk,
+      'Routing friction': averageRoutingFriction,
+      'Responder pressure': averageResponderPressure,
+      'Escalation velocity': averageEscalationVelocity,
+      'Coordination instability': averageCoordinationInstability,
+      'Stabilization drag': averageStabilizationDrag,
+    }).label
 
-    routingActions.forEach((item) => {
-      const responder = item.assigned_responder_id || 'UNASSIGNED'
-      responderLoadMap[responder] = (responderLoadMap[responder] || 0) + 1
-    })
-
-    const highestRegionalPressure = Math.max(...Object.values(regionalLoadMap), 0)
-    const highestResponderPressure = Math.max(...Object.values(responderLoadMap), 0)
-
-    let pressureStatus = 'LOW_ROUTING_PRESSURE'
-
-    if (highestResponderPressure >= 3 || safeguardingFlags >= 3) {
-      pressureStatus = 'CRITICAL_ROUTING_PRESSURE'
-    } else if (highestResponderPressure >= 2 || highestRegionalPressure >= 3) {
-      pressureStatus = 'HIGH_ROUTING_PRESSURE'
-    } else if (highestRegionalPressure >= 2 || activeCases >= 2) {
-      pressureStatus = 'MODERATE_ROUTING_PRESSURE'
-    }
+    const executiveSummary = getExecutiveSummary(pressureState)
+    const actionCue = getActionCue(pressureState)
 
     return {
-      safeguardingFlags,
-      activeCases,
-      highestRegionalPressure,
-      highestResponderPressure,
-      pressureStatus,
-      regionalLoadMap,
-      responderLoadMap,
+      ordered,
+      latest,
+      previous,
+      averageEscalationPressure,
+      averagePropagationRisk,
+      averageRoutingFriction,
+      averageResponderPressure,
+      averageEscalationVelocity,
+      averageCoordinationInstability,
+      averageStabilizationDrag,
+      averageRecoveryReliability,
+      averageSurvivability,
+      pressureLoad,
+      earlyPressure,
+      recentPressure,
+      pressureVelocity,
+      latestPressureMovement,
+      pressureVolatility,
+      pressureContainmentScore,
+      pressureConcentrationScore,
+      pressureSpreadScore,
+      pressureState,
+      dominantPressureDriver,
+      executiveSummary,
+      actionCue,
     }
-  }, [cases, routingActions])
+  }, [metrics])
 
-  const alignedGovernance = getPressureInterpretation(metrics.pressureStatus)
+  const latestRows: PanelRow[] = pressure.latest
+    ? [
+        {
+          label: 'Latest Continuity State',
+          value: pressure.latest.continuity_state,
+        },
+        {
+          label: 'Latest Pressure State',
+          value: pressure.latest.pressure_propagation_state,
+        },
+        {
+          label: 'Latest Trajectory Direction',
+          value: pressure.latest.trajectory_direction,
+        },
+        {
+          label: 'Latest Structural Memory State',
+          value: pressure.latest.structural_memory_state,
+        },
+        {
+          label: 'Dominant Saved Pressure Source',
+          value:
+            pressure.latest.dominant_pressure_source ||
+            'No pressure source recorded',
+        },
+      ]
+    : []
 
-  const generatedBrief = `
-EXAMIA LIS PREDICTIVE ROUTING PRESSURE BRIEF
+  const pressureRows: PanelRow[] = [
+    {
+      label: 'Dominant Pressure Driver',
+      value: pressure.dominantPressureDriver,
+    },
+    {
+      label: 'Pressure Velocity',
+      value: formatDelta(pressure.pressureVelocity),
+    },
+    {
+      label: 'Latest Pressure Movement',
+      value: formatDelta(pressure.latestPressureMovement),
+    },
+    {
+      label: 'Pressure Volatility',
+      value: `${pressure.pressureVolatility}/100`,
+    },
+    {
+      label: 'Pressure Spread Score',
+      value: `${pressure.pressureSpreadScore}/100`,
+    },
+    {
+      label: 'Pressure Containment Score',
+      value: `${pressure.pressureContainmentScore}/100`,
+    },
+  ]
 
-Report Template:
-${reportTemplate}
+  const brief = `
+TSINAXA CGI PRESSURE INTELLIGENCE BRIEF
 
-Pressure Focus:
-${pressureFocus}
+Pressure State:
+${pressure.pressureState}
 
-Operating Scope:
-${operatingScope}
+Snapshots Reviewed:
+${metrics.length}
 
-Routing Pressure Status:
-${metrics.pressureStatus}
+Dominant Pressure Driver:
+${pressure.dominantPressureDriver}
 
-Pressure Metrics:
-Total Cases: ${cases.length}
-Active Stabilization Cases: ${metrics.activeCases}
-Routing Actions: ${routingActions.length}
-Safeguarding Flags: ${metrics.safeguardingFlags}
-Highest Regional Pressure: ${metrics.highestRegionalPressure}
-Highest Responder Pressure: ${metrics.highestResponderPressure}
+Pressure Load:
+${pressure.pressureLoad}/100
 
-Governance Interpretation:
-${alignedGovernance.interpretation}
+Pressure Velocity:
+${pressure.pressureVelocity}
+
+Latest Pressure Movement:
+${pressure.latestPressureMovement}
+
+Pressure Volatility:
+${pressure.pressureVolatility}/100
+
+Pressure Spread Score:
+${pressure.pressureSpreadScore}/100
+
+Pressure Concentration Score:
+${pressure.pressureConcentrationScore}/100
+
+Pressure Containment Score:
+${pressure.pressureContainmentScore}/100
+
+Average Escalation Pressure:
+${pressure.averageEscalationPressure}/100
+
+Average Propagation Risk:
+${pressure.averagePropagationRisk}/100
+
+Average Routing Friction:
+${pressure.averageRoutingFriction}/100
+
+Average Responder Pressure:
+${pressure.averageResponderPressure}/100
+
+Average Escalation Velocity:
+${pressure.averageEscalationVelocity}/100
+
+Average Coordination Instability:
+${pressure.averageCoordinationInstability}/100
+
+Average Stabilization Drag:
+${pressure.averageStabilizationDrag}/100
+
+Average Recovery Reliability:
+${pressure.averageRecoveryReliability}/100
+
+Average Operational Survivability:
+${pressure.averageSurvivability}/100
+
+Executive Interpretation:
+${pressure.executiveSummary}
 
 Recommended Action:
-${alignedGovernance.action}
+${pressure.actionCue}
 
-Governance-Safe Operational Meaning:
-This predictive routing pressure brief identifies where routing accumulation, responder concentration, safeguarding density, continuity fragmentation, and coordination bottlenecks may begin creating operational instability. It supports early stabilization balancing before coordination overload occurs. It does not assign blame to responders, institutions, beneficiaries, or partners.
-
-Governance Monitoring Note:
-${alignedGovernance.monitoring}
-
-Additional Operational Notes:
-${additionalNotes.trim() || 'No additional operational notes entered.'}
+Governance-Safe Meaning:
+This pressure view uses persisted CGI operational metric snapshots. It does not judge people. It evaluates whether pressure is contained, building, spreading, or becoming critical across routing, responders, escalation, coordination, and stabilization drag.
   `.trim()
 
   return (
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.hero}>
-          <p style={styles.kicker}>EXAMIA LIS • ROUTING PRESSURE INTELLIGENCE</p>
+          <p style={styles.kicker}>TSINAXA CGI • PRESSURE INTELLIGENCE</p>
 
-          <h1 style={styles.title}>Predictive Routing Pressure Infrastructure</h1>
+          <h1 style={styles.title}>Continuity Pressure Intelligence</h1>
 
           <p style={styles.subtitle}>
-            Detect routing accumulation, responder saturation, coordination
-            bottlenecks, safeguarding density, and continuity pressure before
-            stabilization pathways overload.
+            Use persisted CGI operational metric snapshots to identify where operational
+            pressure is concentrating, spreading, accelerating, or remaining contained.
           </p>
         </section>
 
         {message && <div style={styles.message}>{message}</div>}
 
+        <section style={styles.pressureHero}>
+          <div>
+            <p style={styles.scoreLabel}>Pressure State</p>
+            <h2 style={styles.pressureState}>{pressure.pressureState}</h2>
+            <p style={styles.panelNote}>{pressure.executiveSummary}</p>
+          </div>
+
+          <div style={styles.scoreGrid}>
+            <ScoreMetric label="Pressure Load" value={pressure.pressureLoad} />
+            <ScoreMetric
+              label="Pressure Spread"
+              value={pressure.pressureSpreadScore}
+            />
+            <ScoreMetric
+              label="Pressure Concentration"
+              value={pressure.pressureConcentrationScore}
+            />
+            <ScoreMetric
+              label="Pressure Containment"
+              value={pressure.pressureContainmentScore}
+            />
+            <ScoreMetric
+              label="Pressure Volatility"
+              value={pressure.pressureVolatility}
+            />
+            <ScoreMetric
+              label="Recent Pressure"
+              value={pressure.recentPressure}
+            />
+          </div>
+
+          <div style={styles.actionBox}>
+            <strong>Recommended Action:</strong>
+            <span>{pressure.actionCue}</span>
+          </div>
+        </section>
+
         <section style={styles.metricsGrid}>
-          <Metric label="Pressure Status" value={metrics.pressureStatus} />
-          <Metric label="Active Cases" value={metrics.activeCases.toString()} />
-          <Metric label="Routing Actions" value={routingActions.length.toString()} />
-          <Metric label="Safeguarding Flags" value={metrics.safeguardingFlags.toString()} />
+          <Metric label="Snapshots Reviewed" value={metrics.length} />
+          <Metric label="Dominant Driver" value={pressure.dominantPressureDriver} />
+          <Metric label="Pressure Velocity" value={formatDelta(pressure.pressureVelocity)} />
           <Metric
-            label="Highest Regional Pressure"
-            value={metrics.highestRegionalPressure.toString()}
+            label="Latest Movement"
+            value={formatDelta(pressure.latestPressureMovement)}
           />
           <Metric
-            label="Highest Responder Pressure"
-            value={metrics.highestResponderPressure.toString()}
+            label="Escalation Pressure Avg"
+            value={`${pressure.averageEscalationPressure}/100`}
+          />
+          <Metric
+            label="Propagation Risk Avg"
+            value={`${pressure.averagePropagationRisk}/100`}
+          />
+          <Metric
+            label="Routing Friction Avg"
+            value={`${pressure.averageRoutingFriction}/100`}
+          />
+          <Metric
+            label="Responder Pressure Avg"
+            value={`${pressure.averageResponderPressure}/100`}
+          />
+        </section>
+
+        <section style={styles.metricsGrid}>
+          <Metric
+            label="Escalation Velocity Avg"
+            value={`${pressure.averageEscalationVelocity}/100`}
+          />
+          <Metric
+            label="Coordination Instability Avg"
+            value={`${pressure.averageCoordinationInstability}/100`}
+          />
+          <Metric
+            label="Stabilization Drag Avg"
+            value={`${pressure.averageStabilizationDrag}/100`}
+          />
+          <Metric
+            label="Recovery Reliability Avg"
+            value={`${pressure.averageRecoveryReliability}/100`}
+          />
+          <Metric
+            label="Survivability Avg"
+            value={`${pressure.averageSurvivability}/100`}
+          />
+        </section>
+
+        <section style={styles.layoutGrid}>
+          <Panel
+            title="Latest Persisted Pressure State"
+            note="Most recent saved operational pressure snapshot."
+            rows={latestRows}
+          />
+
+          <Panel
+            title="Pressure Concentration Reading"
+            note="Summarizes dominant pressure, spread, velocity, volatility, and containment."
+            rows={pressureRows}
           />
         </section>
 
         <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Predictive Routing Pressure Brief Template</h2>
+          <h2 style={styles.sectionTitle}>Recent Pressure Snapshot Trail</h2>
 
-          <p style={styles.helper}>
-            Use standardized dropdowns to keep routing pressure forecasting
-            governance-safe, operationally coherent, and nationally consistent.
-            Interpretation and action cues are automatically aligned with the
-            detected pressure status.
+          <p style={styles.panelNote}>
+            Latest saved rows from <code>cgi_operational_metrics</code>. These are
+            historical pressure records, not live recalculations.
           </p>
 
-          <Select
-            label="Report Template"
-            value={reportTemplate}
-            setValue={setReportTemplate}
-            options={REPORT_TEMPLATES}
-          />
+          <div style={styles.tableWrap}>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Created</th>
+                  <th style={styles.th}>Scope</th>
+                  <th style={styles.th}>Pressure State</th>
+                  <th style={styles.th}>Escalation</th>
+                  <th style={styles.th}>Propagation</th>
+                  <th style={styles.th}>Routing</th>
+                  <th style={styles.th}>Responder</th>
+                  <th style={styles.th}>Drag</th>
+                </tr>
+              </thead>
 
-          <Select
-            label="Pressure Focus"
-            value={pressureFocus}
-            setValue={setPressureFocus}
-            options={PRESSURE_FOCUS_OPTIONS}
-          />
+              <tbody>
+                {metrics.length === 0 && (
+                  <tr>
+                    <td style={styles.td} colSpan={8}>
+                      No persisted CGI operational metrics found yet.
+                    </td>
+                  </tr>
+                )}
 
-          <Select
-            label="Operating Scope"
-            value={operatingScope}
-            setValue={setOperatingScope}
-            options={OPERATING_SCOPE_OPTIONS}
-          />
-
-          <div style={styles.alignedBox}>
-            <h3 style={styles.alignedTitle}>Auto-Aligned Governance Interpretation</h3>
-            <p style={styles.alignedText}>{alignedGovernance.interpretation}</p>
-
-            <h3 style={styles.alignedTitle}>Auto-Aligned Recommended Action</h3>
-            <p style={styles.alignedText}>{alignedGovernance.action}</p>
-
-            <h3 style={styles.alignedTitle}>Auto-Aligned Monitoring Note</h3>
-            <p style={styles.alignedText}>{alignedGovernance.monitoring}</p>
+                {metrics.slice(0, 12).map((item) => (
+                  <tr key={item.id}>
+                    <td style={styles.td}>{formatDate(item.created_at)}</td>
+                    <td style={styles.td}>{item.scope}</td>
+                    <td style={styles.td}>{item.pressure_propagation_state}</td>
+                    <td style={styles.td}>{item.escalation_pressure_index}/100</td>
+                    <td style={styles.td}>{item.propagation_risk}/100</td>
+                    <td style={styles.td}>{item.routing_friction}/100</td>
+                    <td style={styles.td}>{item.responder_pressure}/100</td>
+                    <td style={styles.td}>{item.stabilization_drag}/100</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
-          <label style={styles.label}>
-            Optional Additional Operational Notes
-            <textarea
-              value={additionalNotes}
-              onChange={(event) => setAdditionalNotes(event.target.value)}
-              placeholder="Use operational language only. Avoid blame or unnecessary personal details."
-              style={styles.textarea}
-            />
-          </label>
-
-          <button onClick={loadData} style={styles.button}>
-            Refresh Routing Pressure Intelligence
+          <button onClick={loadPressureMetrics} style={styles.primaryButton}>
+            Refresh Pressure Metrics
           </button>
         </section>
 
         <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Generated Routing Pressure Brief</h2>
-
-          <div style={styles.briefBox}>
-            <pre style={styles.pre}>{generatedBrief}</pre>
-          </div>
-        </section>
-
-        <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Regional Pressure Visibility</h2>
-
-          <div style={styles.grid}>
-            {Object.entries(metrics.regionalLoadMap).map(([region, count]) => (
-              <div key={region} style={styles.smallCard}>
-                <h3 style={styles.smallTitle}>{region}</h3>
-                <p style={styles.smallValue}>{count} case(s)</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Responder Saturation Visibility</h2>
-
-          <div style={styles.grid}>
-            {Object.entries(metrics.responderLoadMap).map(([responderId, count]) => {
-              const responder = responders.find((item) => item.id === responderId)
-
-              return (
-                <div key={responderId} style={styles.smallCard}>
-                  <h3 style={styles.smallTitle}>{responder?.full_name || 'Unassigned'}</h3>
-                  <p style={styles.smallValue}>{count} routed case(s)</p>
-                </div>
-              )
-            })}
-          </div>
+          <h2 style={styles.sectionTitle}>Generated Pressure Brief</h2>
+          <pre style={styles.summaryBox}>{brief}</pre>
         </section>
       </div>
     </main>
   )
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function average(values: number[]) {
+  const valid = values.filter((value) => Number.isFinite(value))
+
+  if (valid.length === 0) return 0
+
+  return Math.round(valid.reduce((sum, value) => sum + value, 0) / valid.length)
+}
+
+function clamp(value: number) {
+  return Math.max(0, Math.min(100, Math.round(value)))
+}
+
+function calculateVolatility(values: number[]) {
+  const valid = values.filter((value) => Number.isFinite(value))
+
+  if (valid.length < 2) return 0
+
+  const mean = average(valid)
+
+  const variance =
+    valid.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) /
+    valid.length
+
+  return Math.min(100, Math.round(Math.sqrt(variance)))
+}
+
+function strongestScore(scores: Record<string, number>) {
+  return (
+    Object.entries(scores)
+      .map(([label, score]) => ({ label, score }))
+      .sort((a, b) => b.score - a.score)[0] || {
+      label: 'No dominant pressure driver detected',
+      score: 0,
+    }
+  )
+}
+
+function getPressureState(input: {
+  count: number
+  pressureLoad: number
+  pressureVelocity: number
+  pressureVolatility: number
+  pressureContainmentScore: number
+  latest: CgiOperationalMetric | null
+}): PressureState {
+  if (input.count < 3) return 'INSUFFICIENT_HISTORY'
+
+  if (
+    input.pressureLoad >= 75 ||
+    input.pressureVelocity >= 18 ||
+    input.pressureVolatility >= 35 ||
+    input.pressureContainmentScore < 35 ||
+    input.latest?.pressure_propagation_state === 'CASCADE_RISK'
+  ) {
+    return 'PRESSURE_CRITICAL'
+  }
+
+  if (
+    input.pressureLoad >= 55 ||
+    input.pressureVelocity >= 10 ||
+    input.pressureVolatility >= 25 ||
+    input.latest?.pressure_propagation_state === 'SPREADING'
+  ) {
+    return 'PRESSURE_SPREADING'
+  }
+
+  if (
+    input.pressureLoad >= 35 ||
+    input.pressureVelocity >= 5 ||
+    input.pressureVolatility >= 18 ||
+    input.latest?.pressure_propagation_state === 'BUILDING'
+  ) {
+    return 'PRESSURE_BUILDING'
+  }
+
+  return 'PRESSURE_CONTAINED'
+}
+
+function getExecutiveSummary(state: PressureState) {
+  if (state === 'INSUFFICIENT_HISTORY') {
+    return 'There are not enough persisted snapshots yet to judge pressure behavior over time. Continue saving operational snapshots.'
+  }
+
+  if (state === 'PRESSURE_CRITICAL') {
+    return 'Pressure intelligence shows critical pressure. Escalation, spread, volatility, or weak containment may be threatening stabilization.'
+  }
+
+  if (state === 'PRESSURE_SPREADING') {
+    return 'Pressure intelligence shows spreading pressure. Operational strain appears to be moving across pathways instead of staying contained.'
+  }
+
+  if (state === 'PRESSURE_BUILDING') {
+    return 'Pressure intelligence shows building pressure. The system is not yet critical, but pressure signals need closer monitoring.'
+  }
+
+  return 'Pressure intelligence shows contained pressure. Current persisted snapshots do not show major spread or critical concentration.'
+}
+
+function getActionCue(state: PressureState) {
+  if (state === 'INSUFFICIENT_HISTORY') {
+    return 'Save more operational snapshots before relying on pressure trend interpretation.'
+  }
+
+  if (state === 'PRESSURE_CRITICAL') {
+    return 'Activate command pressure review and inspect escalation, propagation, routing friction, responder pressure, coordination instability, and stabilization drag immediately.'
+  }
+
+  if (state === 'PRESSURE_SPREADING') {
+    return 'Review where pressure is spreading and rebalance routing, response ownership, and stabilization support before pressure becomes critical.'
+  }
+
+  if (state === 'PRESSURE_BUILDING') {
+    return 'Increase monitoring frequency and compare upcoming snapshots against current pressure velocity and concentration.'
+  }
+
+  return 'Maintain routine monitoring and continue saving snapshots to detect early pressure movement.'
+}
+
+function formatDelta(value: number) {
+  if (value > 0) return `+${value}`
+  return `${value}`
+}
+
+function formatDate(value: string) {
+  if (!value) return 'Not recorded'
+  return new Date(value).toLocaleString()
+}
+
+function Metric({ label, value }: { label: string; value: string | number }) {
   return (
     <div style={styles.metricCard}>
       <p style={styles.metricLabel}>{label}</p>
@@ -361,44 +717,50 @@ function Metric({ label, value }: { label: string; value: string }) {
   )
 }
 
-function Select({
-  label,
-  value,
-  setValue,
-  options,
+function ScoreMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div style={styles.scoreCard}>
+      <p style={styles.scoreMetricLabel}>{label}</p>
+      <h3 style={styles.scoreMetricValue}>{value}/100</h3>
+    </div>
+  )
+}
+
+function Panel({
+  title,
+  note,
+  rows,
 }: {
-  label: string
-  value: string
-  setValue: (value: string) => void
-  options: string[]
+  title: string
+  note: string
+  rows: PanelRow[]
 }) {
   return (
-    <label style={styles.label}>
-      {label}
-      <select
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        style={styles.select}
-      >
-        {options.map((item) => (
-          <option key={item} value={item}>
-            {item}
-          </option>
+    <div style={styles.card}>
+      <h2 style={styles.sectionTitle}>{title}</h2>
+      <p style={styles.panelNote}>{note}</p>
+
+      <div style={styles.panelList}>
+        {rows.length === 0 && <p style={styles.emptyText}>No data available yet.</p>}
+
+        {rows.map((row, index) => (
+          <div key={`${row.label}-${index}`} style={styles.panelRow}>
+            <span>{row.label}</span>
+            <strong>{row.value}</strong>
+          </div>
         ))}
-      </select>
-    </label>
+      </div>
+    </div>
   )
 }
 
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    background: 'linear-gradient(180deg, #020617 0%, #0f172a 100%)',
     color: 'white',
-    padding: '56px 18px',
   },
   container: {
-    maxWidth: '1200px',
+    maxWidth: '1280px',
     margin: '0 auto',
   },
   hero: {
@@ -406,19 +768,19 @@ const styles: Record<string, CSSProperties> = {
   },
   kicker: {
     color: '#67e8f9',
-    fontWeight: 900,
     fontSize: '12px',
+    fontWeight: 900,
     letterSpacing: '2px',
   },
   title: {
-    fontSize: 'clamp(34px, 6vw, 56px)',
+    fontSize: 'clamp(34px, 6vw, 58px)',
     lineHeight: 1.05,
     margin: '12px 0',
   },
   subtitle: {
     color: '#cbd5e1',
+    maxWidth: '980px',
     lineHeight: 1.7,
-    maxWidth: '900px',
     fontSize: '18px',
   },
   message: {
@@ -427,12 +789,64 @@ const styles: Record<string, CSSProperties> = {
     padding: '16px',
     borderRadius: '14px',
     fontWeight: 800,
+    marginBottom: '20px',
+  },
+  pressureHero: {
+    background: '#020617',
+    border: '1px solid #fbbf24',
+    borderRadius: '28px',
+    padding: '24px',
     marginBottom: '24px',
+    boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
+  },
+  scoreLabel: {
+    color: '#94a3b8',
+    fontWeight: 900,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    margin: 0,
+  },
+  pressureState: {
+    fontSize: 'clamp(36px, 7vw, 68px)',
+    margin: '8px 0 20px',
+    color: '#fbbf24',
+    letterSpacing: '-0.05em',
+  },
+  scoreGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
+    gap: '14px',
+  },
+  scoreCard: {
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '18px',
+    padding: '18px',
+  },
+  scoreMetricLabel: {
+    color: '#94a3b8',
+    fontWeight: 800,
+    margin: 0,
+  },
+  scoreMetricValue: {
+    color: '#f8fafc',
+    fontSize: '28px',
+    margin: '10px 0 0',
+  },
+  actionBox: {
+    display: 'grid',
+    gap: '8px',
+    background: '#422006',
+    border: '1px solid #fbbf24',
+    borderRadius: '18px',
+    padding: '18px',
+    marginTop: '16px',
+    color: '#fef3c7',
   },
   metricsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: '16px',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+    gap: '14px',
     marginBottom: '24px',
   },
   metricCard: {
@@ -440,58 +854,81 @@ const styles: Record<string, CSSProperties> = {
     border: '1px solid #1e293b',
     borderRadius: '18px',
     padding: '20px',
+    overflow: 'hidden',
   },
   metricLabel: {
     color: '#94a3b8',
     fontWeight: 800,
+    margin: 0,
   },
   metricValue: {
-    marginTop: '8px',
-    fontSize: '26px',
-    lineHeight: 1.2,
+    fontSize: 'clamp(22px, 4vw, 34px)',
+    margin: '8px 0 0',
+    overflowWrap: 'anywhere',
+  },
+  layoutGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+    gap: '20px',
+    marginBottom: '28px',
   },
   card: {
     background: '#020617',
     border: '1px solid #1e293b',
     borderRadius: '24px',
     padding: '24px',
-    marginBottom: '24px',
+    marginBottom: '28px',
+    boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
   },
   sectionTitle: {
-    fontSize: '28px',
-    marginBottom: '12px',
+    fontSize: '26px',
+    margin: '0 0 10px',
   },
-  helper: {
+  panelNote: {
     color: '#cbd5e1',
     lineHeight: 1.6,
-    marginBottom: '20px',
-  },
-  label: {
-    display: 'block',
-    fontWeight: 800,
     marginBottom: '18px',
   },
-  select: {
-    width: '100%',
-    marginTop: '8px',
-    padding: '14px',
-    borderRadius: '12px',
-    background: '#111827',
-    color: 'white',
-    border: '1px solid #334155',
+  panelList: {
+    display: 'grid',
+    gap: '10px',
   },
-  textarea: {
-    width: '100%',
-    minHeight: '120px',
-    marginTop: '8px',
-    padding: '14px',
-    borderRadius: '12px',
-    background: '#111827',
-    color: 'white',
+  panelRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: '16px',
+    background: '#0f172a',
     border: '1px solid #334155',
-    resize: 'vertical',
+    borderRadius: '14px',
+    padding: '14px',
   },
-  button: {
+  emptyText: {
+    color: '#94a3b8',
+  },
+  tableWrap: {
+    overflowX: 'auto',
+    marginBottom: '20px',
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    minWidth: '900px',
+  },
+  th: {
+    textAlign: 'left',
+    color: '#94a3b8',
+    borderBottom: '1px solid #334155',
+    padding: '12px',
+    fontSize: '12px',
+    textTransform: 'uppercase',
+  },
+  td: {
+    borderBottom: '1px solid #1e293b',
+    padding: '12px',
+    color: '#e2e8f0',
+    verticalAlign: 'top',
+  },
+  primaryButton: {
     width: '100%',
     padding: '16px',
     borderRadius: '14px',
@@ -502,52 +939,14 @@ const styles: Record<string, CSSProperties> = {
     cursor: 'pointer',
     fontSize: '16px',
   },
-  alignedBox: {
+  summaryBox: {
+    whiteSpace: 'pre-wrap',
     background: '#0f172a',
     border: '1px solid #334155',
     borderRadius: '18px',
     padding: '18px',
-    marginBottom: '20px',
-  },
-  alignedTitle: {
-    color: '#67e8f9',
-    fontSize: '14px',
-    margin: '0 0 6px',
-  },
-  alignedText: {
     color: '#e2e8f0',
     lineHeight: 1.6,
-    margin: '0 0 16px',
-  },
-  briefBox: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '20px',
-  },
-  pre: {
-    whiteSpace: 'pre-wrap',
-    lineHeight: 1.7,
-    margin: 0,
-    fontFamily: 'inherit',
-  },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: '16px',
-  },
-  smallCard: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '18px',
-  },
-  smallTitle: {
-    margin: 0,
-    fontSize: '20px',
-  },
-  smallValue: {
-    marginTop: '10px',
-    color: '#cbd5e1',
+    minHeight: '360px',
   },
 }
