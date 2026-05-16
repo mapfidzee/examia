@@ -112,29 +112,33 @@ export default function OperationsPage() {
       operational_survivability_score: 81,
 
       continuity_state: 'STABILIZING',
-      propagation_risk: 'MODERATE',
-      routing_friction: 'LOW',
-      responder_pressure: 'MODERATE',
-      escalation_velocity: 'CONTROLLED',
-      coordination_instability: 'LOW',
-      stabilization_drag: 'MODERATE',
+
+      propagation_risk: 42,
+      routing_friction: 21,
+      responder_pressure: 48,
+      escalation_velocity: 36,
+      coordination_instability: 24,
+      stabilization_drag: 44,
 
       pressure_propagation_state: 'CONTAINED_PRESSURE',
-      trajectory_risk: 'WATCH',
-      continuity_drift: 'LOW',
-      escalation_momentum: 'SLOWING',
-      recovery_direction: 'IMPROVING',
-      stabilization_trend: 'POSITIVE',
-      unresolved_momentum: 'MODERATE',
+
+      trajectory_risk: 39,
+      continuity_drift: 18,
+      escalation_momentum: 32,
+      recovery_direction: 71,
+      stabilization_trend: 76,
+      unresolved_momentum: 46,
+
       trajectory_direction: 'STABILIZING',
 
-      structural_memory_risk: 'WATCH',
-      routing_failure_recurrence: 'LOW',
-      escalation_corridor_recurrence: 'MODERATE',
-      institutional_fragility_signature: 'CONTAINED',
-      intervention_failure_pattern: 'LIMITED',
-      responder_strain_recurrence: 'MODERATE',
-      continuity_collapse_recurrence: 'LOW',
+      structural_memory_risk: 38,
+      routing_failure_recurrence: 22,
+      escalation_corridor_recurrence: 49,
+      institutional_fragility_signature: 35,
+      intervention_failure_pattern: 19,
+      responder_strain_recurrence: 43,
+      continuity_collapse_recurrence: 16,
+
       structural_memory_state: 'ACTIVE_MEMORY',
 
       dominant_pressure_source:
@@ -171,7 +175,7 @@ export default function OperationsPage() {
       continuityPosture: metrics.continuity_state,
       pressureClassification: metrics.pressure_propagation_state,
       trajectoryState: metrics.trajectory_direction,
-      recoveryStatus: metrics.recovery_direction,
+      recoveryStatus: String(metrics.recovery_direction),
       stabilizationConfidence,
       executiveVisibilityLevel,
       snapshotTrigger:
@@ -209,7 +213,7 @@ export default function OperationsPage() {
       continuityPosture: metrics.continuity_state,
       trajectoryState: metrics.trajectory_direction,
       pressureClassification: metrics.pressure_propagation_state,
-      recoveryStatus: metrics.recovery_direction,
+      recoveryStatus: String(metrics.recovery_direction),
       executiveVisibilityLevel,
     })
 
