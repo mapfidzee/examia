@@ -6,6 +6,7 @@ import type { CSSProperties } from 'react'
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
 import { createSnapshotAuditLog } from '@/lib/snapshotAudit'
+import { persistOperationalSnapshot } from '@/lib/cgi/persistOperationalSnapshot'
 
 import { supabase } from '../lib/supabase'
 
@@ -226,21 +227,64 @@ export default function OperationsPage() {
       savedByEmail: user?.email ?? null,
     })
 
-    const { data: snapshot, error: snapshotError } = await supabase
-      .from('cgi_operational_metrics')
-      .insert({
-        ...metrics,
-        ...governancePayload,
-      })
-      .select('id')
-      .single()
+    let snapshot: { id: string } | null = null
 
-    if (snapshotError || !snapshot?.id) {
+    try {
+      snapshot = await persistOperationalSnapshot({
+        scope: metrics.scope,
+        region: metrics.region,
+        institutionId: metrics.institution_id,
+
+        continuityState: metrics.continuity_state,
+        pressurePropagationState:
+          metrics.pressure_propagation_state,
+        trajectoryDirection: metrics.trajectory_direction,
+        structuralMemoryState: metrics.structural_memory_state,
+
+        continuityIntegrityScore:
+          metrics.continuity_integrity_score,
+        stabilizationConfidenceScore:
+          metrics.stabilization_confidence_score,
+        escalationPressureIndex:
+          metrics.escalation_pressure_index,
+        recoveryReliabilityScore:
+          metrics.recovery_reliability_score,
+        operationalSurvivabilityScore:
+          metrics.operational_survivability_score,
+
+        propagationRisk: metrics.propagation_risk,
+        trajectoryRisk: metrics.trajectory_risk,
+        structuralMemoryRisk: metrics.structural_memory_risk,
+
+        recoveryDirection: metrics.recovery_direction,
+        stabilizationTrend: metrics.stabilization_trend,
+        unresolvedMomentum: metrics.unresolved_momentum,
+        stabilizationDrag: metrics.stabilization_drag,
+        continuityDrift: metrics.continuity_drift,
+        escalationMomentum: metrics.escalation_momentum,
+
+        dominantPressureSource:
+          metrics.dominant_pressure_source,
+        dominantTrajectorySignal:
+          metrics.dominant_trajectory_signal,
+        dominantMemoryPattern:
+          metrics.dominant_memory_pattern,
+        executiveSummary: metrics.executive_summary,
+        actionCue: metrics.action_cue,
+      })
+    } catch (error) {
       setSaveState('ERROR')
       setErrorMessage(
-        snapshotError?.message ||
-          'Snapshot was not returned after save.'
+        error instanceof Error
+          ? error.message
+          : 'Snapshot was not returned after save.'
       )
+      return
+    }
+
+    if (!snapshot?.id) {
+      setSaveState('ERROR')
+      setErrorMessage('Snapshot was not returned after save.')
       return
     }
 
@@ -310,9 +354,7 @@ export default function OperationsPage() {
                 Executive Priority Score
               </p>
 
-              <h2>
-                {metrics.executive_priority_score}/100
-              </h2>
+              <h2>{metrics.executive_priority_score}/100</h2>
 
               <p>{metrics.executive_action_urgency}</p>
             </div>
@@ -322,13 +364,9 @@ export default function OperationsPage() {
                 Survivability Threat
               </p>
 
-              <h2>
-                {metrics.survivability_threat_level}
-              </h2>
+              <h2>{metrics.survivability_threat_level}</h2>
 
-              <p>
-                {metrics.executive_action_deadline}
-              </p>
+              <p>{metrics.executive_action_deadline}</p>
             </div>
 
             <div style={cardStyle}>
@@ -336,9 +374,7 @@ export default function OperationsPage() {
                 Continuity Integrity
               </p>
 
-              <h2>
-                {metrics.continuity_integrity_score}%
-              </h2>
+              <h2>{metrics.continuity_integrity_score}%</h2>
 
               <p>{metrics.continuity_state}</p>
             </div>
@@ -348,13 +384,9 @@ export default function OperationsPage() {
                 Structural Deterioration
               </p>
 
-              <h2>
-                {metrics.structural_deterioration_state}
-              </h2>
+              <h2>{metrics.structural_deterioration_state}</h2>
 
-              <p>
-                Not closure. Survivability review required.
-              </p>
+              <p>Not closure. Survivability review required.</p>
             </div>
           </div>
 
@@ -370,11 +402,13 @@ export default function OperationsPage() {
 
             <div style={formGridStyle}>
               <div>
-                <label style={labelStyle}>
+                <label style={labelStyle} htmlFor="snapshot-reason">
                   Snapshot Reason
                 </label>
 
                 <input
+                  id="snapshot-reason"
+                  name="snapshotReason"
                   style={inputStyle}
                   value={snapshotReason}
                   onChange={(event) =>
@@ -384,11 +418,13 @@ export default function OperationsPage() {
               </div>
 
               <div>
-                <label style={labelStyle}>
+                <label style={labelStyle} htmlFor="snapshot-scope">
                   Snapshot Scope
                 </label>
 
                 <input
+                  id="snapshot-scope"
+                  name="snapshotScope"
                   style={inputStyle}
                   value={snapshotScope}
                   onChange={(event) =>
@@ -398,11 +434,13 @@ export default function OperationsPage() {
               </div>
 
               <div>
-                <label style={labelStyle}>
+                <label style={labelStyle} htmlFor="snapshot-type">
                   Snapshot Type
                 </label>
 
                 <select
+                  id="snapshot-type"
+                  name="snapshotType"
                   style={inputStyle}
                   value={snapshotType}
                   onChange={(event) =>
@@ -438,11 +476,13 @@ export default function OperationsPage() {
               </div>
 
               <div>
-                <label style={labelStyle}>
+                <label style={labelStyle} htmlFor="review-period">
                   Review Period
                 </label>
 
                 <input
+                  id="review-period"
+                  name="reviewPeriod"
                   style={inputStyle}
                   value={reviewPeriod}
                   onChange={(event) =>
@@ -452,11 +492,13 @@ export default function OperationsPage() {
               </div>
 
               <div>
-                <label style={labelStyle}>
+                <label style={labelStyle} htmlFor="executive-visibility">
                   Executive Visibility
                 </label>
 
                 <select
+                  id="executive-visibility"
+                  name="executiveVisibilityLevel"
                   style={inputStyle}
                   value={executiveVisibilityLevel}
                   onChange={(event) =>
@@ -465,30 +507,21 @@ export default function OperationsPage() {
                     )
                   }
                 >
-                  <option value="OPERATIONAL">
-                    Operational
-                  </option>
-
-                  <option value="GOVERNANCE">
-                    Governance
-                  </option>
-
-                  <option value="EXECUTIVE">
-                    Executive
-                  </option>
-
-                  <option value="BOARD_LEVEL">
-                    Board Level
-                  </option>
+                  <option value="OPERATIONAL">Operational</option>
+                  <option value="GOVERNANCE">Governance</option>
+                  <option value="EXECUTIVE">Executive</option>
+                  <option value="BOARD_LEVEL">Board Level</option>
                 </select>
               </div>
 
               <div>
-                <label style={labelStyle}>
+                <label style={labelStyle} htmlFor="stabilization-confidence">
                   Stabilization Confidence
                 </label>
 
                 <select
+                  id="stabilization-confidence"
+                  name="stabilizationConfidence"
                   style={inputStyle}
                   value={stabilizationConfidence}
                   onChange={(event) =>
@@ -497,18 +530,9 @@ export default function OperationsPage() {
                     )
                   }
                 >
-                  <option value="LOW">
-                    Low
-                  </option>
-
-                  <option value="MODERATE">
-                    Moderate
-                  </option>
-
-                  <option value="HIGH">
-                    High
-                  </option>
-
+                  <option value="LOW">Low</option>
+                  <option value="MODERATE">Moderate</option>
+                  <option value="HIGH">High</option>
                   <option value="NOT_YET_CREDIBLE">
                     Not Yet Credible
                   </option>
@@ -516,11 +540,13 @@ export default function OperationsPage() {
               </div>
 
               <div>
-                <label style={labelStyle}>
+                <label style={labelStyle} htmlFor="review-owner">
                   Review Owner
                 </label>
 
                 <input
+                  id="review-owner"
+                  name="reviewOwner"
                   style={inputStyle}
                   value={reviewOwner}
                   onChange={(event) =>
@@ -531,11 +557,13 @@ export default function OperationsPage() {
             </div>
 
             <div style={{ marginTop: '16px' }}>
-              <label style={labelStyle}>
+              <label style={labelStyle} htmlFor="governance-note">
                 Governance Note
               </label>
 
               <textarea
+                id="governance-note"
+                name="governanceNote"
                 style={{
                   ...inputStyle,
                   minHeight: '110px',
@@ -602,9 +630,7 @@ export default function OperationsPage() {
               marginTop: '28px',
             }}
           >
-            <h2>
-              Executive Interpretation
-            </h2>
+            <h2>Executive Interpretation</h2>
 
             <p
               style={{
@@ -621,8 +647,7 @@ export default function OperationsPage() {
                 lineHeight: 1.7,
               }}
             >
-              <strong>Action Cue:</strong>{' '}
-              {metrics.action_cue}
+              <strong>Action Cue:</strong> {metrics.action_cue}
             </p>
           </section>
         </section>
