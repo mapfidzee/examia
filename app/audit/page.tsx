@@ -5,17 +5,26 @@ import { useEffect, useMemo, useState } from 'react'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { supabase } from '../../lib/supabase'
 
+type AuditDetails = Record<string, unknown>
+
 type AuditLog = {
   id: string
+  user_id?: string | null
+  email?: string | null
+  role?: string | null
+  action_type?: string | null
+  route?: string | null
+  record_type?: string | null
+  record_id?: string | null
+  summary?: string | null
+  severity?: string | null
+  created_at?: string | null
+  details?: AuditDetails | null
+
   actor_id?: string | null
   actor_email?: string | null
   actor_role?: string | null
-  action_type?: string | null
-  route?: string | null
-  severity?: string | null
   institution_id?: string | null
-  created_at?: string | null
-  details?: Record<string, unknown> | null
 }
 
 type EvidencePosture =
@@ -66,62 +75,103 @@ function normalizeSeverity(value?: string | null) {
   return safeText(value, 'INFO').toUpperCase()
 }
 
+function detailValue(log: AuditLog, key: string) {
+  return log.details?.[key]
+}
+
 function getActor(log: AuditLog) {
   return safeText(
-    log.actor_email || log.actor_role || log.actor_id,
+    log.email ||
+      log.role ||
+      log.user_id ||
+      log.actor_email ||
+      log.actor_role ||
+      log.actor_id ||
+      detailValue(log, 'actor_email') ||
+      detailValue(log, 'actor_role') ||
+      detailValue(log, 'actor_id'),
     'Actor not recorded'
   )
 }
 
-function getVisibilityLevel(log: AuditLog) {
-  const details = log.details || {}
-
+function getActorKey(log: AuditLog) {
   return safeText(
-    details.visibility_level ||
-      details.visibility ||
-      details.visibility_tier ||
-      details.access_level,
+    log.email ||
+      log.user_id ||
+      log.role ||
+      log.actor_email ||
+      log.actor_id ||
+      log.actor_role ||
+      detailValue(log, 'actor_email') ||
+      detailValue(log, 'actor_id') ||
+      detailValue(log, 'actor_role'),
+    ''
+  )
+}
+
+function getInstitution(log: AuditLog) {
+  return safeText(
+    log.institution_id ||
+      detailValue(log, 'institution_id') ||
+      detailValue(log, 'governance_institution') ||
+      detailValue(log, 'institution') ||
+      detailValue(log, 'institution_name'),
+    'Institution not recorded'
+  )
+}
+
+function getVisibilityLevel(log: AuditLog) {
+  return safeText(
+    detailValue(log, 'visibility_level') ||
+      detailValue(log, 'visibility') ||
+      detailValue(log, 'visibility_tier') ||
+      detailValue(log, 'access_level'),
     'Standard governance visibility'
   )
 }
 
 function getLinkedSnapshot(log: AuditLog) {
-  const details = log.details || {}
-
   return safeText(
-    details.snapshot_id ||
-      details.metric_id ||
-      details.cgi_operational_metric_id ||
-      details.linked_snapshot_id,
+    log.record_id ||
+      detailValue(log, 'snapshot_id') ||
+      detailValue(log, 'metric_id') ||
+      detailValue(log, 'cgi_operational_metric_id') ||
+      detailValue(log, 'linked_snapshot_id'),
     'No linked snapshot recorded'
   )
 }
 
 function getEvidenceReason(log: AuditLog) {
-  const details = log.details || {}
-
   return safeText(
-    details.reason ||
-      details.governance_reason ||
-      details.executive_reason ||
-      details.message ||
-      details.summary,
+    log.summary ||
+      detailValue(log, 'reason') ||
+      detailValue(log, 'governance_reason') ||
+      detailValue(log, 'executive_reason') ||
+      detailValue(log, 'message') ||
+      detailValue(log, 'summary'),
     'Governance reason not recorded'
   )
 }
 
+function getRecordType(log: AuditLog) {
+  return safeText(
+    log.record_type ||
+      detailValue(log, 'evidence_type') ||
+      detailValue(log, 'record_type'),
+    'Governance evidence'
+  )
+}
+
 function hasInstitutionScope(log: AuditLog) {
-  return Boolean(log.institution_id)
+  return getInstitution(log) !== 'Institution not recorded'
 }
 
 function hasVisibilityClassification(log: AuditLog) {
-  const visibility = getVisibilityLevel(log)
-  return visibility !== 'Standard governance visibility'
+  return getVisibilityLevel(log) !== 'Standard governance visibility'
 }
 
 function hasLinkedSnapshot(log: AuditLog) {
-  const snapshot = getLinkedSnapshot(log)
-  return snapshot !== 'No linked snapshot recorded'
+  return getLinkedSnapshot(log) !== 'No linked snapshot recorded'
 }
 
 function isImmutableRecord(log: AuditLog) {
@@ -171,7 +221,7 @@ function GovernanceEvidenceLedger() {
 
   const actors = useMemo(() => {
     const values = logs
-      .map((log) => log.actor_email || log.actor_role || log.actor_id)
+      .map(getActorKey)
       .filter(Boolean)
       .map(String)
 
@@ -186,7 +236,7 @@ function GovernanceEvidenceLedger() {
   const filteredLogs = useMemo(() => {
     return logs.filter((log) => {
       const severity = normalizeSeverity(log.severity)
-      const actor = log.actor_email || log.actor_role || log.actor_id || ''
+      const actor = getActorKey(log)
       const route = log.route || ''
       const combined = JSON.stringify(log).toLowerCase()
 
@@ -220,9 +270,7 @@ function GovernanceEvidenceLedger() {
     ).length
 
     const uniqueActors = new Set(
-      filteredLogs
-        .map((log) => log.actor_email || log.actor_role || log.actor_id)
-        .filter(Boolean)
+      filteredLogs.map(getActorKey).filter(Boolean)
     ).size
 
     const institutionScoped = filteredLogs.filter(hasInstitutionScope).length
@@ -473,7 +521,7 @@ function GovernanceEvidenceLedger() {
                   </p>
 
                   <p className="mt-1 text-xs leading-5 text-slate-400">
-                    Institution: {safeText(log.institution_id)}
+                    Institution: {getInstitution(log)}
                   </p>
                 </div>
               ))}
@@ -525,7 +573,8 @@ function GovernanceEvidenceLedger() {
                           <div className="mt-4 grid gap-3 text-sm md:grid-cols-2">
                             <EvidenceLine label="Actor" value={getActor(log)} />
                             <EvidenceLine label="Route / Source" value={safeText(log.route)} />
-                            <EvidenceLine label="Institution" value={safeText(log.institution_id)} />
+                            <EvidenceLine label="Record Type" value={getRecordType(log)} />
+                            <EvidenceLine label="Institution" value={getInstitution(log)} />
                             <EvidenceLine label="Visibility" value={getVisibilityLevel(log)} />
                             <EvidenceLine label="Linked Snapshot" value={getLinkedSnapshot(log)} />
                             <EvidenceLine label="Governance Reason" value={getEvidenceReason(log)} />
