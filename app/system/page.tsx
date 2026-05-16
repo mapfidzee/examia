@@ -154,9 +154,9 @@ function ExecutiveStabilityBoard() {
           </p>
 
           <p style={styles.subtitle}>
-            This board does not promote score-chasing. It interprets continuity
-            posture through thresholds, structural patterns, survivability
-            meaning, and executive action implications.
+            This board does not chase scores. It protects executive memory by
+            interpreting visible instability, recurrence, trajectory,
+            survivability, and governed action readiness.
           </p>
 
           <div style={styles.doctrineGrid}>
@@ -311,9 +311,9 @@ function ExecutiveStabilityBoard() {
               </h2>
 
               <p style={styles.bodyText}>
-                The trail is intentionally threshold-based. It shows how
-                continuity posture is being interpreted over time without
-                encouraging score gaming.
+                The trail preserves continuity interpretation over time. It
+                keeps recurring instability visible until stabilization
+                credibility is durable.
               </p>
 
               <div style={styles.tableWrap}>
@@ -415,7 +415,7 @@ function buildInterpretiveBoard(
     latest.operational_survivability_score
   )
 
-  const memoryThreshold = thresholdFromRisk(
+  const rawMemoryThreshold = thresholdFromRisk(
     average([
       latest.structural_memory_risk,
       latest.routing_failure_recurrence,
@@ -427,11 +427,19 @@ function buildInterpretiveBoard(
     ])
   )
 
-  const actionThreshold =
-    urgencyToThreshold(latest.executive_action_urgency)
-
   const deteriorationState =
     latest.structural_deterioration_state || 'STABLE'
+
+  const recurrenceSignal = resolveRecurrenceSignal(latest)
+
+  const memoryThreshold = resolveMemoryThreshold({
+    rawMemoryThreshold,
+    deteriorationState,
+    recurrenceSignal,
+  })
+
+  const actionThreshold =
+    urgencyToThreshold(latest.executive_action_urgency)
 
   const threatLevel =
     latest.survivability_threat_level || 'WATCH'
@@ -444,6 +452,7 @@ function buildInterpretiveBoard(
     trajectoryThreshold,
     survivabilityThreshold,
     memoryThreshold,
+    recurrenceSignal,
   })
 
   const commandMeaning = buildCommandMeaning({
@@ -453,6 +462,7 @@ function buildInterpretiveBoard(
     trajectoryThreshold,
     survivabilityThreshold,
     memoryThreshold,
+    recurrenceSignal,
   })
 
   const survivabilityInterpretation =
@@ -460,6 +470,7 @@ function buildInterpretiveBoard(
       survivabilityThreshold,
       recoveryThreshold,
       deteriorationState,
+      recurrenceSignal,
     })
 
   const executiveImplication =
@@ -467,13 +478,15 @@ function buildInterpretiveBoard(
       commandPosture,
       actionThreshold,
       deteriorationState,
+      recurrenceSignal,
     })
 
   const structuralPattern =
-    latest.dominant_memory_pattern ||
     buildStructuralPattern({
+      providedPattern: latest.dominant_memory_pattern,
       memoryThreshold,
       deteriorationState,
+      recurrenceSignal,
     })
 
   const actionDeadline =
@@ -481,11 +494,12 @@ function buildInterpretiveBoard(
     'Next governance cycle'
 
   const actionCue =
-    latest.action_cue ||
     buildActionCue({
+      providedCue: latest.action_cue,
       commandPosture,
       actionThreshold,
       actionDeadline,
+      recurrenceSignal,
     })
 
   return {
@@ -514,6 +528,7 @@ function resolveCommandPosture(input: {
   trajectoryThreshold: Threshold
   survivabilityThreshold: Threshold
   memoryThreshold: Threshold
+  recurrenceSignal: boolean
 }): CommandPosture {
   if (
     input.threatLevel === 'CRITICAL' ||
@@ -526,16 +541,19 @@ function resolveCommandPosture(input: {
   if (
     input.deteriorationState === 'ACCELERATING' ||
     input.pressureThreshold === 'HIGH' ||
-    input.trajectoryThreshold === 'HIGH'
+    input.trajectoryThreshold === 'HIGH' ||
+    input.memoryThreshold === 'HIGH'
   ) {
     return 'ELEVATED'
   }
 
   if (
+    input.recurrenceSignal ||
     input.deteriorationState === 'RECURRING' ||
     input.memoryThreshold === 'MODERATE' ||
     input.pressureThreshold === 'MODERATE' ||
-    input.trajectoryThreshold === 'MODERATE'
+    input.trajectoryThreshold === 'MODERATE' ||
+    input.survivabilityThreshold === 'MODERATE'
   ) {
     return 'WATCH'
   }
@@ -550,26 +568,28 @@ function buildCommandMeaning(input: {
   trajectoryThreshold: Threshold
   survivabilityThreshold: Threshold
   memoryThreshold: Threshold
+  recurrenceSignal: boolean
 }) {
   if (input.commandPosture === 'CRITICAL') {
-    return 'Continuity survivability is no longer sufficiently credible without immediate executive intervention.'
+    return 'Continuity survivability is no longer credible enough for routine review. Executive command intervention is required.'
   }
 
   if (input.commandPosture === 'ELEVATED') {
-    return 'Continuity remains active, but pressure or trajectory signals have intensified enough to require executive prioritization.'
+    return 'Continuity remains active, but pressure, trajectory, or structural memory has intensified enough to require executive prioritization.'
   }
 
   if (input.commandPosture === 'WATCH') {
-    return 'Continuity is not collapsing, but recurring pressure or memory patterns remain visible and must not be treated as resolved.'
+    return 'Continuity is not collapsing, but visible recurrence or watchable instability remains present and must not be treated as resolved.'
   }
 
-  return 'Continuity is currently holding, with no major recurring or accelerating instability pattern dominating the latest snapshot.'
+  return 'Continuity is currently holding, with no dominant recurring or accelerating instability pattern visible in the latest snapshot.'
 }
 
 function buildSurvivabilityInterpretation(input: {
   survivabilityThreshold: Threshold
   recoveryThreshold: Threshold
   deteriorationState: string
+  recurrenceSignal: boolean
 }) {
   if (input.survivabilityThreshold === 'CRITICAL') {
     return 'Survivability credibility is weak. Closure language should be avoided until recovery durability improves.'
@@ -584,38 +604,50 @@ function buildSurvivabilityInterpretation(input: {
 
   if (
     input.survivabilityThreshold === 'MODERATE' ||
-    input.recoveryThreshold === 'MODERATE'
+    input.recoveryThreshold === 'MODERATE' ||
+    input.recurrenceSignal
   ) {
-    return 'Survivability is forming but not fully settled. Recovery must remain under governed review.'
+    return 'Survivability is forming, but not fully settled. Recurring pressure must remain under governed review before stabilization is considered durable.'
   }
 
-  return 'Survivability posture is currently credible, provided recurring instability does not intensify.'
+  return 'Survivability posture is currently credible, provided recurrence does not reappear or intensify.'
 }
 
 function buildExecutiveImplication(input: {
   commandPosture: CommandPosture
   actionThreshold: Threshold
   deteriorationState: string
+  recurrenceSignal: boolean
 }) {
   if (input.commandPosture === 'CRITICAL') {
-    return 'Executive action should move immediately from monitoring to command intervention.'
+    return 'Leadership should move from observation to command intervention.'
   }
 
   if (input.commandPosture === 'ELEVATED') {
-    return 'Leadership should prioritize the pressure corridor before it converts into survivability risk.'
+    return 'Leadership should prioritize the visible pressure corridor before it becomes a survivability failure.'
   }
 
   if (input.commandPosture === 'WATCH') {
-    return 'Executive escalation is not immediate, but recurring continuity drag requires governed review.'
+    return 'Action requirement remains low, but recurring pressure corridors require governed review before stabilization can be considered durable.'
   }
 
   return 'Continue governed monitoring. No immediate executive escalation is indicated.'
 }
 
 function buildStructuralPattern(input: {
+  providedPattern: string | null
   memoryThreshold: Threshold
   deteriorationState: string
+  recurrenceSignal: boolean
 }) {
+  if (input.providedPattern && input.recurrenceSignal) {
+    return `${input.providedPattern} This recurrence remains visible until stabilization credibility is proven.`
+  }
+
+  if (input.providedPattern) {
+    return input.providedPattern
+  }
+
   if (
     input.memoryThreshold === 'HIGH' ||
     input.deteriorationState === 'ACCELERATING'
@@ -625,7 +657,8 @@ function buildStructuralPattern(input: {
 
   if (
     input.memoryThreshold === 'MODERATE' ||
-    input.deteriorationState === 'RECURRING'
+    input.deteriorationState === 'RECURRING' ||
+    input.recurrenceSignal
   ) {
     return 'Structural memory shows recurring instability. This should remain visible until stabilization credibility is established.'
   }
@@ -634,9 +667,11 @@ function buildStructuralPattern(input: {
 }
 
 function buildActionCue(input: {
+  providedCue: string | null
   commandPosture: CommandPosture
   actionThreshold: Threshold
   actionDeadline: string
+  recurrenceSignal: boolean
 }) {
   if (input.commandPosture === 'CRITICAL') {
     return `Immediate executive review required. Action window: ${input.actionDeadline}.`
@@ -647,10 +682,10 @@ function buildActionCue(input: {
   }
 
   if (input.commandPosture === 'WATCH') {
-    return `Maintain governed review. Recurring instability must remain visible. Action window: ${input.actionDeadline}.`
+    return `Action requirement remains low, but recurring pressure corridors require governed review before stabilization can be considered durable. Action window: ${input.actionDeadline}.`
   }
 
-  return `Maintain continuity monitoring. Action window: ${input.actionDeadline}.`
+  return `Maintain governed monitoring. Action window: ${input.actionDeadline}.`
 }
 
 function explainPressure(board: InterpretiveBoard) {
@@ -659,15 +694,19 @@ function explainPressure(board: InterpretiveBoard) {
   }
 
   if (board.pressureThreshold === 'MODERATE') {
-    return 'Pressure is not uncontrolled, but it remains visible enough to require review.'
+    return 'Pressure is not uncontrolled, but it remains visible enough to require governed review.'
   }
 
   return 'Pressure is currently contained within the latest snapshot.'
 }
 
 function explainRecovery(board: InterpretiveBoard) {
-  if (board.recoveryThreshold === 'LOW') {
+  if (board.recoveryThreshold === 'CRITICAL') {
     return 'Recovery conversion is weak. Stabilization should not be treated as durable.'
+  }
+
+  if (board.recoveryThreshold === 'HIGH') {
+    return 'Recovery is fragile. Closure should remain restricted until durability improves.'
   }
 
   if (board.recoveryThreshold === 'MODERATE') {
@@ -699,6 +738,56 @@ function explainMemory(board: InterpretiveBoard) {
   }
 
   return 'No dominant recurrence pattern is currently driving the latest posture.'
+}
+
+function resolveMemoryThreshold(input: {
+  rawMemoryThreshold: Threshold
+  deteriorationState: string
+  recurrenceSignal: boolean
+}): Threshold {
+  if (input.deteriorationState === 'ACCELERATING') {
+    return raiseThreshold(input.rawMemoryThreshold, 'HIGH')
+  }
+
+  if (
+    input.deteriorationState === 'RECURRING' ||
+    input.recurrenceSignal
+  ) {
+    return raiseThreshold(input.rawMemoryThreshold, 'MODERATE')
+  }
+
+  return input.rawMemoryThreshold
+}
+
+function resolveRecurrenceSignal(metric: CgiOperationalMetric) {
+  const memoryPattern =
+    metric.dominant_memory_pattern?.toLowerCase() || ''
+
+  const structuralMemoryState =
+    metric.structural_memory_state?.toLowerCase() || ''
+
+  const deteriorationState =
+    metric.structural_deterioration_state?.toLowerCase() || ''
+
+  return (
+    deteriorationState.includes('recurring') ||
+    structuralMemoryState.includes('recurring') ||
+    memoryPattern.includes('recurring') ||
+    memoryPattern.includes('recurrence') ||
+    memoryPattern.includes('corridor') ||
+    memoryPattern.includes('repeated')
+  )
+}
+
+function raiseThreshold(current: Threshold, minimum: Threshold) {
+  const rank: Record<Threshold, number> = {
+    LOW: 1,
+    MODERATE: 2,
+    HIGH: 3,
+    CRITICAL: 4,
+  }
+
+  return rank[current] >= rank[minimum] ? current : minimum
 }
 
 function thresholdFromRisk(value: number): Threshold {
