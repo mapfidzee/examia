@@ -7,6 +7,8 @@ import { supabase } from '../../../lib/supabase'
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 
+type AuditSeverity = 'LOW' | 'MODERATE' | 'HIGH'
+
 type UserRole = {
   id?: string
   user_id: string
@@ -179,7 +181,7 @@ function AdminRolesContent() {
       'Evidence maturity: EXECUTIVE_RECONSTRUCTABLE.',
     ].join(' ')
 
-    const auditPayload = {
+    await logAuditEvent({
       userId: actor.userId,
       email: actor.email,
       role: actor.role,
@@ -193,17 +195,7 @@ function AdminRolesContent() {
       visibilityLevel,
       linkedSnapshotId: target.user_id,
       governanceReason,
-      evidenceMaturity: 'EXECUTIVE_RECONSTRUCTABLE',
-      targetUserEmail: target.email,
-      previousRole,
-      newRole,
-      previousGovernanceScope: previousScope,
-      newGovernanceScope: newScope,
-      immutabilityStatus: 'IMMUTABLE_EVIDENCE_RECORD',
-      nonPunitiveBoundary: 'ROLE_GOVERNANCE_NOT_SURVEILLANCE',
-    }
-
-    await logAuditEvent(auditPayload)
+    })
 
     setMessage(
       `Governance role hardened for ${target.email}. Evidence is now executive-reconstructable.`
@@ -377,7 +369,11 @@ function deriveVisibilityLevel(role: string, scope: string) {
   return 'STANDARD_GOVERNANCE'
 }
 
-function deriveAuditSeverity(previousRole: string, newRole: string, newScope: string) {
+function deriveAuditSeverity(
+  previousRole: string,
+  newRole: string,
+  newScope: string
+): AuditSeverity {
   if (newRole === 'SUPER_ADMIN' || previousRole === 'SUPER_ADMIN') return 'HIGH'
   if (newRole === 'COMMAND_ADMIN' || previousRole === 'COMMAND_ADMIN') return 'HIGH'
   if (newScope === 'GLOBAL' || newScope === 'GLOBAL-TEST') return 'HIGH'
