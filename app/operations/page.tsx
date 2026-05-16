@@ -18,6 +18,8 @@ import {
 
 type SaveState = 'IDLE' | 'SAVING' | 'SAVED' | 'ERROR'
 
+const GOVERNANCE_INSTITUTION = 'TSINAXA CGI'
+
 const pageStyle: CSSProperties = {
   minHeight: '100vh',
   background: '#020617',
@@ -104,6 +106,7 @@ export default function OperationsPage() {
       scope: 'CGI_CONTINUITY_OPERATIONS',
       region: 'GLOBAL',
       institution_id: null,
+      governance_institution: GOVERNANCE_INSTITUTION,
 
       continuity_integrity_score: 86,
       stabilization_confidence_score: 78,
@@ -208,6 +211,7 @@ export default function OperationsPage() {
       auditAction: 'GOVERNED_SNAPSHOT_CREATED',
       auditReason: snapshotReason,
       governanceScope: snapshotScope,
+      governanceInstitution: GOVERNANCE_INSTITUTION,
       performedBy: user?.id ?? null,
       performedByEmail: user?.email ?? null,
       continuityPosture: metrics.continuity_state,
@@ -258,8 +262,9 @@ export default function OperationsPage() {
           >
             This surface preserves operational continuity snapshots as governed
             evidence. A snapshot is not just saved data. It is historical
-            continuity intelligence with scope, reason, review period,
-            visibility level, executive interpretation, and audit traceability.
+            continuity intelligence with institution ownership, scope, reason,
+            review period, visibility level, executive interpretation, and audit
+            traceability.
           </p>
 
           <div style={metricGridStyle}>
