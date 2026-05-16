@@ -29,18 +29,16 @@ type RoutingAction = {
   assigned_responder_id: string | null
   routing_status: string
   routing_reason: string | null
+  created_at?: string | null
 }
 
-type AuditSeverity = 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL'
+type AuditSeverity =
+  | 'LOW'
+  | 'MODERATE'
+  | 'HIGH'
+  | 'CRITICAL'
 
 const GOVERNANCE_INSTITUTION = 'TSINAXA CGI'
-
-const ROUTING_STATUSES = [
-  'ROUTING_PENDING',
-  'ROUTED',
-  'RESPONDER_ASSIGNED',
-  'ESCALATED',
-]
 
 export default function RoutingContent() {
   const [cases, setCases] = useState<BeneficiaryCase[]>([])
@@ -53,11 +51,15 @@ export default function RoutingContent() {
   }, [])
 
   async function loadData() {
-    const [casesResult, respondersResult, routingResult] = await Promise.all([
-      supabase.from('beneficiary_cases').select('*'),
-      supabase.from('responders').select('*'),
-      supabase.from('case_routing_actions').select('*'),
-    ])
+    const [casesResult, respondersResult, routingResult] =
+      await Promise.all([
+        supabase.from('beneficiary_cases').select('*'),
+        supabase.from('responders').select('*'),
+        supabase
+          .from('case_routing_actions')
+          .select('*')
+          .order('created_at', { ascending: false }),
+      ])
 
     if (casesResult.error) console.error(casesResult.error)
     if (respondersResult.error) console.error(respondersResult.error)
@@ -66,8 +68,6 @@ export default function RoutingContent() {
     setCases(casesResult.data || [])
     setResponders(respondersResult.data || [])
     setRoutingActions(routingResult.data || [])
-
-    setMessage('Routing intelligence refreshed.')
   }
 
   async function assignResponder(
@@ -76,17 +76,40 @@ export default function RoutingContent() {
   ) {
     if (!responderId) return
 
-    const responder = responders.find((item) => item.id === responderId)
+    const responder = responders.find(
+      (item) => item.id === responderId
+    )
+
+    const existingRouting = routingActions.filter(
+      (item) =>
+        item.case_id === caseItem.id &&
+        item.routing_status === 'RESPONDER_ASSIGNED'
+    )
+
+    const recurrenceCount = existingRouting.length
+
+    if (recurrenceCount > 0) {
+      setMessage(
+        `Routing recurrence detected for ${caseItem.beneficiary_name}. CGI preserved recurrence visibility instead of silently stacking duplicate routing assignments.`
+      )
+    }
 
     const routingReason =
-      'Governed routing assignment completed'
+      recurrenceCount > 0
+        ? `Routing recurrence detected. Continuity instability remains visible after previous assignment activity. Recurrence count: ${recurrenceCount + 1}.`
+        : 'Route because continuity of support is unstable'
+
+    const routingStatus =
+      recurrenceCount > 0
+        ? 'ROUTING_RECURRENCE'
+        : 'RESPONDER_ASSIGNED'
 
     const { data: routingAction, error } = await supabase
       .from('case_routing_actions')
       .insert({
         case_id: caseItem.id,
         assigned_responder_id: responderId,
-        routing_status: 'RESPONDER_ASSIGNED',
+        routing_status: routingStatus,
         routing_reason: routingReason,
       })
       .select('id')
@@ -100,7 +123,10 @@ export default function RoutingContent() {
     const { error: updateError } = await supabase
       .from('beneficiary_cases')
       .update({
-        case_status: 'RESPONDER_ASSIGNED',
+        case_status:
+          recurrenceCount > 0
+            ? 'ROUTING_RECURRENCE'
+            : 'RESPONDER_ASSIGNED',
       })
       .eq('id', caseItem.id)
 
@@ -110,62 +136,95 @@ export default function RoutingContent() {
     }
 
     await preserveRoutingEvidence({
-      actionType: 'ROUTE_BENEFICIARY_CASE',
-      severity: resolveRoutingSeverity(caseItem),
+      actionType:
+        recurrenceCount > 0
+          ? 'ROUTING_RECURRENCE_DETECTED'
+          : 'ROUTE_BENEFICIARY_CASE',
+
+      severity: resolveRoutingSeverity({
+        caseItem,
+        recurrenceCount,
+      }),
+
       recordType: 'beneficiary_cases',
       recordId: caseItem.id,
+
       summary: buildRoutingSummary({
         caseItem,
         responder,
         routingReason,
+        recurrenceCount,
       }),
+
       caseItem,
       responder,
       routingActionId: routingAction?.id || null,
-      routingStatus: 'RESPONDER_ASSIGNED',
+      routingStatus,
       routingReason,
+      recurrenceCount,
     })
 
-    setMessage('Responder assigned successfully. Routing evidence preserved.')
+    setMessage(
+      recurrenceCount > 0
+        ? `Routing recurrence preserved for ${caseItem.beneficiary_name}. Continuity instability remains under governance review.`
+        : 'Responder assignment preserved as governed routing evidence.'
+    )
 
     await loadData()
   }
 
   const totalCases = cases.length
 
+  const routingRecurrence = routingActions.filter(
+    (item) =>
+      item.routing_status === 'ROUTING_RECURRENCE'
+  ).length
+
   const routedCases = routingActions.length
 
   const assignedCases = routingActions.filter(
-    (item) => item.routing_status === 'RESPONDER_ASSIGNED'
-  ).length
-
-  const escalatedCases = routingActions.filter(
-    (item) => item.routing_status === 'ESCALATED'
+    (item) =>
+      item.routing_status === 'RESPONDER_ASSIGNED'
   ).length
 
   return (
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.hero}>
-          <p style={styles.kicker}>TSINAXA CGI • ROUTING GOVERNANCE</p>
+          <p style={styles.kicker}>
+            TSINAXA CGI • ROUTING GOVERNANCE
+          </p>
 
-          <h1 style={styles.title}>Continuity Routing Infrastructure</h1>
+          <h1 style={styles.title}>
+            Continuity Routing Infrastructure
+          </h1>
 
           <p style={styles.subtitle}>
-            Govern responder assignment, escalation visibility, continuity
-            ownership, operational routing pressure, and institutional
-            stabilization pathways.
+            Govern routing recurrence, responder assignment,
+            continuity instability visibility, operational
+            routing pressure, and institutional stabilization
+            pathways.
           </p>
         </section>
 
         <section style={styles.metricsGrid}>
           <Metric label="Total Cases" value={totalCases} />
           <Metric label="Routing Actions" value={routedCases} />
-          <Metric label="Assigned Responders" value={assignedCases} />
-          <Metric label="Escalated Cases" value={escalatedCases} />
+          <Metric
+            label="Assigned Responders"
+            value={assignedCases}
+          />
+          <Metric
+            label="Routing Recurrence"
+            value={routingRecurrence}
+          />
         </section>
 
-        {message && <div style={styles.message}>{message}</div>}
+        {message && (
+          <div style={styles.message}>
+            {message}
+          </div>
+        )}
 
         <section style={styles.card}>
           <h2 style={styles.sectionTitle}>
@@ -174,7 +233,10 @@ export default function RoutingContent() {
 
           <div style={styles.caseList}>
             {cases.map((caseItem) => (
-              <article key={caseItem.id} style={styles.caseCard}>
+              <article
+                key={caseItem.id}
+                style={styles.caseCard}
+              >
                 <div style={styles.caseHeader}>
                   <div>
                     <h3 style={styles.caseName}>
@@ -186,22 +248,35 @@ export default function RoutingContent() {
                     </p>
                   </div>
 
-                  <span style={severityBadge(caseItem.severity_level)}>
+                  <span
+                    style={severityBadge(
+                      caseItem.severity_level
+                    )}
+                  >
                     {caseItem.severity_level}
                   </span>
                 </div>
 
                 <div style={styles.infoGrid}>
-                  <Info label="Lifecycle" value={caseItem.case_status} />
+                  <Info
+                    label="Lifecycle"
+                    value={caseItem.case_status}
+                  />
 
                   <Info
                     label="Region"
-                    value={caseItem.region || 'Not provided'}
+                    value={
+                      caseItem.region ||
+                      'Not provided'
+                    }
                   />
 
                   <Info
                     label="Institution"
-                    value={caseItem.institution_name || 'Not provided'}
+                    value={
+                      caseItem.institution_name ||
+                      'Not provided'
+                    }
                   />
 
                   <Info
@@ -223,7 +298,10 @@ export default function RoutingContent() {
                     defaultValue=""
                     style={styles.select}
                     onChange={(event) =>
-                      assignResponder(caseItem, event.target.value)
+                      assignResponder(
+                        caseItem,
+                        event.target.value
+                      )
                     }
                   >
                     <option value="">
@@ -245,27 +323,6 @@ export default function RoutingContent() {
             ))}
           </div>
         </section>
-
-        <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>
-            Routing Governance Visibility
-          </h2>
-
-          <div style={styles.routingList}>
-            {routingActions.map((action) => (
-              <div key={action.id} style={styles.routingCard}>
-                <p style={styles.routingStatus}>
-                  {action.routing_status}
-                </p>
-
-                <p style={styles.routingText}>
-                  {action.routing_reason ||
-                    'No routing reason documented'}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
       </div>
     </main>
   )
@@ -282,6 +339,7 @@ async function preserveRoutingEvidence(input: {
   routingActionId: string | null
   routingStatus: string
   routingReason: string
+  recurrenceCount: number
 }) {
   const {
     data: { user },
@@ -294,90 +352,67 @@ async function preserveRoutingEvidence(input: {
   const visibilityLevel =
     input.caseItem.safeguarding_flag ||
     input.caseItem.severity_level === 'CRITICAL' ||
-    input.caseItem.severity_level === 'HIGH'
+    input.recurrenceCount > 0
       ? 'EXECUTIVE'
       : 'GOVERNANCE'
 
-  const governancePosture =
-    resolveRoutingGovernancePosture(input.caseItem)
+  const { error } = await supabase
+    .from('audit_logs')
+    .insert({
+      user_id: user?.id ?? null,
+      email: user?.email ?? null,
+      role: 'ROUTING_GOVERNANCE_ACTOR',
 
-  const { error } = await supabase.from('audit_logs').insert({
-    user_id: user?.id ?? null,
-    email: user?.email ?? null,
-    role: 'ROUTING_GOVERNANCE_ACTOR',
+      action_type: input.actionType,
+      route: '/routing',
+      record_type: input.recordType,
+      record_id: input.recordId,
+      summary: input.summary,
+      severity: input.severity,
 
-    action_type: input.actionType,
-    route: '/routing',
-    record_type: input.recordType,
-    record_id: input.recordId,
-    summary: input.summary,
-    severity: input.severity,
+      details: {
+        evidence_type:
+          input.recurrenceCount > 0
+            ? 'ROUTING_RECURRENCE_EVIDENCE'
+            : 'GOVERNED_ROUTING_EVIDENCE',
 
-    details: {
-      evidence_type: 'GOVERNED_ROUTING_EVIDENCE',
-      immutability_status: 'IMMUTABLE_GOVERNANCE_RECORD',
-      reconstruction_capability: 'ENABLED',
+        recurrence_detected:
+          input.recurrenceCount > 0,
 
-      linked_snapshot_id: input.recordId,
-      beneficiary_case_id: input.caseItem.id,
-      routing_action_id: input.routingActionId,
+        routing_recurrence_count:
+          input.recurrenceCount + 1,
 
-      governance_reason: input.summary,
-      routing_reason: input.routingReason,
-      routing_status: input.routingStatus,
+        linked_snapshot_id: input.recordId,
 
-      governance_institution: institution,
-      governance_scope: 'Continuity routing and responder assignment',
-      governance_posture: governancePosture,
-      visibility_level: visibilityLevel,
+        governance_institution: institution,
+        institution_name: institution,
 
-      institution_id: null,
-      institution_name: institution,
-      region: input.caseItem.region,
+        governance_reason: input.summary,
+        routing_reason: input.routingReason,
+        routing_status: input.routingStatus,
 
-      actor_id: user?.id ?? null,
-      actor_email: user?.email ?? null,
-      actor_role: 'ROUTING_GOVERNANCE_ACTOR',
+        visibility_level: visibilityLevel,
 
-      beneficiary_name: input.caseItem.beneficiary_name,
-      support_domain: input.caseItem.support_domain,
-      case_status: input.caseItem.case_status,
-      severity_level: input.caseItem.severity_level,
-      safeguarding_flag: input.caseItem.safeguarding_flag,
+        actor_email: user?.email ?? null,
+        actor_id: user?.id ?? null,
 
-      assigned_responder_id: input.responder?.id ?? null,
-      assigned_responder_name: input.responder?.full_name ?? null,
-      responder_operational_status:
-        input.responder?.operational_status ?? null,
-      responder_region: input.responder?.region ?? null,
+        continuity_interpretation:
+          input.recurrenceCount > 0
+            ? 'Repeated routing indicates continuity instability may still be unresolved.'
+            : 'Initial routing visibility preserved.',
 
-      continuity_relevance:
-        'Routing evidence preserves how visible need entered governed response and whether assignment continuity can be reconstructed.',
+        survivability_meaning:
+          input.recurrenceCount > 0
+            ? 'Repeated routing pressure suggests stabilization credibility remains uncertain.'
+            : 'Routing initiated governed continuity response.',
 
-      survivability_context:
-        buildRoutingSurvivabilityContext({
-          caseItem: input.caseItem,
-          responder: input.responder,
-          visibilityLevel,
-        }),
-
-      continuity_memory_preserved: true,
-      institutional_traceability: true,
-      executive_visibility_enabled:
-        visibilityLevel === 'EXECUTIVE',
-
-      governance_boundary:
-        'NON_PUNITIVE_CONTINUITY_GOVERNANCE',
-    },
-  })
+        governance_boundary:
+          'NON_PUNITIVE_CONTINUITY_GOVERNANCE',
+      },
+    })
 
   if (error) {
-    console.error('Routing governance evidence logging failed', {
-      message: error.message,
-      code: error.code,
-      details: error.details,
-      hint: error.hint,
-    })
+    console.error(error)
   }
 }
 
@@ -385,58 +420,44 @@ function buildRoutingSummary(input: {
   caseItem: BeneficiaryCase
   responder?: Responder
   routingReason: string
+  recurrenceCount: number
 }) {
-  return `Routed case ${input.caseItem.beneficiary_name} with priority ${input.caseItem.severity_level}. Status moved to RESPONDER_ASSIGNED. Institution: ${input.caseItem.institution_name || GOVERNANCE_INSTITUTION}. Responder: ${input.responder?.full_name || 'none assigned'}. Reason: ${input.routingReason}.`
+  if (input.recurrenceCount > 0) {
+    return `Routing recurrence preserved for ${input.caseItem.beneficiary_name}. Recurrence count: ${input.recurrenceCount + 1}. Continuity instability remains visible after previous routing activity.`
+  }
+
+  return `Routed case ${input.caseItem.beneficiary_name} with priority ${input.caseItem.severity_level}. Status moved to RESPONDER_ASSIGNED. Institution: ${input.caseItem.institution_name || GOVERNANCE_INSTITUTION}.`
 }
 
-function resolveRoutingSeverity(
+function resolveRoutingSeverity(input: {
   caseItem: BeneficiaryCase
-): AuditSeverity {
-  if (caseItem.safeguarding_flag) {
+  recurrenceCount: number
+}): AuditSeverity {
+  if (input.recurrenceCount > 0) {
     return 'HIGH'
   }
 
-  if (caseItem.severity_level === 'CRITICAL') {
+  if (input.caseItem.safeguarding_flag) {
+    return 'HIGH'
+  }
+
+  if (
+    input.caseItem.severity_level === 'CRITICAL'
+  ) {
     return 'CRITICAL'
   }
 
-  if (caseItem.severity_level === 'HIGH') {
+  if (input.caseItem.severity_level === 'HIGH') {
     return 'HIGH'
   }
 
-  if (caseItem.severity_level === 'MODERATE') {
+  if (
+    input.caseItem.severity_level === 'MODERATE'
+  ) {
     return 'MODERATE'
   }
 
   return 'LOW'
-}
-
-function resolveRoutingGovernancePosture(
-  caseItem: BeneficiaryCase
-) {
-  if (
-    caseItem.safeguarding_flag ||
-    caseItem.severity_level === 'CRITICAL'
-  ) {
-    return 'EXECUTIVE_REVIEW'
-  }
-
-  if (
-    caseItem.severity_level === 'HIGH' ||
-    caseItem.severity_level === 'MODERATE'
-  ) {
-    return 'GOVERNANCE_WATCH'
-  }
-
-  return 'CONTINUITY_ROUTING_MONITORING'
-}
-
-function buildRoutingSurvivabilityContext(input: {
-  caseItem: BeneficiaryCase
-  responder?: Responder
-  visibilityLevel: string
-}) {
-  return `Routing continuity preserved for ${input.caseItem.support_domain.toLowerCase()} support. Severity is ${input.caseItem.severity_level.toLowerCase()}, visibility level is ${input.visibilityLevel.toLowerCase()}, and responder assignment is ${input.responder?.full_name ? `linked to ${input.responder.full_name}` : 'not yet linked to a named responder'}. Stabilization credibility depends on whether routed support converts into completed intervention and durable recovery.`
 }
 
 function Metric({
@@ -471,7 +492,9 @@ function Info({
   )
 }
 
-function severityBadge(level: string): CSSProperties {
+function severityBadge(
+  level: string
+): CSSProperties {
   if (level === 'CRITICAL') {
     return {
       background: '#7f1d1d',
@@ -501,184 +524,162 @@ function severityBadge(level: string): CSSProperties {
   }
 }
 
-const styles: Record<string, CSSProperties> = {
-  page: {
-    minHeight: '100vh',
-    color: 'white',
-  },
+const styles: Record<string, CSSProperties> =
+  {
+    page: {
+      minHeight: '100vh',
+      color: 'white',
+    },
 
-  container: {
-    maxWidth: '1200px',
-    margin: '0 auto',
-  },
+    container: {
+      maxWidth: '1200px',
+      margin: '0 auto',
+    },
 
-  hero: {
-    marginBottom: '32px',
-  },
+    hero: {
+      marginBottom: '32px',
+    },
 
-  kicker: {
-    color: '#67e8f9',
-    fontWeight: 900,
-    letterSpacing: '2px',
-    fontSize: '12px',
-  },
+    kicker: {
+      color: '#67e8f9',
+      fontWeight: 900,
+      letterSpacing: '2px',
+      fontSize: '12px',
+    },
 
-  title: {
-    fontSize: 'clamp(34px, 6vw, 56px)',
-    lineHeight: 1.05,
-    margin: '12px 0',
-  },
+    title: {
+      fontSize: 'clamp(34px, 6vw, 56px)',
+      lineHeight: 1.05,
+      margin: '12px 0',
+    },
 
-  subtitle: {
-    color: '#cbd5e1',
-    maxWidth: '920px',
-    lineHeight: 1.7,
-    fontSize: '18px',
-  },
+    subtitle: {
+      color: '#cbd5e1',
+      maxWidth: '920px',
+      lineHeight: 1.7,
+      fontSize: '18px',
+    },
 
-  metricsGrid: {
-    display: 'grid',
-    gridTemplateColumns:
-      'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: '16px',
-    marginBottom: '24px',
-  },
+    metricsGrid: {
+      display: 'grid',
+      gridTemplateColumns:
+        'repeat(auto-fit, minmax(220px, 1fr))',
+      gap: '16px',
+      marginBottom: '24px',
+    },
 
-  metricCard: {
-    background: '#0f172a',
-    border: '1px solid #1e293b',
-    borderRadius: '18px',
-    padding: '20px',
-  },
+    metricCard: {
+      background: '#0f172a',
+      border: '1px solid #1e293b',
+      borderRadius: '18px',
+      padding: '20px',
+    },
 
-  metricLabel: {
-    color: '#94a3b8',
-    fontWeight: 800,
-  },
+    metricLabel: {
+      color: '#94a3b8',
+      fontWeight: 800,
+    },
 
-  metricValue: {
-    fontSize: '42px',
-    marginTop: '8px',
-  },
+    metricValue: {
+      fontSize: '42px',
+      marginTop: '8px',
+    },
 
-  message: {
-    background: '#064e3b',
-    color: '#bbf7d0',
-    padding: '16px',
-    borderRadius: '14px',
-    fontWeight: 800,
-    marginBottom: '20px',
-  },
+    message: {
+      background: '#082f49',
+      color: '#bae6fd',
+      padding: '16px',
+      borderRadius: '14px',
+      fontWeight: 800,
+      marginBottom: '20px',
+      lineHeight: 1.6,
+    },
 
-  card: {
-    background: '#020617',
-    border: '1px solid #1e293b',
-    borderRadius: '24px',
-    padding: '24px',
-    marginBottom: '24px',
-  },
+    card: {
+      background: '#020617',
+      border: '1px solid #1e293b',
+      borderRadius: '24px',
+      padding: '24px',
+      marginBottom: '24px',
+    },
 
-  sectionTitle: {
-    fontSize: '28px',
-    marginBottom: '18px',
-  },
+    sectionTitle: {
+      fontSize: '28px',
+      marginBottom: '18px',
+    },
 
-  caseList: {
-    display: 'grid',
-    gap: '18px',
-  },
+    caseList: {
+      display: 'grid',
+      gap: '18px',
+    },
 
-  caseCard: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '20px',
-    padding: '20px',
-  },
+    caseCard: {
+      background: '#0f172a',
+      border: '1px solid #334155',
+      borderRadius: '20px',
+      padding: '20px',
+    },
 
-  caseHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    gap: '16px',
-    flexWrap: 'wrap',
-  },
+    caseHeader: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      gap: '16px',
+      flexWrap: 'wrap',
+    },
 
-  caseName: {
-    fontSize: '24px',
-    margin: 0,
-  },
+    caseName: {
+      fontSize: '24px',
+      margin: 0,
+    },
 
-  caseDomain: {
-    color: '#93c5fd',
-    marginTop: '6px',
-  },
+    caseDomain: {
+      color: '#93c5fd',
+      marginTop: '6px',
+    },
 
-  infoGrid: {
-    display: 'grid',
-    gridTemplateColumns:
-      'repeat(auto-fit, minmax(180px, 1fr))',
-    gap: '12px',
-    marginTop: '18px',
-  },
+    infoGrid: {
+      display: 'grid',
+      gridTemplateColumns:
+        'repeat(auto-fit, minmax(180px, 1fr))',
+      gap: '12px',
+      marginTop: '18px',
+    },
 
-  infoBox: {
-    background: '#020617',
-    borderRadius: '14px',
-    padding: '12px',
-    border: '1px solid #1e293b',
-  },
+    infoBox: {
+      background: '#020617',
+      borderRadius: '14px',
+      padding: '12px',
+      border: '1px solid #1e293b',
+    },
 
-  infoLabel: {
-    color: '#94a3b8',
-    fontSize: '12px',
-    fontWeight: 900,
-  },
+    infoLabel: {
+      color: '#94a3b8',
+      fontSize: '12px',
+      fontWeight: 900,
+    },
 
-  infoValue: {
-    marginTop: '6px',
-    lineHeight: 1.5,
-  },
+    infoValue: {
+      marginTop: '6px',
+      lineHeight: 1.5,
+    },
 
-  dropdownSection: {
-    marginTop: '20px',
-  },
+    dropdownSection: {
+      marginTop: '20px',
+    },
 
-  label: {
-    display: 'block',
-    fontWeight: 800,
-    marginBottom: '10px',
-  },
+    label: {
+      display: 'block',
+      fontWeight: 800,
+      marginBottom: '10px',
+    },
 
-  select: {
-    width: '100%',
-    marginTop: '8px',
-    padding: '14px',
-    borderRadius: '12px',
-    background: '#111827',
-    color: 'white',
-    border: '1px solid #334155',
-  },
-
-  routingList: {
-    display: 'grid',
-    gap: '12px',
-  },
-
-  routingCard: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '16px',
-    padding: '16px',
-  },
-
-  routingStatus: {
-    color: '#67e8f9',
-    fontWeight: 900,
-    marginBottom: '8px',
-  },
-
-  routingText: {
-    color: '#cbd5e1',
-    lineHeight: 1.6,
-    margin: 0,
-  },
-}
+    select: {
+      width: '100%',
+      marginTop: '8px',
+      padding: '14px',
+      borderRadius: '12px',
+      background: '#111827',
+      color: 'white',
+      border: '1px solid #334155',
+    },
+  }
