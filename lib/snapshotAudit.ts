@@ -54,7 +54,7 @@ export async function createSnapshotAuditLog(
       route: '/operations',
       severity,
 
-      institution_id: input.governanceInstitution,
+      institution_id: null,
 
       details: {
         evidence_type: 'GOVERNED_CONTINUITY_SNAPSHOT',
@@ -122,12 +122,12 @@ function resolveSeverity(input: {
   const pressure =
     input.pressureClassification?.toUpperCase() || ''
 
-  if (input.governancePosture === 'EXECUTIVE_REVIEW') {
-    return 'HIGH'
-  }
-
   if (pressure.includes('UNCONTROLLED')) {
     return 'CRITICAL'
+  }
+
+  if (input.governancePosture === 'EXECUTIVE_REVIEW') {
+    return 'HIGH'
   }
 
   if (pressure.includes('PRESSURE')) {
