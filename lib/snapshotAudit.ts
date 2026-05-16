@@ -25,17 +25,6 @@ type SnapshotAuditResult = {
   error?: string
 }
 
-type AuditPayload = {
-  actor_id?: string | null
-  actor_email?: string | null
-  actor_role?: string | null
-  action_type: string
-  route: string
-  severity: string
-  institution_id?: string | null
-  details: Record<string, unknown>
-}
-
 export async function createSnapshotAuditLog(
   input: SnapshotAuditInput
 ): Promise<SnapshotAuditResult> {
@@ -54,106 +43,79 @@ export async function createSnapshotAuditLog(
     pressureClassification: input.pressureClassification,
   })
 
-  const evidenceDetails = {
-    evidence_type: 'GOVERNED_CONTINUITY_SNAPSHOT',
-    immutability_status: 'IMMUTABLE_GOVERNANCE_RECORD',
-    reconstruction_capability: 'ENABLED',
-
-    snapshot_id: input.snapshotId,
-    linked_snapshot_id: input.snapshotId,
-
-    governance_reason: governanceReason,
-    governance_scope: input.governanceScope ?? null,
-    governance_institution: input.governanceInstitution,
-    governance_posture: governancePosture,
-
-    actor_id: input.performedBy ?? null,
-    actor_email: input.performedByEmail ?? null,
-    actor_role: 'CONTINUITY_GOVERNANCE_ACTOR',
-
-    visibility_level:
-      input.executiveVisibilityLevel ??
-      'EXECUTIVE',
-
-    continuity_posture:
-      input.continuityPosture ?? null,
-    trajectory_state:
-      input.trajectoryState ?? null,
-    pressure_classification:
-      input.pressureClassification ?? null,
-    recovery_status:
-      input.recoveryStatus ?? null,
-
-    survivability_context:
-      buildSurvivabilityContext({
-        continuityPosture: input.continuityPosture,
-        trajectoryState: input.trajectoryState,
-        recoveryStatus: input.recoveryStatus,
-      }),
-
-    continuity_memory_preserved: true,
-    institutional_traceability: true,
-    executive_visibility_enabled: true,
-
-    governance_boundary:
-      'NON_PUNITIVE_CONTINUITY_GOVERNANCE',
-  }
-
-  const primaryPayload: AuditPayload = {
-    actor_id: input.performedBy ?? null,
-    actor_email: input.performedByEmail ?? null,
-    actor_role: null,
-
-    action_type: input.auditAction,
-    route: '/operations',
-    severity,
-
-    institution_id: null,
-
-    details: evidenceDetails,
-  }
-
-  const primaryResult = await insertAuditPayload(primaryPayload)
-
-  if (primaryResult.success) {
-    return primaryResult
-  }
-
-  const fallbackPayload: AuditPayload = {
-    action_type: input.auditAction,
-    route: '/operations',
-    severity,
-    details: evidenceDetails,
-  }
-
-  const fallbackResult = await insertAuditPayload(fallbackPayload)
-
-  if (!fallbackResult.success) {
-    console.error(
-      'CGI governed snapshot audit logging failed',
-      fallbackResult.error
-    )
-
-    return fallbackResult
-  }
-
-  return fallbackResult
-}
-
-async function insertAuditPayload(
-  payload: AuditPayload
-): Promise<SnapshotAuditResult> {
   const { error } = await supabase
     .from('audit_logs')
-    .insert(payload)
+    .insert({
+      user_id: input.performedBy ?? null,
+      email: input.performedByEmail ?? null,
+      role: 'CONTINUITY_GOVERNANCE_ACTOR',
+
+      action_type: input.auditAction,
+      route: '/operations',
+      severity,
+
+      record_type: 'GOVERNED_CONTINUITY_SNAPSHOT',
+      record_id: input.snapshotId,
+      summary: governanceReason,
+
+      details: {
+        evidence_type: 'GOVERNED_CONTINUITY_SNAPSHOT',
+        immutability_status: 'IMMUTABLE_GOVERNANCE_RECORD',
+        reconstruction_capability: 'ENABLED',
+
+        snapshot_id: input.snapshotId,
+        linked_snapshot_id: input.snapshotId,
+
+        governance_reason: governanceReason,
+        governance_scope: input.governanceScope ?? null,
+        governance_institution: input.governanceInstitution,
+        governance_posture: governancePosture,
+
+        institution_id: null,
+
+        actor_id: input.performedBy ?? null,
+        actor_email: input.performedByEmail ?? null,
+        actor_role: 'CONTINUITY_GOVERNANCE_ACTOR',
+
+        visibility_level:
+          input.executiveVisibilityLevel ??
+          'EXECUTIVE',
+
+        continuity_posture:
+          input.continuityPosture ?? null,
+        trajectory_state:
+          input.trajectoryState ?? null,
+        pressure_classification:
+          input.pressureClassification ?? null,
+        recovery_status:
+          input.recoveryStatus ?? null,
+
+        survivability_context:
+          buildSurvivabilityContext({
+            continuityPosture: input.continuityPosture,
+            trajectoryState: input.trajectoryState,
+            recoveryStatus: input.recoveryStatus,
+          }),
+
+        continuity_memory_preserved: true,
+        institutional_traceability: true,
+        executive_visibility_enabled: true,
+
+        governance_boundary:
+          'NON_PUNITIVE_CONTINUITY_GOVERNANCE',
+      },
+    })
 
   if (error) {
-    console.error('CGI audit insert failed', {
-      message: error.message,
-      code: error.code,
-      details: error.details,
-      hint: error.hint,
-    })
+    console.error(
+      'CGI governed snapshot audit logging failed',
+      {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+      }
+    )
 
     return {
       success: false,
