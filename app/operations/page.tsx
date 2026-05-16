@@ -16,6 +16,8 @@ import {
   type StabilizationConfidence,
 } from '../lib/snapshotGovernance'
 
+import { calculateExecutivePrioritization } from '../lib/executivePrioritization'
+
 type SaveState = 'IDLE' | 'SAVING' | 'SAVED' | 'ERROR'
 
 const GOVERNANCE_INSTITUTION = 'TSINAXA CGI'
@@ -84,7 +86,7 @@ export default function OperationsPage() {
     useState<SnapshotType>('DAILY_CONTINUITY_REVIEW')
 
   const [governanceNote, setGovernanceNote] = useState(
-    'Snapshot preserved for continuity posture review, historical comparison, and executive visibility.'
+    'Snapshot preserved for continuity posture review, historical comparison, executive visibility, and action prioritization.'
   )
 
   const [reviewPeriod, setReviewPeriod] = useState(
@@ -102,7 +104,7 @@ export default function OperationsPage() {
     useState<StabilizationConfidence>('MODERATE')
 
   const metrics = useMemo(() => {
-    return {
+    const baseMetrics = {
       scope: 'CGI_CONTINUITY_OPERATIONS',
       region: 'GLOBAL',
       institution_id: null,
@@ -152,12 +154,48 @@ export default function OperationsPage() {
 
       dominant_memory_pattern:
         'Recurring pressure corridors require executive review',
+    }
+
+    const prioritization = calculateExecutivePrioritization({
+      escalationPressureIndex:
+        baseMetrics.escalation_pressure_index,
+      operationalSurvivabilityScore:
+        baseMetrics.operational_survivability_score,
+      recoveryReliabilityScore:
+        baseMetrics.recovery_reliability_score,
+      unresolvedMomentum:
+        baseMetrics.unresolved_momentum,
+      continuityCollapseRecurrence:
+        baseMetrics.continuity_collapse_recurrence,
+      escalationCorridorRecurrence:
+        baseMetrics.escalation_corridor_recurrence,
+      responderStrainRecurrence:
+        baseMetrics.responder_strain_recurrence,
+    })
+
+    return {
+      ...baseMetrics,
+
+      executive_priority_score:
+        prioritization.executivePriorityScore,
+
+      survivability_threat_level:
+        prioritization.survivabilityThreatLevel,
+
+      executive_action_urgency:
+        prioritization.executiveActionUrgency,
+
+      structural_deterioration_state:
+        prioritization.structuralDeteriorationState,
+
+      executive_action_deadline:
+        prioritization.executiveActionDeadline,
 
       executive_summary:
-        'CGI continuity posture is stabilizing, but unresolved momentum and recurring pressure corridors require governed review before survivability can be considered credible.',
+        `CGI continuity posture is ${baseMetrics.continuity_state.toLowerCase()}, with ${prioritization.survivabilityThreatLevel.toLowerCase()} survivability threat and ${prioritization.executiveActionUrgency.toLowerCase()} executive action urgency. Recurring pressure corridors and unresolved momentum require governed review before stabilization can be considered durable.`,
 
       action_cue:
-        'Preserve snapshot, review pressure corridor recurrence, and verify whether recovery is durable before declaring stabilization credible.',
+        `Priority score ${prioritization.executivePriorityScore}/100. Review pressure corridor recurrence, verify recovery durability, and complete executive action ${prioritization.executiveActionDeadline.toLowerCase()}.`,
     }
   }, [])
 
@@ -256,18 +294,43 @@ export default function OperationsPage() {
           <p
             style={{
               color: '#cbd5e1',
-              maxWidth: '860px',
+              maxWidth: '900px',
               lineHeight: 1.7,
             }}
           >
             This surface preserves operational continuity snapshots as governed
-            evidence. A snapshot is not just saved data. It is historical
-            continuity intelligence with institution ownership, scope, reason,
-            review period, visibility level, executive interpretation, and audit
-            traceability.
+            evidence. Each snapshot now carries institution ownership, audit
+            traceability, executive visibility, survivability threat level, and
+            action prioritization.
           </p>
 
           <div style={metricGridStyle}>
+            <div style={cardStyle}>
+              <p style={{ color: '#94a3b8' }}>
+                Executive Priority Score
+              </p>
+
+              <h2>
+                {metrics.executive_priority_score}/100
+              </h2>
+
+              <p>{metrics.executive_action_urgency}</p>
+            </div>
+
+            <div style={cardStyle}>
+              <p style={{ color: '#94a3b8' }}>
+                Survivability Threat
+              </p>
+
+              <h2>
+                {metrics.survivability_threat_level}
+              </h2>
+
+              <p>
+                {metrics.executive_action_deadline}
+              </p>
+            </div>
+
             <div style={cardStyle}>
               <p style={{ color: '#94a3b8' }}>
                 Continuity Integrity
@@ -282,37 +345,11 @@ export default function OperationsPage() {
 
             <div style={cardStyle}>
               <p style={{ color: '#94a3b8' }}>
-                Stabilization Confidence
+                Structural Deterioration
               </p>
 
               <h2>
-                {metrics.stabilization_confidence_score}%
-              </h2>
-
-              <p>{stabilizationConfidence}</p>
-            </div>
-
-            <div style={cardStyle}>
-              <p style={{ color: '#94a3b8' }}>
-                Pressure Index
-              </p>
-
-              <h2>
-                {metrics.escalation_pressure_index}
-              </h2>
-
-              <p>
-                {metrics.pressure_propagation_state}
-              </p>
-            </div>
-
-            <div style={cardStyle}>
-              <p style={{ color: '#94a3b8' }}>
-                Survivability Score
-              </p>
-
-              <h2>
-                {metrics.operational_survivability_score}%
+                {metrics.structural_deterioration_state}
               </h2>
 
               <p>
@@ -542,7 +579,8 @@ export default function OperationsPage() {
                   marginTop: '12px',
                 }}
               >
-                Governed snapshot saved. Historical continuity intelligence and audit trail preserved.
+                Governed snapshot saved. Historical continuity intelligence,
+                prioritization signal, and audit trail preserved.
               </p>
             )}
 
