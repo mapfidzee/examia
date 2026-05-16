@@ -25,6 +25,17 @@ type SnapshotAuditResult = {
   error?: string
 }
 
+type AuditPayload = {
+  actor_id?: string | null
+  actor_email?: string | null
+  actor_role?: string | null
+  action_type: string
+  route: string
+  severity: string
+  institution_id?: string | null
+  details: Record<string, unknown>
+}
+
 export async function createSnapshotAuditLog(
   input: SnapshotAuditInput
 ): Promise<SnapshotAuditResult> {
@@ -43,66 +54,106 @@ export async function createSnapshotAuditLog(
     pressureClassification: input.pressureClassification,
   })
 
-  const { error } = await supabase
-    .from('audit_logs')
-    .insert({
-      actor_id: input.performedBy ?? null,
-      actor_email: input.performedByEmail ?? null,
-      actor_role: 'CONTINUITY_GOVERNANCE_ACTOR',
+  const evidenceDetails = {
+    evidence_type: 'GOVERNED_CONTINUITY_SNAPSHOT',
+    immutability_status: 'IMMUTABLE_GOVERNANCE_RECORD',
+    reconstruction_capability: 'ENABLED',
 
-      action_type: input.auditAction,
-      route: '/operations',
-      severity,
+    snapshot_id: input.snapshotId,
+    linked_snapshot_id: input.snapshotId,
 
-      institution_id: null,
+    governance_reason: governanceReason,
+    governance_scope: input.governanceScope ?? null,
+    governance_institution: input.governanceInstitution,
+    governance_posture: governancePosture,
 
-      details: {
-        evidence_type: 'GOVERNED_CONTINUITY_SNAPSHOT',
-        immutability_status: 'IMMUTABLE_GOVERNANCE_RECORD',
-        reconstruction_capability: 'ENABLED',
+    actor_id: input.performedBy ?? null,
+    actor_email: input.performedByEmail ?? null,
+    actor_role: 'CONTINUITY_GOVERNANCE_ACTOR',
 
-        snapshot_id: input.snapshotId,
-        linked_snapshot_id: input.snapshotId,
+    visibility_level:
+      input.executiveVisibilityLevel ??
+      'EXECUTIVE',
 
-        governance_reason: governanceReason,
-        governance_scope: input.governanceScope ?? null,
-        governance_institution: input.governanceInstitution,
-        governance_posture: governancePosture,
+    continuity_posture:
+      input.continuityPosture ?? null,
+    trajectory_state:
+      input.trajectoryState ?? null,
+    pressure_classification:
+      input.pressureClassification ?? null,
+    recovery_status:
+      input.recoveryStatus ?? null,
 
-        visibility_level:
-          input.executiveVisibilityLevel ??
-          'EXECUTIVE',
+    survivability_context:
+      buildSurvivabilityContext({
+        continuityPosture: input.continuityPosture,
+        trajectoryState: input.trajectoryState,
+        recoveryStatus: input.recoveryStatus,
+      }),
 
-        continuity_posture:
-          input.continuityPosture ?? null,
-        trajectory_state:
-          input.trajectoryState ?? null,
-        pressure_classification:
-          input.pressureClassification ?? null,
-        recovery_status:
-          input.recoveryStatus ?? null,
+    continuity_memory_preserved: true,
+    institutional_traceability: true,
+    executive_visibility_enabled: true,
 
-        survivability_context:
-          buildSurvivabilityContext({
-            continuityPosture: input.continuityPosture,
-            trajectoryState: input.trajectoryState,
-            recoveryStatus: input.recoveryStatus,
-          }),
+    governance_boundary:
+      'NON_PUNITIVE_CONTINUITY_GOVERNANCE',
+  }
 
-        continuity_memory_preserved: true,
-        institutional_traceability: true,
-        executive_visibility_enabled: true,
+  const primaryPayload: AuditPayload = {
+    actor_id: input.performedBy ?? null,
+    actor_email: input.performedByEmail ?? null,
+    actor_role: null,
 
-        governance_boundary:
-          'NON_PUNITIVE_CONTINUITY_GOVERNANCE',
-      },
-    })
+    action_type: input.auditAction,
+    route: '/operations',
+    severity,
 
-  if (error) {
+    institution_id: null,
+
+    details: evidenceDetails,
+  }
+
+  const primaryResult = await insertAuditPayload(primaryPayload)
+
+  if (primaryResult.success) {
+    return primaryResult
+  }
+
+  const fallbackPayload: AuditPayload = {
+    action_type: input.auditAction,
+    route: '/operations',
+    severity,
+    details: evidenceDetails,
+  }
+
+  const fallbackResult = await insertAuditPayload(fallbackPayload)
+
+  if (!fallbackResult.success) {
     console.error(
       'CGI governed snapshot audit logging failed',
-      error
+      fallbackResult.error
     )
+
+    return fallbackResult
+  }
+
+  return fallbackResult
+}
+
+async function insertAuditPayload(
+  payload: AuditPayload
+): Promise<SnapshotAuditResult> {
+  const { error } = await supabase
+    .from('audit_logs')
+    .insert(payload)
+
+  if (error) {
+    console.error('CGI audit insert failed', {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+    })
 
     return {
       success: false,
