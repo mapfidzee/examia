@@ -81,7 +81,7 @@ type InterpretiveBoard = {
   recoveryThreshold: Threshold
   survivabilityThreshold: Threshold
   memoryThreshold: Threshold
-  actionThreshold: Threshold
+  actionPosture: string
   actionDeadline: string
   actionCue: string
 }
@@ -254,7 +254,7 @@ function ExecutiveStabilityBoard() {
                 </p>
 
                 <h2 style={styles.actionThreshold}>
-                  {board.actionThreshold}
+                  {board.actionPosture}
                 </h2>
 
                 <p style={styles.bodyText}>
@@ -411,9 +411,10 @@ function buildInterpretiveBoard(
     ])
   )
 
-  const survivabilityThreshold = thresholdFromStrength(
-    latest.operational_survivability_score
-  )
+  const baselineSurvivabilityThreshold =
+    thresholdFromStrength(
+      latest.operational_survivability_score
+    )
 
   const rawMemoryThreshold = thresholdFromRisk(
     average([
@@ -431,6 +432,12 @@ function buildInterpretiveBoard(
     latest.structural_deterioration_state || 'STABLE'
 
   const recurrenceSignal = resolveRecurrenceSignal(latest)
+
+  const survivabilityThreshold =
+    resolveSurvivabilityThreshold({
+      baseline: baselineSurvivabilityThreshold,
+      recurrenceSignal,
+    })
 
   const memoryThreshold = resolveMemoryThreshold({
     rawMemoryThreshold,
@@ -454,6 +461,13 @@ function buildInterpretiveBoard(
     memoryThreshold,
     recurrenceSignal,
   })
+
+  const actionPosture =
+    resolveActionPosture({
+      actionThreshold,
+      recurrenceSignal,
+      commandPosture,
+    })
 
   const commandMeaning = buildCommandMeaning({
     commandPosture,
@@ -514,7 +528,7 @@ function buildInterpretiveBoard(
     recoveryThreshold,
     survivabilityThreshold,
     memoryThreshold,
-    actionThreshold,
+    actionPosture,
     actionDeadline,
     actionCue,
   }
@@ -607,7 +621,7 @@ function buildSurvivabilityInterpretation(input: {
     input.recoveryThreshold === 'MODERATE' ||
     input.recurrenceSignal
   ) {
-    return 'Survivability is forming, but not fully settled. Recurring pressure must remain under governed review before stabilization is considered durable.'
+    return 'Baseline survivability is credible, but recurrence keeps durability under governed review before stabilization can be considered settled.'
   }
 
   return 'Survivability posture is currently credible, provided recurrence does not reappear or intensify.'
@@ -628,7 +642,7 @@ function buildExecutiveImplication(input: {
   }
 
   if (input.commandPosture === 'WATCH') {
-    return 'Action requirement remains low, but recurring pressure corridors require governed review before stabilization can be considered durable.'
+    return 'Immediate intervention is not indicated, but recurring pressure corridors require governed review before stabilization can be considered durable.'
   }
 
   return 'Continue governed monitoring. No immediate executive escalation is indicated.'
@@ -641,7 +655,7 @@ function buildStructuralPattern(input: {
   recurrenceSignal: boolean
 }) {
   if (input.providedPattern && input.recurrenceSignal) {
-    return `${input.providedPattern} This recurrence remains visible until stabilization credibility is proven.`
+    return `${ensureSentence(input.providedPattern)} This recurrence remains visible until stabilization credibility is proven.`
   }
 
   if (input.providedPattern) {
@@ -682,7 +696,7 @@ function buildActionCue(input: {
   }
 
   if (input.commandPosture === 'WATCH') {
-    return `Action requirement remains low, but recurring pressure corridors require governed review before stabilization can be considered durable. Action window: ${input.actionDeadline}.`
+    return `Recurring pressure corridors require governed review before stabilization can be considered durable. Action window: ${input.actionDeadline}.`
   }
 
   return `Maintain governed monitoring. Action window: ${input.actionDeadline}.`
@@ -722,7 +736,7 @@ function explainSurvivability(board: InterpretiveBoard) {
   }
 
   if (board.survivabilityThreshold === 'MODERATE') {
-    return 'Survivability remains watchable because recurring strain could weaken durability.'
+    return 'Survivability remains watchable because visible recurrence could weaken durability.'
   }
 
   return 'Survivability requires executive attention before stabilization can be trusted.'
@@ -757,6 +771,44 @@ function resolveMemoryThreshold(input: {
   }
 
   return input.rawMemoryThreshold
+}
+
+function resolveSurvivabilityThreshold(input: {
+  baseline: Threshold
+  recurrenceSignal: boolean
+}): Threshold {
+  if (
+    input.recurrenceSignal &&
+    input.baseline === 'LOW'
+  ) {
+    return 'MODERATE'
+  }
+
+  return input.baseline
+}
+
+function resolveActionPosture(input: {
+  actionThreshold: Threshold
+  recurrenceSignal: boolean
+  commandPosture: CommandPosture
+}) {
+  if (input.commandPosture === 'CRITICAL') {
+    return 'EXECUTIVE INTERVENTION'
+  }
+
+  if (input.commandPosture === 'ELEVATED') {
+    return 'EXECUTIVE PRIORITIZATION'
+  }
+
+  if (
+    input.commandPosture === 'WATCH' ||
+    input.recurrenceSignal ||
+    input.actionThreshold === 'MODERATE'
+  ) {
+    return 'GOVERNED REVIEW'
+  }
+
+  return 'ROUTINE MONITORING'
 }
 
 function resolveRecurrenceSignal(metric: CgiOperationalMetric) {
@@ -820,6 +872,20 @@ function average(values: number[]) {
     valid.reduce((sum, value) => sum + value, 0) /
       valid.length
   )
+}
+
+function ensureSentence(value: string) {
+  const trimmed = value.trim()
+
+  if (
+    trimmed.endsWith('.') ||
+    trimmed.endsWith('!') ||
+    trimmed.endsWith('?')
+  ) {
+    return trimmed
+  }
+
+  return `${trimmed}.`
 }
 
 function formatDate(value: string) {
@@ -1044,8 +1110,10 @@ const styles: Record<string, CSSProperties> = {
 
   actionThreshold: {
     color: '#67e8f9',
-    fontSize: '42px',
+    fontSize: 'clamp(32px, 5vw, 46px)',
+    lineHeight: 1.05,
     margin: '0 0 14px',
+    letterSpacing: '-0.04em',
   },
 
   deadlineBox: {
