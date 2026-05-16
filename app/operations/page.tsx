@@ -5,6 +5,7 @@ import type { CSSProperties } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
+import { createSnapshotAuditLog } from '@/lib/snapshotAudit'
 
 import { supabase } from '../lib/supabase'
 
@@ -180,16 +181,43 @@ export default function OperationsPage() {
       savedByEmail: user?.email ?? null,
     })
 
-    const { error } = await supabase
+    const { data: snapshot, error: snapshotError } = await supabase
       .from('cgi_operational_metrics')
       .insert({
         ...metrics,
         ...governancePayload,
       })
+      .select('id')
+      .single()
 
-    if (error) {
+    if (snapshotError || !snapshot?.id) {
       setSaveState('ERROR')
-      setErrorMessage(error.message)
+      setErrorMessage(
+        snapshotError?.message ||
+          'Snapshot was not returned after save.'
+      )
+      return
+    }
+
+    const auditResult = await createSnapshotAuditLog({
+      snapshotId: snapshot.id,
+      auditAction: 'GOVERNED_SNAPSHOT_CREATED',
+      auditReason: snapshotReason,
+      governanceScope: snapshotScope,
+      performedBy: user?.id ?? null,
+      performedByEmail: user?.email ?? null,
+      continuityPosture: metrics.continuity_state,
+      trajectoryState: metrics.trajectory_direction,
+      pressureClassification: metrics.pressure_propagation_state,
+      recoveryStatus: metrics.recovery_direction,
+      executiveVisibilityLevel,
+    })
+
+    if (!auditResult.success) {
+      setSaveState('ERROR')
+      setErrorMessage(
+        'Snapshot saved, but audit logging failed. Review audit trail before relying on this snapshot.'
+      )
       return
     }
 
@@ -227,7 +255,7 @@ export default function OperationsPage() {
             This surface preserves operational continuity snapshots as governed
             evidence. A snapshot is not just saved data. It is historical
             continuity intelligence with scope, reason, review period,
-            visibility level, and executive interpretation.
+            visibility level, executive interpretation, and audit traceability.
           </p>
 
           <div style={metricGridStyle}>
@@ -505,7 +533,7 @@ export default function OperationsPage() {
                   marginTop: '12px',
                 }}
               >
-                Governed snapshot saved. Historical continuity intelligence preserved.
+                Governed snapshot saved. Historical continuity intelligence and audit trail preserved.
               </p>
             )}
 
