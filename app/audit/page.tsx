@@ -20,7 +20,6 @@ type AuditLog = {
   severity?: string | null
   created_at?: string | null
   details?: AuditDetails | null
-
   actor_id?: string | null
   actor_email?: string | null
   actor_role?: string | null
@@ -33,6 +32,11 @@ type EvidencePosture =
   | 'GOVERNANCE WATCH'
   | 'EXECUTIVE REVIEW'
 
+type EvidenceMaturity =
+  | 'LEGACY EVIDENCE'
+  | 'HARDENED GOVERNANCE EVIDENCE'
+  | 'EXECUTIVE RECONSTRUCTABLE'
+
 type EvidenceSummary = {
   total: number
   critical: number
@@ -43,6 +47,9 @@ type EvidenceSummary = {
   immutableRecords: number
   visibilityClassified: number
   linkedSnapshots: number
+  legacyEvidence: number
+  hardenedEvidence: number
+  executiveReconstructable: number
   evidencePosture: EvidencePosture
   evidenceMeaning: string
 }
@@ -53,6 +60,12 @@ const severityOrder: Record<string, number> = {
   MODERATE: 2,
   LOW: 1,
   INFO: 0,
+}
+
+const maturityOrder: Record<EvidenceMaturity, number> = {
+  'EXECUTIVE RECONSTRUCTABLE': 3,
+  'HARDENED GOVERNANCE EVIDENCE': 2,
+  'LEGACY EVIDENCE': 1,
 }
 
 const LEDGER_DOCTRINE = [
@@ -79,17 +92,20 @@ function detailValue(log: AuditLog, key: string) {
   return log.details?.[key]
 }
 
+function fullEvidenceText(log: AuditLog) {
+  return `${log.summary || ''} ${JSON.stringify(log.details || {})}`.toUpperCase()
+}
+
 function getActor(log: AuditLog) {
   return safeText(
     log.email ||
-      log.role ||
-      log.user_id ||
       log.actor_email ||
-      log.actor_role ||
+      log.user_id ||
       log.actor_id ||
       detailValue(log, 'actor_email') ||
-      detailValue(log, 'actor_role') ||
-      detailValue(log, 'actor_id'),
+      detailValue(log, 'actor_id') ||
+      detailValue(log, 'actor') ||
+      detailValue(log, 'user_email'),
     'Actor not recorded'
   )
 }
@@ -98,34 +114,42 @@ function getActorKey(log: AuditLog) {
   return safeText(
     log.email ||
       log.user_id ||
-      log.role ||
       log.actor_email ||
       log.actor_id ||
-      log.actor_role ||
       detailValue(log, 'actor_email') ||
       detailValue(log, 'actor_id') ||
-      detailValue(log, 'actor_role'),
+      detailValue(log, 'user_email'),
     ''
   )
 }
 
 function getInstitution(log: AuditLog) {
+  const text = log.summary || ''
+
+  const summaryInstitution = text.match(/Institution scope:\s*([^.]*)\./i)
+
   return safeText(
     log.institution_id ||
       detailValue(log, 'institution_id') ||
       detailValue(log, 'governance_institution') ||
       detailValue(log, 'institution') ||
-      detailValue(log, 'institution_name'),
+      detailValue(log, 'institution_name') ||
+      summaryInstitution?.[1],
     'Institution not recorded'
   )
 }
 
 function getVisibilityLevel(log: AuditLog) {
+  const text = log.summary || ''
+
+  const summaryVisibility = text.match(/Visibility level:\s*([^.]*)\./i)
+
   return safeText(
     detailValue(log, 'visibility_level') ||
       detailValue(log, 'visibility') ||
       detailValue(log, 'visibility_tier') ||
-      detailValue(log, 'access_level'),
+      detailValue(log, 'access_level') ||
+      summaryVisibility?.[1],
     'Standard governance visibility'
   )
 }
@@ -178,6 +202,48 @@ function isImmutableRecord(log: AuditLog) {
   return Boolean(log.id && log.created_at)
 }
 
+function resolveEvidenceMaturity(log: AuditLog): EvidenceMaturity {
+  const text = fullEvidenceText(log)
+
+  const hasActor = getActor(log) !== 'Actor not recorded'
+  const hasInstitution = hasInstitutionScope(log)
+  const hasVisibility = hasVisibilityClassification(log)
+  const hasLinkedRecord = hasLinkedSnapshot(log)
+  const hasReason = getEvidenceReason(log) !== 'Governance reason not recorded'
+  const hasImmutability = isImmutableRecord(log)
+
+  if (
+    text.includes('EXECUTIVE_RECONSTRUCTABLE') ||
+    (hasActor && hasInstitution && hasVisibility && hasLinkedRecord && hasReason && hasImmutability)
+  ) {
+    return 'EXECUTIVE RECONSTRUCTABLE'
+  }
+
+  if (
+    text.includes('HARDENED') ||
+    text.includes('GOVERNANCE REASON') ||
+    text.includes('VISIBILITY LEVEL') ||
+    text.includes('NON-PUNITIVE') ||
+    (hasActor && hasReason && hasImmutability)
+  ) {
+    return 'HARDENED GOVERNANCE EVIDENCE'
+  }
+
+  return 'LEGACY EVIDENCE'
+}
+
+function getMaturityMeaning(maturity: EvidenceMaturity) {
+  if (maturity === 'EXECUTIVE RECONSTRUCTABLE') {
+    return 'This record preserves enough evidence for leadership to reconstruct who acted, what changed, why it mattered, where it applied, and what continuity posture was preserved.'
+  }
+
+  if (maturity === 'HARDENED GOVERNANCE EVIDENCE') {
+    return 'This record preserves strengthened governance meaning, but may not yet contain every enterprise-grade reconstruction field.'
+  }
+
+  return 'This is historical evidence created before the current CGI hardening standard. It remains valid, but its reconstruction depth is limited.'
+}
+
 export default function AuditPage() {
   return (
     <CGIGovernanceShell>
@@ -193,6 +259,7 @@ function GovernanceEvidenceLedger() {
   const [severityFilter, setSeverityFilter] = useState('ALL')
   const [actorFilter, setActorFilter] = useState('ALL')
   const [routeFilter, setRouteFilter] = useState('ALL')
+  const [maturityFilter, setMaturityFilter] = useState('ALL')
   const [search, setSearch] = useState('')
 
   useEffect(() => {
@@ -220,11 +287,7 @@ function GovernanceEvidenceLedger() {
   }
 
   const actors = useMemo(() => {
-    const values = logs
-      .map(getActorKey)
-      .filter(Boolean)
-      .map(String)
-
+    const values = logs.map(getActorKey).filter(Boolean).map(String)
     return ['ALL', ...Array.from(new Set(values))]
   }, [logs])
 
@@ -238,23 +301,18 @@ function GovernanceEvidenceLedger() {
       const severity = normalizeSeverity(log.severity)
       const actor = getActorKey(log)
       const route = log.route || ''
+      const maturity = resolveEvidenceMaturity(log)
       const combined = JSON.stringify(log).toLowerCase()
 
-      const severityMatch =
-        severityFilter === 'ALL' || severity === severityFilter
-
-      const actorMatch =
-        actorFilter === 'ALL' || String(actor) === actorFilter
-
-      const routeMatch =
-        routeFilter === 'ALL' || String(route) === routeFilter
-
-      const searchMatch =
-        search.trim() === '' || combined.includes(search.toLowerCase())
-
-      return severityMatch && actorMatch && routeMatch && searchMatch
+      return (
+        (severityFilter === 'ALL' || severity === severityFilter) &&
+        (actorFilter === 'ALL' || String(actor) === actorFilter) &&
+        (routeFilter === 'ALL' || String(route) === routeFilter) &&
+        (maturityFilter === 'ALL' || maturity === maturityFilter) &&
+        (search.trim() === '' || combined.includes(search.toLowerCase()))
+      )
     })
-  }, [logs, severityFilter, actorFilter, routeFilter, search])
+  }, [logs, severityFilter, actorFilter, routeFilter, maturityFilter, search])
 
   const summary = useMemo((): EvidenceSummary => {
     const critical = filteredLogs.filter(
@@ -269,16 +327,23 @@ function GovernanceEvidenceLedger() {
       safeText(log.action_type, '').toUpperCase().includes('GOVERNANCE')
     ).length
 
-    const uniqueActors = new Set(
-      filteredLogs.map(getActorKey).filter(Boolean)
-    ).size
-
+    const uniqueActors = new Set(filteredLogs.map(getActorKey).filter(Boolean)).size
     const institutionScoped = filteredLogs.filter(hasInstitutionScope).length
     const immutableRecords = filteredLogs.filter(isImmutableRecord).length
-    const visibilityClassified = filteredLogs.filter(
-      hasVisibilityClassification
-    ).length
+    const visibilityClassified = filteredLogs.filter(hasVisibilityClassification).length
     const linkedSnapshots = filteredLogs.filter(hasLinkedSnapshot).length
+
+    const legacyEvidence = filteredLogs.filter(
+      (log) => resolveEvidenceMaturity(log) === 'LEGACY EVIDENCE'
+    ).length
+
+    const hardenedEvidence = filteredLogs.filter(
+      (log) => resolveEvidenceMaturity(log) === 'HARDENED GOVERNANCE EVIDENCE'
+    ).length
+
+    const executiveReconstructable = filteredLogs.filter(
+      (log) => resolveEvidenceMaturity(log) === 'EXECUTIVE RECONSTRUCTABLE'
+    ).length
 
     const evidencePosture = resolveEvidencePosture({
       total: filteredLogs.length,
@@ -287,6 +352,7 @@ function GovernanceEvidenceLedger() {
       governanceActions,
       institutionScoped,
       immutableRecords,
+      legacyEvidence,
     })
 
     return {
@@ -299,6 +365,9 @@ function GovernanceEvidenceLedger() {
       immutableRecords,
       visibilityClassified,
       linkedSnapshots,
+      legacyEvidence,
+      hardenedEvidence,
+      executiveReconstructable,
       evidencePosture,
       evidenceMeaning: buildEvidenceMeaning(evidencePosture),
     }
@@ -314,6 +383,11 @@ function GovernanceEvidenceLedger() {
 
   const sortedLogs = useMemo(() => {
     return [...filteredLogs].sort((a, b) => {
+      const aMaturity = maturityOrder[resolveEvidenceMaturity(a)]
+      const bMaturity = maturityOrder[resolveEvidenceMaturity(b)]
+
+      if (bMaturity !== aMaturity) return bMaturity - aMaturity
+
       const aSeverity = severityOrder[normalizeSeverity(a.severity)] ?? 0
       const bSeverity = severityOrder[normalizeSeverity(b.severity)] ?? 0
 
@@ -345,9 +419,9 @@ function GovernanceEvidenceLedger() {
               </p>
 
               <p className="mt-5 max-w-4xl text-base leading-8 text-slate-300 md:text-lg">
-                This ledger preserves governance evidence for continuity
-                interpretation, executive oversight, institutional
-                accountability, and survivability reconstruction.
+                This ledger now distinguishes legacy records from hardened
+                governance evidence and executive-reconstructable continuity
+                evidence.
               </p>
             </div>
 
@@ -395,14 +469,13 @@ function GovernanceEvidenceLedger() {
 
             <div className="rounded-3xl border border-slate-800 bg-slate-900 p-5">
               <p className="text-sm font-bold uppercase tracking-[0.16em] text-slate-400">
-                Ledger Trust Meaning
+                Ledger Maturity Meaning
               </p>
 
               <p className="mt-3 text-sm leading-7 text-slate-300">
-                CGI audit evidence is not designed to blame people. It exists
-                to preserve what happened, who governed it, where it occurred,
-                why it mattered, and whether continuity memory can be
-                reconstructed later.
+                Older evidence is not treated as broken. It is identified as
+                legacy evidence. Hardened records are separated from records
+                that are fully executive-reconstructable.
               </p>
             </div>
           </div>
@@ -410,26 +483,24 @@ function GovernanceEvidenceLedger() {
 
         <section className="grid gap-4 md:grid-cols-4">
           <MetricCard title="Evidence Records" value={summary.total} />
+          <MetricCard title="Legacy Evidence" value={summary.legacyEvidence} />
+          <MetricCard title="Hardened Evidence" value={summary.hardenedEvidence} />
+          <MetricCard title="Executive Reconstructable" value={summary.executiveReconstructable} />
           <MetricCard title="Immutable Records" value={summary.immutableRecords} />
           <MetricCard title="Institution Scoped" value={summary.institutionScoped} />
           <MetricCard title="Linked Snapshots" value={summary.linkedSnapshots} />
-          <MetricCard title="Critical Evidence" value={summary.critical} />
-          <MetricCard title="High-Risk Evidence" value={summary.high} />
-          <MetricCard title="Governance Actions" value={summary.governanceActions} />
           <MetricCard title="Evidence Actors" value={summary.uniqueActors} />
         </section>
 
         <section className="rounded-3xl border border-slate-800 bg-slate-950 p-5">
-          <h2 className="text-xl font-black">
-            Evidence Filters
-          </h2>
+          <h2 className="text-xl font-black">Evidence Filters</h2>
 
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-            Filter the ledger by severity, actor, route, or evidence content
-            without changing the preserved record.
+            Filter the ledger by severity, actor, route, maturity, or evidence
+            content without changing the preserved record.
           </p>
 
-          <div className="mt-5 grid gap-3 md:grid-cols-4">
+          <div className="mt-5 grid gap-3 md:grid-cols-5">
             <select
               value={severityFilter}
               onChange={(event) => setSeverityFilter(event.target.value)}
@@ -467,6 +538,21 @@ function GovernanceEvidenceLedger() {
               ))}
             </select>
 
+            <select
+              value={maturityFilter}
+              onChange={(event) => setMaturityFilter(event.target.value)}
+              className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm"
+            >
+              <option value="ALL">All maturity levels</option>
+              <option value="LEGACY EVIDENCE">Legacy Evidence</option>
+              <option value="HARDENED GOVERNANCE EVIDENCE">
+                Hardened Governance Evidence
+              </option>
+              <option value="EXECUTIVE RECONSTRUCTABLE">
+                Executive Reconstructable
+              </option>
+            </select>
+
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
@@ -478,9 +564,7 @@ function GovernanceEvidenceLedger() {
 
         <section className="grid gap-5 lg:grid-cols-3">
           <div className="rounded-3xl border border-slate-800 bg-slate-950 p-5 lg:col-span-1">
-            <h2 className="text-xl font-black">
-              Executive Review Evidence
-            </h2>
+            <h2 className="text-xl font-black">Executive Review Evidence</h2>
 
             <p className="mt-2 text-sm leading-6 text-slate-400">
               Critical and high-risk evidence requiring executive visibility.
@@ -517,11 +601,11 @@ function GovernanceEvidenceLedger() {
                   </p>
 
                   <p className="mt-1 text-xs leading-5 text-slate-400">
-                    Source: {safeText(log.route)}
+                    Institution: {getInstitution(log)}
                   </p>
 
-                  <p className="mt-1 text-xs leading-5 text-slate-400">
-                    Institution: {getInstitution(log)}
+                  <p className="mt-3 rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-black text-cyan-300">
+                    {resolveEvidenceMaturity(log)}
                   </p>
                 </div>
               ))}
@@ -529,13 +613,11 @@ function GovernanceEvidenceLedger() {
           </div>
 
           <div className="rounded-3xl border border-slate-800 bg-slate-950 p-5 lg:col-span-2">
-            <h2 className="text-xl font-black">
-              Immutable Continuity Ledger
-            </h2>
+            <h2 className="text-xl font-black">Immutable Continuity Ledger</h2>
 
             <p className="mt-2 text-sm leading-6 text-slate-400">
-              Sorted by governance severity and recency. Each record supports
-              continuity reconstruction without turning the system into
+              Sorted by maturity, governance severity, and recency. Each record
+              supports continuity reconstruction without turning the system into
               person-level surveillance.
             </p>
 
@@ -550,55 +632,67 @@ function GovernanceEvidenceLedger() {
                 </div>
               ) : (
                 <div className="divide-y divide-slate-800">
-                  {sortedLogs.map((log) => (
-                    <article key={log.id} className="bg-slate-900 p-5">
-                      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                        <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-black text-slate-200">
-                              {normalizeSeverity(log.severity)}
-                            </span>
+                  {sortedLogs.map((log) => {
+                    const maturity = resolveEvidenceMaturity(log)
 
-                            <span className="rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-bold text-cyan-300">
-                              {safeText(log.action_type)}
-                            </span>
+                    return (
+                      <article key={log.id} className="bg-slate-900 p-5">
+                        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-black text-slate-200">
+                                {normalizeSeverity(log.severity)}
+                              </span>
 
-                            <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300">
-                              {isImmutableRecord(log)
-                                ? 'Immutable record'
-                                : 'Integrity incomplete'}
-                            </span>
+                              <span className="rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-bold text-cyan-300">
+                                {safeText(log.action_type)}
+                              </span>
+
+                              <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300">
+                                {isImmutableRecord(log)
+                                  ? 'Immutable record'
+                                  : 'Integrity incomplete'}
+                              </span>
+
+                              <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-black text-amber-300">
+                                {maturity}
+                              </span>
+                            </div>
+
+                            <p className="mt-3 max-w-3xl text-xs leading-5 text-slate-400">
+                              {getMaturityMeaning(maturity)}
+                            </p>
+
+                            <div className="mt-4 grid gap-3 text-sm md:grid-cols-2">
+                              <EvidenceLine label="Actor" value={getActor(log)} />
+                              <EvidenceLine label="Route / Source" value={safeText(log.route)} />
+                              <EvidenceLine label="Record Type" value={getRecordType(log)} />
+                              <EvidenceLine label="Institution" value={getInstitution(log)} />
+                              <EvidenceLine label="Visibility" value={getVisibilityLevel(log)} />
+                              <EvidenceLine label="Linked Snapshot" value={getLinkedSnapshot(log)} />
+                              <EvidenceLine label="Governance Reason" value={getEvidenceReason(log)} />
+                            </div>
                           </div>
 
-                          <div className="mt-4 grid gap-3 text-sm md:grid-cols-2">
-                            <EvidenceLine label="Actor" value={getActor(log)} />
-                            <EvidenceLine label="Route / Source" value={safeText(log.route)} />
-                            <EvidenceLine label="Record Type" value={getRecordType(log)} />
-                            <EvidenceLine label="Institution" value={getInstitution(log)} />
-                            <EvidenceLine label="Visibility" value={getVisibilityLevel(log)} />
-                            <EvidenceLine label="Linked Snapshot" value={getLinkedSnapshot(log)} />
-                            <EvidenceLine label="Governance Reason" value={getEvidenceReason(log)} />
-                          </div>
+                          <p className="text-xs text-slate-500">
+                            {formatDate(log.created_at)}
+                          </p>
                         </div>
 
-                        <p className="text-xs text-slate-500">
-                          {formatDate(log.created_at)}
-                        </p>
-                      </div>
+                        {log.details && (
+                          <details className="mt-5 rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                            <summary className="cursor-pointer text-sm font-bold text-slate-300">
+                              View preserved evidence details
+                            </summary>
 
-                      {log.details && (
-                        <details className="mt-5 rounded-2xl border border-slate-800 bg-slate-950 p-4">
-                          <summary className="cursor-pointer text-sm font-bold text-slate-300">
-                            View preserved evidence details
-                          </summary>
-
-                          <pre className="mt-3 overflow-x-auto whitespace-pre-wrap text-xs leading-5 text-slate-400">
-                            {JSON.stringify(log.details, null, 2)}
-                          </pre>
-                        </details>
-                      )}
-                    </article>
-                  ))}
+                            <pre className="mt-3 overflow-x-auto whitespace-pre-wrap text-xs leading-5 text-slate-400">
+                              {JSON.stringify(log.details, null, 2)}
+                            </pre>
+                          </details>
+                        )}
+                      </article>
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -606,22 +700,20 @@ function GovernanceEvidenceLedger() {
         </section>
 
         <section className="rounded-3xl border border-slate-800 bg-slate-950 p-5">
-          <h2 className="text-xl font-black">
-            Governance Reconstruction Meaning
-          </h2>
+          <h2 className="text-xl font-black">Governance Reconstruction Meaning</h2>
 
           <div className="mt-5 grid gap-4 md:grid-cols-3">
             <InterpretationCard
-              title="Evidence Preservation"
-              text="The ledger preserves continuity events so visible instability does not disappear after action is taken."
+              title="Legacy Evidence"
+              text="Historical evidence remains visible, but is clearly separated from newer hardened governance records."
             />
             <InterpretationCard
-              title="Executive Trust"
-              text="Actor, institution, route, reason, visibility, and snapshot linkage allow leadership to reconstruct governance decisions."
+              title="Hardened Evidence"
+              text="Structured governance meaning is preserved so role, routing, intervention, and operational decisions do not disappear."
             />
             <InterpretationCard
-              title="Non-Punitive Accountability"
-              text="The ledger protects institutional memory without ranking workers, blaming individuals, or becoming a surveillance surface."
+              title="Executive Reconstruction"
+              text="The strongest records preserve enough context for leaders to reconstruct what happened, why it mattered, and whether continuity was governed."
             />
           </div>
         </section>
@@ -637,23 +729,14 @@ function resolveEvidencePosture(input: {
   governanceActions: number
   institutionScoped: number
   immutableRecords: number
+  legacyEvidence: number
 }): EvidencePosture {
-  if (input.total === 0) {
-    return 'LEDGER EMPTY'
-  }
-
-  if (input.critical > 0 || input.high > 2) {
-    return 'EXECUTIVE REVIEW'
-  }
-
-  if (
-    input.high > 0 ||
-    input.governanceActions > 0 ||
-    input.institutionScoped < input.total
-  ) {
+  if (input.total === 0) return 'LEDGER EMPTY'
+  if (input.critical > 0 || input.high > 2) return 'EXECUTIVE REVIEW'
+  if (input.legacyEvidence > input.total / 2) return 'GOVERNANCE WATCH'
+  if (input.high > 0 || input.governanceActions > 0 || input.institutionScoped < input.total) {
     return 'GOVERNANCE WATCH'
   }
-
   return 'EVIDENCE HOLDING'
 }
 
@@ -667,39 +750,25 @@ function buildEvidenceMeaning(posture: EvidencePosture) {
   }
 
   if (posture === 'GOVERNANCE WATCH') {
-    return 'Governance evidence is present, but visibility, institution scope, or elevated activity should remain under review.'
+    return 'Governance evidence is present, but maturity, visibility, institution scope, or elevated activity should remain under review.'
   }
 
   return 'Governance evidence is preserved, traceable, and currently sufficient for continuity reconstruction.'
 }
 
-function MetricCard({
-  title,
-  value,
-}: {
-  title: string
-  value: number
-}) {
+function MetricCard({ title, value }: { title: string; value: number }) {
   return (
     <div className="rounded-3xl border border-slate-800 bg-slate-950 p-5 shadow-xl">
       <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
         {title}
       </p>
 
-      <p className="mt-3 text-4xl font-black text-white">
-        {value}
-      </p>
+      <p className="mt-3 text-4xl font-black text-white">{value}</p>
     </div>
   )
 }
 
-function EvidenceLine({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
+function EvidenceLine({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3">
       <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
@@ -713,22 +782,12 @@ function EvidenceLine({
   )
 }
 
-function InterpretationCard({
-  title,
-  text,
-}: {
-  title: string
-  text: string
-}) {
+function InterpretationCard({ title, text }: { title: string; text: string }) {
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-      <h3 className="font-black text-white">
-        {title}
-      </h3>
+      <h3 className="font-black text-white">{title}</h3>
 
-      <p className="mt-2 text-sm leading-6 text-slate-400">
-        {text}
-      </p>
+      <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
     </div>
   )
 }
