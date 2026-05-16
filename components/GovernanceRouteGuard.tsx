@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+
 import type { GovernanceRole } from '@/lib/authGovernance'
 import { requireGovernanceRole } from '@/lib/authGovernance'
 import { supabase } from '@/lib/supabase'
@@ -63,13 +64,12 @@ export default function GovernanceRouteGuard({
     const { data: responder, error: responderError } =
       await supabase
         .from('responders')
-        .select(
-          `
-            operational_status,
-            governance_status,
-            governance_reason
-          `
-        )
+        .select(`
+          operational_status,
+          governance_role,
+          full_name,
+          email
+        `)
         .eq('email', user.email)
         .maybeSingle()
 
@@ -97,51 +97,36 @@ export default function GovernanceRouteGuard({
       return
     }
 
-    const governanceStatus =
-      responder.governance_status || 'PENDING'
-
     const operationalStatus =
       responder.operational_status || 'INACTIVE'
 
-    if (
-      governanceStatus === 'SUSPENDED' ||
-      operationalStatus === 'SUSPENDED'
-    ) {
+    if (operationalStatus === 'SUSPENDED') {
       setAccessState('SUSPENDED')
 
       setMessage(
-        responder.governance_reason ||
-          'Governance access is currently suspended.'
+        'Governance access is currently suspended.'
       )
 
       router.replace('/access-denied')
       return
     }
 
-    if (
-      governanceStatus === 'RESTRICTED' ||
-      operationalStatus === 'RESTRICTED'
-    ) {
+    if (operationalStatus === 'RESTRICTED') {
       setAccessState('RESTRICTED')
 
       setMessage(
-        responder.governance_reason ||
-          'Governance access is currently restricted.'
+        'Governance access is currently restricted.'
       )
 
       router.replace('/access-denied')
       return
     }
 
-    if (
-      governanceStatus !== 'ACTIVE' &&
-      governanceStatus !== 'VERIFIED'
-    ) {
+    if (operationalStatus !== 'ACTIVE') {
       setAccessState('INACTIVE')
 
       setMessage(
-        responder.governance_reason ||
-          'Governance activation is not yet complete.'
+        'Governance activation is not yet complete.'
       )
 
       router.replace('/access-denied')
@@ -246,7 +231,7 @@ function InfrastructureAccessScreen({
             margin: 0,
           }}
         >
-          EXAMIA • GOVERNANCE ACCESS CONTROL
+          TSINAXA CGI • GOVERNANCE ACCESS CONTROL
         </p>
 
         <h1
@@ -314,11 +299,11 @@ function InfrastructureAccessScreen({
               marginBottom: 0,
             }}
           >
-            EXAMIA protects continuity governance, routing integrity,
-            recovery visibility, institutional memory, safeguarding
-            coordination, and audit traceability. Access is governed
-            according to operational authorization and governance
-            status.
+            TSINAXA CGI protects continuity governance,
+            operational traceability, recovery visibility,
+            structural memory, executive survivability interpretation,
+            and audit integrity. Access is governed according to
+            operational authorization and governance role.
           </p>
         </div>
       </section>
