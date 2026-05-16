@@ -31,6 +31,10 @@ type RoutingAction = {
   routing_reason: string | null
 }
 
+type AuditSeverity = 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL'
+
+const GOVERNANCE_INSTITUTION = 'TSINAXA CGI'
+
 const ROUTING_STATUSES = [
   'ROUTING_PENDING',
   'ROUTED',
@@ -72,26 +76,57 @@ export default function RoutingContent() {
   ) {
     if (!responderId) return
 
-    const { error } = await supabase.from('case_routing_actions').insert({
-      case_id: caseItem.id,
-      assigned_responder_id: responderId,
-      routing_status: 'RESPONDER_ASSIGNED',
-      routing_reason: 'Governed routing assignment completed',
-    })
+    const responder = responders.find((item) => item.id === responderId)
+
+    const routingReason =
+      'Governed routing assignment completed'
+
+    const { data: routingAction, error } = await supabase
+      .from('case_routing_actions')
+      .insert({
+        case_id: caseItem.id,
+        assigned_responder_id: responderId,
+        routing_status: 'RESPONDER_ASSIGNED',
+        routing_reason: routingReason,
+      })
+      .select('id')
+      .single()
 
     if (error) {
       alert(error.message)
       return
     }
 
-    await supabase
+    const { error: updateError } = await supabase
       .from('beneficiary_cases')
       .update({
         case_status: 'RESPONDER_ASSIGNED',
       })
       .eq('id', caseItem.id)
 
-    setMessage('Responder assigned successfully.')
+    if (updateError) {
+      alert(updateError.message)
+      return
+    }
+
+    await preserveRoutingEvidence({
+      actionType: 'ROUTE_BENEFICIARY_CASE',
+      severity: resolveRoutingSeverity(caseItem),
+      recordType: 'beneficiary_cases',
+      recordId: caseItem.id,
+      summary: buildRoutingSummary({
+        caseItem,
+        responder,
+        routingReason,
+      }),
+      caseItem,
+      responder,
+      routingActionId: routingAction?.id || null,
+      routingStatus: 'RESPONDER_ASSIGNED',
+      routingReason,
+    })
+
+    setMessage('Responder assigned successfully. Routing evidence preserved.')
 
     await loadData()
   }
@@ -234,6 +269,174 @@ export default function RoutingContent() {
       </div>
     </main>
   )
+}
+
+async function preserveRoutingEvidence(input: {
+  actionType: string
+  severity: AuditSeverity
+  recordType: string
+  recordId: string
+  summary: string
+  caseItem: BeneficiaryCase
+  responder?: Responder
+  routingActionId: string | null
+  routingStatus: string
+  routingReason: string
+}) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const institution =
+    input.caseItem.institution_name ||
+    GOVERNANCE_INSTITUTION
+
+  const visibilityLevel =
+    input.caseItem.safeguarding_flag ||
+    input.caseItem.severity_level === 'CRITICAL' ||
+    input.caseItem.severity_level === 'HIGH'
+      ? 'EXECUTIVE'
+      : 'GOVERNANCE'
+
+  const governancePosture =
+    resolveRoutingGovernancePosture(input.caseItem)
+
+  const { error } = await supabase.from('audit_logs').insert({
+    user_id: user?.id ?? null,
+    email: user?.email ?? null,
+    role: 'ROUTING_GOVERNANCE_ACTOR',
+
+    action_type: input.actionType,
+    route: '/routing',
+    record_type: input.recordType,
+    record_id: input.recordId,
+    summary: input.summary,
+    severity: input.severity,
+
+    details: {
+      evidence_type: 'GOVERNED_ROUTING_EVIDENCE',
+      immutability_status: 'IMMUTABLE_GOVERNANCE_RECORD',
+      reconstruction_capability: 'ENABLED',
+
+      linked_snapshot_id: input.recordId,
+      beneficiary_case_id: input.caseItem.id,
+      routing_action_id: input.routingActionId,
+
+      governance_reason: input.summary,
+      routing_reason: input.routingReason,
+      routing_status: input.routingStatus,
+
+      governance_institution: institution,
+      governance_scope: 'Continuity routing and responder assignment',
+      governance_posture: governancePosture,
+      visibility_level: visibilityLevel,
+
+      institution_id: null,
+      institution_name: institution,
+      region: input.caseItem.region,
+
+      actor_id: user?.id ?? null,
+      actor_email: user?.email ?? null,
+      actor_role: 'ROUTING_GOVERNANCE_ACTOR',
+
+      beneficiary_name: input.caseItem.beneficiary_name,
+      support_domain: input.caseItem.support_domain,
+      case_status: input.caseItem.case_status,
+      severity_level: input.caseItem.severity_level,
+      safeguarding_flag: input.caseItem.safeguarding_flag,
+
+      assigned_responder_id: input.responder?.id ?? null,
+      assigned_responder_name: input.responder?.full_name ?? null,
+      responder_operational_status:
+        input.responder?.operational_status ?? null,
+      responder_region: input.responder?.region ?? null,
+
+      continuity_relevance:
+        'Routing evidence preserves how visible need entered governed response and whether assignment continuity can be reconstructed.',
+
+      survivability_context:
+        buildRoutingSurvivabilityContext({
+          caseItem: input.caseItem,
+          responder: input.responder,
+          visibilityLevel,
+        }),
+
+      continuity_memory_preserved: true,
+      institutional_traceability: true,
+      executive_visibility_enabled:
+        visibilityLevel === 'EXECUTIVE',
+
+      governance_boundary:
+        'NON_PUNITIVE_CONTINUITY_GOVERNANCE',
+    },
+  })
+
+  if (error) {
+    console.error('Routing governance evidence logging failed', {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+    })
+  }
+}
+
+function buildRoutingSummary(input: {
+  caseItem: BeneficiaryCase
+  responder?: Responder
+  routingReason: string
+}) {
+  return `Routed case ${input.caseItem.beneficiary_name} with priority ${input.caseItem.severity_level}. Status moved to RESPONDER_ASSIGNED. Institution: ${input.caseItem.institution_name || GOVERNANCE_INSTITUTION}. Responder: ${input.responder?.full_name || 'none assigned'}. Reason: ${input.routingReason}.`
+}
+
+function resolveRoutingSeverity(
+  caseItem: BeneficiaryCase
+): AuditSeverity {
+  if (caseItem.safeguarding_flag) {
+    return 'HIGH'
+  }
+
+  if (caseItem.severity_level === 'CRITICAL') {
+    return 'CRITICAL'
+  }
+
+  if (caseItem.severity_level === 'HIGH') {
+    return 'HIGH'
+  }
+
+  if (caseItem.severity_level === 'MODERATE') {
+    return 'MODERATE'
+  }
+
+  return 'LOW'
+}
+
+function resolveRoutingGovernancePosture(
+  caseItem: BeneficiaryCase
+) {
+  if (
+    caseItem.safeguarding_flag ||
+    caseItem.severity_level === 'CRITICAL'
+  ) {
+    return 'EXECUTIVE_REVIEW'
+  }
+
+  if (
+    caseItem.severity_level === 'HIGH' ||
+    caseItem.severity_level === 'MODERATE'
+  ) {
+    return 'GOVERNANCE_WATCH'
+  }
+
+  return 'CONTINUITY_ROUTING_MONITORING'
+}
+
+function buildRoutingSurvivabilityContext(input: {
+  caseItem: BeneficiaryCase
+  responder?: Responder
+  visibilityLevel: string
+}) {
+  return `Routing continuity preserved for ${input.caseItem.support_domain.toLowerCase()} support. Severity is ${input.caseItem.severity_level.toLowerCase()}, visibility level is ${input.visibilityLevel.toLowerCase()}, and responder assignment is ${input.responder?.full_name ? `linked to ${input.responder.full_name}` : 'not yet linked to a named responder'}. Stabilization credibility depends on whether routed support converts into completed intervention and durable recovery.`
 }
 
 function Metric({
