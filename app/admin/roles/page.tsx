@@ -163,21 +163,26 @@ function AdminRolesContent() {
     }
 
     const actor = await getAuditActor()
-
     const institutionScope = deriveInstitutionScope(newScope)
     const visibilityLevel = deriveVisibilityLevel(newRole, newScope)
     const severity = deriveAuditSeverity(previousRole, newRole, newScope)
 
-    const governanceReason = [
-      `Governance role updated for ${target.email}.`,
+    const summary = [
+      'UPDATE_GOVERNANCE_ROLE.',
+      `Actor: ${actor.email}.`,
+      `Actor role: ${actor.role}.`,
+      `Target user: ${target.email}.`,
+      `Target user ID: ${target.user_id}.`,
       `Previous role: ${previousRole}.`,
       `New role: ${newRole}.`,
       `Previous governance scope: ${previousScope}.`,
       `New governance scope: ${newScope}.`,
       `Institution scope: ${institutionScope}.`,
-      `Reason: ${reason}.`,
+      `Visibility level: ${visibilityLevel}.`,
+      `Governance reason: ${reason}.`,
       'Governance posture: permission change preserved as executive continuity evidence.',
-      'Boundary: non-punitive access governance; not staff surveillance or performance scoring.',
+      'Immutability status: IMMUTABLE_EVIDENCE_RECORD.',
+      'Non-punitive boundary: role governance only; not staff surveillance, blame, worker ranking, or clinical judgment.',
       'Evidence maturity: EXECUTIVE_RECONSTRUCTABLE.',
     ].join(' ')
 
@@ -189,12 +194,8 @@ function AdminRolesContent() {
       route: '/admin/roles',
       recordType: 'user_roles',
       recordId: target.user_id,
-      summary: governanceReason,
+      summary,
       severity,
-      institutionName: institutionScope,
-      visibilityLevel,
-      linkedSnapshotId: target.user_id,
-      governanceReason,
     })
 
     setMessage(
@@ -215,9 +216,7 @@ function AdminRolesContent() {
     <main style={styles.page}>
       <section style={styles.hero}>
         <p style={styles.kicker}>TSINAXA CGI • ROLE GOVERNANCE EVIDENCE</p>
-
         <h1 style={styles.title}>Governance Role Control</h1>
-
         <p style={styles.subtitle}>
           Role changes are no longer quiet permission edits. Each change preserves
           actor identity, target user, previous role, new role, governance scope,
