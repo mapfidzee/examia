@@ -16,6 +16,35 @@ type BeneficiaryCase = {
   region?: string | null
   institution_name?: string | null
   safeguarding_flag?: boolean | null
+  intervention_summary?: string | null
+  outcome_summary?: string | null
+  created_at?: string | null
+  updated_at?: string | null
+}
+
+type RoutingRecord = {
+  id: string
+  case_id?: string | null
+  assigned_responder_id?: string | null
+  routing_status?: string | null
+  routing_reason?: string | null
+  created_at?: string | null
+}
+
+type InterventionRecord = {
+  id: string
+  case_id?: string | null
+  intervention_type?: string | null
+  intervention_summary?: string | null
+  created_at?: string | null
+}
+
+type TimelineRecord = {
+  id: string
+  case_id?: string | null
+  event_type?: string | null
+  event_summary?: string | null
+  actor?: string | null
   created_at?: string | null
 }
 
@@ -31,28 +60,6 @@ type AuditLog = {
   severity?: string | null
   created_at?: string | null
   details?: Record<string, unknown> | null
-}
-
-type RoutingRecord = {
-  id: string
-  beneficiary_case_id?: string | null
-  routing_status?: string | null
-  routing_priority?: string | null
-  routing_reason?: string | null
-  assigned_responder_id?: string | null
-  institution_name?: string | null
-  created_at?: string | null
-}
-
-type InterventionRecord = {
-  id: string
-  beneficiary_case_id?: string | null
-  intervention_status?: string | null
-  intervention_type?: string | null
-  completion_notes?: string | null
-  continuity_risk?: string | null
-  next_status?: string | null
-  created_at?: string | null
 }
 
 type ReconstructionPosture =
@@ -95,7 +102,7 @@ function getAuditActor(log: AuditLog) {
 
 function getAuditInstitution(log: AuditLog) {
   const text = log.summary || ''
-  const summaryInstitution = text.match(/Institution scope:\s*([^.]*)\./i)
+  const summaryInstitution = text.match(/Institution:\s*([^.]*)\./i)
 
   return safeText(
     detailValue(log, 'institution_name') ||
@@ -109,15 +116,20 @@ function getAuditInstitution(log: AuditLog) {
 function getEvidenceMaturity(log: AuditLog) {
   const text = fullAuditText(log)
 
-  if (text.includes('EXECUTIVE_RECONSTRUCTABLE')) {
+  if (
+    text.includes('EXECUTIVE_RECONSTRUCTABLE') ||
+    text.includes('RECONSTRUCTION_CAPABILITY') ||
+    text.includes('IMMUTABLE_GOVERNANCE_RECORD')
+  ) {
     return 'EXECUTIVE RECONSTRUCTABLE'
   }
 
   if (
-    text.includes('HARDENED') ||
+    text.includes('CONTROLLED_INTERVENTION_EVIDENCE') ||
+    text.includes('GOVERNED_ROUTING_EVIDENCE') ||
     text.includes('GOVERNANCE REASON') ||
-    text.includes('NON-PUNITIVE') ||
-    text.includes('VISIBILITY LEVEL')
+    text.includes('NON_PUNITIVE') ||
+    text.includes('VISIBILITY_LEVEL')
   ) {
     return 'HARDENED GOVERNANCE EVIDENCE'
   }
@@ -140,14 +152,13 @@ function CaseContinuityLedger() {
   const [caseRecord, setCaseRecord] = useState<BeneficiaryCase | null>(null)
   const [routingRecords, setRoutingRecords] = useState<RoutingRecord[]>([])
   const [interventionRecords, setInterventionRecords] = useState<InterventionRecord[]>([])
+  const [timelineRecords, setTimelineRecords] = useState<TimelineRecord[]>([])
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (caseId) {
-      loadCaseContinuity()
-    }
+    if (caseId) loadCaseContinuity()
   }, [caseId])
 
   async function loadCaseContinuity() {
@@ -166,29 +177,44 @@ function CaseContinuityLedger() {
       return
     }
 
-    const { data: routingData } = await supabase
-      .from('case_routing')
-      .select('*')
-      .eq('beneficiary_case_id', caseId)
-      .order('created_at', { ascending: false })
+    const [routingResult, interventionResult, timelineResult, auditResult] =
+      await Promise.all([
+        supabase
+          .from('case_routing_actions')
+          .select('*')
+          .eq('case_id', caseId)
+          .order('created_at', { ascending: false }),
 
-    const { data: interventionData } = await supabase
-      .from('intervention_records')
-      .select('*')
-      .eq('beneficiary_case_id', caseId)
-      .order('created_at', { ascending: false })
+        supabase
+          .from('case_interventions')
+          .select('*')
+          .eq('case_id', caseId)
+          .order('created_at', { ascending: false }),
 
-    const { data: auditData } = await supabase
-      .from('audit_logs')
-      .select('*')
-      .or(`record_id.eq.${caseId},summary.ilike.%${caseId}%`)
-      .order('created_at', { ascending: false })
-      .limit(100)
+        supabase
+          .from('case_timeline')
+          .select('*')
+          .eq('case_id', caseId)
+          .order('created_at', { ascending: false }),
+
+        supabase
+          .from('audit_logs')
+          .select('*')
+          .or(`record_id.eq.${caseId},summary.ilike.%${caseId}%`)
+          .order('created_at', { ascending: false })
+          .limit(100),
+      ])
+
+    if (routingResult.error) console.error(routingResult.error)
+    if (interventionResult.error) console.error(interventionResult.error)
+    if (timelineResult.error) console.error(timelineResult.error)
+    if (auditResult.error) console.error(auditResult.error)
 
     setCaseRecord(caseData)
-    setRoutingRecords(routingData || [])
-    setInterventionRecords(interventionData || [])
-    setAuditLogs(auditData || [])
+    setRoutingRecords(routingResult.data || [])
+    setInterventionRecords(interventionResult.data || [])
+    setTimelineRecords(timelineResult.data || [])
+    setAuditLogs(auditResult.data || [])
     setLoading(false)
   }
 
@@ -196,33 +222,41 @@ function CaseContinuityLedger() {
     const hasCase = Boolean(caseRecord)
     const hasRouting = routingRecords.length > 0
     const hasIntervention = interventionRecords.length > 0
+    const hasTimeline = timelineRecords.length > 0
     const hasAudit = auditLogs.length > 0
     const hasExecutiveEvidence = auditLogs.some(
       (log) => getEvidenceMaturity(log) === 'EXECUTIVE RECONSTRUCTABLE'
     )
 
-    if (!hasCase && !hasRouting && !hasIntervention && !hasAudit) {
+    if (!hasCase && !hasRouting && !hasIntervention && !hasTimeline && !hasAudit) {
       return 'RECONSTRUCTION EMPTY'
     }
 
-    if (hasCase && hasRouting && hasIntervention && hasAudit && hasExecutiveEvidence) {
+    if (
+      hasCase &&
+      hasRouting &&
+      hasIntervention &&
+      hasTimeline &&
+      hasAudit &&
+      hasExecutiveEvidence
+    ) {
       return 'EXECUTIVE RECONSTRUCTABLE'
     }
 
-    if (hasCase && (hasRouting || hasIntervention) && hasAudit) {
+    if (hasCase && (hasRouting || hasIntervention || hasTimeline) && hasAudit) {
       return 'GOVERNED CONTINUITY TRACE'
     }
 
     return 'PARTIAL CONTINUITY MEMORY'
-  }, [caseRecord, routingRecords, interventionRecords, auditLogs])
+  }, [caseRecord, routingRecords, interventionRecords, timelineRecords, auditLogs])
 
   const reconstructionMeaning = useMemo(() => {
     if (reconstructionPosture === 'EXECUTIVE RECONSTRUCTABLE') {
-      return 'This case has enough continuity evidence for leadership to reconstruct intake context, routing movement, intervention activity, and governance evidence.'
+      return 'This case has enough continuity evidence for leadership to reconstruct case identity, routing movement, intervention activity, timeline memory, and governance evidence.'
     }
 
     if (reconstructionPosture === 'GOVERNED CONTINUITY TRACE') {
-      return 'This case has a governed continuity trail, but some recovery, survivability, or executive reconstruction evidence may still be incomplete.'
+      return 'This case has a governed continuity trail, but recovery, reliability, or survivability evidence may still be incomplete.'
     }
 
     if (reconstructionPosture === 'PARTIAL CONTINUITY MEMORY') {
@@ -244,9 +278,16 @@ function CaseContinuityLedger() {
       ...interventionRecords.map((item) => ({
         id: `intervention-${item.id}`,
         type: 'INTERVENTION',
-        title: safeText(item.intervention_status, 'Intervention event'),
+        title: safeText(item.intervention_type, 'Intervention event'),
         date: item.created_at,
-        body: safeText(item.completion_notes || item.continuity_risk, 'Intervention evidence not recorded'),
+        body: safeText(item.intervention_summary, 'Intervention summary not recorded'),
+      })),
+      ...timelineRecords.map((item) => ({
+        id: `timeline-${item.id}`,
+        type: 'TIMELINE',
+        title: safeText(item.event_type, 'Timeline event'),
+        date: item.created_at,
+        body: safeText(item.event_summary, 'Timeline summary not recorded'),
       })),
       ...auditLogs.map((item) => ({
         id: `audit-${item.id}`,
@@ -262,7 +303,7 @@ function CaseContinuityLedger() {
       const bTime = b.date ? new Date(b.date).getTime() : 0
       return bTime - aTime
     })
-  }, [routingRecords, interventionRecords, auditLogs])
+  }, [routingRecords, interventionRecords, timelineRecords, auditLogs])
 
   return (
     <main className="min-h-screen text-white">
@@ -282,7 +323,8 @@ function CaseContinuityLedger() {
 
           <p className="mt-5 max-w-4xl text-base leading-8 text-slate-300 md:text-lg">
             This view reconstructs a single case across routing, intervention,
-            audit evidence, continuity posture, and executive reconstructability.
+            timeline memory, audit evidence, continuity posture, and executive
+            reconstructability.
           </p>
 
           <button
@@ -319,11 +361,12 @@ function CaseContinuityLedger() {
               </p>
             </section>
 
-            <section className="grid gap-4 md:grid-cols-4">
+            <section className="grid gap-4 md:grid-cols-5">
               <MetricCard title="Routing Records" value={routingRecords.length} />
               <MetricCard title="Intervention Records" value={interventionRecords.length} />
+              <MetricCard title="Timeline Records" value={timelineRecords.length} />
               <MetricCard title="Audit Evidence" value={auditLogs.length} />
-              <MetricCard title="Timeline Events" value={timeline.length} />
+              <MetricCard title="Total Events" value={timeline.length} />
             </section>
 
             <section className="grid gap-5 lg:grid-cols-3">
@@ -340,7 +383,11 @@ function CaseContinuityLedger() {
                   <EvidenceLine label="Region" value={safeText(caseRecord?.region)} />
                   <EvidenceLine
                     label="Safeguarding"
-                    value={caseRecord?.safeguarding_flag ? 'Safeguarding flag active' : 'No safeguarding flag recorded'}
+                    value={
+                      caseRecord?.safeguarding_flag
+                        ? 'Safeguarding flag active'
+                        : 'No safeguarding flag recorded'
+                    }
                   />
                 </div>
               </div>
@@ -349,15 +396,13 @@ function CaseContinuityLedger() {
                 <h2 className="text-xl font-black">Continuity Timeline</h2>
 
                 <p className="mt-2 text-sm leading-6 text-slate-400">
-                  Timeline combines routing, intervention, and audit evidence so
-                  visible instability does not disappear after action is taken.
+                  Timeline combines routing, intervention, lifecycle timeline,
+                  and audit evidence so visible instability does not disappear.
                 </p>
 
                 <div className="mt-5 space-y-3">
                   {timeline.length === 0 ? (
-                    <p className="rounded-2xl bg-slate-900 p-4 text-sm text-slate-400">
-                      No continuity timeline exists yet for this case.
-                    </p>
+                    <EmptyState text="No continuity timeline exists yet for this case." />
                   ) : (
                     timeline.map((event) => (
                       <article
@@ -376,7 +421,7 @@ function CaseContinuityLedger() {
 
                         <h3 className="mt-3 font-black text-white">{event.title}</h3>
 
-                        <p className="mt-2 text-sm leading-6 text-slate-400">
+                        <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-400">
                           {event.body}
                         </p>
                       </article>
@@ -389,14 +434,13 @@ function CaseContinuityLedger() {
             <section className="grid gap-5 lg:grid-cols-2">
               <EvidencePanel title="Routing Evidence">
                 {routingRecords.length === 0 ? (
-                  <EmptyState text="No routing evidence linked to this case yet." />
+                  <EmptyState text="No routing action records linked to this case yet." />
                 ) : (
                   routingRecords.map((item) => (
                     <article key={item.id} className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
                       <EvidenceLine label="Routing Status" value={safeText(item.routing_status)} />
-                      <EvidenceLine label="Priority" value={safeText(item.routing_priority)} />
                       <EvidenceLine label="Reason" value={safeText(item.routing_reason)} />
-                      <EvidenceLine label="Institution" value={safeText(item.institution_name)} />
+                      <EvidenceLine label="Assigned Responder ID" value={safeText(item.assigned_responder_id)} />
                       <EvidenceLine label="Created" value={formatDate(item.created_at)} />
                     </article>
                   ))
@@ -405,16 +449,15 @@ function CaseContinuityLedger() {
 
               <EvidencePanel title="Intervention Evidence">
                 {interventionRecords.length === 0 ? (
-                  <EmptyState text="No intervention evidence linked to this case yet." />
+                  <EmptyState text="No intervention records linked to this case yet." />
                 ) : (
                   interventionRecords.map((item) => (
                     <article key={item.id} className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
-                      <EvidenceLine label="Intervention Status" value={safeText(item.intervention_status)} />
                       <EvidenceLine label="Intervention Type" value={safeText(item.intervention_type)} />
-                      <EvidenceLine label="Continuity Risk" value={safeText(item.continuity_risk)} />
-                      <EvidenceLine label="Next Status" value={safeText(item.next_status)} />
-                      <EvidenceLine label="Completion Notes" value={safeText(item.completion_notes)} />
                       <EvidenceLine label="Created" value={formatDate(item.created_at)} />
+                      <p className="mt-4 whitespace-pre-wrap rounded-2xl border border-slate-800 bg-slate-950 p-4 text-sm leading-6 text-slate-300">
+                        {safeText(item.intervention_summary, 'Intervention summary not recorded')}
+                      </p>
                     </article>
                   ))
                 )}
@@ -423,10 +466,6 @@ function CaseContinuityLedger() {
 
             <section className="rounded-3xl border border-slate-800 bg-slate-950 p-5">
               <h2 className="text-xl font-black">Governance Audit Evidence</h2>
-
-              <p className="mt-2 text-sm leading-6 text-slate-400">
-                Audit evidence linked to this case by record ID or preserved summary.
-              </p>
 
               <div className="mt-5 space-y-3">
                 {auditLogs.length === 0 ? (
@@ -480,7 +519,7 @@ function CaseContinuityLedger() {
                 />
                 <InterpretationCard
                   title="Visible Instability Must Not Disappear"
-                  text="Routing, intervention, and audit evidence remain visible as institutional memory instead of fading after the workflow moves on."
+                  text="Routing, intervention, timeline, and audit evidence remain visible as institutional memory instead of fading after the workflow moves on."
                 />
               </div>
             </section>
@@ -513,7 +552,6 @@ function EvidencePanel({
   return (
     <section className="rounded-3xl border border-slate-800 bg-slate-950 p-5">
       <h2 className="text-xl font-black">{title}</h2>
-
       <div className="mt-5 space-y-3">{children}</div>
     </section>
   )
