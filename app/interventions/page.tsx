@@ -6,7 +6,6 @@ import {
   evaluateInterventionLifecycle,
   type ContinuityRisk,
 } from '../../lib/lifecycleGovernance'
-import { logAuditEvent } from '../../lib/auditLogger'
 import { supabase } from '../../lib/supabase'
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
@@ -23,6 +22,10 @@ type BeneficiaryCase = {
   safeguarding_flag: boolean
   assigned_responder_id?: string | null
 }
+
+type AuditSeverity = 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL'
+
+const GOVERNANCE_INSTITUTION = 'TSINAXA CGI'
 
 const INTERVENTION_TYPES = [
   'Learning continuity stabilization',
@@ -114,17 +117,6 @@ function InterventionCompletionContent() {
     loadCases()
   }, [])
 
-  async function getAuditActor() {
-    const { data } = await supabase.auth.getUser()
-    const user = data.user
-
-    return {
-      userId: user?.id ?? null,
-      email: user?.email ?? null,
-      role: 'INTERVENTION_GOVERNANCE_USER',
-    }
-  }
-
   async function loadCases() {
     const { data, error } = await supabase
       .from('beneficiary_cases')
@@ -167,6 +159,9 @@ CONTROLLED INTERVENTION EVIDENCE RECORD
 
 Beneficiary Case:
 ${caseItem.beneficiary_name} • ${caseItem.support_domain} • ${caseItem.severity_level}
+
+Institution:
+${caseItem.institution_name || GOVERNANCE_INSTITUTION}
 
 Intervention Type:
 ${interventionType || 'Not specified'}
@@ -222,6 +217,13 @@ Intervention is not recovery. TSINAXA CGI records the intervention, evaluates co
     setMessage('')
 
     const caseItem = selectedCase()
+
+    if (!caseItem) {
+      alert('Selected case could not be found.')
+      setLoading(false)
+      return
+    }
+
     const lifecycleDecision = evaluateInterventionLifecycle({
       completionStatus,
       continuityRisk,
@@ -229,13 +231,15 @@ Intervention is not recovery. TSINAXA CGI records the intervention, evaluates co
 
     const evidence = interventionEvidence()
 
-    const { error: interventionError } = await supabase
+    const { data: interventionRecord, error: interventionError } = await supabase
       .from('case_interventions')
       .insert({
         case_id: selectedCaseId,
         intervention_type: interventionType,
         intervention_summary: evidence,
       })
+      .select('id')
+      .single()
 
     if (interventionError) {
       alert(interventionError.message)
@@ -258,12 +262,16 @@ Intervention is not recovery. TSINAXA CGI records the intervention, evaluates co
       return
     }
 
-    const { error: timelineError } = await supabase.from('case_timeline').insert({
-      case_id: selectedCaseId,
-      event_type: lifecycleDecision.timelineEventType,
-      event_summary: `${lifecycleDecision.timelineSummary} Completion: ${completionStatus}. Continuity risk: ${continuityRisk}. Stabilization confidence: ${lifecycleDecision.stabilizationConfidence}.`,
-      actor: 'TSINAXA CGI Lifecycle Governance Intervention',
-    })
+    const { data: timelineRecord, error: timelineError } = await supabase
+      .from('case_timeline')
+      .insert({
+        case_id: selectedCaseId,
+        event_type: lifecycleDecision.timelineEventType,
+        event_summary: `${lifecycleDecision.timelineSummary} Completion: ${completionStatus}. Continuity risk: ${continuityRisk}. Stabilization confidence: ${lifecycleDecision.stabilizationConfidence}.`,
+        actor: 'TSINAXA CGI Lifecycle Governance Intervention',
+      })
+      .select('id')
+      .single()
 
     if (timelineError) {
       alert(timelineError.message)
@@ -271,25 +279,20 @@ Intervention is not recovery. TSINAXA CGI records the intervention, evaluates co
       return
     }
 
-    const actor = await getAuditActor()
-
-    await logAuditEvent({
-      userId: actor.userId,
-      email: actor.email,
-      role: actor.role,
-      actionType: 'SAVE_INTERVENTION_EVIDENCE',
-      route: '/interventions',
-      recordType: 'beneficiary_cases',
-      recordId: selectedCaseId,
-      summary: `Saved intervention evidence for ${caseItem?.beneficiary_name || selectedCaseId}. Completion: ${completionStatus}. Continuity risk: ${continuityRisk}. Next status: ${lifecycleDecision.nextStatus}.`,
-      severity:
-        continuityRisk === 'CRITICAL'
-          ? 'CRITICAL'
-          : continuityRisk === 'HIGH'
-            ? 'HIGH'
-            : completionStatus === 'ESCALATION_REQUIRED'
-              ? 'HIGH'
-              : 'MODERATE',
+    await preserveInterventionGovernanceEvidence({
+      caseItem,
+      interventionRecordId: interventionRecord?.id || null,
+      timelineRecordId: timelineRecord?.id || null,
+      lifecycleDecision,
+      evidence,
+      interventionType,
+      interventionMode,
+      completionStatus,
+      sessionSummary,
+      stabilizationScore,
+      continuityRisk,
+      responderTemplate,
+      additionalResponderNotes,
     })
 
     setSelectedCaseId('')
@@ -302,7 +305,7 @@ Intervention is not recovery. TSINAXA CGI records the intervention, evaluates co
     setResponderTemplate('')
     setAdditionalResponderNotes('')
 
-    setMessage('Controlled intervention evidence saved. Lifecycle governance, timeline memory, and audit trail updated.')
+    setMessage('Controlled intervention evidence saved. Lifecycle governance, timeline memory, and audit evidence preserved.')
     setLoading(false)
 
     await loadCases()
@@ -459,6 +462,235 @@ Intervention is not recovery. TSINAXA CGI records the intervention, evaluates co
       </div>
     </main>
   )
+}
+
+async function preserveInterventionGovernanceEvidence(input: {
+  caseItem: BeneficiaryCase
+  interventionRecordId: string | null
+  timelineRecordId: string | null
+  lifecycleDecision: {
+    nextStatus: string
+    stabilizationConfidence: string
+    shouldEscalate: boolean
+    shouldMonitorRecovery: boolean
+    commandVisibility: boolean
+    timelineEventType: string
+    timelineSummary: string
+  }
+  evidence: string
+  interventionType: string
+  interventionMode: string
+  completionStatus: string
+  sessionSummary: string
+  stabilizationScore: string
+  continuityRisk: ContinuityRisk
+  responderTemplate: string
+  additionalResponderNotes: string
+}) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const institution =
+    input.caseItem.institution_name ||
+    GOVERNANCE_INSTITUTION
+
+  const visibilityLevel =
+    input.lifecycleDecision.commandVisibility ||
+    input.caseItem.safeguarding_flag ||
+    input.continuityRisk === 'CRITICAL' ||
+    input.continuityRisk === 'HIGH'
+      ? 'EXECUTIVE'
+      : 'GOVERNANCE'
+
+  const governancePosture =
+    resolveInterventionGovernancePosture({
+      continuityRisk: input.continuityRisk,
+      completionStatus: input.completionStatus,
+      commandVisibility:
+        input.lifecycleDecision.commandVisibility,
+      shouldEscalate:
+        input.lifecycleDecision.shouldEscalate,
+    })
+
+  const severity = resolveInterventionSeverity({
+    continuityRisk: input.continuityRisk,
+    completionStatus: input.completionStatus,
+    commandVisibility:
+      input.lifecycleDecision.commandVisibility,
+  })
+
+  const summary =
+    `Saved intervention evidence for ${input.caseItem.beneficiary_name}. Completion: ${input.completionStatus}. Continuity risk: ${input.continuityRisk}. Next status: ${input.lifecycleDecision.nextStatus}. Institution: ${institution}.`
+
+  const { error } = await supabase.from('audit_logs').insert({
+    user_id: user?.id ?? null,
+    email: user?.email ?? null,
+    role: 'INTERVENTION_GOVERNANCE_USER',
+
+    action_type: 'SAVE_INTERVENTION_EVIDENCE',
+    route: '/interventions',
+    record_type: 'beneficiary_cases',
+    record_id: input.caseItem.id,
+    summary,
+    severity,
+
+    details: {
+      evidence_type: 'CONTROLLED_INTERVENTION_EVIDENCE',
+      immutability_status: 'IMMUTABLE_GOVERNANCE_RECORD',
+      reconstruction_capability: 'ENABLED',
+
+      linked_snapshot_id: input.caseItem.id,
+      beneficiary_case_id: input.caseItem.id,
+      intervention_record_id:
+        input.interventionRecordId,
+      timeline_record_id:
+        input.timelineRecordId,
+
+      governance_reason: summary,
+      governance_institution: institution,
+      governance_scope:
+        'Controlled intervention completion and recovery continuity',
+      governance_posture: governancePosture,
+      visibility_level: visibilityLevel,
+
+      institution_id: null,
+      institution_name: institution,
+      region: input.caseItem.region,
+
+      actor_id: user?.id ?? null,
+      actor_email: user?.email ?? null,
+      actor_role: 'INTERVENTION_GOVERNANCE_USER',
+
+      beneficiary_name: input.caseItem.beneficiary_name,
+      beneficiary_level: input.caseItem.beneficiary_level,
+      support_domain: input.caseItem.support_domain,
+      previous_case_status: input.caseItem.case_status,
+      next_case_status: input.lifecycleDecision.nextStatus,
+      severity_level: input.caseItem.severity_level,
+      safeguarding_flag: input.caseItem.safeguarding_flag,
+
+      intervention_type: input.interventionType,
+      intervention_mode: input.interventionMode,
+      completion_status: input.completionStatus,
+      session_summary: input.sessionSummary,
+      stabilization_score:
+        Number(input.stabilizationScore),
+      continuity_risk_after_intervention:
+        input.continuityRisk,
+
+      stabilization_confidence:
+        input.lifecycleDecision.stabilizationConfidence,
+      escalation_required:
+        input.lifecycleDecision.shouldEscalate,
+      recovery_monitoring_required:
+        input.lifecycleDecision.shouldMonitorRecovery,
+      command_visibility_required:
+        input.lifecycleDecision.commandVisibility,
+
+      responder_note_template:
+        input.responderTemplate || null,
+      additional_operational_notes:
+        input.additionalResponderNotes.trim() || null,
+
+      continuity_relevance:
+        'Intervention evidence preserves whether routed support converted into completed action, partial action, escalation, follow-up, or recovery monitoring.',
+
+      survivability_context:
+        buildInterventionSurvivabilityContext({
+          caseItem: input.caseItem,
+          completionStatus: input.completionStatus,
+          continuityRisk: input.continuityRisk,
+          stabilizationConfidence:
+            input.lifecycleDecision.stabilizationConfidence,
+          nextStatus: input.lifecycleDecision.nextStatus,
+        }),
+
+      intervention_is_not_recovery: true,
+      continuity_memory_preserved: true,
+      institutional_traceability: true,
+      executive_visibility_enabled:
+        visibilityLevel === 'EXECUTIVE',
+
+      governance_boundary:
+        'NON_PUNITIVE_CONTINUITY_GOVERNANCE',
+    },
+  })
+
+  if (error) {
+    console.error('Intervention governance evidence logging failed', {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+    })
+  }
+}
+
+function resolveInterventionSeverity(input: {
+  continuityRisk: ContinuityRisk
+  completionStatus: string
+  commandVisibility: boolean
+}): AuditSeverity {
+  if (
+    input.continuityRisk === 'CRITICAL' ||
+    input.completionStatus === 'ESCALATION_REQUIRED'
+  ) {
+    return 'CRITICAL'
+  }
+
+  if (
+    input.continuityRisk === 'HIGH' ||
+    input.commandVisibility
+  ) {
+    return 'HIGH'
+  }
+
+  if (input.continuityRisk === 'MODERATE') {
+    return 'MODERATE'
+  }
+
+  return 'LOW'
+}
+
+function resolveInterventionGovernancePosture(input: {
+  continuityRisk: ContinuityRisk
+  completionStatus: string
+  commandVisibility: boolean
+  shouldEscalate: boolean
+}) {
+  if (
+    input.continuityRisk === 'CRITICAL' ||
+    input.completionStatus === 'ESCALATION_REQUIRED' ||
+    input.shouldEscalate
+  ) {
+    return 'EXECUTIVE_REVIEW'
+  }
+
+  if (
+    input.continuityRisk === 'HIGH' ||
+    input.commandVisibility ||
+    input.completionStatus === 'FOLLOW_UP_REQUIRED' ||
+    input.completionStatus === 'INTERRUPTED'
+  ) {
+    return 'GOVERNANCE_WATCH'
+  }
+
+  if (input.continuityRisk === 'MODERATE') {
+    return 'RECOVERY_MONITORING'
+  }
+
+  return 'STABILIZATION_EVIDENCE_HOLDING'
+}
+
+function buildInterventionSurvivabilityContext(input: {
+  caseItem: BeneficiaryCase
+  completionStatus: string
+  continuityRisk: ContinuityRisk
+  stabilizationConfidence: string
+  nextStatus: string
+}) {
+  return `Intervention completion is ${input.completionStatus.toLowerCase()} with ${input.continuityRisk.toLowerCase()} continuity risk and ${input.stabilizationConfidence.toLowerCase()} stabilization confidence. The case moves toward ${input.nextStatus.toLowerCase()}. Recovery is not assumed; survivability depends on follow-up, monitoring, escalation handling, and durable stabilization evidence.`
 }
 
 function Metric({ label, value }: { label: string; value: number }) {
