@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { supabase } from '../../lib/supabase'
 
@@ -9,8 +10,6 @@ type CgiOperationalMetric = {
   id: string
   created_at: string
   scope: string
-  region: string | null
-  institution_id: string | null
 
   continuity_state: string
   pressure_propagation_state: string
@@ -27,14 +26,10 @@ type CgiOperationalMetric = {
 
   recovery_reliability_score: number
   operational_survivability_score: number
-  continuity_integrity_score: number
-  stabilization_confidence_score: number
 
   dominant_pressure_source: string | null
   dominant_trajectory_signal: string | null
   dominant_memory_pattern: string | null
-  executive_summary: string | null
-  action_cue: string | null
 }
 
 type PressureState =
@@ -44,9 +39,10 @@ type PressureState =
   | 'PRESSURE_SPREADING'
   | 'PRESSURE_CRITICAL'
 
-type PanelRow = {
-  label: string
-  value: string
+type Interpretation = {
+  posture: string
+  meaning: string
+  action: string
 }
 
 const SAMPLE_LIMIT = 120
@@ -68,7 +64,7 @@ function PressureContent() {
   }, [])
 
   async function loadPressureMetrics() {
-    setMessage('Loading persisted CGI pressure metrics...')
+    setMessage('Loading pressure intelligence...')
 
     const { data, error } = await supabase
       .from('cgi_operational_metrics')
@@ -78,70 +74,42 @@ function PressureContent() {
 
     if (error) {
       console.error(error)
-      setMessage('Failed to load persisted CGI pressure metrics.')
+      setMessage('Pressure intelligence could not be loaded.')
       return
     }
 
     setMetrics(data || [])
-    setMessage('Persisted CGI pressure metrics loaded.')
+    setMessage('Pressure intelligence loaded.')
   }
 
   const pressure = useMemo(() => {
     const ordered = [...metrics].sort(
-      (a, b) =>
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
     )
 
     const latest = ordered[ordered.length - 1] || null
     const previous = ordered[ordered.length - 2] || null
-
     const earlyWindow = ordered.slice(0, 5)
     const recentWindow = ordered.slice(-5)
 
-    const averageEscalationPressure = average(
-      metrics.map((item) => item.escalation_pressure_index),
-    )
+    const escalation = average(ordered.map((item) => item.escalation_pressure_index))
+    const propagation = average(ordered.map((item) => item.propagation_risk))
+    const routing = average(ordered.map((item) => item.routing_friction))
+    const responder = average(ordered.map((item) => item.responder_pressure))
+    const velocity = average(ordered.map((item) => item.escalation_velocity))
+    const coordination = average(ordered.map((item) => item.coordination_instability))
+    const drag = average(ordered.map((item) => item.stabilization_drag))
+    const recoveryReliability = average(ordered.map((item) => item.recovery_reliability_score))
+    const survivability = average(ordered.map((item) => item.operational_survivability_score))
 
-    const averagePropagationRisk = average(
-      metrics.map((item) => item.propagation_risk),
-    )
-
-    const averageRoutingFriction = average(
-      metrics.map((item) => item.routing_friction),
-    )
-
-    const averageResponderPressure = average(
-      metrics.map((item) => item.responder_pressure),
-    )
-
-    const averageEscalationVelocity = average(
-      metrics.map((item) => item.escalation_velocity),
-    )
-
-    const averageCoordinationInstability = average(
-      metrics.map((item) => item.coordination_instability),
-    )
-
-    const averageStabilizationDrag = average(
-      metrics.map((item) => item.stabilization_drag),
-    )
-
-    const averageRecoveryReliability = average(
-      metrics.map((item) => item.recovery_reliability_score),
-    )
-
-    const averageSurvivability = average(
-      metrics.map((item) => item.operational_survivability_score),
-    )
-
-    const pressureLoad = average([
-      averageEscalationPressure,
-      averagePropagationRisk,
-      averageRoutingFriction,
-      averageResponderPressure,
-      averageEscalationVelocity,
-      averageCoordinationInstability,
-      averageStabilizationDrag,
+    const load = average([
+      escalation,
+      propagation,
+      routing,
+      responder,
+      velocity,
+      coordination,
+      drag,
     ])
 
     const earlyPressure = average(
@@ -154,8 +122,8 @@ function PressureContent() {
           item.escalation_velocity,
           item.coordination_instability,
           item.stabilization_drag,
-        ]),
-      ),
+        ])
+      )
     )
 
     const recentPressure = average(
@@ -168,14 +136,13 @@ function PressureContent() {
           item.escalation_velocity,
           item.coordination_instability,
           item.stabilization_drag,
-        ]),
-      ),
+        ])
+      )
     )
 
-    const pressureVelocity =
-      metrics.length < 2 ? 0 : Math.round(recentPressure - earlyPressure)
+    const pressureVelocity = ordered.length < 2 ? 0 : recentPressure - earlyPressure
 
-    const latestPressureMovement =
+    const latestMovement =
       latest && previous
         ? average([
             latest.escalation_pressure_index - previous.escalation_pressure_index,
@@ -188,8 +155,8 @@ function PressureContent() {
           ])
         : 0
 
-    const pressureVolatility = calculateVolatility(
-      metrics.map((item) =>
+    const volatility = calculateVolatility(
+      ordered.map((item) =>
         average([
           item.escalation_pressure_index,
           item.propagation_risk,
@@ -198,199 +165,105 @@ function PressureContent() {
           item.escalation_velocity,
           item.coordination_instability,
           item.stabilization_drag,
-        ]),
-      ),
+        ])
+      )
     )
 
-    const pressureContainmentScore = clamp(
-      averageRecoveryReliability * 0.35 +
-        averageSurvivability * 0.35 +
-        (100 - pressureLoad) * 0.3,
+    const containment = clamp(
+      recoveryReliability * 0.35 + survivability * 0.35 + (100 - load) * 0.3
     )
 
-    const pressureConcentrationScore = strongestScore({
-      'Escalation pressure': averageEscalationPressure,
-      'Propagation risk': averagePropagationRisk,
-      'Routing friction': averageRoutingFriction,
-      'Responder pressure': averageResponderPressure,
-      'Escalation velocity': averageEscalationVelocity,
-      'Coordination instability': averageCoordinationInstability,
-      'Stabilization drag': averageStabilizationDrag,
-    }).score
+    const spread = average([propagation, coordination, velocity, drag])
 
-    const pressureSpreadScore = clamp(
-      average([
-        averagePropagationRisk,
-        averageCoordinationInstability,
-        averageEscalationVelocity,
-        averageStabilizationDrag,
-      ]),
-    )
+    const dominantDriver = strongestDriver({
+      'Escalation pressure': escalation,
+      'Propagation risk': propagation,
+      'Routing friction': routing,
+      'Responder pressure': responder,
+      'Escalation velocity': velocity,
+      'Coordination instability': coordination,
+      'Stabilization drag': drag,
+    })
 
-    const pressureState = getPressureState({
-      count: metrics.length,
-      pressureLoad,
-      pressureVelocity,
-      pressureVolatility,
-      pressureContainmentScore,
+    const state = getPressureState({
+      count: ordered.length,
+      load,
+      velocity: pressureVelocity,
+      volatility,
+      containment,
       latest,
     })
 
-    const dominantPressureDriver = strongestScore({
-      'Escalation pressure': averageEscalationPressure,
-      'Propagation risk': averagePropagationRisk,
-      'Routing friction': averageRoutingFriction,
-      'Responder pressure': averageResponderPressure,
-      'Escalation velocity': averageEscalationVelocity,
-      'Coordination instability': averageCoordinationInstability,
-      'Stabilization drag': averageStabilizationDrag,
-    }).label
+    const pressurePosture = interpretPressureState(state)
+    const loadMeaning = interpretPressureLoad(load)
+    const spreadMeaning = interpretSpread(spread)
+    const containmentMeaning = interpretContainment(containment)
+    const velocityMeaning = interpretVelocity(pressureVelocity || latestMovement)
+    const volatilityMeaning = interpretVolatility(volatility)
+    const routingMeaning = interpretRouting(routing)
+    const responderMeaning = interpretResponder(responder)
+    const dragMeaning = interpretDrag(drag)
+    const historyDepth = interpretHistory(ordered.length)
 
-    const executiveSummary = getExecutiveSummary(pressureState)
-    const actionCue = getActionCue(pressureState)
+    const executiveSummary = `${pressurePosture.meaning} Dominant driver: ${dominantDriver}. ${spreadMeaning.meaning} ${containmentMeaning.meaning}`
+
+    const actionCue = compactAction([
+      pressurePosture.action,
+      spreadMeaning.action,
+      containmentMeaning.action,
+      dragMeaning.action,
+    ])
 
     return {
-      ordered,
       latest,
-      previous,
-      averageEscalationPressure,
-      averagePropagationRisk,
-      averageRoutingFriction,
-      averageResponderPressure,
-      averageEscalationVelocity,
-      averageCoordinationInstability,
-      averageStabilizationDrag,
-      averageRecoveryReliability,
-      averageSurvivability,
-      pressureLoad,
-      earlyPressure,
-      recentPressure,
-      pressureVelocity,
-      latestPressureMovement,
-      pressureVolatility,
-      pressureContainmentScore,
-      pressureConcentrationScore,
-      pressureSpreadScore,
-      pressureState,
-      dominantPressureDriver,
+      pressurePosture,
+      loadMeaning,
+      spreadMeaning,
+      containmentMeaning,
+      velocityMeaning,
+      volatilityMeaning,
+      routingMeaning,
+      responderMeaning,
+      dragMeaning,
+      historyDepth,
+      dominantDriver,
       executiveSummary,
       actionCue,
     }
   }, [metrics])
 
-  const latestRows: PanelRow[] = pressure.latest
-    ? [
-        {
-          label: 'Latest Continuity State',
-          value: pressure.latest.continuity_state,
-        },
-        {
-          label: 'Latest Pressure State',
-          value: pressure.latest.pressure_propagation_state,
-        },
-        {
-          label: 'Latest Trajectory Direction',
-          value: pressure.latest.trajectory_direction,
-        },
-        {
-          label: 'Latest Structural Memory State',
-          value: pressure.latest.structural_memory_state,
-        },
-        {
-          label: 'Dominant Saved Pressure Source',
-          value:
-            pressure.latest.dominant_pressure_source ||
-            'No pressure source recorded',
-        },
-      ]
-    : []
-
-  const pressureRows: PanelRow[] = [
-    {
-      label: 'Dominant Pressure Driver',
-      value: pressure.dominantPressureDriver,
-    },
-    {
-      label: 'Pressure Velocity',
-      value: formatDelta(pressure.pressureVelocity),
-    },
-    {
-      label: 'Latest Pressure Movement',
-      value: formatDelta(pressure.latestPressureMovement),
-    },
-    {
-      label: 'Pressure Volatility',
-      value: `${pressure.pressureVolatility}/100`,
-    },
-    {
-      label: 'Pressure Spread Score',
-      value: `${pressure.pressureSpreadScore}/100`,
-    },
-    {
-      label: 'Pressure Containment Score',
-      value: `${pressure.pressureContainmentScore}/100`,
-    },
-  ]
-
   const brief = `
 TSINAXA CGI PRESSURE INTELLIGENCE BRIEF
 
-Pressure State:
-${pressure.pressureState}
-
-Snapshots Reviewed:
-${metrics.length}
-
-Dominant Pressure Driver:
-${pressure.dominantPressureDriver}
+Pressure Posture:
+${pressure.pressurePosture.posture}
 
 Pressure Load:
-${pressure.pressureLoad}/100
+${pressure.loadMeaning.posture}
 
-Pressure Velocity:
-${pressure.pressureVelocity}
+Pressure Spread:
+${pressure.spreadMeaning.posture}
 
-Latest Pressure Movement:
-${pressure.latestPressureMovement}
+Pressure Containment:
+${pressure.containmentMeaning.posture}
+
+Pressure Movement:
+${pressure.velocityMeaning.posture}
 
 Pressure Volatility:
-${pressure.pressureVolatility}/100
+${pressure.volatilityMeaning.posture}
 
-Pressure Spread Score:
-${pressure.pressureSpreadScore}/100
+Routing Friction:
+${pressure.routingMeaning.posture}
 
-Pressure Concentration Score:
-${pressure.pressureConcentrationScore}/100
+Responder Pressure:
+${pressure.responderMeaning.posture}
 
-Pressure Containment Score:
-${pressure.pressureContainmentScore}/100
+Stabilization Drag:
+${pressure.dragMeaning.posture}
 
-Average Escalation Pressure:
-${pressure.averageEscalationPressure}/100
-
-Average Propagation Risk:
-${pressure.averagePropagationRisk}/100
-
-Average Routing Friction:
-${pressure.averageRoutingFriction}/100
-
-Average Responder Pressure:
-${pressure.averageResponderPressure}/100
-
-Average Escalation Velocity:
-${pressure.averageEscalationVelocity}/100
-
-Average Coordination Instability:
-${pressure.averageCoordinationInstability}/100
-
-Average Stabilization Drag:
-${pressure.averageStabilizationDrag}/100
-
-Average Recovery Reliability:
-${pressure.averageRecoveryReliability}/100
-
-Average Operational Survivability:
-${pressure.averageSurvivability}/100
+Dominant Pressure Driver:
+${pressure.dominantDriver}
 
 Executive Interpretation:
 ${pressure.executiveSummary}
@@ -399,144 +272,99 @@ Recommended Action:
 ${pressure.actionCue}
 
 Governance-Safe Meaning:
-This pressure view uses persisted CGI operational metric snapshots. It does not judge people. It evaluates whether pressure is contained, building, spreading, or becoming critical across routing, responders, escalation, coordination, and stabilization drag.
+This pressure view interprets persisted continuity memory. It does not judge people. It asks whether pressure is contained, building, spreading, or becoming critical across the system.
   `.trim()
 
   return (
     <main style={styles.page}>
       <div style={styles.container}>
-        <section style={styles.hero}>
+        <section style={styles.header}>
           <p style={styles.kicker}>TSINAXA CGI • PRESSURE INTELLIGENCE</p>
 
           <h1 style={styles.title}>Continuity Pressure Intelligence</h1>
 
           <p style={styles.subtitle}>
-            Use persisted CGI operational metric snapshots to identify where operational
-            pressure is concentrating, spreading, accelerating, or remaining contained.
+            Executive interpretation of whether operational pressure is contained,
+            building, spreading, or threatening stabilization credibility.
           </p>
         </section>
 
         {message && <div style={styles.message}>{message}</div>}
 
-        <section style={styles.pressureHero}>
+        <section style={styles.heroCard}>
           <div>
-            <p style={styles.scoreLabel}>Pressure State</p>
-            <h2 style={styles.pressureState}>{pressure.pressureState}</h2>
-            <p style={styles.panelNote}>{pressure.executiveSummary}</p>
-          </div>
+            <p style={styles.sectionKicker}>Pressure Posture</p>
 
-          <div style={styles.scoreGrid}>
-            <ScoreMetric label="Pressure Load" value={pressure.pressureLoad} />
-            <ScoreMetric
-              label="Pressure Spread"
-              value={pressure.pressureSpreadScore}
-            />
-            <ScoreMetric
-              label="Pressure Concentration"
-              value={pressure.pressureConcentrationScore}
-            />
-            <ScoreMetric
-              label="Pressure Containment"
-              value={pressure.pressureContainmentScore}
-            />
-            <ScoreMetric
-              label="Pressure Volatility"
-              value={pressure.pressureVolatility}
-            />
-            <ScoreMetric
-              label="Recent Pressure"
-              value={pressure.recentPressure}
-            />
+            <h2 style={styles.heroPosture}>
+              {pressure.pressurePosture.posture}
+            </h2>
+
+            <p style={styles.heroMeaning}>{pressure.executiveSummary}</p>
           </div>
 
           <div style={styles.actionBox}>
-            <strong>Recommended Action:</strong>
-            <span>{pressure.actionCue}</span>
+            <p style={styles.actionLabel}>Recommended Action</p>
+            <p style={styles.actionText}>{pressure.actionCue}</p>
           </div>
         </section>
 
-        <section style={styles.metricsGrid}>
-          <Metric label="Snapshots Reviewed" value={metrics.length} />
-          <Metric label="Dominant Driver" value={pressure.dominantPressureDriver} />
-          <Metric label="Pressure Velocity" value={formatDelta(pressure.pressureVelocity)} />
-          <Metric
-            label="Latest Movement"
-            value={formatDelta(pressure.latestPressureMovement)}
-          />
-          <Metric
-            label="Escalation Pressure Avg"
-            value={`${pressure.averageEscalationPressure}/100`}
-          />
-          <Metric
-            label="Propagation Risk Avg"
-            value={`${pressure.averagePropagationRisk}/100`}
-          />
-          <Metric
-            label="Routing Friction Avg"
-            value={`${pressure.averageRoutingFriction}/100`}
-          />
-          <Metric
-            label="Responder Pressure Avg"
-            value={`${pressure.averageResponderPressure}/100`}
-          />
+        <section style={styles.postureGrid}>
+          <PostureCard title="Pressure Load" interpretation={pressure.loadMeaning} />
+          <PostureCard title="Pressure Spread" interpretation={pressure.spreadMeaning} />
+          <PostureCard title="Pressure Containment" interpretation={pressure.containmentMeaning} />
+          <PostureCard title="Pressure Movement" interpretation={pressure.velocityMeaning} />
+          <PostureCard title="Routing Friction" interpretation={pressure.routingMeaning} />
+          <PostureCard title="Stabilization Drag" interpretation={pressure.dragMeaning} />
         </section>
 
-        <section style={styles.metricsGrid}>
-          <Metric
-            label="Escalation Velocity Avg"
-            value={`${pressure.averageEscalationVelocity}/100`}
-          />
-          <Metric
-            label="Coordination Instability Avg"
-            value={`${pressure.averageCoordinationInstability}/100`}
-          />
-          <Metric
-            label="Stabilization Drag Avg"
-            value={`${pressure.averageStabilizationDrag}/100`}
-          />
-          <Metric
-            label="Recovery Reliability Avg"
-            value={`${pressure.averageRecoveryReliability}/100`}
-          />
-          <Metric
-            label="Survivability Avg"
-            value={`${pressure.averageSurvivability}/100`}
-          />
+        <section style={styles.compactGrid}>
+          <CompactCard title="History Depth" value={pressure.historyDepth.posture} />
+          <CompactCard title="Dominant Driver" value={pressure.dominantDriver} />
+          <CompactCard title="Volatility" value={pressure.volatilityMeaning.posture} />
+          <CompactCard title="Responder Pressure" value={pressure.responderMeaning.posture} />
         </section>
 
-        <section style={styles.layoutGrid}>
-          <Panel
-            title="Latest Persisted Pressure State"
-            note="Most recent saved operational pressure snapshot."
-            rows={latestRows}
-          />
+        <section style={styles.twoColumn}>
+          <Panel title="Latest Pressure Context">
+            <Info label="Continuity State" value={pressure.latest?.continuity_state || 'Not recorded'} />
+            <Info label="Pressure State" value={pressure.latest?.pressure_propagation_state || 'Not recorded'} />
+            <Info label="Trajectory Direction" value={pressure.latest?.trajectory_direction || 'Not recorded'} />
+            <Info label="Structural Memory" value={pressure.latest?.structural_memory_state || 'Not recorded'} />
+            <Info label="Dominant Pressure" value={pressure.latest?.dominant_pressure_source || 'Not recorded'} />
+          </Panel>
 
-          <Panel
-            title="Pressure Concentration Reading"
-            note="Summarizes dominant pressure, spread, velocity, volatility, and containment."
-            rows={pressureRows}
-          />
+          <Panel title="Pressure Reading">
+            <Info label="Pressure Posture" value={pressure.pressurePosture.posture} />
+            <Info label="Pressure Spread" value={pressure.spreadMeaning.posture} />
+            <Info label="Containment" value={pressure.containmentMeaning.posture} />
+            <Info label="Dominant Driver" value={pressure.dominantDriver} />
+            <Info label="Current Reading" value={pressure.loadMeaning.posture} />
+          </Panel>
         </section>
 
         <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Recent Pressure Snapshot Trail</h2>
+          <div style={styles.cardHeader}>
+            <div>
+              <h2 style={styles.cardTitle}>Recent Pressure Memory Trail</h2>
+              <p style={styles.cardNote}>
+                Recent snapshots are displayed as pressure postures, not raw scores.
+              </p>
+            </div>
 
-          <p style={styles.panelNote}>
-            Latest saved rows from <code>cgi_operational_metrics</code>. These are
-            historical pressure records, not live recalculations.
-          </p>
+            <button onClick={loadPressureMetrics} style={styles.primaryButton}>
+              Refresh
+            </button>
+          </div>
 
           <div style={styles.tableWrap}>
             <table style={styles.table}>
               <thead>
                 <tr>
                   <th style={styles.th}>Created</th>
-                  <th style={styles.th}>Scope</th>
                   <th style={styles.th}>Pressure State</th>
                   <th style={styles.th}>Escalation</th>
                   <th style={styles.th}>Propagation</th>
                   <th style={styles.th}>Routing</th>
-                  <th style={styles.th}>Responder</th>
                   <th style={styles.th}>Drag</th>
                 </tr>
               </thead>
@@ -544,35 +372,37 @@ This pressure view uses persisted CGI operational metric snapshots. It does not 
               <tbody>
                 {metrics.length === 0 && (
                   <tr>
-                    <td style={styles.td} colSpan={8}>
-                      No persisted CGI operational metrics found yet.
+                    <td style={styles.td} colSpan={6}>
+                      No persisted pressure memory found yet.
                     </td>
                   </tr>
                 )}
 
-                {metrics.slice(0, 12).map((item) => (
+                {metrics.slice(0, 8).map((item) => (
                   <tr key={item.id}>
                     <td style={styles.td}>{formatDate(item.created_at)}</td>
-                    <td style={styles.td}>{item.scope}</td>
                     <td style={styles.td}>{item.pressure_propagation_state}</td>
-                    <td style={styles.td}>{item.escalation_pressure_index}/100</td>
-                    <td style={styles.td}>{item.propagation_risk}/100</td>
-                    <td style={styles.td}>{item.routing_friction}/100</td>
-                    <td style={styles.td}>{item.responder_pressure}/100</td>
-                    <td style={styles.td}>{item.stabilization_drag}/100</td>
+                    <td style={styles.td}>
+                      {interpretPressureLoad(item.escalation_pressure_index).posture}
+                    </td>
+                    <td style={styles.td}>
+                      {interpretSpread(item.propagation_risk).posture}
+                    </td>
+                    <td style={styles.td}>
+                      {interpretRouting(item.routing_friction).posture}
+                    </td>
+                    <td style={styles.td}>
+                      {interpretDrag(item.stabilization_drag).posture}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-
-          <button onClick={loadPressureMetrics} style={styles.primaryButton}>
-            Refresh Pressure Metrics
-          </button>
         </section>
 
         <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Generated Pressure Brief</h2>
+          <h2 style={styles.cardTitle}>Generated Pressure Brief</h2>
           <pre style={styles.summaryBox}>{brief}</pre>
         </section>
       </div>
@@ -582,9 +412,7 @@ This pressure view uses persisted CGI operational metric snapshots. It does not 
 
 function average(values: number[]) {
   const valid = values.filter((value) => Number.isFinite(value))
-
   if (valid.length === 0) return 0
-
   return Math.round(valid.reduce((sum, value) => sum + value, 0) / valid.length)
 }
 
@@ -594,11 +422,9 @@ function clamp(value: number) {
 
 function calculateVolatility(values: number[]) {
   const valid = values.filter((value) => Number.isFinite(value))
-
   if (valid.length < 2) return 0
 
   const mean = average(valid)
-
   const variance =
     valid.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) /
     valid.length
@@ -606,50 +432,46 @@ function calculateVolatility(values: number[]) {
   return Math.min(100, Math.round(Math.sqrt(variance)))
 }
 
-function strongestScore(scores: Record<string, number>) {
+function strongestDriver(scores: Record<string, number>) {
   return (
-    Object.entries(scores)
-      .map(([label, score]) => ({ label, score }))
-      .sort((a, b) => b.score - a.score)[0] || {
-      label: 'No dominant pressure driver detected',
-      score: 0,
-    }
+    Object.entries(scores).sort((a, b) => b[1] - a[1])[0]?.[0] ||
+    'No dominant pressure driver detected'
   )
 }
 
 function getPressureState(input: {
   count: number
-  pressureLoad: number
-  pressureVelocity: number
-  pressureVolatility: number
-  pressureContainmentScore: number
+  load: number
+  velocity: number
+  volatility: number
+  containment: number
   latest: CgiOperationalMetric | null
 }): PressureState {
   if (input.count < 3) return 'INSUFFICIENT_HISTORY'
 
   if (
-    input.pressureLoad >= 75 ||
-    input.pressureVelocity >= 18 ||
-    input.pressureVolatility >= 35 ||
-    input.pressureContainmentScore < 35 ||
+    input.load >= 75 ||
+    input.velocity >= 18 ||
+    input.volatility >= 35 ||
+    input.containment < 35 ||
     input.latest?.pressure_propagation_state === 'CASCADE_RISK'
   ) {
     return 'PRESSURE_CRITICAL'
   }
 
   if (
-    input.pressureLoad >= 55 ||
-    input.pressureVelocity >= 10 ||
-    input.pressureVolatility >= 25 ||
+    input.load >= 55 ||
+    input.velocity >= 10 ||
+    input.volatility >= 25 ||
     input.latest?.pressure_propagation_state === 'SPREADING'
   ) {
     return 'PRESSURE_SPREADING'
   }
 
   if (
-    input.pressureLoad >= 35 ||
-    input.pressureVelocity >= 5 ||
-    input.pressureVolatility >= 18 ||
+    input.load >= 35 ||
+    input.velocity >= 5 ||
+    input.volatility >= 18 ||
     input.latest?.pressure_propagation_state === 'BUILDING'
   ) {
     return 'PRESSURE_BUILDING'
@@ -658,49 +480,272 @@ function getPressureState(input: {
   return 'PRESSURE_CONTAINED'
 }
 
-function getExecutiveSummary(state: PressureState) {
+function interpretPressureState(state: PressureState): Interpretation {
   if (state === 'INSUFFICIENT_HISTORY') {
-    return 'There are not enough persisted snapshots yet to judge pressure behavior over time. Continue saving operational snapshots.'
+    return {
+      posture: 'INSUFFICIENT HISTORY',
+      meaning: 'Pressure memory is not yet deep enough to judge pressure behavior.',
+      action: 'Continue saving operational snapshots.',
+    }
   }
 
   if (state === 'PRESSURE_CRITICAL') {
-    return 'Pressure intelligence shows critical pressure. Escalation, spread, volatility, or weak containment may be threatening stabilization.'
+    return {
+      posture: 'PRESSURE CRITICAL',
+      meaning: 'Pressure may be threatening stabilization credibility.',
+      action: 'Activate command pressure review.',
+    }
   }
 
   if (state === 'PRESSURE_SPREADING') {
-    return 'Pressure intelligence shows spreading pressure. Operational strain appears to be moving across pathways instead of staying contained.'
+    return {
+      posture: 'PRESSURE SPREADING',
+      meaning: 'Pressure appears to be moving across operational pathways.',
+      action: 'Review spread points and rebalance response ownership.',
+    }
   }
 
   if (state === 'PRESSURE_BUILDING') {
-    return 'Pressure intelligence shows building pressure. The system is not yet critical, but pressure signals need closer monitoring.'
+    return {
+      posture: 'PRESSURE BUILDING',
+      meaning: 'Pressure is not yet critical, but visible buildup requires watch.',
+      action: 'Increase monitoring and compare upcoming snapshots.',
+    }
   }
 
-  return 'Pressure intelligence shows contained pressure. Current persisted snapshots do not show major spread or critical concentration.'
+  return {
+    posture: 'PRESSURE CONTAINED',
+    meaning: 'Pressure is currently contained in the reviewed memory.',
+    action: 'Maintain routine pressure monitoring.',
+  }
 }
 
-function getActionCue(state: PressureState) {
-  if (state === 'INSUFFICIENT_HISTORY') {
-    return 'Save more operational snapshots before relying on pressure trend interpretation.'
+function interpretPressureLoad(value: number): Interpretation {
+  if (value >= 70) {
+    return {
+      posture: 'HEAVY PRESSURE LOAD',
+      meaning: 'Pressure load is high enough to threaten stabilization.',
+      action: 'Escalate pressure review.',
+    }
   }
 
-  if (state === 'PRESSURE_CRITICAL') {
-    return 'Activate command pressure review and inspect escalation, propagation, routing friction, responder pressure, coordination instability, and stabilization drag immediately.'
+  if (value >= 50) {
+    return {
+      posture: 'MODERATE PRESSURE LOAD',
+      meaning: 'Pressure load is visible and should remain under review.',
+      action: 'Keep pressure visible.',
+    }
   }
 
-  if (state === 'PRESSURE_SPREADING') {
-    return 'Review where pressure is spreading and rebalance routing, response ownership, and stabilization support before pressure becomes critical.'
+  if (value >= 35) {
+    return {
+      posture: 'PRESSURE MONITORED',
+      meaning: 'Pressure exists but is not dominant.',
+      action: 'Continue monitoring.',
+    }
   }
 
-  if (state === 'PRESSURE_BUILDING') {
-    return 'Increase monitoring frequency and compare upcoming snapshots against current pressure velocity and concentration.'
+  return {
+    posture: 'PRESSURE CONTAINED',
+    meaning: 'Pressure load appears contained.',
+    action: 'Maintain monitoring.',
   }
-
-  return 'Maintain routine monitoring and continue saving snapshots to detect early pressure movement.'
 }
 
-function formatDelta(value: number) {
-  if (value > 0) return `+${value}`
-  return `${value}`
+function interpretSpread(value: number): Interpretation {
+  if (value >= 70) {
+    return {
+      posture: 'SPREAD RISK HIGH',
+      meaning: 'Pressure may be spreading across the pathway.',
+      action: 'Review propagation and coordination instability.',
+    }
+  }
+
+  if (value >= 50) {
+    return {
+      posture: 'SPREAD UNDER WATCH',
+      meaning: 'Pressure spread is visible and must remain under governance review.',
+      action: 'Keep spread visible.',
+    }
+  }
+
+  return {
+    posture: 'SPREAD CONTAINED',
+    meaning: 'Pressure spread appears contained.',
+    action: 'Continue monitoring.',
+  }
+}
+
+function interpretContainment(value: number): Interpretation {
+  if (value >= 70) {
+    return {
+      posture: 'CONTAINMENT HOLDING',
+      meaning: 'Recovery reliability and survivability are supporting pressure containment.',
+      action: 'Maintain containment discipline.',
+    }
+  }
+
+  if (value >= 45) {
+    return {
+      posture: 'CONTAINMENT MONITORED',
+      meaning: 'Containment exists but still needs confirmation.',
+      action: 'Continue monitoring.',
+    }
+  }
+
+  return {
+    posture: 'CONTAINMENT WEAK',
+    meaning: 'Pressure may exceed current stabilization capacity.',
+    action: 'Escalate containment review.',
+  }
+}
+
+function interpretVelocity(value: number): Interpretation {
+  if (value >= 10) {
+    return {
+      posture: 'PRESSURE RISING',
+      meaning: 'Pressure is increasing across the reviewed memory window.',
+      action: 'Review rising pressure drivers.',
+    }
+  }
+
+  if (value <= -10) {
+    return {
+      posture: 'PRESSURE EASING',
+      meaning: 'Pressure movement is easing.',
+      action: 'Maintain monitoring.',
+    }
+  }
+
+  return {
+    posture: 'PRESSURE HOLDING',
+    meaning: 'Pressure is neither clearly rising nor clearly easing.',
+    action: 'Continue comparison across future snapshots.',
+  }
+}
+
+function interpretVolatility(value: number): Interpretation {
+  if (value >= 30) {
+    return {
+      posture: 'PRESSURE VOLATILE',
+      meaning: 'Pressure movement is fluctuating enough to weaken confidence.',
+      action: 'Extend monitoring.',
+    }
+  }
+
+  if (value >= 18) {
+    return {
+      posture: 'VARIATION CONTAINED',
+      meaning: 'Pressure variation exists but is not showing collapse.',
+      action: 'Watch for repeated instability.',
+    }
+  }
+
+  return {
+    posture: 'PRESSURE MOVEMENT STABLE',
+    meaning: 'Pressure movement appears steady.',
+    action: 'Maintain routine monitoring.',
+  }
+}
+
+function interpretRouting(value: number): Interpretation {
+  if (value >= 65) {
+    return {
+      posture: 'ROUTING FRICTION HIGH',
+      meaning: 'Routing friction may be slowing stabilization.',
+      action: 'Review routing ownership and response alignment.',
+    }
+  }
+
+  if (value >= 40) {
+    return {
+      posture: 'ROUTING FRICTION VISIBLE',
+      meaning: 'Routing friction exists and should stay visible.',
+      action: 'Monitor routing pressure.',
+    }
+  }
+
+  return {
+    posture: 'ROUTING FRICTION CONTAINED',
+    meaning: 'Routing friction appears contained.',
+    action: 'Maintain monitoring.',
+  }
+}
+
+function interpretResponder(value: number): Interpretation {
+  if (value >= 65) {
+    return {
+      posture: 'RESPONDER PRESSURE HIGH',
+      meaning: 'Responder pressure may weaken continuity response.',
+      action: 'Review responder load and ownership.',
+    }
+  }
+
+  if (value >= 40) {
+    return {
+      posture: 'RESPONDER PRESSURE VISIBLE',
+      meaning: 'Responder pressure is visible but not dominant.',
+      action: 'Keep responder pressure under review.',
+    }
+  }
+
+  return {
+    posture: 'RESPONDER PRESSURE CONTAINED',
+    meaning: 'Responder pressure appears contained.',
+    action: 'Maintain monitoring.',
+  }
+}
+
+function interpretDrag(value: number): Interpretation {
+  if (value >= 65) {
+    return {
+      posture: 'STABILIZATION DRAG HIGH',
+      meaning: 'Stabilization drag may delay recovery credibility.',
+      action: 'Escalate stabilization drag review.',
+    }
+  }
+
+  if (value >= 40) {
+    return {
+      posture: 'STABILIZATION DRAG VISIBLE',
+      meaning: 'Drag remains visible and should stay under review.',
+      action: 'Keep drag visible until recovery holds.',
+    }
+  }
+
+  return {
+    posture: 'STABILIZATION DRAG CONTAINED',
+    meaning: 'Stabilization drag appears contained.',
+    action: 'Maintain monitoring.',
+  }
+}
+
+function interpretHistory(count: number): Interpretation {
+  if (count < 3) {
+    return {
+      posture: 'INSUFFICIENT HISTORY',
+      meaning: 'Too few snapshots exist for pressure interpretation.',
+      action: 'Continue saving operational snapshots.',
+    }
+  }
+
+  if (count < 10) {
+    return {
+      posture: 'EARLY PRESSURE MEMORY',
+      meaning: 'Pressure memory has started but remains early.',
+      action: 'Continue building continuity memory.',
+    }
+  }
+
+  return {
+    posture: 'PRESSURE MEMORY ESTABLISHED',
+    meaning: 'Persisted memory supports pressure interpretation.',
+    action: 'Use posture to guide review.',
+  }
+}
+
+function compactAction(actions: string[]) {
+  return Array.from(new Set(actions)).join(' ')
 }
 
 function formatDate(value: string) {
@@ -708,48 +753,51 @@ function formatDate(value: string) {
   return new Date(value).toLocaleString()
 }
 
-function Metric({ label, value }: { label: string; value: string | number }) {
+function PostureCard({
+  title,
+  interpretation,
+}: {
+  title: string
+  interpretation: Interpretation
+}) {
   return (
-    <div style={styles.metricCard}>
-      <p style={styles.metricLabel}>{label}</p>
-      <h2 style={styles.metricValue}>{value}</h2>
-    </div>
+    <article style={styles.postureCard}>
+      <p style={styles.cardKicker}>{title}</p>
+      <h3 style={styles.postureTitle}>{interpretation.posture}</h3>
+      <p style={styles.postureMeaning}>{interpretation.meaning}</p>
+    </article>
   )
 }
 
-function ScoreMetric({ label, value }: { label: string; value: number }) {
+function CompactCard({ title, value }: { title: string; value: string }) {
   return (
-    <div style={styles.scoreCard}>
-      <p style={styles.scoreMetricLabel}>{label}</p>
-      <h3 style={styles.scoreMetricValue}>{value}/100</h3>
-    </div>
+    <article style={styles.compactCard}>
+      <p style={styles.cardKicker}>{title}</p>
+      <h3 style={styles.compactValue}>{value}</h3>
+    </article>
   )
 }
 
 function Panel({
   title,
-  note,
-  rows,
+  children,
 }: {
   title: string
-  note: string
-  rows: PanelRow[]
+  children: React.ReactNode
 }) {
   return (
-    <div style={styles.card}>
-      <h2 style={styles.sectionTitle}>{title}</h2>
-      <p style={styles.panelNote}>{note}</p>
+    <section style={styles.card}>
+      <h2 style={styles.cardTitle}>{title}</h2>
+      <div style={styles.infoList}>{children}</div>
+    </section>
+  )
+}
 
-      <div style={styles.panelList}>
-        {rows.length === 0 && <p style={styles.emptyText}>No data available yet.</p>}
-
-        {rows.map((row, index) => (
-          <div key={`${row.label}-${index}`} style={styles.panelRow}>
-            <span>{row.label}</span>
-            <strong>{row.value}</strong>
-          </div>
-        ))}
-      </div>
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={styles.infoRow}>
+      <span style={styles.infoLabel}>{label}</span>
+      <strong style={styles.infoValue}>{value}</strong>
     </div>
   )
 }
@@ -758,195 +806,258 @@ const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
     color: 'white',
+    overflowX: 'hidden',
   },
   container: {
-    maxWidth: '1280px',
+    width: '100%',
+    maxWidth: '1120px',
     margin: '0 auto',
+    padding: '0 20px 48px',
+    boxSizing: 'border-box',
   },
-  hero: {
-    marginBottom: '32px',
+  header: {
+    marginBottom: '20px',
+    paddingTop: '4px',
   },
   kicker: {
-    color: '#67e8f9',
+    color: '#fbbf24',
     fontSize: '12px',
     fontWeight: 900,
     letterSpacing: '2px',
+    margin: 0,
   },
   title: {
-    fontSize: 'clamp(34px, 6vw, 58px)',
+    fontSize: 'clamp(32px, 5vw, 48px)',
     lineHeight: 1.05,
-    margin: '12px 0',
+    margin: '10px 0',
   },
   subtitle: {
     color: '#cbd5e1',
-    maxWidth: '980px',
-    lineHeight: 1.7,
-    fontSize: '18px',
+    maxWidth: '760px',
+    lineHeight: 1.65,
+    fontSize: '16px',
+    margin: 0,
   },
   message: {
-    background: '#064e3b',
-    color: '#bbf7d0',
-    padding: '16px',
+    background: '#422006',
+    color: '#fef3c7',
+    padding: '12px 14px',
     borderRadius: '14px',
     fontWeight: 800,
-    marginBottom: '20px',
+    marginBottom: '16px',
+    fontSize: '14px',
   },
-  pressureHero: {
+  heroCard: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.4fr) minmax(260px, 0.6fr)',
+    gap: '16px',
     background: '#020617',
     border: '1px solid #fbbf24',
-    borderRadius: '28px',
-    padding: '24px',
-    marginBottom: '24px',
-    boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
+    borderRadius: '24px',
+    padding: '22px',
+    marginBottom: '16px',
+    boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
   },
-  scoreLabel: {
+  sectionKicker: {
     color: '#94a3b8',
     fontWeight: 900,
     letterSpacing: '0.12em',
     textTransform: 'uppercase',
     margin: 0,
+    fontSize: '12px',
   },
-  pressureState: {
-    fontSize: 'clamp(36px, 7vw, 68px)',
-    margin: '8px 0 20px',
+  heroPosture: {
+    fontSize: 'clamp(34px, 6vw, 56px)',
+    margin: '8px 0 12px',
     color: '#fbbf24',
     letterSpacing: '-0.05em',
+    lineHeight: 1,
   },
-  scoreGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
-    gap: '14px',
-  },
-  scoreCard: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '18px',
-  },
-  scoreMetricLabel: {
-    color: '#94a3b8',
-    fontWeight: 800,
+  heroMeaning: {
+    color: '#fef3c7',
+    lineHeight: 1.6,
     margin: 0,
-  },
-  scoreMetricValue: {
-    color: '#f8fafc',
-    fontSize: '28px',
-    margin: '10px 0 0',
+    maxWidth: '720px',
   },
   actionBox: {
-    display: 'grid',
-    gap: '8px',
     background: '#422006',
     border: '1px solid #fbbf24',
     borderRadius: '18px',
-    padding: '18px',
-    marginTop: '16px',
+    padding: '16px',
+    alignSelf: 'stretch',
+  },
+  actionLabel: {
+    color: '#fde68a',
+    fontWeight: 900,
+    margin: '0 0 8px',
+    fontSize: '12px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.12em',
+  },
+  actionText: {
     color: '#fef3c7',
+    lineHeight: 1.55,
+    margin: 0,
+    fontSize: '14px',
   },
-  metricsGrid: {
+  postureGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
     gap: '14px',
-    marginBottom: '24px',
+    marginBottom: '16px',
   },
-  metricCard: {
+  postureCard: {
     background: '#0f172a',
     border: '1px solid #1e293b',
     borderRadius: '18px',
-    padding: '20px',
-    overflow: 'hidden',
+    padding: '16px',
+    minHeight: '150px',
+    boxSizing: 'border-box',
   },
-  metricLabel: {
+  cardKicker: {
     color: '#94a3b8',
     fontWeight: 800,
     margin: 0,
+    fontSize: '12px',
   },
-  metricValue: {
-    fontSize: 'clamp(22px, 4vw, 34px)',
-    margin: '8px 0 0',
+  postureTitle: {
+    color: '#f8fafc',
+    fontSize: '19px',
+    margin: '10px 0 8px',
+    lineHeight: 1.15,
+  },
+  postureMeaning: {
+    color: '#cbd5e1',
+    lineHeight: 1.5,
+    fontSize: '14px',
+    margin: 0,
+  },
+  compactGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: '14px',
+    marginBottom: '16px',
+  },
+  compactCard: {
+    background: '#0f172a',
+    border: '1px solid #1e293b',
+    borderRadius: '18px',
+    padding: '16px',
+    minHeight: '104px',
+    boxSizing: 'border-box',
+  },
+  compactValue: {
+    fontSize: '18px',
+    lineHeight: 1.2,
+    margin: '10px 0 0',
+    color: '#f8fafc',
     overflowWrap: 'anywhere',
   },
-  layoutGrid: {
+  twoColumn: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-    gap: '20px',
-    marginBottom: '28px',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: '16px',
+    marginBottom: '16px',
   },
   card: {
     background: '#020617',
     border: '1px solid #1e293b',
-    borderRadius: '24px',
-    padding: '24px',
-    marginBottom: '28px',
-    boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
+    borderRadius: '22px',
+    padding: '20px',
+    marginBottom: '16px',
+    boxShadow: '0 20px 50px rgba(0,0,0,0.24)',
+    boxSizing: 'border-box',
+    overflow: 'hidden',
   },
-  sectionTitle: {
-    fontSize: '26px',
-    margin: '0 0 10px',
-  },
-  panelNote: {
-    color: '#cbd5e1',
-    lineHeight: 1.6,
-    marginBottom: '18px',
-  },
-  panelList: {
-    display: 'grid',
-    gap: '10px',
-  },
-  panelRow: {
+  cardHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     gap: '16px',
+    alignItems: 'flex-start',
+    marginBottom: '14px',
+  },
+  cardTitle: {
+    fontSize: '22px',
+    margin: 0,
+    lineHeight: 1.2,
+  },
+  cardNote: {
+    color: '#94a3b8',
+    lineHeight: 1.5,
+    margin: '6px 0 0',
+    fontSize: '14px',
+  },
+  infoList: {
+    display: 'grid',
+    gap: '10px',
+    marginTop: '14px',
+  },
+  infoRow: {
+    display: 'grid',
+    gridTemplateColumns: '160px minmax(0, 1fr)',
+    gap: '12px',
     background: '#0f172a',
     border: '1px solid #334155',
     borderRadius: '14px',
-    padding: '14px',
+    padding: '12px',
+    alignItems: 'start',
   },
-  emptyText: {
+  infoLabel: {
     color: '#94a3b8',
+    fontWeight: 800,
+    fontSize: '12px',
+  },
+  infoValue: {
+    color: '#f8fafc',
+    lineHeight: 1.45,
+    overflowWrap: 'anywhere',
   },
   tableWrap: {
+    width: '100%',
     overflowX: 'auto',
-    marginBottom: '20px',
   },
   table: {
     width: '100%',
     borderCollapse: 'collapse',
-    minWidth: '900px',
+    minWidth: '760px',
   },
   th: {
     textAlign: 'left',
     color: '#94a3b8',
     borderBottom: '1px solid #334155',
-    padding: '12px',
-    fontSize: '12px',
+    padding: '10px',
+    fontSize: '11px',
     textTransform: 'uppercase',
   },
   td: {
     borderBottom: '1px solid #1e293b',
-    padding: '12px',
+    padding: '10px',
     color: '#e2e8f0',
     verticalAlign: 'top',
+    fontWeight: 700,
+    fontSize: '13px',
   },
   primaryButton: {
-    width: '100%',
-    padding: '16px',
-    borderRadius: '14px',
+    padding: '10px 14px',
+    borderRadius: '12px',
     border: 'none',
-    background: '#67e8f9',
-    color: '#082f49',
+    background: '#fbbf24',
+    color: '#422006',
     fontWeight: 900,
     cursor: 'pointer',
-    fontSize: '16px',
+    fontSize: '14px',
+    whiteSpace: 'nowrap',
   },
   summaryBox: {
     whiteSpace: 'pre-wrap',
     background: '#0f172a',
     border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '18px',
+    borderRadius: '16px',
+    padding: '16px',
     color: '#e2e8f0',
-    lineHeight: 1.6,
-    minHeight: '360px',
+    lineHeight: 1.55,
+    minHeight: '260px',
+    fontSize: '14px',
+    overflowX: 'auto',
   },
 }
