@@ -9,7 +9,6 @@ import { supabase } from '../../lib/supabase'
 type CgiOperationalMetric = {
   id: string
   created_at: string
-
   scope: string
 
   continuity_state: string
@@ -17,26 +16,28 @@ type CgiOperationalMetric = {
   trajectory_direction: string
   structural_memory_state: string
 
-  dominant_pressure_source: string | null
-  dominant_trajectory_signal: string | null
-  dominant_memory_pattern: string | null
-
-  executive_summary: string | null
-  action_cue: string | null
-
   continuity_integrity_score: number
   stabilization_confidence_score: number
+  escalation_pressure_index: number
   recovery_reliability_score: number
   operational_survivability_score: number
 
   propagation_risk: number
   trajectory_risk: number
   structural_memory_risk: number
-  escalation_pressure_index: number
-
   unresolved_momentum: number
   stabilization_drag: number
   continuity_drift: number
+
+  dominant_pressure_source: string | null
+  dominant_trajectory_signal: string | null
+  dominant_memory_pattern: string | null
+}
+
+type Interpretation = {
+  posture: string
+  meaning: string
+  action: string
 }
 
 const SAMPLE_LIMIT = 100
@@ -58,7 +59,7 @@ function ReliabilityContent() {
   }, [])
 
   async function loadReliabilityMetrics() {
-    setMessage('Loading persisted CGI reliability intelligence...')
+    setMessage('Loading reliability intelligence...')
 
     const { data, error } = await supabase
       .from('cgi_operational_metrics')
@@ -68,382 +69,222 @@ function ReliabilityContent() {
 
     if (error) {
       console.error(error)
-
-      setMessage(
-        'Failed to load persisted CGI reliability intelligence.',
-      )
-
+      setMessage('Reliability intelligence could not be loaded.')
       return
     }
 
     setMetrics(data || [])
-
-    setMessage(
-      'Persisted CGI reliability intelligence loaded.',
-    )
+    setMessage('Reliability intelligence loaded.')
   }
 
   const intelligence = useMemo(() => {
     const ordered = [...metrics].sort(
-      (a, b) =>
-        new Date(a.created_at).getTime() -
-        new Date(b.created_at).getTime(),
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
     )
 
     const latest = ordered[ordered.length - 1] || null
 
-    const averageReliability = average(
-      ordered.map(
-        (item) => item.recovery_reliability_score,
-      ),
-    )
-
-    const averageSurvivability = average(
-      ordered.map(
-        (item) => item.operational_survivability_score,
-      ),
-    )
-
-    const averageContinuity = average(
-      ordered.map(
-        (item) => item.continuity_integrity_score,
-      ),
-    )
+    const reliability = average(ordered.map((item) => item.recovery_reliability_score))
+    const survivability = average(ordered.map((item) => item.operational_survivability_score))
+    const continuity = average(ordered.map((item) => item.continuity_integrity_score))
+    const confidence = average(ordered.map((item) => item.stabilization_confidence_score))
+    const pressure = average(ordered.map((item) => item.escalation_pressure_index))
+    const propagation = average(ordered.map((item) => item.propagation_risk))
+    const trajectory = average(ordered.map((item) => item.trajectory_risk))
+    const memoryRisk = average(ordered.map((item) => item.structural_memory_risk))
+    const drift = average(ordered.map((item) => item.continuity_drift))
+    const unresolved = average(ordered.map((item) => item.unresolved_momentum))
+    const drag = average(ordered.map((item) => item.stabilization_drag))
 
     const instabilityBurden = average([
-      average(
-        ordered.map(
-          (item) => item.propagation_risk,
-        ),
-      ),
-
-      average(
-        ordered.map(
-          (item) => item.trajectory_risk,
-        ),
-      ),
-
-      average(
-        ordered.map(
-          (item) =>
-            item.structural_memory_risk,
-        ),
-      ),
-
-      average(
-        ordered.map(
-          (item) =>
-            item.escalation_pressure_index,
-        ),
-      ),
+      pressure,
+      propagation,
+      trajectory,
+      memoryRisk,
+      unresolved,
+      drag,
+      drift,
     ])
 
     const volatility = calculateVolatility(
-      ordered.map(
-        (item) =>
-          item.recovery_reliability_score,
-      ),
+      ordered.map((item) => item.recovery_reliability_score)
     )
 
-    const reliabilityPosture =
-      resolveReliabilityPosture({
-        reliability: averageReliability,
-        survivability: averageSurvivability,
-        continuity: averageContinuity,
-        instabilityBurden,
-        volatility,
-      })
+    const reliabilityPosture = interpretReliabilityPosture({
+      reliability,
+      survivability,
+      continuity,
+      instabilityBurden,
+      volatility,
+    })
 
-    const executiveMeaning =
-      resolveExecutiveMeaning(
-        reliabilityPosture,
-      )
+    const reliabilityDirection = interpretReliability(reliability)
+    const survivabilityMeaning = interpretSurvivability(survivability)
+    const continuityMeaning = interpretContinuity(continuity)
+    const stabilizationConfidence = interpretConfidence(confidence)
+    const instabilityMeaning = interpretInstability(instabilityBurden)
+    const volatilityMeaning = interpretVolatility(volatility)
+    const driftMeaning = interpretDrift(drift)
+    const unresolvedMeaning = interpretUnresolved(unresolved)
+    const historyDepth = interpretHistory(ordered.length)
 
-    const recommendedAction =
-      resolveRecommendedAction(
-        reliabilityPosture,
-      )
+    const dominantWeakness = strongestDriver({
+      'Reliability weakness': 100 - reliability,
+      'Survivability weakness': 100 - survivability,
+      'Continuity integrity weakness': 100 - continuity,
+      'Stabilization confidence weakness': 100 - confidence,
+      'Escalation pressure': pressure,
+      'Trajectory risk': trajectory,
+      'Structural memory risk': memoryRisk,
+      'Continuity drift': drift,
+      'Unresolved momentum': unresolved,
+    })
+
+    const executiveSummary = `${reliabilityPosture.meaning} Dominant weakness: ${dominantWeakness}. ${instabilityMeaning.meaning} ${driftMeaning.meaning}`
+
+    const actionCue = compactAction([
+      reliabilityPosture.action,
+      instabilityMeaning.action,
+      driftMeaning.action,
+      volatilityMeaning.action,
+    ])
 
     return {
       latest,
-
       reliabilityPosture,
-
-      executiveMeaning,
-
-      recommendedAction,
-
-      reliabilityDirection:
-        resolveReliabilityDirection(
-          averageReliability,
-        ),
-
-      survivabilityMeaning:
-        resolveSurvivabilityMeaning(
-          averageSurvivability,
-        ),
-
-      continuityMeaning:
-        resolveContinuityMeaning(
-          averageContinuity,
-        ),
-
-      instabilityMeaning:
-        resolveInstabilityMeaning(
-          instabilityBurden,
-        ),
-
-      volatilityMeaning:
-        resolveVolatilityMeaning(
-          volatility,
-        ),
-
-      driftMeaning:
-        resolveDriftMeaning(
-          average(
-            ordered.map(
-              (item) =>
-                item.continuity_drift,
-            ),
-          ),
-        ),
-
-      unresolvedMeaning:
-        resolveUnresolvedMeaning(
-          average(
-            ordered.map(
-              (item) =>
-                item.unresolved_momentum,
-            ),
-          ),
-        ),
-
-      snapshotsReviewed: ordered.length,
+      reliabilityDirection,
+      survivabilityMeaning,
+      continuityMeaning,
+      stabilizationConfidence,
+      instabilityMeaning,
+      volatilityMeaning,
+      driftMeaning,
+      unresolvedMeaning,
+      historyDepth,
+      dominantWeakness,
+      executiveSummary,
+      actionCue,
     }
   }, [metrics])
+
+  const brief = `
+TSINAXA CGI RELIABILITY INTELLIGENCE BRIEF
+
+Reliability Posture:
+${intelligence.reliabilityPosture.posture}
+
+Reliability Direction:
+${intelligence.reliabilityDirection.posture}
+
+Survivability:
+${intelligence.survivabilityMeaning.posture}
+
+Continuity Integrity:
+${intelligence.continuityMeaning.posture}
+
+Stabilization Confidence:
+${intelligence.stabilizationConfidence.posture}
+
+Instability Burden:
+${intelligence.instabilityMeaning.posture}
+
+Volatility:
+${intelligence.volatilityMeaning.posture}
+
+Continuity Drift:
+${intelligence.driftMeaning.posture}
+
+Dominant Weakness:
+${intelligence.dominantWeakness}
+
+Executive Interpretation:
+${intelligence.executiveSummary}
+
+Recommended Action:
+${intelligence.actionCue}
+
+Governance-Safe Meaning:
+This reliability view interprets persisted continuity memory. It does not judge people. It asks whether stabilization is becoming dependable across time.
+  `.trim()
 
   return (
     <main style={styles.page}>
       <div style={styles.container}>
-        <section style={styles.hero}>
-          <p style={styles.kicker}>
-            TSINAXA CGI • RELIABILITY
-            INTELLIGENCE
-          </p>
+        <section style={styles.header}>
+          <p style={styles.kicker}>TSINAXA CGI • RELIABILITY INTELLIGENCE</p>
 
-          <h1 style={styles.title}>
-            Continuity Reliability
-            Intelligence
-          </h1>
+          <h1 style={styles.title}>Continuity Reliability Intelligence</h1>
 
           <p style={styles.subtitle}>
-            Interpret whether continuity
-            stabilization is becoming
-            dependable, fragile,
-            deteriorating, or structurally
-            unstable across persisted CGI
-            operational memory.
+            Executive interpretation of whether continuity stabilization is becoming
+            dependable, fragile, unstable, or deteriorating across persisted memory.
           </p>
         </section>
 
-        {message && (
-          <div style={styles.message}>
-            {message}
-          </div>
-        )}
+        {message && <div style={styles.message}>{message}</div>}
 
-        <section style={styles.primaryBoard}>
-          <div style={styles.primaryHeader}>
-            <div>
-              <p style={styles.primaryLabel}>
-                Reliability Posture
-              </p>
+        <section style={styles.heroCard}>
+          <div>
+            <p style={styles.sectionKicker}>Reliability Posture</p>
 
-              <h2 style={styles.primaryValue}>
-                {
-                  intelligence.reliabilityPosture
-                }
-              </h2>
-            </div>
-
-            <div style={styles.primaryBadge}>
-              CONTINUITY
-              DEPENDABILITY
-            </div>
-          </div>
-
-          <p style={styles.primaryMeaning}>
-            {
-              intelligence.executiveMeaning
-            }
-          </p>
-
-          <div style={styles.actionBox}>
-            <strong>
-              Recommended Action
-            </strong>
-
-            <span>
-              {
-                intelligence.recommendedAction
-              }
-            </span>
-          </div>
-        </section>
-
-        <section style={styles.signalGrid}>
-          <SignalCard
-            title="Reliability Direction"
-            value={
-              intelligence.reliabilityDirection
-            }
-          />
-
-          <SignalCard
-            title="Survivability"
-            value={
-              intelligence.survivabilityMeaning
-            }
-          />
-
-          <SignalCard
-            title="Continuity Integrity"
-            value={
-              intelligence.continuityMeaning
-            }
-          />
-
-          <SignalCard
-            title="Instability Burden"
-            value={
-              intelligence.instabilityMeaning
-            }
-          />
-
-          <SignalCard
-            title="Reliability Volatility"
-            value={
-              intelligence.volatilityMeaning
-            }
-          />
-
-          <SignalCard
-            title="Continuity Drift"
-            value={
-              intelligence.driftMeaning
-            }
-          />
-
-          <SignalCard
-            title="Unresolved Momentum"
-            value={
-              intelligence.unresolvedMeaning
-            }
-          />
-
-          <SignalCard
-            title="History Depth"
-            value={
-              intelligence.snapshotsReviewed >=
-              10
-                ? 'RELIABILITY MEMORY ESTABLISHED'
-                : 'INSUFFICIENT RELIABILITY MEMORY'
-            }
-          />
-        </section>
-
-        {intelligence.latest && (
-          <section style={styles.contextCard}>
-            <h2 style={styles.sectionTitle}>
-              Latest Persisted Reliability
-              Context
+            <h2 style={styles.heroPosture}>
+              {intelligence.reliabilityPosture.posture}
             </h2>
 
-            <div style={styles.contextGrid}>
-              <ContextItem
-                label="Latest Continuity State"
-                value={
-                  intelligence.latest
-                    .continuity_state
-                }
-              />
+            <p style={styles.heroMeaning}>{intelligence.executiveSummary}</p>
+          </div>
 
-              <ContextItem
-                label="Latest Pressure State"
-                value={
-                  intelligence.latest
-                    .pressure_propagation_state
-                }
-              />
+          <div style={styles.actionBox}>
+            <p style={styles.actionLabel}>Recommended Action</p>
+            <p style={styles.actionText}>{intelligence.actionCue}</p>
+          </div>
+        </section>
 
-              <ContextItem
-                label="Latest Trajectory Direction"
-                value={
-                  intelligence.latest
-                    .trajectory_direction
-                }
-              />
+        <section style={styles.postureGrid}>
+          <PostureCard title="Reliability Direction" interpretation={intelligence.reliabilityDirection} />
+          <PostureCard title="Survivability" interpretation={intelligence.survivabilityMeaning} />
+          <PostureCard title="Continuity Integrity" interpretation={intelligence.continuityMeaning} />
+          <PostureCard title="Stabilization Confidence" interpretation={intelligence.stabilizationConfidence} />
+          <PostureCard title="Instability Burden" interpretation={intelligence.instabilityMeaning} />
+          <PostureCard title="Reliability Volatility" interpretation={intelligence.volatilityMeaning} />
+        </section>
 
-              <ContextItem
-                label="Structural Memory State"
-                value={
-                  intelligence.latest
-                    .structural_memory_state
-                }
-              />
+        <section style={styles.compactGrid}>
+          <CompactCard title="History Depth" value={intelligence.historyDepth.posture} />
+          <CompactCard title="Dominant Weakness" value={intelligence.dominantWeakness} />
+          <CompactCard title="Continuity Drift" value={intelligence.driftMeaning.posture} />
+          <CompactCard title="Unresolved Momentum" value={intelligence.unresolvedMeaning.posture} />
+        </section>
 
-              <ContextItem
-                label="Dominant Pressure Source"
-                value={
-                  intelligence.latest
-                    .dominant_pressure_source ||
-                  'No dominant pressure source recorded'
-                }
-              />
+        <section style={styles.twoColumn}>
+          <Panel title="Latest Reliability Context">
+            <Info label="Continuity State" value={intelligence.latest?.continuity_state || 'Not recorded'} />
+            <Info label="Pressure State" value={intelligence.latest?.pressure_propagation_state || 'Not recorded'} />
+            <Info label="Trajectory Direction" value={intelligence.latest?.trajectory_direction || 'Not recorded'} />
+            <Info label="Structural Memory" value={intelligence.latest?.structural_memory_state || 'Not recorded'} />
+            <Info label="Dominant Pressure" value={intelligence.latest?.dominant_pressure_source || 'Not recorded'} />
+          </Panel>
 
-              <ContextItem
-                label="Dominant Trajectory Signal"
-                value={
-                  intelligence.latest
-                    .dominant_trajectory_signal ||
-                  'No dominant trajectory signal recorded'
-                }
-              />
+          <Panel title="Dependability Reading">
+            <Info label="Reliability Posture" value={intelligence.reliabilityPosture.posture} />
+            <Info label="Survivability" value={intelligence.survivabilityMeaning.posture} />
+            <Info label="Volatility" value={intelligence.volatilityMeaning.posture} />
+            <Info label="Dominant Weakness" value={intelligence.dominantWeakness} />
+            <Info label="Current Reading" value={intelligence.reliabilityDirection.posture} />
+          </Panel>
+        </section>
 
-              <ContextItem
-                label="Dominant Memory Pattern"
-                value={
-                  intelligence.latest
-                    .dominant_memory_pattern ||
-                  'No dominant memory pattern recorded'
-                }
-              />
-            </div>
-          </section>
-        )}
-
-        <section style={styles.tableCard}>
-          <div style={styles.tableHeader}>
+        <section style={styles.card}>
+          <div style={styles.cardHeader}>
             <div>
-              <h2 style={styles.sectionTitle}>
-                Recent Reliability Memory
-              </h2>
-
-              <p style={styles.tableNote}>
-                Historical CGI operational
-                memory interpreted into
-                executive-readable
-                reliability posture.
+              <h2 style={styles.cardTitle}>Recent Reliability Memory Trail</h2>
+              <p style={styles.cardNote}>
+                Recent snapshots are displayed as threshold interpretations, not raw scores.
               </p>
             </div>
 
-            <button
-              onClick={
-                loadReliabilityMetrics
-              }
-              style={styles.button}
-            >
-              Refresh Reliability
+            <button onClick={loadReliabilityMetrics} style={styles.primaryButton}>
+              Refresh
             </button>
           </div>
 
@@ -451,175 +292,100 @@ function ReliabilityContent() {
             <table style={styles.table}>
               <thead>
                 <tr>
-                  <th style={styles.th}>
-                    Created
-                  </th>
-
-                  <th style={styles.th}>
-                    Continuity
-                  </th>
-
-                  <th style={styles.th}>
-                    Reliability
-                  </th>
-
-                  <th style={styles.th}>
-                    Survivability
-                  </th>
-
-                  <th style={styles.th}>
-                    Pressure
-                  </th>
-
-                  <th style={styles.th}>
-                    Drift
-                  </th>
+                  <th style={styles.th}>Created</th>
+                  <th style={styles.th}>Continuity</th>
+                  <th style={styles.th}>Reliability</th>
+                  <th style={styles.th}>Survivability</th>
+                  <th style={styles.th}>Pressure</th>
+                  <th style={styles.th}>Drift</th>
                 </tr>
               </thead>
 
               <tbody>
-                {metrics
-                  .slice(0, 12)
-                  .map((item) => (
-                    <tr key={item.id}>
-                      <td style={styles.td}>
-                        {formatDate(
-                          item.created_at,
-                        )}
-                      </td>
+                {metrics.length === 0 && (
+                  <tr>
+                    <td style={styles.td} colSpan={6}>
+                      No persisted reliability memory found yet.
+                    </td>
+                  </tr>
+                )}
 
-                      <td style={styles.td}>
-                        {
-                          item.continuity_state
-                        }
-                      </td>
-
-                      <td style={styles.td}>
-                        {resolveReliabilityDirection(
-                          item.recovery_reliability_score,
-                        )}
-                      </td>
-
-                      <td style={styles.td}>
-                        {resolveSurvivabilityMeaning(
-                          item.operational_survivability_score,
-                        )}
-                      </td>
-
-                      <td style={styles.td}>
-                        {resolveInstabilityMeaning(
-                          item.escalation_pressure_index,
-                        )}
-                      </td>
-
-                      <td style={styles.td}>
-                        {resolveDriftMeaning(
-                          item.continuity_drift,
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                {metrics.slice(0, 8).map((item) => (
+                  <tr key={item.id}>
+                    <td style={styles.td}>{formatDate(item.created_at)}</td>
+                    <td style={styles.td}>{item.continuity_state}</td>
+                    <td style={styles.td}>
+                      {interpretReliability(item.recovery_reliability_score).posture}
+                    </td>
+                    <td style={styles.td}>
+                      {interpretSurvivability(item.operational_survivability_score).posture}
+                    </td>
+                    <td style={styles.td}>
+                      {interpretInstability(item.escalation_pressure_index).posture}
+                    </td>
+                    <td style={styles.td}>
+                      {interpretDrift(item.continuity_drift).posture}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
+        </section>
+
+        <section style={styles.card}>
+          <h2 style={styles.cardTitle}>Generated Reliability Brief</h2>
+          <pre style={styles.summaryBox}>{brief}</pre>
         </section>
       </div>
     </main>
   )
 }
 
-function SignalCard({
-  title,
-  value,
-}: {
-  title: string
-  value: string
-}) {
-  return (
-    <div style={styles.signalCard}>
-      <p style={styles.signalTitle}>
-        {title}
-      </p>
-
-      <h3 style={styles.signalValue}>
-        {value}
-      </h3>
-    </div>
-  )
-}
-
-function ContextItem({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
-  return (
-    <div style={styles.contextItem}>
-      <p style={styles.contextLabel}>
-        {label}
-      </p>
-
-      <h3 style={styles.contextValue}>
-        {value}
-      </h3>
-    </div>
-  )
-}
-
 function average(values: number[]) {
-  const valid = values.filter((v) =>
-    Number.isFinite(v),
-  )
-
+  const valid = values.filter((value) => Number.isFinite(value))
   if (valid.length === 0) return 0
-
-  return Math.round(
-    valid.reduce((a, b) => a + b, 0) /
-      valid.length,
-  )
+  return Math.round(valid.reduce((sum, value) => sum + value, 0) / valid.length)
 }
 
-function calculateVolatility(
-  values: number[],
-) {
-  const valid = values.filter((v) =>
-    Number.isFinite(v),
-  )
-
+function calculateVolatility(values: number[]) {
+  const valid = values.filter((value) => Number.isFinite(value))
   if (valid.length < 2) return 0
 
   const mean = average(valid)
-
   const variance =
-    valid.reduce(
-      (sum, value) =>
-        sum +
-        Math.pow(value - mean, 2),
-      0,
-    ) / valid.length
+    valid.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) /
+    valid.length
 
-  return Math.round(
-    Math.sqrt(variance),
+  return Math.min(100, Math.round(Math.sqrt(variance)))
+}
+
+function strongestDriver(scores: Record<string, number>) {
+  return (
+    Object.entries(scores).sort((a, b) => b[1] - a[1])[0]?.[0] ||
+    'No dominant weakness detected'
   )
 }
 
-function resolveReliabilityPosture(
-  input: {
-    reliability: number
-    survivability: number
-    continuity: number
-    instabilityBurden: number
-    volatility: number
-  },
-) {
+function interpretReliabilityPosture(input: {
+  reliability: number
+  survivability: number
+  continuity: number
+  instabilityBurden: number
+  volatility: number
+}): Interpretation {
   if (
     input.reliability >= 75 &&
     input.survivability >= 75 &&
+    input.continuity >= 70 &&
     input.instabilityBurden <= 35
   ) {
-    return 'RELIABILITY STRENGTHENING'
+    return {
+      posture: 'RELIABILITY STRENGTHENING',
+      meaning:
+        'Continuity stabilization is becoming dependable across persisted memory.',
+      action: 'Maintain current stabilization discipline and confirm durability.',
+    }
   }
 
   if (
@@ -627,416 +393,602 @@ function resolveReliabilityPosture(
     input.survivability <= 40 ||
     input.instabilityBurden >= 70
   ) {
-    return 'RELIABILITY DETERIORATING'
+    return {
+      posture: 'RELIABILITY DETERIORATING',
+      meaning:
+        'Continuity reliability is weakening and may not support durable stabilization.',
+      action:
+        'Escalate review of recurring pressure, survivability weakness, and unresolved momentum.',
+    }
   }
 
-  if (
-    input.volatility >= 25
-  ) {
-    return 'RELIABILITY UNSTABLE'
+  if (input.volatility >= 25 || input.instabilityBurden >= 50) {
+    return {
+      posture: 'RELIABILITY UNSTABLE',
+      meaning:
+        'Reliability is fluctuating and has not settled into dependable continuity.',
+      action: 'Inspect volatility drivers and compare against drift and recurrence.',
+    }
   }
 
-  return 'RELIABILITY HOLDING'
+  return {
+    posture: 'RELIABILITY HOLDING',
+    meaning:
+      'Reliability exists and is holding, but dependability still requires confirmation.',
+    action: 'Maintain monitoring and continue saving operational memory.',
+  }
 }
 
-function resolveExecutiveMeaning(
-  posture: string,
-) {
-  if (
-    posture ===
-    'RELIABILITY STRENGTHENING'
-  ) {
-    return 'Continuity stabilization is becoming dependable. Recovery reliability, survivability, and operational continuity are holding together with contained structural pressure.'
+function interpretReliability(value: number): Interpretation {
+  if (value >= 75) {
+    return {
+      posture: 'RELIABILITY STRENGTHENING',
+      meaning: 'Reliability is moving toward dependable continuity.',
+      action: 'Preserve current operating discipline.',
+    }
   }
 
-  if (
-    posture ===
-    'RELIABILITY DETERIORATING'
-  ) {
-    return 'Continuity reliability is weakening. Structural pressure, instability burden, or survivability deterioration remain visible and require executive review.'
+  if (value >= 55) {
+    return {
+      posture: 'RELIABILITY HOLDING',
+      meaning: 'Reliability exists but still requires durability confirmation.',
+      action: 'Keep monitoring active.',
+    }
   }
 
-  if (
-    posture ===
-    'RELIABILITY UNSTABLE'
-  ) {
-    return 'Continuity reliability is fluctuating between stabilization and instability. The infrastructure has not yet settled into durable operational dependability.'
+  if (value >= 40) {
+    return {
+      posture: 'RELIABILITY FRAGILE',
+      meaning: 'Reliability is visible but vulnerable to instability.',
+      action: 'Review unresolved barriers.',
+    }
   }
 
-  return 'Continuity reliability is holding. Recovery credibility exists, but survivability durability still requires continued governance review.'
+  return {
+    posture: 'RELIABILITY DETERIORATING',
+    meaning: 'Reliability is too weak to support durable continuity.',
+    action: 'Escalate reliability review.',
+  }
 }
 
-function resolveRecommendedAction(
-  posture: string,
-) {
-  if (
-    posture ===
-    'RELIABILITY STRENGTHENING'
-  ) {
-    return 'Maintain current stabilization posture and continue survivability monitoring.'
+function interpretSurvivability(value: number): Interpretation {
+  if (value >= 75) {
+    return {
+      posture: 'SURVIVABILITY IMPROVING',
+      meaning: 'The continuity pathway is showing stronger durability.',
+      action: 'Maintain survivability monitoring.',
+    }
   }
 
-  if (
-    posture ===
-    'RELIABILITY DETERIORATING'
-  ) {
-    return 'Review recurring instability corridors, escalation burden, and unresolved structural pressure before deterioration becomes systemic.'
+  if (value >= 55) {
+    return {
+      posture: 'SURVIVABILITY MONITORED',
+      meaning: 'Survivability exists but remains under review.',
+      action: 'Do not assume closure.',
+    }
   }
 
-  if (
-    posture ===
-    'RELIABILITY UNSTABLE'
-  ) {
-    return 'Inspect volatility drivers and compare recent operational memory against continuity drift and unresolved momentum.'
+  if (value >= 40) {
+    return {
+      posture: 'SURVIVABILITY FRAGILE',
+      meaning: 'Survivability may weaken under continued pressure.',
+      action: 'Continue governed review.',
+    }
   }
 
-  return 'Maintain monitoring and continue saving operational snapshots to confirm durability.'
+  return {
+    posture: 'SURVIVABILITY DETERIORATING',
+    meaning: 'Survivability is not credible enough for closure.',
+    action: 'Escalate survivability review.',
+  }
 }
 
-function resolveReliabilityDirection(
-  value: number,
-) {
-  if (value >= 75)
-    return 'RELIABILITY STRENGTHENING'
+function interpretContinuity(value: number): Interpretation {
+  if (value >= 75) {
+    return {
+      posture: 'CONTINUITY HOLDING',
+      meaning: 'Continuity integrity is holding strongly.',
+      action: 'Maintain confirmation monitoring.',
+    }
+  }
 
-  if (value >= 55)
-    return 'RELIABILITY HOLDING'
+  if (value >= 55) {
+    return {
+      posture: 'CONTINUITY MONITORED',
+      meaning: 'Continuity is present but still requires review.',
+      action: 'Continue monitoring.',
+    }
+  }
 
-  if (value >= 40)
-    return 'RELIABILITY FRAGILE'
+  if (value >= 40) {
+    return {
+      posture: 'CONTINUITY FRAGILE',
+      meaning: 'Continuity may weaken if unresolved pressure persists.',
+      action: 'Review drift and pressure.',
+    }
+  }
 
-  return 'RELIABILITY DETERIORATING'
+  return {
+    posture: 'CONTINUITY DETERIORATING',
+    meaning: 'Continuity integrity is weakening.',
+    action: 'Escalate continuity review.',
+  }
 }
 
-function resolveSurvivabilityMeaning(
-  value: number,
-) {
-  if (value >= 75)
-    return 'SURVIVABILITY IMPROVING'
+function interpretConfidence(value: number): Interpretation {
+  if (value >= 75) {
+    return {
+      posture: 'CONFIDENCE STRONG',
+      meaning: 'Stabilization confidence is becoming credible.',
+      action: 'Confirm durability before closure.',
+    }
+  }
 
-  if (value >= 55)
-    return 'SURVIVABILITY MONITORED'
+  if (value >= 55) {
+    return {
+      posture: 'CONFIDENCE MODERATE',
+      meaning: 'Stabilization confidence exists but is not final proof.',
+      action: 'Maintain review.',
+    }
+  }
 
-  if (value >= 40)
-    return 'SURVIVABILITY FRAGILE'
+  if (value >= 40) {
+    return {
+      posture: 'CONFIDENCE FRAGILE',
+      meaning: 'Stabilization confidence remains vulnerable.',
+      action: 'Strengthen follow-through.',
+    }
+  }
 
-  return 'SURVIVABILITY DETERIORATING'
+  return {
+    posture: 'CONFIDENCE WEAK',
+    meaning: 'Stabilization confidence is too weak for closure.',
+    action: 'Escalate stabilization review.',
+  }
 }
 
-function resolveContinuityMeaning(
-  value: number,
-) {
-  if (value >= 75)
-    return 'CONTINUITY HOLDING'
+function interpretInstability(value: number): Interpretation {
+  if (value >= 70) {
+    return {
+      posture: 'HEAVY INSTABILITY BURDEN',
+      meaning: 'Instability burden is strong enough to threaten dependability.',
+      action: 'Escalate instability review.',
+    }
+  }
 
-  if (value >= 55)
-    return 'CONTINUITY MONITORED'
+  if (value >= 50) {
+    return {
+      posture: 'MODERATE STRUCTURAL FRICTION',
+      meaning: 'Structural friction remains visible.',
+      action: 'Reduce reliability blockers.',
+    }
+  }
 
-  if (value >= 40)
-    return 'CONTINUITY FRAGILE'
+  if (value >= 35) {
+    return {
+      posture: 'INSTABILITY MONITORED',
+      meaning: 'Instability is visible but not dominant.',
+      action: 'Keep under review.',
+    }
+  }
 
-  return 'CONTINUITY DETERIORATING'
+  return {
+    posture: 'INSTABILITY CONTAINED',
+    meaning: 'Instability burden appears contained.',
+    action: 'Continue monitoring.',
+  }
 }
 
-function resolveInstabilityMeaning(
-  value: number,
-) {
-  if (value >= 70)
-    return 'HEAVY INSTABILITY BURDEN'
+function interpretVolatility(value: number): Interpretation {
+  if (value >= 30) {
+    return {
+      posture: 'HIGH VOLATILITY',
+      meaning: 'Reliability movement is fluctuating too much for confidence.',
+      action: 'Extend monitoring.',
+    }
+  }
 
-  if (value >= 50)
-    return 'MODERATE STRUCTURAL FRICTION'
+  if (value >= 18) {
+    return {
+      posture: 'CONTAINED VARIATION',
+      meaning: 'Variation exists but is not showing collapse.',
+      action: 'Watch for repeated instability.',
+    }
+  }
 
-  if (value >= 35)
-    return 'INSTABILITY MONITORED'
-
-  return 'INSTABILITY CONTAINED'
+  return {
+    posture: 'STABLE MOVEMENT',
+    meaning: 'Reliability movement appears steady.',
+    action: 'Maintain confirmation monitoring.',
+  }
 }
 
-function resolveVolatilityMeaning(
-  value: number,
-) {
-  if (value >= 30)
-    return 'HIGH VOLATILITY'
+function interpretDrift(value: number): Interpretation {
+  if (value >= 60) {
+    return {
+      posture: 'SEVERE CONTINUITY DRIFT',
+      meaning: 'Continuity drift is strong enough to threaten reliability.',
+      action: 'Escalate drift review.',
+    }
+  }
 
-  if (value >= 18)
-    return 'CONTAINED VARIATION'
+  if (value >= 40) {
+    return {
+      posture: 'DRIFT UNDER WATCH',
+      meaning: 'Continuity drift is visible and must remain under review.',
+      action: 'Keep drift visible.',
+    }
+  }
 
-  return 'STABLE RELIABILITY MOVEMENT'
+  return {
+    posture: 'DRIFT CONTAINED',
+    meaning: 'Continuity drift is currently contained.',
+    action: 'Maintain monitoring.',
+  }
 }
 
-function resolveDriftMeaning(
-  value: number,
-) {
-  if (value >= 60)
-    return 'SEVERE CONTINUITY DRIFT'
+function interpretUnresolved(value: number): Interpretation {
+  if (value >= 65) {
+    return {
+      posture: 'HEAVY UNRESOLVED MOMENTUM',
+      meaning: 'Unresolved momentum may undermine dependability.',
+      action: 'Escalate unresolved pressure review.',
+    }
+  }
 
-  if (value >= 40)
-    return 'MODERATE CONTINUITY DRIFT'
+  if (value >= 45) {
+    return {
+      posture: 'MODERATE UNRESOLVED MOMENTUM',
+      meaning: 'Unresolved momentum remains visible.',
+      action: 'Keep ownership and follow-up active.',
+    }
+  }
 
-  return 'DRIFT CONTAINED'
+  return {
+    posture: 'UNRESOLVED MOMENTUM CONTAINED',
+    meaning: 'Unresolved momentum appears contained.',
+    action: 'Continue monitoring.',
+  }
 }
 
-function resolveUnresolvedMeaning(
-  value: number,
-) {
-  if (value >= 65)
-    return 'HEAVY UNRESOLVED MOMENTUM'
+function interpretHistory(count: number): Interpretation {
+  if (count < 3) {
+    return {
+      posture: 'INSUFFICIENT HISTORY',
+      meaning: 'Too few snapshots exist for reliability interpretation.',
+      action: 'Continue saving operational snapshots.',
+    }
+  }
 
-  if (value >= 45)
-    return 'MODERATE UNRESOLVED MOMENTUM'
+  if (count < 10) {
+    return {
+      posture: 'EARLY HISTORY',
+      meaning: 'Reliability memory has started but remains young.',
+      action: 'Continue building continuity memory.',
+    }
+  }
 
-  return 'UNRESOLVED MOMENTUM CONTAINED'
+  return {
+    posture: 'MEMORY ESTABLISHED',
+    meaning: 'Persisted memory supports reliability interpretation.',
+    action: 'Use posture to guide review.',
+  }
+}
+
+function compactAction(actions: string[]) {
+  return Array.from(new Set(actions)).join(' ')
 }
 
 function formatDate(value: string) {
-  return new Date(
-    value,
-  ).toLocaleString()
+  if (!value) return 'Not recorded'
+  return new Date(value).toLocaleString()
 }
 
-const styles: Record<
-  string,
-  CSSProperties
-> = {
+function PostureCard({
+  title,
+  interpretation,
+}: {
+  title: string
+  interpretation: Interpretation
+}) {
+  return (
+    <article style={styles.postureCard}>
+      <p style={styles.cardKicker}>{title}</p>
+      <h3 style={styles.postureTitle}>{interpretation.posture}</h3>
+      <p style={styles.postureMeaning}>{interpretation.meaning}</p>
+    </article>
+  )
+}
+
+function CompactCard({ title, value }: { title: string; value: string }) {
+  return (
+    <article style={styles.compactCard}>
+      <p style={styles.cardKicker}>{title}</p>
+      <h3 style={styles.compactValue}>{value}</h3>
+    </article>
+  )
+}
+
+function Panel({
+  title,
+  children,
+}: {
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <section style={styles.card}>
+      <h2 style={styles.cardTitle}>{title}</h2>
+      <div style={styles.infoList}>{children}</div>
+    </section>
+  )
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={styles.infoRow}>
+      <span style={styles.infoLabel}>{label}</span>
+      <strong style={styles.infoValue}>{value}</strong>
+    </div>
+  )
+}
+
+const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    color: '#f8fafc',
+    color: 'white',
+    overflowX: 'hidden',
   },
-
   container: {
     width: '100%',
-    maxWidth: '1380px',
+    maxWidth: '1120px',
     margin: '0 auto',
+    padding: '0 20px 48px',
+    boxSizing: 'border-box',
   },
-
-  hero: {
-    marginBottom: '28px',
+  header: {
+    marginBottom: '20px',
+    paddingTop: '4px',
   },
-
   kicker: {
     color: '#67e8f9',
     fontSize: '12px',
     fontWeight: 900,
-    letterSpacing: '0.16em',
-    marginBottom: '12px',
+    letterSpacing: '2px',
+    margin: 0,
   },
-
   title: {
-    fontSize:
-      'clamp(38px, 6vw, 62px)',
+    fontSize: 'clamp(32px, 5vw, 48px)',
     lineHeight: 1.05,
-    margin: 0,
+    margin: '10px 0',
   },
-
   subtitle: {
-    marginTop: '18px',
     color: '#cbd5e1',
-    fontSize: '18px',
-    lineHeight: 1.7,
-    maxWidth: '980px',
-  },
-
-  message: {
-    background: '#052e16',
-    border: '1px solid #14532d',
-    color: '#dcfce7',
-    padding: '16px',
-    borderRadius: '18px',
-    marginBottom: '24px',
-    fontWeight: 700,
-  },
-
-  primaryBoard: {
-    background: '#020617',
-    border: '1px solid #1e293b',
-    borderRadius: '28px',
-    padding: '32px',
-    marginBottom: '28px',
-  },
-
-  primaryHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    gap: '20px',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-  },
-
-  primaryLabel: {
-    color: '#94a3b8',
-    textTransform: 'uppercase',
-    letterSpacing: '0.12em',
-    fontWeight: 900,
-    fontSize: '12px',
+    maxWidth: '760px',
+    lineHeight: 1.65,
+    fontSize: '16px',
     margin: 0,
   },
-
-  primaryValue: {
-    fontSize:
-      'clamp(38px, 6vw, 64px)',
-    margin: '10px 0 0',
+  message: {
+    background: '#064e3b',
+    color: '#bbf7d0',
+    padding: '12px 14px',
+    borderRadius: '14px',
+    fontWeight: 800,
+    marginBottom: '16px',
+    fontSize: '14px',
+  },
+  heroCard: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.4fr) minmax(260px, 0.6fr)',
+    gap: '16px',
+    background: '#020617',
+    border: '1px solid #22c55e',
+    borderRadius: '24px',
+    padding: '22px',
+    marginBottom: '16px',
+    boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
+  },
+  sectionKicker: {
+    color: '#94a3b8',
+    fontWeight: 900,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    margin: 0,
+    fontSize: '12px',
+  },
+  heroPosture: {
+    fontSize: 'clamp(34px, 6vw, 56px)',
+    margin: '8px 0 12px',
+    color: '#86efac',
+    letterSpacing: '-0.05em',
     lineHeight: 1,
   },
-
-  primaryBadge: {
-    padding: '12px 18px',
-    borderRadius: '999px',
-    background: '#0f172a',
-    border: '1px solid #334155',
-    fontWeight: 800,
-    color: '#67e8f9',
-    height: 'fit-content',
+  heroMeaning: {
+    color: '#dbeafe',
+    lineHeight: 1.6,
+    margin: 0,
+    maxWidth: '720px',
   },
-
-  primaryMeaning: {
-    marginTop: '24px',
-    color: '#cbd5e1',
-    lineHeight: 1.8,
-    fontSize: '17px',
-    maxWidth: '1100px',
-  },
-
   actionBox: {
-    marginTop: '24px',
-    background: '#0f172a',
-    border: '1px solid #334155',
+    background: '#052e16',
+    border: '1px solid #22c55e',
     borderRadius: '18px',
-    padding: '20px',
-    display: 'grid',
-    gap: '10px',
+    padding: '16px',
+    alignSelf: 'stretch',
   },
-
-  signalGrid: {
-    display: 'grid',
-    gridTemplateColumns:
-      'repeat(auto-fit, minmax(260px, 1fr))',
-    gap: '18px',
-    marginBottom: '28px',
+  actionLabel: {
+    color: '#86efac',
+    fontWeight: 900,
+    margin: '0 0 8px',
+    fontSize: '12px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.12em',
   },
-
-  signalCard: {
+  actionText: {
+    color: '#dcfce7',
+    lineHeight: 1.55,
+    margin: 0,
+    fontSize: '14px',
+  },
+  postureGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: '14px',
+    marginBottom: '16px',
+  },
+  postureCard: {
+    background: '#0f172a',
+    border: '1px solid #1e293b',
+    borderRadius: '18px',
+    padding: '16px',
+    minHeight: '150px',
+    boxSizing: 'border-box',
+  },
+  cardKicker: {
+    color: '#94a3b8',
+    fontWeight: 800,
+    margin: 0,
+    fontSize: '12px',
+  },
+  postureTitle: {
+    color: '#f8fafc',
+    fontSize: '19px',
+    margin: '10px 0 8px',
+    lineHeight: 1.15,
+  },
+  postureMeaning: {
+    color: '#cbd5e1',
+    lineHeight: 1.5,
+    fontSize: '14px',
+    margin: 0,
+  },
+  compactGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: '14px',
+    marginBottom: '16px',
+  },
+  compactCard: {
+    background: '#0f172a',
+    border: '1px solid #1e293b',
+    borderRadius: '18px',
+    padding: '16px',
+    minHeight: '104px',
+    boxSizing: 'border-box',
+  },
+  compactValue: {
+    fontSize: '18px',
+    lineHeight: 1.2,
+    margin: '10px 0 0',
+    color: '#f8fafc',
+    overflowWrap: 'anywhere',
+  },
+  twoColumn: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: '16px',
+    marginBottom: '16px',
+  },
+  card: {
     background: '#020617',
     border: '1px solid #1e293b',
     borderRadius: '22px',
-    padding: '22px',
+    padding: '20px',
+    marginBottom: '16px',
+    boxShadow: '0 20px 50px rgba(0,0,0,0.24)',
+    boxSizing: 'border-box',
+    overflow: 'hidden',
   },
-
-  signalTitle: {
-    color: '#94a3b8',
-    margin: 0,
-    marginBottom: '14px',
-    fontWeight: 800,
-    fontSize: '13px',
-    textTransform: 'uppercase',
-  },
-
-  signalValue: {
-    margin: 0,
-    fontSize: '24px',
-    lineHeight: 1.4,
-  },
-
-  contextCard: {
-    background: '#020617',
-    border: '1px solid #1e293b',
-    borderRadius: '26px',
-    padding: '28px',
-    marginBottom: '28px',
-  },
-
-  sectionTitle: {
-    fontSize: '30px',
-    margin: 0,
-    marginBottom: '22px',
-  },
-
-  contextGrid: {
-    display: 'grid',
-    gridTemplateColumns:
-      'repeat(auto-fit, minmax(300px, 1fr))',
-    gap: '16px',
-  },
-
-  contextItem: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '18px',
-  },
-
-  contextLabel: {
-    color: '#94a3b8',
-    margin: 0,
-    marginBottom: '10px',
-    fontSize: '12px',
-    textTransform: 'uppercase',
-    fontWeight: 800,
-  },
-
-  contextValue: {
-    margin: 0,
-    lineHeight: 1.6,
-    fontSize: '18px',
-  },
-
-  tableCard: {
-    background: '#020617',
-    border: '1px solid #1e293b',
-    borderRadius: '26px',
-    padding: '28px',
-  },
-
-  tableHeader: {
+  cardHeader: {
     display: 'flex',
     justifyContent: 'space-between',
-    gap: '20px',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    marginBottom: '24px',
+    gap: '16px',
+    alignItems: 'flex-start',
+    marginBottom: '14px',
   },
-
-  tableNote: {
+  cardTitle: {
+    fontSize: '22px',
+    margin: 0,
+    lineHeight: 1.2,
+  },
+  cardNote: {
     color: '#94a3b8',
-    lineHeight: 1.7,
-    maxWidth: '900px',
+    lineHeight: 1.5,
+    margin: '6px 0 0',
+    fontSize: '14px',
   },
-
+  infoList: {
+    display: 'grid',
+    gap: '10px',
+    marginTop: '14px',
+  },
+  infoRow: {
+    display: 'grid',
+    gridTemplateColumns: '160px minmax(0, 1fr)',
+    gap: '12px',
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '14px',
+    padding: '12px',
+    alignItems: 'start',
+  },
+  infoLabel: {
+    color: '#94a3b8',
+    fontWeight: 800,
+    fontSize: '12px',
+  },
+  infoValue: {
+    color: '#f8fafc',
+    lineHeight: 1.45,
+    overflowWrap: 'anywhere',
+  },
   tableWrap: {
+    width: '100%',
     overflowX: 'auto',
   },
-
   table: {
     width: '100%',
-    minWidth: '1000px',
     borderCollapse: 'collapse',
+    minWidth: '760px',
   },
-
   th: {
     textAlign: 'left',
-    padding: '16px',
-    borderBottom: '1px solid #334155',
     color: '#94a3b8',
-    fontSize: '12px',
+    borderBottom: '1px solid #334155',
+    padding: '10px',
+    fontSize: '11px',
     textTransform: 'uppercase',
   },
-
   td: {
-    padding: '16px',
     borderBottom: '1px solid #1e293b',
+    padding: '10px',
     color: '#e2e8f0',
     verticalAlign: 'top',
-    lineHeight: 1.6,
+    fontWeight: 700,
+    fontSize: '13px',
   },
-
-  button: {
-    padding: '14px 20px',
-    borderRadius: '14px',
+  primaryButton: {
+    padding: '10px 14px',
+    borderRadius: '12px',
     border: 'none',
     background: '#67e8f9',
     color: '#082f49',
     fontWeight: 900,
     cursor: 'pointer',
+    fontSize: '14px',
     whiteSpace: 'nowrap',
+  },
+  summaryBox: {
+    whiteSpace: 'pre-wrap',
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '16px',
+    padding: '16px',
+    color: '#e2e8f0',
+    lineHeight: 1.55,
+    minHeight: '260px',
+    fontSize: '14px',
+    overflowX: 'auto',
   },
 }
