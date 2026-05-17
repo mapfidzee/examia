@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { supabase } from '../../lib/supabase'
 
@@ -9,8 +10,6 @@ type CgiOperationalMetric = {
   id: string
   created_at: string
   scope: string
-  region: string | null
-  institution_id: string | null
 
   continuity_state: string
   pressure_propagation_state: string
@@ -19,7 +18,6 @@ type CgiOperationalMetric = {
 
   continuity_integrity_score: number
   stabilization_confidence_score: number
-  escalation_pressure_index: number
   recovery_reliability_score: number
   operational_survivability_score: number
 
@@ -29,15 +27,12 @@ type CgiOperationalMetric = {
   recovery_direction: number
   stabilization_trend: number
   unresolved_momentum: number
-
   propagation_risk: number
   structural_memory_risk: number
 
   dominant_pressure_source: string | null
   dominant_trajectory_signal: string | null
   dominant_memory_pattern: string | null
-  executive_summary: string | null
-  action_cue: string | null
 }
 
 type TrajectoryState =
@@ -47,9 +42,10 @@ type TrajectoryState =
   | 'TRAJECTORY_DRIFTING'
   | 'TRAJECTORY_DETERIORATING'
 
-type PanelRow = {
-  label: string
-  value: string
+type Interpretation = {
+  posture: string
+  meaning: string
+  action: string
 }
 
 const SAMPLE_LIMIT = 120
@@ -71,7 +67,7 @@ function TrajectoryContent() {
   }, [])
 
   async function loadTrajectoryMetrics() {
-    setMessage('Loading persisted CGI trajectory metrics...')
+    setMessage('Loading trajectory intelligence...')
 
     const { data, error } = await supabase
       .from('cgi_operational_metrics')
@@ -81,55 +77,40 @@ function TrajectoryContent() {
 
     if (error) {
       console.error(error)
-      setMessage('Failed to load persisted CGI trajectory metrics.')
+      setMessage('Trajectory intelligence could not be loaded.')
       return
     }
 
     setMetrics(data || [])
-    setMessage('Persisted CGI trajectory metrics loaded.')
+    setMessage('Trajectory intelligence loaded.')
   }
 
   const trajectory = useMemo(() => {
     const ordered = [...metrics].sort(
-      (a, b) =>
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
     )
 
     const latest = ordered[ordered.length - 1] || null
     const previous = ordered[ordered.length - 2] || null
-
     const earlyWindow = ordered.slice(0, 5)
     const recentWindow = ordered.slice(-5)
 
-    const averageTrajectoryRisk = average(metrics.map((item) => item.trajectory_risk))
-    const averageContinuityDrift = average(metrics.map((item) => item.continuity_drift))
-    const averageEscalationMomentum = average(
-      metrics.map((item) => item.escalation_momentum),
+    const trajectoryRisk = average(ordered.map((item) => item.trajectory_risk))
+    const drift = average(ordered.map((item) => item.continuity_drift))
+    const escalationMomentum = average(ordered.map((item) => item.escalation_momentum))
+    const recoveryDirection = average(ordered.map((item) => item.recovery_direction))
+    const stabilizationTrend = average(ordered.map((item) => item.stabilization_trend))
+    const unresolvedMomentum = average(ordered.map((item) => item.unresolved_momentum))
+    const continuityIntegrity = average(ordered.map((item) => item.continuity_integrity_score))
+    const stabilizationConfidence = average(
+      ordered.map((item) => item.stabilization_confidence_score)
     )
-    const averageRecoveryDirection = average(
-      metrics.map((item) => item.recovery_direction),
-    )
-    const averageStabilizationTrend = average(
-      metrics.map((item) => item.stabilization_trend),
-    )
-    const averageUnresolvedMomentum = average(
-      metrics.map((item) => item.unresolved_momentum),
-    )
+    const reliability = average(ordered.map((item) => item.recovery_reliability_score))
+    const survivability = average(ordered.map((item) => item.operational_survivability_score))
+    const propagation = average(ordered.map((item) => item.propagation_risk))
+    const memoryRisk = average(ordered.map((item) => item.structural_memory_risk))
 
-    const averageContinuityIntegrity = average(
-      metrics.map((item) => item.continuity_integrity_score),
-    )
-    const averageStabilizationConfidence = average(
-      metrics.map((item) => item.stabilization_confidence_score),
-    )
-    const averageRecoveryReliability = average(
-      metrics.map((item) => item.recovery_reliability_score),
-    )
-    const averageSurvivability = average(
-      metrics.map((item) => item.operational_survivability_score),
-    )
-
-    const earlyTrajectoryPressure = average(
+    const earlyPressure = average(
       earlyWindow.map((item) =>
         average([
           item.trajectory_risk,
@@ -138,11 +119,11 @@ function TrajectoryContent() {
           item.unresolved_momentum,
           100 - item.recovery_direction,
           100 - item.stabilization_trend,
-        ]),
-      ),
+        ])
+      )
     )
 
-    const recentTrajectoryPressure = average(
+    const recentPressure = average(
       recentWindow.map((item) =>
         average([
           item.trajectory_risk,
@@ -151,41 +132,37 @@ function TrajectoryContent() {
           item.unresolved_momentum,
           100 - item.recovery_direction,
           100 - item.stabilization_trend,
-        ]),
-      ),
+        ])
+      )
     )
 
-    const trajectoryPressureVelocity =
-      metrics.length < 2
-        ? 0
-        : Math.round(recentTrajectoryPressure - earlyTrajectoryPressure)
+    const trajectoryPressureMovement =
+      ordered.length < 2 ? 0 : recentPressure - earlyPressure
 
-    const earlyStabilizationMovement = average(
+    const earlyStabilization = average(
       earlyWindow.map((item) =>
         average([
           item.recovery_direction,
           item.stabilization_trend,
           item.recovery_reliability_score,
           item.operational_survivability_score,
-        ]),
-      ),
+        ])
+      )
     )
 
-    const recentStabilizationMovement = average(
+    const recentStabilization = average(
       recentWindow.map((item) =>
         average([
           item.recovery_direction,
           item.stabilization_trend,
           item.recovery_reliability_score,
           item.operational_survivability_score,
-        ]),
-      ),
+        ])
+      )
     )
 
-    const stabilizationMovementVelocity =
-      metrics.length < 2
-        ? 0
-        : Math.round(recentStabilizationMovement - earlyStabilizationMovement)
+    const stabilizationMovement =
+      ordered.length < 2 ? 0 : recentStabilization - earlyStabilization
 
     const latestTrajectoryMovement =
       latest && previous
@@ -199,19 +176,8 @@ function TrajectoryContent() {
           ])
         : 0
 
-    const latestStabilizationMovement =
-      latest && previous
-        ? average([
-            latest.recovery_direction - previous.recovery_direction,
-            latest.stabilization_trend - previous.stabilization_trend,
-            latest.recovery_reliability_score - previous.recovery_reliability_score,
-            latest.operational_survivability_score -
-              previous.operational_survivability_score,
-          ])
-        : 0
-
     const trajectoryVolatility = calculateVolatility(
-      metrics.map((item) =>
+      ordered.map((item) =>
         average([
           item.trajectory_risk,
           item.continuity_drift,
@@ -219,231 +185,126 @@ function TrajectoryContent() {
           item.unresolved_momentum,
           100 - item.recovery_direction,
           100 - item.stabilization_trend,
-        ]),
-      ),
+        ])
+      )
     )
 
-    const directionStrength = clamp(
-      average([
-        averageRecoveryDirection,
-        averageStabilizationTrend,
-        averageRecoveryReliability,
-        averageSurvivability,
-        averageContinuityIntegrity,
-        averageStabilizationConfidence,
-      ]),
-    )
+    const directionStrength = average([
+      recoveryDirection,
+      stabilizationTrend,
+      reliability,
+      survivability,
+      continuityIntegrity,
+      stabilizationConfidence,
+    ])
 
-    const deteriorationLoad = clamp(
-      average([
-        averageTrajectoryRisk,
-        averageContinuityDrift,
-        averageEscalationMomentum,
-        averageUnresolvedMomentum,
-        metrics.length > 0
-          ? average(metrics.map((item) => item.propagation_risk))
-          : 0,
-        metrics.length > 0
-          ? average(metrics.map((item) => item.structural_memory_risk))
-          : 0,
-      ]),
-    )
+    const deteriorationLoad = average([
+      trajectoryRisk,
+      drift,
+      escalationMomentum,
+      unresolvedMomentum,
+      propagation,
+      memoryRisk,
+    ])
 
-    const trajectoryState = getTrajectoryState({
-      count: metrics.length,
+    const state = getTrajectoryState({
+      count: ordered.length,
       directionStrength,
       deteriorationLoad,
-      trajectoryPressureVelocity,
-      stabilizationMovementVelocity,
+      trajectoryPressureMovement,
+      stabilizationMovement,
       trajectoryVolatility,
       latest,
     })
 
-    const dominantTrajectoryDriver = strongestDriver({
-      'Trajectory risk': averageTrajectoryRisk,
-      'Continuity drift': averageContinuityDrift,
-      'Escalation momentum': averageEscalationMomentum,
-      'Unresolved momentum': averageUnresolvedMomentum,
-      'Recovery weakness': 100 - averageRecoveryDirection,
-      'Stabilization weakness': 100 - averageStabilizationTrend,
-      'Reliability weakness': 100 - averageRecoveryReliability,
-      'Survivability weakness': 100 - averageSurvivability,
-      'Pressure velocity': Math.max(trajectoryPressureVelocity, 0),
-      'Stabilization decline': Math.max(-stabilizationMovementVelocity, 0),
-      Volatility: trajectoryVolatility,
+    const dominantDriver = strongestDriver({
+      'Trajectory risk': trajectoryRisk,
+      'Continuity drift': drift,
+      'Escalation momentum': escalationMomentum,
+      'Unresolved momentum': unresolvedMomentum,
+      'Recovery weakness': 100 - recoveryDirection,
+      'Stabilization weakness': 100 - stabilizationTrend,
+      'Reliability weakness': 100 - reliability,
+      'Survivability weakness': 100 - survivability,
+      'Pressure movement': Math.max(trajectoryPressureMovement, 0),
+      'Stabilization decline': Math.max(-stabilizationMovement, 0),
+      'Trajectory volatility': trajectoryVolatility,
     })
 
-    const executiveSummary = getExecutiveSummary(trajectoryState)
-    const actionCue = getActionCue(trajectoryState)
+    const trajectoryPosture = interpretTrajectoryState(state)
+    const directionPosture = interpretDirectionStrength(directionStrength)
+    const driftPosture = interpretDrift(drift)
+    const deteriorationSignal = interpretDeterioration(deteriorationLoad)
+    const recoveryPosture = interpretRecoveryDirection(recoveryDirection)
+    const stabilizationPosture = interpretStabilization(stabilizationTrend)
+    const momentumPosture = interpretMomentum(escalationMomentum)
+    const unresolvedPosture = interpretUnresolved(unresolvedMomentum)
+    const volatilityPosture = interpretVolatility(trajectoryVolatility)
+    const movementPosture = interpretMovement(
+      trajectoryPressureMovement || latestTrajectoryMovement
+    )
+    const historyDepth = interpretHistory(ordered.length)
+
+    const executiveSummary = `${trajectoryPosture.meaning} Dominant trajectory driver: ${dominantDriver}. ${driftPosture.meaning} ${stabilizationPosture.meaning}`
+
+    const actionCue = compactAction([
+      trajectoryPosture.action,
+      driftPosture.action,
+      deteriorationSignal.action,
+      stabilizationPosture.action,
+    ])
 
     return {
-      ordered,
       latest,
-      previous,
-      averageTrajectoryRisk,
-      averageContinuityDrift,
-      averageEscalationMomentum,
-      averageRecoveryDirection,
-      averageStabilizationTrend,
-      averageUnresolvedMomentum,
-      averageContinuityIntegrity,
-      averageStabilizationConfidence,
-      averageRecoveryReliability,
-      averageSurvivability,
-      earlyTrajectoryPressure,
-      recentTrajectoryPressure,
-      trajectoryPressureVelocity,
-      earlyStabilizationMovement,
-      recentStabilizationMovement,
-      stabilizationMovementVelocity,
-      latestTrajectoryMovement,
-      latestStabilizationMovement,
-      trajectoryVolatility,
-      directionStrength,
-      deteriorationLoad,
-      trajectoryState,
-      dominantTrajectoryDriver,
+      trajectoryPosture,
+      directionPosture,
+      driftPosture,
+      deteriorationSignal,
+      recoveryPosture,
+      stabilizationPosture,
+      momentumPosture,
+      unresolvedPosture,
+      volatilityPosture,
+      movementPosture,
+      historyDepth,
+      dominantDriver,
       executiveSummary,
       actionCue,
     }
   }, [metrics])
 
-  const latestRows: PanelRow[] = trajectory.latest
-    ? [
-        {
-          label: 'Latest Continuity State',
-          value: trajectory.latest.continuity_state,
-        },
-        {
-          label: 'Latest Trajectory Direction',
-          value: trajectory.latest.trajectory_direction,
-        },
-        {
-          label: 'Latest Pressure State',
-          value: trajectory.latest.pressure_propagation_state,
-        },
-        {
-          label: 'Latest Structural Memory State',
-          value: trajectory.latest.structural_memory_state,
-        },
-        {
-          label: 'Dominant Trajectory Signal',
-          value:
-            trajectory.latest.dominant_trajectory_signal ||
-            'No trajectory signal recorded',
-        },
-        {
-          label: 'Dominant Pressure Source',
-          value:
-            trajectory.latest.dominant_pressure_source ||
-            'No pressure source recorded',
-        },
-        {
-          label: 'Dominant Memory Pattern',
-          value:
-            trajectory.latest.dominant_memory_pattern ||
-            'No memory pattern recorded',
-        },
-      ]
-    : []
-
-  const directionRows: PanelRow[] = [
-    {
-      label: 'Dominant Trajectory Driver',
-      value: trajectory.dominantTrajectoryDriver,
-    },
-    {
-      label: 'Trajectory Pressure Velocity',
-      value: formatDelta(trajectory.trajectoryPressureVelocity),
-    },
-    {
-      label: 'Stabilization Movement Velocity',
-      value: formatDelta(trajectory.stabilizationMovementVelocity),
-    },
-    {
-      label: 'Latest Trajectory Movement',
-      value: formatDelta(trajectory.latestTrajectoryMovement),
-    },
-    {
-      label: 'Latest Stabilization Movement',
-      value: formatDelta(trajectory.latestStabilizationMovement),
-    },
-    {
-      label: 'Trajectory Volatility',
-      value: `${trajectory.trajectoryVolatility}/100`,
-    },
-    {
-      label: 'Direction Strength',
-      value: `${trajectory.directionStrength}/100`,
-    },
-    {
-      label: 'Deterioration Load',
-      value: `${trajectory.deteriorationLoad}/100`,
-    },
-  ]
-
   const brief = `
 TSINAXA CGI TRAJECTORY INTELLIGENCE BRIEF
 
-Trajectory State:
-${trajectory.trajectoryState}
+Trajectory Posture:
+${trajectory.trajectoryPosture.posture}
 
-Snapshots Reviewed:
-${metrics.length}
+Direction Posture:
+${trajectory.directionPosture.posture}
 
-Dominant Trajectory Driver:
-${trajectory.dominantTrajectoryDriver}
+Continuity Drift:
+${trajectory.driftPosture.posture}
 
-Direction Strength:
-${trajectory.directionStrength}/100
+Deterioration Signal:
+${trajectory.deteriorationSignal.posture}
 
-Deterioration Load:
-${trajectory.deteriorationLoad}/100
+Recovery Direction:
+${trajectory.recoveryPosture.posture}
 
-Trajectory Pressure Velocity:
-${trajectory.trajectoryPressureVelocity}
+Stabilization Movement:
+${trajectory.stabilizationPosture.posture}
 
-Stabilization Movement Velocity:
-${trajectory.stabilizationMovementVelocity}
+Momentum State:
+${trajectory.momentumPosture.posture}
 
-Latest Trajectory Movement:
-${trajectory.latestTrajectoryMovement}
-
-Latest Stabilization Movement:
-${trajectory.latestStabilizationMovement}
+Unresolved Momentum:
+${trajectory.unresolvedPosture.posture}
 
 Trajectory Volatility:
-${trajectory.trajectoryVolatility}/100
+${trajectory.volatilityPosture.posture}
 
-Average Trajectory Risk:
-${trajectory.averageTrajectoryRisk}/100
-
-Average Continuity Drift:
-${trajectory.averageContinuityDrift}/100
-
-Average Escalation Momentum:
-${trajectory.averageEscalationMomentum}/100
-
-Average Recovery Direction:
-${trajectory.averageRecoveryDirection}/100
-
-Average Stabilization Trend:
-${trajectory.averageStabilizationTrend}/100
-
-Average Unresolved Momentum:
-${trajectory.averageUnresolvedMomentum}/100
-
-Average Continuity Integrity:
-${trajectory.averageContinuityIntegrity}/100
-
-Average Stabilization Confidence:
-${trajectory.averageStabilizationConfidence}/100
-
-Average Recovery Reliability:
-${trajectory.averageRecoveryReliability}/100
-
-Average Operational Survivability:
-${trajectory.averageSurvivability}/100
+Dominant Trajectory Driver:
+${trajectory.dominantDriver}
 
 Executive Interpretation:
 ${trajectory.executiveSummary}
@@ -452,153 +313,99 @@ Recommended Action:
 ${trajectory.actionCue}
 
 Governance-Safe Meaning:
-This trajectory view uses persisted CGI operational metric snapshots. It does not judge people. It evaluates whether continuity direction is recovering, holding, drifting, or deteriorating across time.
+This trajectory view interprets persisted continuity memory. It does not judge people. It asks whether continuity direction is recovering, holding, drifting, or deteriorating across time.
   `.trim()
 
   return (
     <main style={styles.page}>
       <div style={styles.container}>
-        <section style={styles.hero}>
+        <section style={styles.header}>
           <p style={styles.kicker}>TSINAXA CGI • TRAJECTORY INTELLIGENCE</p>
 
           <h1 style={styles.title}>Continuity Trajectory Intelligence</h1>
 
           <p style={styles.subtitle}>
-            Use persisted CGI operational metric snapshots to see whether continuity is
-            recovering, holding, drifting, or deteriorating across time.
+            Executive interpretation of whether continuity direction is recovering,
+            holding, drifting, or deteriorating across persisted operational memory.
           </p>
         </section>
 
         {message && <div style={styles.message}>{message}</div>}
 
-        <section style={styles.trajectoryHero}>
+        <section style={styles.heroCard}>
           <div>
-            <p style={styles.scoreLabel}>Trajectory State</p>
-            <h2 style={styles.trajectoryState}>{trajectory.trajectoryState}</h2>
-            <p style={styles.panelNote}>{trajectory.executiveSummary}</p>
-          </div>
+            <p style={styles.sectionKicker}>Trajectory Posture</p>
 
-          <div style={styles.scoreGrid}>
-            <ScoreMetric
-              label="Direction Strength"
-              value={trajectory.directionStrength}
-            />
-            <ScoreMetric
-              label="Deterioration Load"
-              value={trajectory.deteriorationLoad}
-            />
-            <ScoreMetric
-              label="Trajectory Risk"
-              value={trajectory.averageTrajectoryRisk}
-            />
-            <ScoreMetric
-              label="Continuity Drift"
-              value={trajectory.averageContinuityDrift}
-            />
-            <ScoreMetric
-              label="Recovery Direction"
-              value={trajectory.averageRecoveryDirection}
-            />
-            <ScoreMetric
-              label="Stabilization Trend"
-              value={trajectory.averageStabilizationTrend}
-            />
+            <h2 style={styles.heroPosture}>
+              {trajectory.trajectoryPosture.posture}
+            </h2>
+
+            <p style={styles.heroMeaning}>{trajectory.executiveSummary}</p>
           </div>
 
           <div style={styles.actionBox}>
-            <strong>Recommended Action:</strong>
-            <span>{trajectory.actionCue}</span>
+            <p style={styles.actionLabel}>Recommended Action</p>
+            <p style={styles.actionText}>{trajectory.actionCue}</p>
           </div>
         </section>
 
-        <section style={styles.metricsGrid}>
-          <Metric label="Snapshots Reviewed" value={metrics.length} />
-          <Metric
-            label="Dominant Driver"
-            value={trajectory.dominantTrajectoryDriver}
-          />
-          <Metric
-            label="Trajectory Pressure Velocity"
-            value={formatDelta(trajectory.trajectoryPressureVelocity)}
-          />
-          <Metric
-            label="Stabilization Velocity"
-            value={formatDelta(trajectory.stabilizationMovementVelocity)}
-          />
-          <Metric
-            label="Latest Trajectory Movement"
-            value={formatDelta(trajectory.latestTrajectoryMovement)}
-          />
-          <Metric
-            label="Latest Stabilization Movement"
-            value={formatDelta(trajectory.latestStabilizationMovement)}
-          />
-          <Metric
-            label="Trajectory Volatility"
-            value={`${trajectory.trajectoryVolatility}/100`}
-          />
-          <Metric
-            label="Unresolved Momentum Avg"
-            value={`${trajectory.averageUnresolvedMomentum}/100`}
-          />
+        <section style={styles.postureGrid}>
+          <PostureCard title="Direction Posture" interpretation={trajectory.directionPosture} />
+          <PostureCard title="Continuity Drift" interpretation={trajectory.driftPosture} />
+          <PostureCard title="Deterioration Signal" interpretation={trajectory.deteriorationSignal} />
+          <PostureCard title="Recovery Direction" interpretation={trajectory.recoveryPosture} />
+          <PostureCard title="Stabilization Movement" interpretation={trajectory.stabilizationPosture} />
+          <PostureCard title="Momentum State" interpretation={trajectory.momentumPosture} />
         </section>
 
-        <section style={styles.metricsGrid}>
-          <Metric
-            label="Escalation Momentum Avg"
-            value={`${trajectory.averageEscalationMomentum}/100`}
-          />
-          <Metric
-            label="Continuity Integrity Avg"
-            value={`${trajectory.averageContinuityIntegrity}/100`}
-          />
-          <Metric
-            label="Stabilization Confidence Avg"
-            value={`${trajectory.averageStabilizationConfidence}/100`}
-          />
-          <Metric
-            label="Recovery Reliability Avg"
-            value={`${trajectory.averageRecoveryReliability}/100`}
-          />
-          <Metric
-            label="Survivability Avg"
-            value={`${trajectory.averageSurvivability}/100`}
-          />
+        <section style={styles.compactGrid}>
+          <CompactCard title="History Depth" value={trajectory.historyDepth.posture} />
+          <CompactCard title="Dominant Driver" value={trajectory.dominantDriver} />
+          <CompactCard title="Trajectory Volatility" value={trajectory.volatilityPosture.posture} />
+          <CompactCard title="Unresolved Momentum" value={trajectory.unresolvedPosture.posture} />
         </section>
 
-        <section style={styles.layoutGrid}>
-          <Panel
-            title="Latest Persisted Trajectory State"
-            note="Most recent saved trajectory snapshot."
-            rows={latestRows}
-          />
+        <section style={styles.twoColumn}>
+          <Panel title="Latest Trajectory Context">
+            <Info label="Continuity State" value={trajectory.latest?.continuity_state || 'Not recorded'} />
+            <Info label="Trajectory Direction" value={trajectory.latest?.trajectory_direction || 'Not recorded'} />
+            <Info label="Pressure State" value={trajectory.latest?.pressure_propagation_state || 'Not recorded'} />
+            <Info label="Structural Memory" value={trajectory.latest?.structural_memory_state || 'Not recorded'} />
+            <Info label="Dominant Trajectory" value={trajectory.latest?.dominant_trajectory_signal || 'Not recorded'} />
+          </Panel>
 
-          <Panel
-            title="Trajectory Direction Reading"
-            note="Shows whether continuity direction is strengthening, weakening, drifting, or volatile."
-            rows={directionRows}
-          />
+          <Panel title="Trajectory Reading">
+            <Info label="Trajectory Posture" value={trajectory.trajectoryPosture.posture} />
+            <Info label="Continuity Drift" value={trajectory.driftPosture.posture} />
+            <Info label="Deterioration Signal" value={trajectory.deteriorationSignal.posture} />
+            <Info label="Dominant Driver" value={trajectory.dominantDriver} />
+            <Info label="Current Reading" value={trajectory.directionPosture.posture} />
+          </Panel>
         </section>
 
         <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Recent Trajectory Snapshot Trail</h2>
+          <div style={styles.cardHeader}>
+            <div>
+              <h2 style={styles.cardTitle}>Recent Trajectory Memory Trail</h2>
+              <p style={styles.cardNote}>
+                Recent snapshots are displayed as trajectory postures, not raw scores.
+              </p>
+            </div>
 
-          <p style={styles.panelNote}>
-            Latest saved rows from <code>cgi_operational_metrics</code>. These are
-            historical trajectory records, not live recalculations.
-          </p>
+            <button onClick={loadTrajectoryMetrics} style={styles.primaryButton}>
+              Refresh
+            </button>
+          </div>
 
           <div style={styles.tableWrap}>
             <table style={styles.table}>
               <thead>
                 <tr>
                   <th style={styles.th}>Created</th>
-                  <th style={styles.th}>Scope</th>
                   <th style={styles.th}>Trajectory</th>
                   <th style={styles.th}>Risk</th>
                   <th style={styles.th}>Drift</th>
-                  <th style={styles.th}>Escalation</th>
-                  <th style={styles.th}>Recovery</th>
+                  <th style={styles.th}>Momentum</th>
                   <th style={styles.th}>Stabilization</th>
                 </tr>
               </thead>
@@ -606,35 +413,37 @@ This trajectory view uses persisted CGI operational metric snapshots. It does no
               <tbody>
                 {metrics.length === 0 && (
                   <tr>
-                    <td style={styles.td} colSpan={8}>
-                      No persisted CGI operational metrics found yet.
+                    <td style={styles.td} colSpan={6}>
+                      No persisted trajectory memory found yet.
                     </td>
                   </tr>
                 )}
 
-                {metrics.slice(0, 12).map((item) => (
+                {metrics.slice(0, 8).map((item) => (
                   <tr key={item.id}>
                     <td style={styles.td}>{formatDate(item.created_at)}</td>
-                    <td style={styles.td}>{item.scope}</td>
                     <td style={styles.td}>{item.trajectory_direction}</td>
-                    <td style={styles.td}>{item.trajectory_risk}/100</td>
-                    <td style={styles.td}>{item.continuity_drift}/100</td>
-                    <td style={styles.td}>{item.escalation_momentum}/100</td>
-                    <td style={styles.td}>{item.recovery_direction}/100</td>
-                    <td style={styles.td}>{item.stabilization_trend}/100</td>
+                    <td style={styles.td}>
+                      {interpretDeterioration(item.trajectory_risk).posture}
+                    </td>
+                    <td style={styles.td}>
+                      {interpretDrift(item.continuity_drift).posture}
+                    </td>
+                    <td style={styles.td}>
+                      {interpretMomentum(item.escalation_momentum).posture}
+                    </td>
+                    <td style={styles.td}>
+                      {interpretStabilization(item.stabilization_trend).posture}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-
-          <button onClick={loadTrajectoryMetrics} style={styles.primaryButton}>
-            Refresh Trajectory Metrics
-          </button>
         </section>
 
         <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Generated Trajectory Brief</h2>
+          <h2 style={styles.cardTitle}>Generated Trajectory Brief</h2>
           <pre style={styles.summaryBox}>{brief}</pre>
         </section>
       </div>
@@ -644,23 +453,15 @@ This trajectory view uses persisted CGI operational metric snapshots. It does no
 
 function average(values: number[]) {
   const valid = values.filter((value) => Number.isFinite(value))
-
   if (valid.length === 0) return 0
-
   return Math.round(valid.reduce((sum, value) => sum + value, 0) / valid.length)
-}
-
-function clamp(value: number) {
-  return Math.max(0, Math.min(100, Math.round(value)))
 }
 
 function calculateVolatility(values: number[]) {
   const valid = values.filter((value) => Number.isFinite(value))
-
   if (valid.length < 2) return 0
 
   const mean = average(valid)
-
   const variance =
     valid.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) /
     valid.length
@@ -679,8 +480,8 @@ function getTrajectoryState(input: {
   count: number
   directionStrength: number
   deteriorationLoad: number
-  trajectoryPressureVelocity: number
-  stabilizationMovementVelocity: number
+  trajectoryPressureMovement: number
+  stabilizationMovement: number
   trajectoryVolatility: number
   latest: CgiOperationalMetric | null
 }): TrajectoryState {
@@ -688,8 +489,8 @@ function getTrajectoryState(input: {
 
   if (
     input.deteriorationLoad >= 65 ||
-    input.trajectoryPressureVelocity >= 15 ||
-    input.stabilizationMovementVelocity <= -15 ||
+    input.trajectoryPressureMovement >= 15 ||
+    input.stabilizationMovement <= -15 ||
     input.latest?.trajectory_direction === 'DETERIORATING' ||
     input.latest?.trajectory_direction === 'COLLAPSE_RISK'
   ) {
@@ -698,8 +499,8 @@ function getTrajectoryState(input: {
 
   if (
     input.deteriorationLoad >= 45 ||
-    input.trajectoryPressureVelocity >= 8 ||
-    input.stabilizationMovementVelocity <= -8 ||
+    input.trajectoryPressureMovement >= 8 ||
+    input.stabilizationMovement <= -8 ||
     input.trajectoryVolatility >= 25 ||
     input.latest?.trajectory_direction === 'DRIFTING'
   ) {
@@ -708,7 +509,7 @@ function getTrajectoryState(input: {
 
   if (
     input.directionStrength >= 60 &&
-    input.stabilizationMovementVelocity >= 5 &&
+    input.stabilizationMovement >= 5 &&
     input.deteriorationLoad < 45
   ) {
     return 'TRAJECTORY_RECOVERING'
@@ -717,49 +518,288 @@ function getTrajectoryState(input: {
   return 'TRAJECTORY_HOLDING'
 }
 
-function getExecutiveSummary(state: TrajectoryState) {
+function interpretTrajectoryState(state: TrajectoryState): Interpretation {
   if (state === 'INSUFFICIENT_HISTORY') {
-    return 'There are not enough persisted snapshots yet to judge trajectory movement over time. Continue saving operational snapshots.'
+    return {
+      posture: 'INSUFFICIENT HISTORY',
+      meaning: 'Trajectory memory is not yet deep enough to judge direction.',
+      action: 'Continue saving operational snapshots.',
+    }
   }
 
   if (state === 'TRAJECTORY_DETERIORATING') {
-    return 'Trajectory intelligence shows deterioration. Continuity pressure is rising, stabilization direction is weakening, or the latest state is moving toward collapse risk.'
+    return {
+      posture: 'TRAJECTORY DETERIORATING',
+      meaning: 'Continuity direction is weakening and may threaten stabilization credibility.',
+      action: 'Activate trajectory review immediately.',
+    }
   }
 
   if (state === 'TRAJECTORY_DRIFTING') {
-    return 'Trajectory intelligence shows drift. Continuity has not collapsed, but recovery direction and stabilization trend are not yet strong enough.'
+    return {
+      posture: 'TRAJECTORY DRIFTING',
+      meaning: 'Continuity has not collapsed, but direction is not yet reliable.',
+      action: 'Strengthen ownership, intervention completion, and recovery monitoring.',
+    }
   }
 
   if (state === 'TRAJECTORY_RECOVERING') {
-    return 'Trajectory intelligence shows recovery movement. Stabilization direction, recovery reliability, or survivability are improving across persisted snapshots.'
+    return {
+      posture: 'TRAJECTORY RECOVERING',
+      meaning: 'Recovery direction and stabilization movement are improving.',
+      action: 'Preserve recovery discipline and confirm durability.',
+    }
   }
 
-  return 'Trajectory intelligence is holding. Persisted snapshots do not show major recovery acceleration or major deterioration.'
+  return {
+    posture: 'TRAJECTORY HOLDING',
+    meaning: 'Trajectory is holding without strong recovery acceleration or clear deterioration.',
+    action: 'Maintain monitoring and continue saving trajectory memory.',
+  }
 }
 
-function getActionCue(state: TrajectoryState) {
-  if (state === 'INSUFFICIENT_HISTORY') {
-    return 'Save more operational snapshots before relying on trajectory trend interpretation.'
+function interpretDirectionStrength(value: number): Interpretation {
+  if (value >= 70) {
+    return {
+      posture: 'DIRECTION STRENGTHENING',
+      meaning: 'Continuity direction is becoming more dependable.',
+      action: 'Confirm survivability before closure.',
+    }
   }
 
-  if (state === 'TRAJECTORY_DETERIORATING') {
-    return 'Activate trajectory review and inspect drift, escalation momentum, unresolved momentum, recovery direction, and stabilization trend immediately.'
+  if (value >= 50) {
+    return {
+      posture: 'DIRECTION HOLDING',
+      meaning: 'Continuity direction is visible but still requires confirmation.',
+      action: 'Continue direction monitoring.',
+    }
   }
 
-  if (state === 'TRAJECTORY_DRIFTING') {
-    return 'Strengthen routing ownership, intervention completion, outcome confirmation, and recovery monitoring to restore direction.'
+  return {
+    posture: 'DIRECTION WEAK',
+    meaning: 'Continuity direction is not strong enough for stability confidence.',
+    action: 'Review recovery and stabilization barriers.',
   }
-
-  if (state === 'TRAJECTORY_RECOVERING') {
-    return 'Preserve current recovery discipline and continue confirming that stabilization remains durable.'
-  }
-
-  return 'Maintain monitoring and continue saving snapshots to detect whether trajectory begins recovering or deteriorating.'
 }
 
-function formatDelta(value: number) {
-  if (value > 0) return `+${value}`
-  return `${value}`
+function interpretDrift(value: number): Interpretation {
+  if (value >= 60) {
+    return {
+      posture: 'DRIFT RISING',
+      meaning: 'Continuity drift is strong enough to threaten trajectory.',
+      action: 'Escalate drift review.',
+    }
+  }
+
+  if (value >= 35) {
+    return {
+      posture: 'DRIFT UNDER WATCH',
+      meaning: 'Drift remains visible and must stay under governance review.',
+      action: 'Keep drift visible.',
+    }
+  }
+
+  return {
+    posture: 'DRIFT CONTAINED',
+    meaning: 'Continuity drift is currently contained.',
+    action: 'Maintain monitoring.',
+  }
+}
+
+function interpretDeterioration(value: number): Interpretation {
+  if (value >= 70) {
+    return {
+      posture: 'DETERIORATION RISK HIGH',
+      meaning: 'Deterioration pressure may threaten stabilization credibility.',
+      action: 'Escalate deterioration review.',
+    }
+  }
+
+  if (value >= 45) {
+    return {
+      posture: 'DETERIORATION UNDER WATCH',
+      meaning: 'Deterioration pressure is visible and requires review.',
+      action: 'Keep deterioration visible.',
+    }
+  }
+
+  return {
+    posture: 'DETERIORATION CONTAINED',
+    meaning: 'Deterioration pressure appears contained.',
+    action: 'Maintain monitoring.',
+  }
+}
+
+function interpretRecoveryDirection(value: number): Interpretation {
+  if (value >= 70) {
+    return {
+      posture: 'RECOVERY MOVING FORWARD',
+      meaning: 'Recovery direction is improving.',
+      action: 'Protect the recovery pathway.',
+    }
+  }
+
+  if (value >= 50) {
+    return {
+      posture: 'RECOVERY HOLDING',
+      meaning: 'Recovery movement is visible but not yet final proof.',
+      action: 'Continue recovery monitoring.',
+    }
+  }
+
+  return {
+    posture: 'RECOVERY WEAKENING',
+    meaning: 'Recovery direction may be weakening.',
+    action: 'Review recovery blockers.',
+  }
+}
+
+function interpretStabilization(value: number): Interpretation {
+  if (value >= 70) {
+    return {
+      posture: 'STABILIZATION STRENGTHENING',
+      meaning: 'Stabilization movement is becoming more credible.',
+      action: 'Confirm durability before closure.',
+    }
+  }
+
+  if (value >= 45) {
+    return {
+      posture: 'STABILIZATION FRAGILE',
+      meaning: 'Stabilization movement exists but is not yet durable.',
+      action: 'Keep recovery monitoring active.',
+    }
+  }
+
+  return {
+    posture: 'STABILIZATION WEAK',
+    meaning: 'Stabilization movement is too weak for confidence.',
+    action: 'Review unresolved barriers.',
+  }
+}
+
+function interpretMomentum(value: number): Interpretation {
+  if (value >= 65) {
+    return {
+      posture: 'ESCALATION MOMENTUM HIGH',
+      meaning: 'Escalation momentum may accelerate deterioration.',
+      action: 'Escalate momentum review.',
+    }
+  }
+
+  if (value >= 40) {
+    return {
+      posture: 'ESCALATION MOMENTUM VISIBLE',
+      meaning: 'Escalation momentum remains visible.',
+      action: 'Keep escalation under review.',
+    }
+  }
+
+  return {
+    posture: 'ESCALATION MOMENTUM CONTAINED',
+    meaning: 'Escalation momentum appears contained.',
+    action: 'Maintain monitoring.',
+  }
+}
+
+function interpretUnresolved(value: number): Interpretation {
+  if (value >= 65) {
+    return {
+      posture: 'UNRESOLVED MOMENTUM HIGH',
+      meaning: 'Unresolved momentum may slow or reverse recovery.',
+      action: 'Escalate unresolved momentum review.',
+    }
+  }
+
+  if (value >= 40) {
+    return {
+      posture: 'UNRESOLVED MOMENTUM VISIBLE',
+      meaning: 'Unresolved momentum remains visible.',
+      action: 'Keep follow-up active.',
+    }
+  }
+
+  return {
+    posture: 'UNRESOLVED MOMENTUM CONTAINED',
+    meaning: 'Unresolved momentum appears contained.',
+    action: 'Maintain monitoring.',
+  }
+}
+
+function interpretVolatility(value: number): Interpretation {
+  if (value >= 30) {
+    return {
+      posture: 'TRAJECTORY VOLATILE',
+      meaning: 'Trajectory movement fluctuates enough to weaken confidence.',
+      action: 'Extend trajectory monitoring.',
+    }
+  }
+
+  if (value >= 18) {
+    return {
+      posture: 'VARIATION CONTAINED',
+      meaning: 'Trajectory variation exists but is not showing collapse.',
+      action: 'Watch for repeated instability.',
+    }
+  }
+
+  return {
+    posture: 'TRAJECTORY MOVEMENT STABLE',
+    meaning: 'Trajectory movement appears steady.',
+    action: 'Maintain routine monitoring.',
+  }
+}
+
+function interpretMovement(value: number): Interpretation {
+  if (value >= 10) {
+    return {
+      posture: 'PRESSURE MOVING AGAINST TRAJECTORY',
+      meaning: 'Trajectory pressure is rising across the reviewed memory.',
+      action: 'Review trajectory pressure drivers.',
+    }
+  }
+
+  if (value <= -10) {
+    return {
+      posture: 'TRAJECTORY PRESSURE EASING',
+      meaning: 'Trajectory pressure is easing across the reviewed memory.',
+      action: 'Maintain monitoring.',
+    }
+  }
+
+  return {
+    posture: 'TRAJECTORY MOVEMENT HOLDING',
+    meaning: 'Trajectory movement is neither clearly improving nor deteriorating.',
+    action: 'Continue comparison across future snapshots.',
+  }
+}
+
+function interpretHistory(count: number): Interpretation {
+  if (count < 3) {
+    return {
+      posture: 'INSUFFICIENT HISTORY',
+      meaning: 'Too few snapshots exist for trajectory interpretation.',
+      action: 'Continue saving operational snapshots.',
+    }
+  }
+
+  if (count < 10) {
+    return {
+      posture: 'EARLY TRAJECTORY MEMORY',
+      meaning: 'Trajectory memory has started but remains early.',
+      action: 'Continue building continuity memory.',
+    }
+  }
+
+  return {
+    posture: 'TRAJECTORY MEMORY ESTABLISHED',
+    meaning: 'Persisted memory supports trajectory interpretation.',
+    action: 'Use posture to guide review.',
+  }
+}
+
+function compactAction(actions: string[]) {
+  return Array.from(new Set(actions)).join(' ')
 }
 
 function formatDate(value: string) {
@@ -767,48 +807,51 @@ function formatDate(value: string) {
   return new Date(value).toLocaleString()
 }
 
-function Metric({ label, value }: { label: string; value: string | number }) {
+function PostureCard({
+  title,
+  interpretation,
+}: {
+  title: string
+  interpretation: Interpretation
+}) {
   return (
-    <div style={styles.metricCard}>
-      <p style={styles.metricLabel}>{label}</p>
-      <h2 style={styles.metricValue}>{value}</h2>
-    </div>
+    <article style={styles.postureCard}>
+      <p style={styles.cardKicker}>{title}</p>
+      <h3 style={styles.postureTitle}>{interpretation.posture}</h3>
+      <p style={styles.postureMeaning}>{interpretation.meaning}</p>
+    </article>
   )
 }
 
-function ScoreMetric({ label, value }: { label: string; value: number }) {
+function CompactCard({ title, value }: { title: string; value: string }) {
   return (
-    <div style={styles.scoreCard}>
-      <p style={styles.scoreMetricLabel}>{label}</p>
-      <h3 style={styles.scoreMetricValue}>{value}/100</h3>
-    </div>
+    <article style={styles.compactCard}>
+      <p style={styles.cardKicker}>{title}</p>
+      <h3 style={styles.compactValue}>{value}</h3>
+    </article>
   )
 }
 
 function Panel({
   title,
-  note,
-  rows,
+  children,
 }: {
   title: string
-  note: string
-  rows: PanelRow[]
+  children: React.ReactNode
 }) {
   return (
-    <div style={styles.card}>
-      <h2 style={styles.sectionTitle}>{title}</h2>
-      <p style={styles.panelNote}>{note}</p>
+    <section style={styles.card}>
+      <h2 style={styles.cardTitle}>{title}</h2>
+      <div style={styles.infoList}>{children}</div>
+    </section>
+  )
+}
 
-      <div style={styles.panelList}>
-        {rows.length === 0 && <p style={styles.emptyText}>No data available yet.</p>}
-
-        {rows.map((row, index) => (
-          <div key={`${row.label}-${index}`} style={styles.panelRow}>
-            <span>{row.label}</span>
-            <strong>{row.value}</strong>
-          </div>
-        ))}
-      </div>
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={styles.infoRow}>
+      <span style={styles.infoLabel}>{label}</span>
+      <strong style={styles.infoValue}>{value}</strong>
     </div>
   )
 }
@@ -817,195 +860,258 @@ const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
     color: 'white',
+    overflowX: 'hidden',
   },
   container: {
-    maxWidth: '1280px',
+    width: '100%',
+    maxWidth: '1120px',
     margin: '0 auto',
+    padding: '0 20px 48px',
+    boxSizing: 'border-box',
   },
-  hero: {
-    marginBottom: '32px',
+  header: {
+    marginBottom: '20px',
+    paddingTop: '4px',
   },
   kicker: {
-    color: '#67e8f9',
+    color: '#c4b5fd',
     fontSize: '12px',
     fontWeight: 900,
     letterSpacing: '2px',
+    margin: 0,
   },
   title: {
-    fontSize: 'clamp(34px, 6vw, 58px)',
+    fontSize: 'clamp(32px, 5vw, 48px)',
     lineHeight: 1.05,
-    margin: '12px 0',
+    margin: '10px 0',
   },
   subtitle: {
     color: '#cbd5e1',
-    maxWidth: '980px',
-    lineHeight: 1.7,
-    fontSize: '18px',
+    maxWidth: '760px',
+    lineHeight: 1.65,
+    fontSize: '16px',
+    margin: 0,
   },
   message: {
-    background: '#064e3b',
-    color: '#bbf7d0',
-    padding: '16px',
+    background: '#2e1065',
+    color: '#ede9fe',
+    padding: '12px 14px',
     borderRadius: '14px',
     fontWeight: 800,
-    marginBottom: '20px',
+    marginBottom: '16px',
+    fontSize: '14px',
   },
-  trajectoryHero: {
+  heroCard: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.4fr) minmax(260px, 0.6fr)',
+    gap: '16px',
     background: '#020617',
     border: '1px solid #a78bfa',
-    borderRadius: '28px',
-    padding: '24px',
-    marginBottom: '24px',
-    boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
+    borderRadius: '24px',
+    padding: '22px',
+    marginBottom: '16px',
+    boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
   },
-  scoreLabel: {
+  sectionKicker: {
     color: '#94a3b8',
     fontWeight: 900,
     letterSpacing: '0.12em',
     textTransform: 'uppercase',
     margin: 0,
+    fontSize: '12px',
   },
-  trajectoryState: {
-    fontSize: 'clamp(36px, 7vw, 68px)',
-    margin: '8px 0 20px',
+  heroPosture: {
+    fontSize: 'clamp(34px, 6vw, 56px)',
+    margin: '8px 0 12px',
     color: '#c4b5fd',
     letterSpacing: '-0.05em',
+    lineHeight: 1,
   },
-  scoreGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
-    gap: '14px',
-  },
-  scoreCard: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '18px',
-  },
-  scoreMetricLabel: {
-    color: '#94a3b8',
-    fontWeight: 800,
+  heroMeaning: {
+    color: '#ede9fe',
+    lineHeight: 1.6,
     margin: 0,
-  },
-  scoreMetricValue: {
-    color: '#f8fafc',
-    fontSize: '28px',
-    margin: '10px 0 0',
+    maxWidth: '720px',
   },
   actionBox: {
-    display: 'grid',
-    gap: '8px',
     background: '#2e1065',
     border: '1px solid #a78bfa',
     borderRadius: '18px',
-    padding: '18px',
-    marginTop: '16px',
+    padding: '16px',
+    alignSelf: 'stretch',
+  },
+  actionLabel: {
+    color: '#c4b5fd',
+    fontWeight: 900,
+    margin: '0 0 8px',
+    fontSize: '12px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.12em',
+  },
+  actionText: {
     color: '#ede9fe',
+    lineHeight: 1.55,
+    margin: 0,
+    fontSize: '14px',
   },
-  metricsGrid: {
+  postureGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
     gap: '14px',
-    marginBottom: '24px',
+    marginBottom: '16px',
   },
-  metricCard: {
+  postureCard: {
     background: '#0f172a',
     border: '1px solid #1e293b',
     borderRadius: '18px',
-    padding: '20px',
-    overflow: 'hidden',
+    padding: '16px',
+    minHeight: '150px',
+    boxSizing: 'border-box',
   },
-  metricLabel: {
+  cardKicker: {
     color: '#94a3b8',
     fontWeight: 800,
     margin: 0,
+    fontSize: '12px',
   },
-  metricValue: {
-    fontSize: 'clamp(22px, 4vw, 34px)',
-    margin: '8px 0 0',
+  postureTitle: {
+    color: '#f8fafc',
+    fontSize: '19px',
+    margin: '10px 0 8px',
+    lineHeight: 1.15,
+  },
+  postureMeaning: {
+    color: '#cbd5e1',
+    lineHeight: 1.5,
+    fontSize: '14px',
+    margin: 0,
+  },
+  compactGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: '14px',
+    marginBottom: '16px',
+  },
+  compactCard: {
+    background: '#0f172a',
+    border: '1px solid #1e293b',
+    borderRadius: '18px',
+    padding: '16px',
+    minHeight: '104px',
+    boxSizing: 'border-box',
+  },
+  compactValue: {
+    fontSize: '18px',
+    lineHeight: 1.2,
+    margin: '10px 0 0',
+    color: '#f8fafc',
     overflowWrap: 'anywhere',
   },
-  layoutGrid: {
+  twoColumn: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-    gap: '20px',
-    marginBottom: '28px',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: '16px',
+    marginBottom: '16px',
   },
   card: {
     background: '#020617',
     border: '1px solid #1e293b',
-    borderRadius: '24px',
-    padding: '24px',
-    marginBottom: '28px',
-    boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
+    borderRadius: '22px',
+    padding: '20px',
+    marginBottom: '16px',
+    boxShadow: '0 20px 50px rgba(0,0,0,0.24)',
+    boxSizing: 'border-box',
+    overflow: 'hidden',
   },
-  sectionTitle: {
-    fontSize: '26px',
-    margin: '0 0 10px',
-  },
-  panelNote: {
-    color: '#cbd5e1',
-    lineHeight: 1.6,
-    marginBottom: '18px',
-  },
-  panelList: {
-    display: 'grid',
-    gap: '10px',
-  },
-  panelRow: {
+  cardHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     gap: '16px',
+    alignItems: 'flex-start',
+    marginBottom: '14px',
+  },
+  cardTitle: {
+    fontSize: '22px',
+    margin: 0,
+    lineHeight: 1.2,
+  },
+  cardNote: {
+    color: '#94a3b8',
+    lineHeight: 1.5,
+    margin: '6px 0 0',
+    fontSize: '14px',
+  },
+  infoList: {
+    display: 'grid',
+    gap: '10px',
+    marginTop: '14px',
+  },
+  infoRow: {
+    display: 'grid',
+    gridTemplateColumns: '160px minmax(0, 1fr)',
+    gap: '12px',
     background: '#0f172a',
     border: '1px solid #334155',
     borderRadius: '14px',
-    padding: '14px',
+    padding: '12px',
+    alignItems: 'start',
   },
-  emptyText: {
+  infoLabel: {
     color: '#94a3b8',
+    fontWeight: 800,
+    fontSize: '12px',
+  },
+  infoValue: {
+    color: '#f8fafc',
+    lineHeight: 1.45,
+    overflowWrap: 'anywhere',
   },
   tableWrap: {
+    width: '100%',
     overflowX: 'auto',
-    marginBottom: '20px',
   },
   table: {
     width: '100%',
     borderCollapse: 'collapse',
-    minWidth: '900px',
+    minWidth: '760px',
   },
   th: {
     textAlign: 'left',
     color: '#94a3b8',
     borderBottom: '1px solid #334155',
-    padding: '12px',
-    fontSize: '12px',
+    padding: '10px',
+    fontSize: '11px',
     textTransform: 'uppercase',
   },
   td: {
     borderBottom: '1px solid #1e293b',
-    padding: '12px',
+    padding: '10px',
     color: '#e2e8f0',
     verticalAlign: 'top',
+    fontWeight: 700,
+    fontSize: '13px',
   },
   primaryButton: {
-    width: '100%',
-    padding: '16px',
-    borderRadius: '14px',
+    padding: '10px 14px',
+    borderRadius: '12px',
     border: 'none',
-    background: '#67e8f9',
-    color: '#082f49',
+    background: '#c4b5fd',
+    color: '#2e1065',
     fontWeight: 900,
     cursor: 'pointer',
-    fontSize: '16px',
+    fontSize: '14px',
+    whiteSpace: 'nowrap',
   },
   summaryBox: {
     whiteSpace: 'pre-wrap',
     background: '#0f172a',
     border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '18px',
+    borderRadius: '16px',
+    padding: '16px',
     color: '#e2e8f0',
-    lineHeight: 1.6,
-    minHeight: '360px',
+    lineHeight: 1.55,
+    minHeight: '260px',
+    fontSize: '14px',
+    overflowX: 'auto',
   },
 }
