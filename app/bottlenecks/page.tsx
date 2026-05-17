@@ -457,6 +457,102 @@ function PostureCard({
       <p style={styles.metricLabel}>{label}</p>
 
       <h2 style={styles.metricValue}>{value}</h2>
+      <section style={styles.card}>
+  <h2 style={styles.sectionTitle}>
+    Responder Concentration Visibility
+  </h2>
+
+  <p style={styles.bodyText}>
+    Visibility into continuity concentration, routing accumulation,
+    and stabilization ownership pressure across responders.
+  </p>
+
+  <div
+    style={{
+      display: 'grid',
+      gridTemplateColumns:
+        'repeat(auto-fit, minmax(260px, 1fr))',
+      gap: '16px',
+      marginTop: '20px',
+    }}
+  >
+    {Object.entries(intelligence.responderLoadMap).map(
+      ([responderId, load]) => {
+        const responder =
+          responders.find(
+            (item) => item.id === responderId
+          ) || null
+
+        const responderName =
+          responderId === 'UNASSIGNED'
+            ? 'Unassigned Pathways'
+            : responder?.full_name || 'Unknown Responder'
+
+        let posture =
+          'RESPONDER LOAD CONTROLLED'
+
+        let interpretation =
+          'Continuity ownership appears controlled.'
+
+        if (load >= 4) {
+          posture =
+            'RESPONDER CONCENTRATION CRITICAL'
+
+          interpretation =
+            'Continuity ownership concentration may threaten survivability.'
+        } else if (load >= 2) {
+          posture =
+            'RESPONDER CONCENTRATION VISIBLE'
+
+          interpretation =
+            'Visible continuity concentration should remain under governance review.'
+        }
+
+        return (
+          <div
+            key={responderId}
+            style={{
+              background: '#0f172a',
+              border: '1px solid #1e293b',
+              borderRadius: '20px',
+              padding: '20px',
+            }}
+          >
+            <p
+              style={{
+                color: '#94a3b8',
+                marginBottom: '10px',
+                fontWeight: 700,
+              }}
+            >
+              {responderName}
+            </p>
+
+            <h3
+              style={{
+                margin: 0,
+                marginBottom: '12px',
+                fontSize: '18px',
+              }}
+            >
+              {posture}
+            </h3>
+
+            <p
+              style={{
+                color: '#cbd5e1',
+                lineHeight: 1.7,
+                margin: 0,
+              }}
+            >
+              {interpretation}
+            </p>
+          </div>
+        )
+      }
+    )}
+  </div>
+</section>
     </div>
   )
 }
