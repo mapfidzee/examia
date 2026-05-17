@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
+import { interpretBottleneck } from '@/lib/cgi/interpreters/interpretBottleneck'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -149,19 +150,13 @@ export default function BottlenecksPage() {
 
     const highestResponderLoad = Math.max(...Object.values(responderLoadMap), 0)
 
-    let bottleneckStatus = 'LOW_BOTTLENECK_PRESSURE'
-
-    if (highestResponderLoad >= 4 || stalledCases >= 3 || safeguardingFlags >= 3) {
-      bottleneckStatus = 'CRITICAL_BOTTLENECK_PRESSURE'
-    } else if (
-      highestResponderLoad >= 2 ||
-      unresolvedCases >= 2 ||
-      stalledCases >= 2
-    ) {
-      bottleneckStatus = 'HIGH_BOTTLENECK_PRESSURE'
-    } else if (unresolvedCases >= 1 || safeguardingFlags >= 1) {
-      bottleneckStatus = 'MODERATE_BOTTLENECK_PRESSURE'
-    }
+    const centralizedBottleneck = interpretBottleneck({
+      routingCongestion: clamp(highestResponderLoad * 20),
+      responderConcentration: clamp(highestResponderLoad * 20),
+      unresolvedMomentum: clamp(unresolvedCases * 25),
+      continuityDrift: clamp(stalledCases * 25),
+      propagationRisk: clamp(safeguardingFlags * 25),
+    })
 
     const responderConcentration: ResponderConcentration[] = Object.entries(
       responderLoadMap
@@ -195,7 +190,11 @@ export default function BottlenecksPage() {
     })
 
     return {
-      bottleneckPosture: interpretBottleneckStatus(bottleneckStatus),
+      bottleneckPosture: {
+        posture: centralizedBottleneck.posture,
+        interpretation: centralizedBottleneck.summary,
+        action: centralizedBottleneck.executiveAction,
+      },
       routingCongestion: interpretRoutingCongestion(highestResponderLoad),
       stabilizationDelay: interpretStabilizationDelay(stalledCases),
       safeguardingVisibility: interpretSafeguarding(safeguardingFlags),
@@ -386,44 +385,8 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
   )
 }
 
-function interpretBottleneckStatus(status: string) {
-  if (status === 'LOW_BOTTLENECK_PRESSURE') {
-    return {
-      posture: 'BOTTLENECK CONTAINED',
-      interpretation:
-        'Operational pathways appear stable with no visible continuity blockage threatening stabilization movement.',
-      action:
-        'Maintain routine continuity monitoring and preserve pathway visibility.',
-    }
-  }
-
-  if (status === 'MODERATE_BOTTLENECK_PRESSURE') {
-    return {
-      posture: 'BOTTLENECK PRESSURE VISIBLE',
-      interpretation:
-        'Some stabilization pathways are slowing and require closer continuity visibility.',
-      action:
-        'Review pathway progression and monitor continuity accumulation.',
-    }
-  }
-
-  if (status === 'HIGH_BOTTLENECK_PRESSURE') {
-    return {
-      posture: 'BOTTLENECK ESCALATION ACTIVE',
-      interpretation:
-        'Visible stabilization blockage is slowing continuity movement and increasing operational congestion.',
-      action:
-        'Redistribute continuity load and review unresolved pathway congestion.',
-    }
-  }
-
-  return {
-    posture: 'CRITICAL BOTTLENECK PRESSURE',
-    interpretation:
-      'Critical blockage pressure is threatening stabilization continuity and operational survivability.',
-    action:
-      'Escalate executive continuity review and rebalance stabilization infrastructure immediately.',
-  }
+function clamp(value: number) {
+  return Math.max(0, Math.min(100, Math.round(value)))
 }
 
 function interpretRoutingCongestion(load: number) {
