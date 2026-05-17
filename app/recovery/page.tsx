@@ -48,9 +48,16 @@ type RecoveryState =
   | 'RECOVERY_FRAGILE'
   | 'RECOVERY_STALLED'
 
+type ThresholdInterpretation = {
+  posture: string
+  meaning: string
+  action: string
+}
+
 type PanelRow = {
   label: string
   value: string
+  meaning?: string
 }
 
 const SAMPLE_LIMIT = 120
@@ -72,7 +79,7 @@ function RecoveryContent() {
   }, [])
 
   async function loadRecoveryMetrics() {
-    setMessage('Loading persisted CGI recovery metrics...')
+    setMessage('Loading persisted CGI recovery intelligence...')
 
     const { data, error } = await supabase
       .from('cgi_operational_metrics')
@@ -82,18 +89,18 @@ function RecoveryContent() {
 
     if (error) {
       console.error(error)
-      setMessage('Failed to load persisted CGI recovery metrics.')
+      setMessage('Failed to load persisted CGI recovery intelligence.')
       return
     }
 
     setMetrics(data || [])
-    setMessage('Persisted CGI recovery metrics loaded.')
+    setMessage('Persisted CGI recovery intelligence loaded.')
   }
 
   const recovery = useMemo(() => {
     const ordered = [...metrics].sort(
       (a, b) =>
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
     )
 
     const latest = ordered[ordered.length - 1] || null
@@ -103,43 +110,43 @@ function RecoveryContent() {
     const recentWindow = ordered.slice(-5)
 
     const averageRecoveryReliability = average(
-      metrics.map((item) => item.recovery_reliability_score),
+      metrics.map((item) => item.recovery_reliability_score)
     )
 
     const averageRecoveryDirection = average(
-      metrics.map((item) => item.recovery_direction),
+      metrics.map((item) => item.recovery_direction)
     )
 
     const averageStabilizationTrend = average(
-      metrics.map((item) => item.stabilization_trend),
+      metrics.map((item) => item.stabilization_trend)
     )
 
     const averageStabilizationConfidence = average(
-      metrics.map((item) => item.stabilization_confidence_score),
+      metrics.map((item) => item.stabilization_confidence_score)
     )
 
     const averageSurvivability = average(
-      metrics.map((item) => item.operational_survivability_score),
+      metrics.map((item) => item.operational_survivability_score)
     )
 
     const averageContinuityIntegrity = average(
-      metrics.map((item) => item.continuity_integrity_score),
+      metrics.map((item) => item.continuity_integrity_score)
     )
 
     const averageUnresolvedMomentum = average(
-      metrics.map((item) => item.unresolved_momentum),
+      metrics.map((item) => item.unresolved_momentum)
     )
 
     const averageStabilizationDrag = average(
-      metrics.map((item) => item.stabilization_drag),
+      metrics.map((item) => item.stabilization_drag)
     )
 
     const averageContinuityDrift = average(
-      metrics.map((item) => item.continuity_drift),
+      metrics.map((item) => item.continuity_drift)
     )
 
     const averageEscalationMomentum = average(
-      metrics.map((item) => item.escalation_momentum),
+      metrics.map((item) => item.escalation_momentum)
     )
 
     const averageInstabilityBurden = average([
@@ -161,19 +168,15 @@ function RecoveryContent() {
         averageSurvivability,
         averageContinuityIntegrity,
         100 - averageInstabilityBurden,
-      ]),
+      ])
     )
 
     const earlyRecoveryConversion = average(
-      earlyWindow.map((item) =>
-        recoveryConversionFromSnapshot(item),
-      ),
+      earlyWindow.map((item) => recoveryConversionFromSnapshot(item))
     )
 
     const recentRecoveryConversion = average(
-      recentWindow.map((item) =>
-        recoveryConversionFromSnapshot(item),
-      ),
+      recentWindow.map((item) => recoveryConversionFromSnapshot(item))
     )
 
     const recoveryVelocity =
@@ -188,7 +191,7 @@ function RecoveryContent() {
         : 0
 
     const recoveryVolatility = calculateVolatility(
-      metrics.map((item) => recoveryConversionFromSnapshot(item)),
+      metrics.map((item) => recoveryConversionFromSnapshot(item))
     )
 
     const recoveryBlockageScore = clamp(
@@ -201,7 +204,7 @@ function RecoveryContent() {
         100 - averageRecoveryDirection,
         100 - averageStabilizationTrend,
         100 - averageSurvivability,
-      ]),
+      ])
     )
 
     const recoveryState = getRecoveryState({
@@ -225,33 +228,54 @@ function RecoveryContent() {
       'Stabilization confidence weakness': 100 - averageStabilizationConfidence,
     })
 
-    const executiveSummary = getExecutiveSummary(recoveryState)
-    const actionCue = getActionCue(recoveryState)
+    const recoveryPosture = interpretRecoveryPosture(recoveryState)
+    const recoveryDurability = interpretDurability(recoveryConversionScore)
+    const recoveryReliability = interpretReliability(averageRecoveryReliability)
+    const recoveryDirection = interpretDirection(recoveryVelocity)
+    const stabilizationTrend = interpretStabilizationTrend(
+      averageStabilizationTrend
+    )
+    const survivability = interpretSurvivability(averageSurvivability)
+    const recoveryPressure = interpretRecoveryPressure(recoveryBlockageScore)
+    const volatility = interpretVolatility(recoveryVolatility)
+    const instabilityBurden = interpretInstabilityBurden(
+      averageInstabilityBurden
+    )
+    const continuityDrift = interpretContinuityDrift(averageContinuityDrift)
+    const historyDepth = interpretHistoryDepth(metrics.length)
+
+    const executiveSummary = getExecutiveSummary({
+      recoveryState,
+      dominantRecoveryBlocker,
+      recoveryDurability,
+      recoveryPressure,
+      volatility,
+      continuityDrift,
+    })
+
+    const actionCue = getActionCue({
+      recoveryState,
+      recoveryPressure,
+      continuityDrift,
+      volatility,
+    })
 
     return {
       ordered,
       latest,
-      previous,
-      averageRecoveryReliability,
-      averageRecoveryDirection,
-      averageStabilizationTrend,
-      averageStabilizationConfidence,
-      averageSurvivability,
-      averageContinuityIntegrity,
-      averageUnresolvedMomentum,
-      averageStabilizationDrag,
-      averageContinuityDrift,
-      averageEscalationMomentum,
-      averageInstabilityBurden,
-      recoveryConversionScore,
-      earlyRecoveryConversion,
-      recentRecoveryConversion,
-      recoveryVelocity,
-      latestRecoveryMovement,
-      recoveryVolatility,
-      recoveryBlockageScore,
       recoveryState,
       dominantRecoveryBlocker,
+      recoveryPosture,
+      recoveryDurability,
+      recoveryReliability,
+      recoveryDirection,
+      stabilizationTrend,
+      survivability,
+      recoveryPressure,
+      volatility,
+      instabilityBurden,
+      continuityDrift,
+      historyDepth,
       executiveSummary,
       actionCue,
     }
@@ -262,36 +286,50 @@ function RecoveryContent() {
         {
           label: 'Latest Continuity State',
           value: recovery.latest.continuity_state,
+          meaning:
+            'The most recent continuity posture preserved in institutional memory.',
         },
         {
           label: 'Latest Trajectory Direction',
           value: recovery.latest.trajectory_direction,
+          meaning:
+            'The latest directional signal showing whether recovery movement is improving, holding, or weakening.',
         },
         {
           label: 'Latest Pressure State',
           value: recovery.latest.pressure_propagation_state,
+          meaning:
+            'The latest pressure classification affecting recovery durability.',
         },
         {
           label: 'Latest Structural Memory State',
           value: recovery.latest.structural_memory_state,
+          meaning:
+            'Whether recurring patterns remain visible in the continuity memory layer.',
         },
         {
           label: 'Dominant Pressure Source',
           value:
             recovery.latest.dominant_pressure_source ||
             'No pressure source recorded',
+          meaning:
+            'The main pressure source currently shaping recovery credibility.',
         },
         {
           label: 'Dominant Trajectory Signal',
           value:
             recovery.latest.dominant_trajectory_signal ||
             'No trajectory signal recorded',
+          meaning:
+            'The strongest visible direction signal in the recovery pathway.',
         },
         {
           label: 'Dominant Memory Pattern',
           value:
             recovery.latest.dominant_memory_pattern ||
             'No memory pattern recorded',
+          meaning:
+            'The recurring pattern that leadership should not allow to disappear.',
         },
       ]
     : []
@@ -300,85 +338,71 @@ function RecoveryContent() {
     {
       label: 'Dominant Recovery Blocker',
       value: recovery.dominantRecoveryBlocker,
+      meaning:
+        'The strongest visible barrier preventing recovery from becoming durable.',
     },
     {
-      label: 'Recovery Velocity',
-      value: formatDelta(recovery.recoveryVelocity),
-    },
-    {
-      label: 'Latest Recovery Movement',
-      value: formatDelta(recovery.latestRecoveryMovement),
+      label: 'Recovery Direction',
+      value: recovery.recoveryDirection.posture,
+      meaning: recovery.recoveryDirection.meaning,
     },
     {
       label: 'Recovery Volatility',
-      value: `${recovery.recoveryVolatility}/100`,
+      value: recovery.volatility.posture,
+      meaning: recovery.volatility.meaning,
     },
     {
-      label: 'Recovery Blockage Score',
-      value: `${recovery.recoveryBlockageScore}/100`,
+      label: 'Recovery Pressure',
+      value: recovery.recoveryPressure.posture,
+      meaning: recovery.recoveryPressure.meaning,
     },
     {
       label: 'Instability Burden',
-      value: `${recovery.averageInstabilityBurden}/100`,
+      value: recovery.instabilityBurden.posture,
+      meaning: recovery.instabilityBurden.meaning,
+    },
+    {
+      label: 'Continuity Drift',
+      value: recovery.continuityDrift.posture,
+      meaning: recovery.continuityDrift.meaning,
     },
   ]
 
   const brief = `
 TSINAXA CGI RECOVERY INTELLIGENCE BRIEF
 
-Recovery State:
-${recovery.recoveryState}
+Recovery Posture:
+${recovery.recoveryPosture.posture}
 
-Snapshots Reviewed:
-${metrics.length}
+History Depth:
+${recovery.historyDepth.posture}
 
-Recovery Conversion Score:
-${recovery.recoveryConversionScore}/100
+Recovery Durability:
+${recovery.recoveryDurability.posture}
+
+Recovery Reliability:
+${recovery.recoveryReliability.posture}
+
+Recovery Direction:
+${recovery.recoveryDirection.posture}
+
+Stabilization Trend:
+${recovery.stabilizationTrend.posture}
+
+Survivability:
+${recovery.survivability.posture}
+
+Recovery Pressure:
+${recovery.recoveryPressure.posture}
+
+Recovery Volatility:
+${recovery.volatility.posture}
+
+Continuity Drift:
+${recovery.continuityDrift.posture}
 
 Dominant Recovery Blocker:
 ${recovery.dominantRecoveryBlocker}
-
-Recovery Velocity:
-${recovery.recoveryVelocity}
-
-Latest Recovery Movement:
-${recovery.latestRecoveryMovement}
-
-Recovery Volatility:
-${recovery.recoveryVolatility}/100
-
-Recovery Blockage Score:
-${recovery.recoveryBlockageScore}/100
-
-Average Recovery Reliability:
-${recovery.averageRecoveryReliability}/100
-
-Average Recovery Direction:
-${recovery.averageRecoveryDirection}/100
-
-Average Stabilization Trend:
-${recovery.averageStabilizationTrend}/100
-
-Average Stabilization Confidence:
-${recovery.averageStabilizationConfidence}/100
-
-Average Operational Survivability:
-${recovery.averageSurvivability}/100
-
-Average Continuity Integrity:
-${recovery.averageContinuityIntegrity}/100
-
-Average Unresolved Momentum:
-${recovery.averageUnresolvedMomentum}/100
-
-Average Stabilization Drag:
-${recovery.averageStabilizationDrag}/100
-
-Average Continuity Drift:
-${recovery.averageContinuityDrift}/100
-
-Average Escalation Momentum:
-${recovery.averageEscalationMomentum}/100
 
 Executive Interpretation:
 ${recovery.executiveSummary}
@@ -387,7 +411,7 @@ Recommended Action:
 ${recovery.actionCue}
 
 Governance-Safe Meaning:
-This recovery view uses persisted CGI operational metric snapshots. It does not judge people. It evaluates whether stabilization, recovery reliability, survivability, and direction are converting into durable recovery over time.
+This recovery view uses persisted CGI operational memory. It does not judge people. It interprets whether stabilization, recovery reliability, survivability, and direction are converting into credible recovery over time.
   `.trim()
 
   return (
@@ -399,9 +423,10 @@ This recovery view uses persisted CGI operational metric snapshots. It does not 
           <h1 style={styles.title}>Continuity Recovery Intelligence</h1>
 
           <p style={styles.subtitle}>
-            Use persisted CGI operational metric snapshots to see whether stabilization
-            confidence, recovery reliability, survivability, and recovery direction are
-            actually converting into durable recovery.
+            Interpret whether stabilization is becoming durable recovery using
+            threshold posture, operational meaning, and executive action cues.
+            Internal calculations remain hidden; leadership sees recovery
+            credibility.
           </p>
         </section>
 
@@ -409,35 +434,37 @@ This recovery view uses persisted CGI operational metric snapshots. It does not 
 
         <section style={styles.recoveryHero}>
           <div>
-            <p style={styles.scoreLabel}>Recovery State</p>
-            <h2 style={styles.recoveryState}>{recovery.recoveryState}</h2>
+            <p style={styles.scoreLabel}>Recovery Posture</p>
+            <h2 style={styles.recoveryState}>
+              {recovery.recoveryPosture.posture}
+            </h2>
             <p style={styles.panelNote}>{recovery.executiveSummary}</p>
           </div>
 
           <div style={styles.scoreGrid}>
-            <ScoreMetric
-              label="Recovery Conversion"
-              value={recovery.recoveryConversionScore}
+            <PostureMetric
+              label="Recovery Durability"
+              interpretation={recovery.recoveryDurability}
             />
-            <ScoreMetric
+            <PostureMetric
               label="Recovery Reliability"
-              value={recovery.averageRecoveryReliability}
+              interpretation={recovery.recoveryReliability}
             />
-            <ScoreMetric
+            <PostureMetric
               label="Recovery Direction"
-              value={recovery.averageRecoveryDirection}
+              interpretation={recovery.recoveryDirection}
             />
-            <ScoreMetric
+            <PostureMetric
               label="Stabilization Trend"
-              value={recovery.averageStabilizationTrend}
+              interpretation={recovery.stabilizationTrend}
             />
-            <ScoreMetric
+            <PostureMetric
               label="Survivability"
-              value={recovery.averageSurvivability}
+              interpretation={recovery.survivability}
             />
-            <ScoreMetric
-              label="Blockage Score"
-              value={recovery.recoveryBlockageScore}
+            <PostureMetric
+              label="Recovery Pressure"
+              interpretation={recovery.recoveryPressure}
             />
           </div>
 
@@ -448,50 +475,26 @@ This recovery view uses persisted CGI operational metric snapshots. It does not 
         </section>
 
         <section style={styles.metricsGrid}>
-          <Metric label="Snapshots Reviewed" value={metrics.length} />
+          <Metric label="History Depth" value={recovery.historyDepth.posture} />
           <Metric
             label="Dominant Blocker"
             value={recovery.dominantRecoveryBlocker}
           />
-          <Metric label="Recovery Velocity" value={formatDelta(recovery.recoveryVelocity)} />
-          <Metric
-            label="Latest Recovery Movement"
-            value={formatDelta(recovery.latestRecoveryMovement)}
-          />
           <Metric
             label="Recovery Volatility"
-            value={`${recovery.recoveryVolatility}/100`}
+            value={recovery.volatility.posture}
           />
           <Metric
             label="Instability Burden"
-            value={`${recovery.averageInstabilityBurden}/100`}
+            value={recovery.instabilityBurden.posture}
           />
           <Metric
-            label="Stabilization Confidence Avg"
-            value={`${recovery.averageStabilizationConfidence}/100`}
+            label="Continuity Drift"
+            value={recovery.continuityDrift.posture}
           />
           <Metric
-            label="Continuity Integrity Avg"
-            value={`${recovery.averageContinuityIntegrity}/100`}
-          />
-        </section>
-
-        <section style={styles.metricsGrid}>
-          <Metric
-            label="Unresolved Momentum Avg"
-            value={`${recovery.averageUnresolvedMomentum}/100`}
-          />
-          <Metric
-            label="Stabilization Drag Avg"
-            value={`${recovery.averageStabilizationDrag}/100`}
-          />
-          <Metric
-            label="Continuity Drift Avg"
-            value={`${recovery.averageContinuityDrift}/100`}
-          />
-          <Metric
-            label="Escalation Momentum Avg"
-            value={`${recovery.averageEscalationMomentum}/100`}
+            label="Latest Movement"
+            value={recovery.recoveryDirection.posture}
           />
         </section>
 
@@ -504,17 +507,18 @@ This recovery view uses persisted CGI operational metric snapshots. It does not 
 
           <Panel
             title="Recovery Conversion Reading"
-            note="Shows whether stabilization signals are becoming durable recovery."
+            note="Shows whether stabilization signals are becoming credible recovery."
             rows={recoveryRows}
           />
         </section>
 
         <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Recent Recovery Snapshot Trail</h2>
+          <h2 style={styles.sectionTitle}>Recent Recovery Memory Trail</h2>
 
           <p style={styles.panelNote}>
-            Latest saved rows from <code>cgi_operational_metrics</code>. These are
-            historical recovery records, not live recalculations.
+            Latest saved rows from <code>cgi_operational_metrics</code>.
+            Values are interpreted into threshold language so the page remains
+            executive-readable.
           </p>
 
           <div style={styles.tableWrap}>
@@ -528,7 +532,7 @@ This recovery view uses persisted CGI operational metric snapshots. It does not 
                   <th style={styles.th}>Recovery Direction</th>
                   <th style={styles.th}>Stabilization Trend</th>
                   <th style={styles.th}>Survivability</th>
-                  <th style={styles.th}>Unresolved</th>
+                  <th style={styles.th}>Unresolved Momentum</th>
                 </tr>
               </thead>
 
@@ -536,7 +540,7 @@ This recovery view uses persisted CGI operational metric snapshots. It does not 
                 {metrics.length === 0 && (
                   <tr>
                     <td style={styles.td} colSpan={8}>
-                      No persisted CGI operational metrics found yet.
+                      No persisted CGI recovery memory found yet.
                     </td>
                   </tr>
                 )}
@@ -546,11 +550,23 @@ This recovery view uses persisted CGI operational metric snapshots. It does not 
                     <td style={styles.td}>{formatDate(item.created_at)}</td>
                     <td style={styles.td}>{item.scope}</td>
                     <td style={styles.td}>{item.continuity_state}</td>
-                    <td style={styles.td}>{item.recovery_reliability_score}/100</td>
-                    <td style={styles.td}>{item.recovery_direction}/100</td>
-                    <td style={styles.td}>{item.stabilization_trend}/100</td>
-                    <td style={styles.td}>{item.operational_survivability_score}/100</td>
-                    <td style={styles.td}>{item.unresolved_momentum}/100</td>
+                    <td style={styles.td}>
+                      {interpretReliability(item.recovery_reliability_score).posture}
+                    </td>
+                    <td style={styles.td}>
+                      {interpretDirection(item.recovery_direction - 50).posture}
+                    </td>
+                    <td style={styles.td}>
+                      {interpretStabilizationTrend(item.stabilization_trend).posture}
+                    </td>
+                    <td style={styles.td}>
+                      {interpretSurvivability(
+                        item.operational_survivability_score
+                      ).posture}
+                    </td>
+                    <td style={styles.td}>
+                      {interpretInstabilityBurden(item.unresolved_momentum).posture}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -558,7 +574,7 @@ This recovery view uses persisted CGI operational metric snapshots. It does not 
           </div>
 
           <button onClick={loadRecoveryMetrics} style={styles.primaryButton}>
-            Refresh Recovery Metrics
+            Refresh Recovery Intelligence
           </button>
         </section>
 
@@ -590,15 +606,13 @@ function recoveryConversionFromSnapshot(item: CgiOperationalMetric) {
           item.trajectory_risk,
           item.structural_memory_risk,
         ]),
-    ]),
+    ])
   )
 }
 
 function average(values: number[]) {
   const valid = values.filter((value) => Number.isFinite(value))
-
   if (valid.length === 0) return 0
-
   return Math.round(valid.reduce((sum, value) => sum + value, 0) / valid.length)
 }
 
@@ -608,11 +622,9 @@ function clamp(value: number) {
 
 function calculateVolatility(values: number[]) {
   const valid = values.filter((value) => Number.isFinite(value))
-
   if (valid.length < 2) return 0
 
   const mean = average(valid)
-
   const variance =
     valid.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) /
     valid.length
@@ -666,49 +678,356 @@ function getRecoveryState(input: {
   return 'RECOVERY_HOLDING'
 }
 
-function getExecutiveSummary(state: RecoveryState) {
+function interpretRecoveryPosture(state: RecoveryState): ThresholdInterpretation {
   if (state === 'INSUFFICIENT_HISTORY') {
-    return 'There are not enough persisted snapshots yet to judge recovery conversion over time. Continue saving operational snapshots.'
+    return {
+      posture: 'INSUFFICIENT RECOVERY HISTORY',
+      meaning:
+        'There is not enough persisted recovery memory to judge durability over time.',
+      action:
+        'Continue saving operational snapshots before relying on recovery interpretation.',
+    }
   }
 
   if (state === 'RECOVERY_STRENGTHENING') {
-    return 'Recovery intelligence shows strengthening recovery conversion. Stabilization, reliability, survivability, and recovery direction are moving in a favorable direction.'
+    return {
+      posture: 'RECOVERY STRENGTHENING',
+      meaning:
+        'Recovery signals are improving and stabilization credibility is moving in a favorable direction.',
+      action:
+        'Preserve monitoring discipline and confirm survivability remains durable.',
+    }
   }
 
   if (state === 'RECOVERY_STALLED') {
-    return 'Recovery intelligence shows stalled recovery. Stabilization signals are not converting into durable recovery strongly enough.'
+    return {
+      posture: 'RECOVERY STALLED',
+      meaning:
+        'Stabilization signals are not converting into durable recovery strongly enough.',
+      action:
+        'Review unresolved momentum, stabilization drag, survivability, and outcome confirmation immediately.',
+    }
   }
 
   if (state === 'RECOVERY_FRAGILE') {
-    return 'Recovery intelligence shows fragile recovery. Some recovery movement exists, but unresolved momentum, drag, drift, or volatility may weaken durability.'
+    return {
+      posture: 'RECOVERY FRAGILE',
+      meaning:
+        'Some recovery movement exists, but unresolved instability may weaken durability.',
+      action:
+        'Strengthen follow-up, ownership, and recovery monitoring before recovery weakens.',
+    }
   }
 
-  return 'Recovery intelligence is holding. Current persisted snapshots show neither strong strengthening nor clear collapse of recovery conversion.'
+  return {
+    posture: 'RECOVERY HOLDING',
+    meaning:
+      'Recovery is visible and currently holding, but durability still requires continued confirmation.',
+    action:
+      'Maintain monitoring and continue saving snapshots to confirm whether recovery remains durable.',
+  }
 }
 
-function getActionCue(state: RecoveryState) {
-  if (state === 'INSUFFICIENT_HISTORY') {
-    return 'Save more operational snapshots before relying on recovery conversion interpretation.'
+function interpretDurability(score: number): ThresholdInterpretation {
+  if (score >= 70) {
+    return {
+      posture: 'DURABILITY IMPROVING',
+      meaning:
+        'Recovery signals are converting into stronger stabilization credibility.',
+      action: 'Continue monitoring until survivability is confirmed.',
+    }
   }
 
-  if (state === 'RECOVERY_STRENGTHENING') {
-    return 'Preserve recovery discipline and continue confirming that stabilization remains durable.'
+  if (score >= 50) {
+    return {
+      posture: 'MONITORED RECOVERY',
+      meaning:
+        'Recovery signals exist, but stabilization durability is not yet fully credible.',
+      action:
+        'Maintain governed monitoring and verify whether recovery holds over time.',
+    }
   }
 
-  if (state === 'RECOVERY_STALLED') {
-    return 'Review unresolved momentum, stabilization drag, recovery direction, survivability, and outcome confirmation immediately.'
+  return {
+    posture: 'DURABILITY NOT YET CREDIBLE',
+    meaning:
+      'Recovery evidence is too weak to treat stabilization as durable.',
+    action:
+      'Escalate review of unresolved pressure, continuity drift, and recovery reliability.',
   }
-
-  if (state === 'RECOVERY_FRAGILE') {
-    return 'Strengthen follow-up, outcome confirmation, routing ownership, and recovery monitoring before recovery weakens.'
-  }
-
-  return 'Maintain monitoring and continue saving snapshots to confirm whether recovery remains durable.'
 }
 
-function formatDelta(value: number) {
-  if (value > 0) return `+${value}`
-  return `${value}`
+function interpretReliability(score: number): ThresholdInterpretation {
+  if (score >= 70) {
+    return {
+      posture: 'RELIABILITY STRENGTHENING',
+      meaning: 'Recovery reliability is moving toward a credible holding pattern.',
+      action: 'Preserve the current recovery discipline.',
+    }
+  }
+
+  if (score >= 45) {
+    return {
+      posture: 'RELIABILITY HOLDING',
+      meaning:
+        'Recovery reliability exists, but still needs confirmation before closure is trusted.',
+      action: 'Keep follow-up active and watch for recurrence.',
+    }
+  }
+
+  return {
+    posture: 'RELIABILITY WEAK',
+    meaning:
+      'Recovery reliability is not strong enough to support durable stabilization.',
+    action: 'Review intervention quality, ownership, and monitoring continuity.',
+  }
+}
+
+function interpretDirection(value: number): ThresholdInterpretation {
+  if (value >= 10) {
+    return {
+      posture: 'RECOVERY MOVING FORWARD',
+      meaning: 'Recovery direction is improving across the reviewed memory window.',
+      action: 'Continue monitoring and protect the recovery pathway.',
+    }
+  }
+
+  if (value <= -10) {
+    return {
+      posture: 'RECOVERY LOSING GROUND',
+      meaning:
+        'Recovery direction is weakening and may require leadership review.',
+      action: 'Investigate drift, recurrence, and unresolved stabilization pressure.',
+    }
+  }
+
+  return {
+    posture: 'RECOVERY DIRECTION HOLDING',
+    meaning:
+      'Recovery direction is not clearly improving or collapsing. Continued monitoring is needed.',
+    action: 'Maintain the monitoring window before declaring durability.',
+  }
+}
+
+function interpretStabilizationTrend(score: number): ThresholdInterpretation {
+  if (score >= 70) {
+    return {
+      posture: 'STABILIZATION STRENGTHENING',
+      meaning: 'Stabilization signals are becoming more credible.',
+      action: 'Continue validating survivability before closure.',
+    }
+  }
+
+  if (score >= 45) {
+    return {
+      posture: 'STABILIZATION FRAGILE',
+      meaning:
+        'Improvement signals are visible, but not yet durable enough for survivability confidence.',
+      action: 'Keep recovery monitoring active.',
+    }
+  }
+
+  return {
+    posture: 'STABILIZATION WEAK',
+    meaning:
+      'Stabilization signals remain weak and may not support credible recovery.',
+    action: 'Review unresolved barriers and intervention follow-through.',
+  }
+}
+
+function interpretSurvivability(score: number): ThresholdInterpretation {
+  if (score >= 70) {
+    return {
+      posture: 'SURVIVABILITY IMPROVING',
+      meaning: 'The system is showing stronger signs of durable recovery.',
+      action: 'Maintain monitoring until survivability is confirmed.',
+    }
+  }
+
+  if (score >= 45) {
+    return {
+      posture: 'SURVIVABILITY MONITORED',
+      meaning:
+        'Survivability exists but remains under review. Closure should not be assumed.',
+      action: 'Continue continuity monitoring and recurrence review.',
+    }
+  }
+
+  return {
+    posture: 'SURVIVABILITY AT RISK',
+    meaning:
+      'Recovery may not survive if unresolved pressure or drift continues.',
+    action: 'Escalate survivability review.',
+  }
+}
+
+function interpretRecoveryPressure(score: number): ThresholdInterpretation {
+  if (score >= 65) {
+    return {
+      posture: 'HIGH RECOVERY PRESSURE',
+      meaning:
+        'Structural friction is strong enough to threaten recovery durability.',
+      action: 'Escalate pressure review and verify recovery ownership.',
+    }
+  }
+
+  if (score >= 35) {
+    return {
+      posture: 'MODERATE STRUCTURAL FRICTION',
+      meaning:
+        'Unresolved stabilization drag remains visible and should stay under governance review.',
+      action: 'Maintain monitoring and reduce unresolved recovery blockers.',
+    }
+  }
+
+  return {
+    posture: 'PRESSURE CONTAINED',
+    meaning: 'Recovery pressure appears contained in the current memory window.',
+    action: 'Continue routine recovery monitoring.',
+  }
+}
+
+function interpretVolatility(score: number): ThresholdInterpretation {
+  if (score >= 35) {
+    return {
+      posture: 'RECOVERY VOLATILE',
+      meaning:
+        'Recovery movement is fluctuating enough to weaken confidence in durability.',
+      action: 'Extend the monitoring window and review recurrence pressure.',
+    }
+  }
+
+  if (score >= 18) {
+    return {
+      posture: 'CONTAINED VARIATION',
+      meaning:
+        'Recovery movement varies, but not enough to indicate clear collapse.',
+      action: 'Continue watching for repeated instability.',
+    }
+  }
+
+  return {
+    posture: 'RECOVERY CONSISTENT',
+    meaning: 'Recovery movement appears steady in the current memory window.',
+    action: 'Maintain confirmation monitoring.',
+  }
+}
+
+function interpretInstabilityBurden(score: number): ThresholdInterpretation {
+  if (score >= 65) {
+    return {
+      posture: 'HEAVY INSTABILITY BURDEN',
+      meaning:
+        'Unresolved instability remains high enough to threaten recovery credibility.',
+      action: 'Escalate unresolved momentum and pressure review.',
+    }
+  }
+
+  if (score >= 35) {
+    return {
+      posture: 'MODERATE INSTABILITY BURDEN',
+      meaning:
+        'Instability remains visible but is not yet showing full recovery collapse.',
+      action: 'Keep continuity monitoring active.',
+    }
+  }
+
+  return {
+    posture: 'INSTABILITY BURDEN CONTAINED',
+    meaning:
+      'Visible instability burden appears contained in the current recovery window.',
+    action: 'Continue routine monitoring.',
+  }
+}
+
+function interpretContinuityDrift(score: number): ThresholdInterpretation {
+  if (score >= 55) {
+    return {
+      posture: 'CONTINUITY DRIFT RISING',
+      meaning:
+        'Recovery may be weakening because continuity drift is becoming more visible.',
+      action: 'Review drift sources and recovery ownership immediately.',
+    }
+  }
+
+  if (score >= 25) {
+    return {
+      posture: 'DRIFT UNDER WATCH',
+      meaning:
+        'Some continuity drift is visible and should remain under governance review.',
+      action: 'Keep drift visible until recovery durability is confirmed.',
+    }
+  }
+
+  return {
+    posture: 'DRIFT CONTAINED',
+    meaning:
+      'Continuity drift is currently contained in the reviewed memory window.',
+    action: 'Maintain monitoring.',
+  }
+}
+
+function interpretHistoryDepth(count: number): ThresholdInterpretation {
+  if (count < 3) {
+    return {
+      posture: 'INSUFFICIENT HISTORY',
+      meaning:
+        'There are too few persisted snapshots to judge recovery durability.',
+      action: 'Continue saving operational snapshots.',
+    }
+  }
+
+  if (count < 10) {
+    return {
+      posture: 'EARLY HISTORY',
+      meaning:
+        'There is enough memory to begin interpretation, but recovery confidence remains early.',
+      action: 'Continue building continuity memory.',
+    }
+  }
+
+  return {
+    posture: 'RECOVERY MEMORY ESTABLISHED',
+    meaning:
+      'There is enough persisted memory to support recovery interpretation.',
+    action: 'Use threshold posture to guide review.',
+  }
+}
+
+function getExecutiveSummary(input: {
+  recoveryState: RecoveryState
+  dominantRecoveryBlocker: string
+  recoveryDurability: ThresholdInterpretation
+  recoveryPressure: ThresholdInterpretation
+  volatility: ThresholdInterpretation
+  continuityDrift: ThresholdInterpretation
+}) {
+  if (input.recoveryState === 'INSUFFICIENT_HISTORY') {
+    return 'There is not enough persisted recovery memory yet to judge durability. Continue saving operational snapshots before relying on recovery interpretation.'
+  }
+
+  return `${input.recoveryDurability.meaning} Dominant blocker: ${input.dominantRecoveryBlocker}. ${input.recoveryPressure.meaning} ${input.volatility.meaning} ${input.continuityDrift.meaning}`
+}
+
+function getActionCue(input: {
+  recoveryState: RecoveryState
+  recoveryPressure: ThresholdInterpretation
+  continuityDrift: ThresholdInterpretation
+  volatility: ThresholdInterpretation
+}) {
+  if (input.recoveryState === 'RECOVERY_STALLED') {
+    return 'Executive review is required before recovery can be treated as credible.'
+  }
+
+  if (input.recoveryState === 'RECOVERY_FRAGILE') {
+    return 'Strengthen follow-up, ownership, and recovery monitoring before instability returns.'
+  }
+
+  if (input.recoveryState === 'RECOVERY_STRENGTHENING') {
+    return 'Preserve recovery discipline and continue confirming survivability.'
+  }
+
+  return `${input.recoveryPressure.action} ${input.continuityDrift.action} ${input.volatility.action}`
 }
 
 function formatDate(value: string) {
@@ -725,11 +1044,18 @@ function Metric({ label, value }: { label: string; value: string | number }) {
   )
 }
 
-function ScoreMetric({ label, value }: { label: string; value: number }) {
+function PostureMetric({
+  label,
+  interpretation,
+}: {
+  label: string
+  interpretation: ThresholdInterpretation
+}) {
   return (
     <div style={styles.scoreCard}>
       <p style={styles.scoreMetricLabel}>{label}</p>
-      <h3 style={styles.scoreMetricValue}>{value}/100</h3>
+      <h3 style={styles.scoreMetricValue}>{interpretation.posture}</h3>
+      <p style={styles.scoreMeaning}>{interpretation.meaning}</p>
     </div>
   )
 }
@@ -753,7 +1079,10 @@ function Panel({
 
         {rows.map((row, index) => (
           <div key={`${row.label}-${index}`} style={styles.panelRow}>
-            <span>{row.label}</span>
+            <div>
+              <span style={styles.panelRowLabel}>{row.label}</span>
+              {row.meaning && <p style={styles.panelRowMeaning}>{row.meaning}</p>}
+            </div>
             <strong>{row.value}</strong>
           </div>
         ))}
@@ -822,7 +1151,7 @@ const styles: Record<string, CSSProperties> = {
   },
   scoreGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
     gap: '14px',
   },
   scoreCard: {
@@ -838,8 +1167,15 @@ const styles: Record<string, CSSProperties> = {
   },
   scoreMetricValue: {
     color: '#f8fafc',
-    fontSize: '28px',
+    fontSize: '22px',
     margin: '10px 0 0',
+    lineHeight: 1.15,
+  },
+  scoreMeaning: {
+    color: '#cbd5e1',
+    lineHeight: 1.55,
+    fontSize: '14px',
+    marginTop: '10px',
   },
   actionBox: {
     display: 'grid',
@@ -853,7 +1189,7 @@ const styles: Record<string, CSSProperties> = {
   },
   metricsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
     gap: '14px',
     marginBottom: '24px',
   },
@@ -870,9 +1206,10 @@ const styles: Record<string, CSSProperties> = {
     margin: 0,
   },
   metricValue: {
-    fontSize: 'clamp(22px, 4vw, 34px)',
+    fontSize: 'clamp(20px, 3vw, 28px)',
     margin: '8px 0 0',
     overflowWrap: 'anywhere',
+    lineHeight: 1.15,
   },
   layoutGrid: {
     display: 'grid',
@@ -910,6 +1247,16 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: '14px',
     padding: '14px',
   },
+  panelRowLabel: {
+    color: '#f8fafc',
+    fontWeight: 800,
+  },
+  panelRowMeaning: {
+    color: '#94a3b8',
+    margin: '6px 0 0',
+    lineHeight: 1.5,
+    fontSize: '13px',
+  },
   emptyText: {
     color: '#94a3b8',
   },
@@ -920,7 +1267,7 @@ const styles: Record<string, CSSProperties> = {
   table: {
     width: '100%',
     borderCollapse: 'collapse',
-    minWidth: '900px',
+    minWidth: '1000px',
   },
   th: {
     textAlign: 'left',
@@ -935,6 +1282,7 @@ const styles: Record<string, CSSProperties> = {
     padding: '12px',
     color: '#e2e8f0',
     verticalAlign: 'top',
+    fontWeight: 700,
   },
   primaryButton: {
     width: '100%',
