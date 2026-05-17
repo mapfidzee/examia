@@ -61,7 +61,7 @@ type InterpretiveThreshold =
   | 'CONTAINED'
   | 'WATCHABLE'
   | 'DESTABILIZING'
-  | 'SURVIVABILITY_THREAT'
+  | 'SURVIVABILITY THREAT'
 
 type CommandPosture =
   | 'STABLE COMMAND'
@@ -570,11 +570,11 @@ function resolveCommandPosture(input: {
 }): CommandPosture {
   if (
     input.pressureThreshold ===
-      'SURVIVABILITY_THREAT' ||
+      'SURVIVABILITY THREAT' ||
     input.trajectoryThreshold ===
-      'SURVIVABILITY_THREAT' ||
+      'SURVIVABILITY THREAT' ||
     input.survivabilityThreshold ===
-      'SURVIVABILITY_THREAT'
+      'SURVIVABILITY THREAT'
   ) {
     return 'CRITICAL COMMAND'
   }
@@ -662,7 +662,7 @@ function buildSurvivabilityInterpretation(
   threshold: InterpretiveThreshold
 ) {
   if (
-    threshold === 'SURVIVABILITY_THREAT'
+    threshold === 'SURVIVABILITY THREAT'
   ) {
     return 'Survivability credibility is weak and should not be treated as stable.'
   }
@@ -687,7 +687,7 @@ function explainPressure(
 ) {
   if (
     board.pressureThreshold ===
-    'SURVIVABILITY_THREAT'
+    'SURVIVABILITY THREAT'
   ) {
     return 'Pressure is threatening operational survivability.'
   }
@@ -714,7 +714,7 @@ function explainRecovery(
 ) {
   if (
     board.recoveryThreshold ===
-    'SURVIVABILITY_THREAT'
+    'SURVIVABILITY THREAT'
   ) {
     return 'Recovery credibility is weak and should not support closure.'
   }
@@ -741,7 +741,7 @@ function explainSurvivability(
 ) {
   if (
     board.survivabilityThreshold ===
-    'SURVIVABILITY_THREAT'
+    'SURVIVABILITY THREAT'
   ) {
     return 'Survivability posture requires executive attention.'
   }
@@ -768,7 +768,7 @@ function explainMemory(
 ) {
   if (
     board.memoryThreshold ===
-    'SURVIVABILITY_THREAT'
+    'SURVIVABILITY THREAT'
   ) {
     return 'Structural recurrence is materially threatening survivability.'
   }
@@ -794,7 +794,7 @@ function thresholdFromRisk(
   value: number
 ): InterpretiveThreshold {
   if (value >= 75) {
-    return 'SURVIVABILITY_THREAT'
+    return 'SURVIVABILITY THREAT'
   }
 
   if (value >= 55) {
@@ -812,7 +812,7 @@ function thresholdFromStrength(
   value: number
 ): InterpretiveThreshold {
   if (value < 35) {
-    return 'SURVIVABILITY_THREAT'
+    return 'SURVIVABILITY THREAT'
   }
 
   if (value < 55) {
@@ -899,278 +899,297 @@ function ReasonBlock({
   )
 }
 
-const styles: Record<
-  string,
-  CSSProperties
-> = {
+const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
     color: 'white',
+    overflowX: 'hidden',
   },
 
   container: {
-    maxWidth: '1240px',
+    width: '100%',
+    maxWidth: '1120px',
     margin: '0 auto',
-    paddingBottom: '80px',
+    padding: '0 20px 48px',
+    boxSizing: 'border-box',
   },
 
   hero: {
-    marginBottom: '34px',
+    marginBottom: '20px',
+    paddingTop: '4px',
   },
 
   kicker: {
     color: '#67e8f9',
-    fontSize: '13px',
+    fontSize: '12px',
     fontWeight: 900,
-    letterSpacing: '3px',
+    letterSpacing: '2px',
+    margin: 0,
   },
 
   title: {
-    fontSize:
-      'clamp(44px, 7vw, 82px)',
-    lineHeight: 0.95,
-    margin: '12px 0',
-    letterSpacing: '-0.07em',
+    fontSize: 'clamp(32px, 5vw, 48px)',
+    lineHeight: 1.05,
+    margin: '10px 0',
+    letterSpacing: '-0.04em',
   },
 
   enterpriseSubtitle: {
     color: '#a7f3d0',
-    fontSize:
-      'clamp(22px, 4vw, 34px)',
+    fontSize: 'clamp(20px, 3vw, 28px)',
     fontWeight: 900,
-    marginBottom: '18px',
+    margin: '0 0 10px',
   },
 
   subtitle: {
     color: '#cbd5e1',
-    maxWidth: '900px',
-    lineHeight: 1.8,
-    fontSize: '18px',
+    maxWidth: '760px',
+    lineHeight: 1.65,
+    fontSize: '16px',
+    margin: 0,
   },
 
   doctrinePanel: {
     background: '#020617',
     border: '1px solid #334155',
-    borderRadius: '28px',
-    padding: '26px',
-    marginTop: '26px',
+    borderRadius: '22px',
+    padding: '20px',
+    marginTop: '18px',
+    marginBottom: '16px',
   },
 
   doctrineTitle: {
     color: '#67e8f9',
-    fontSize: '13px',
+    fontSize: '12px',
     fontWeight: 900,
-    letterSpacing: '0.18em',
-    marginBottom: '18px',
+    letterSpacing: '0.16em',
+    margin: '0 0 14px',
   },
 
   doctrineGrid: {
     display: 'grid',
     gridTemplateColumns:
-      'repeat(auto-fit, minmax(240px, 1fr))',
-    gap: '14px',
+      'repeat(3, minmax(0, 1fr))',
+    gap: '12px',
   },
 
   doctrineCard: {
     background: '#0f172a',
     border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '18px',
+    borderRadius: '16px',
+    padding: '14px',
     color: '#cffafe',
     fontWeight: 800,
-    lineHeight: 1.6,
+    lineHeight: 1.5,
+    fontSize: '14px',
   },
 
   message: {
     background: '#064e3b',
     color: '#bbf7d0',
-    padding: '16px 18px',
-    borderRadius: '16px',
+    padding: '12px 14px',
+    borderRadius: '14px',
     fontWeight: 800,
-    marginBottom: '22px',
+    marginBottom: '16px',
+    fontSize: '14px',
   },
 
   commandPanel: {
     display: 'grid',
     gridTemplateColumns:
-      'minmax(0, 1.4fr) minmax(320px, 0.8fr)',
-    gap: '22px',
+      'minmax(0, 1.4fr) minmax(260px, 0.6fr)',
+    gap: '16px',
     background: '#020617',
     border: '1px solid #67e8f9',
-    borderRadius: '34px',
-    padding: '34px',
-    marginBottom: '26px',
+    borderRadius: '24px',
+    padding: '22px',
+    marginBottom: '16px',
+    boxShadow:
+      '0 20px 50px rgba(0,0,0,0.28)',
   },
 
   panelEyebrow: {
     color: '#94a3b8',
     fontWeight: 900,
-    letterSpacing: '0.14em',
+    letterSpacing: '0.12em',
     textTransform: 'uppercase',
     fontSize: '12px',
-    marginBottom: '10px',
+    margin: '0 0 8px',
   },
 
   commandPosture: {
-    fontSize:
-      'clamp(48px, 9vw, 94px)',
-    lineHeight: 0.95,
-    marginBottom: '20px',
+    fontSize: 'clamp(34px, 6vw, 56px)',
+    lineHeight: 1,
+    margin: '8px 0 12px',
     color: '#67e8f9',
-    letterSpacing: '-0.07em',
+    letterSpacing: '-0.05em',
   },
 
   commandMeaning: {
     color: '#e2e8f0',
-    fontSize: '20px',
-    lineHeight: 1.7,
+    fontSize: '16px',
+    lineHeight: 1.6,
+    maxWidth: '720px',
+    margin: 0,
   },
 
   implicationBox: {
     background: '#082f49',
     border: '1px solid #0891b2',
-    borderRadius: '24px',
-    padding: '24px',
+    borderRadius: '18px',
+    padding: '16px',
+    alignSelf: 'stretch',
   },
 
   implicationText: {
     color: '#cffafe',
-    fontSize: '18px',
-    lineHeight: 1.7,
+    fontSize: '14px',
+    lineHeight: 1.55,
+    margin: 0,
     fontWeight: 700,
   },
 
   interpretiveGrid: {
     display: 'grid',
     gridTemplateColumns:
-      'repeat(auto-fit, minmax(260px, 1fr))',
-    gap: '18px',
-    marginBottom: '28px',
+      'repeat(4, minmax(0, 1fr))',
+    gap: '14px',
+    marginBottom: '16px',
   },
 
   interpretivePanel: {
-    background: '#020617',
+    background: '#0f172a',
     border: '1px solid #1e293b',
-    borderRadius: '26px',
-    padding: '26px',
-    minHeight: '230px',
+    borderRadius: '18px',
+    padding: '16px',
+    minHeight: '150px',
+    boxSizing: 'border-box',
   },
 
   thresholdLabel: {
     color: '#a7f3d0',
-    fontSize: '32px',
-    lineHeight: 1.05,
-    marginBottom: '18px',
+    fontSize: '22px',
+    lineHeight: 1.1,
+    margin: '8px 0 10px',
+    overflowWrap: 'anywhere',
   },
 
   actionPanel: {
     display: 'grid',
     gridTemplateColumns:
-      'minmax(0, 1fr) minmax(240px, 0.4fr)',
-    gap: '22px',
+      'minmax(0, 1fr) minmax(220px, 0.45fr)',
+    gap: '16px',
     background: '#020617',
     border: '1px solid #334155',
-    borderRadius: '28px',
-    padding: '30px',
-    marginBottom: '28px',
+    borderRadius: '22px',
+    padding: '20px',
+    marginBottom: '16px',
   },
 
   actionThreshold: {
     color: '#67e8f9',
-    fontSize:
-      'clamp(32px, 5vw, 48px)',
-    lineHeight: 1,
-    marginBottom: '14px',
+    fontSize: 'clamp(28px, 4vw, 38px)',
+    lineHeight: 1.05,
+    margin: '8px 0 10px',
   },
 
   deadlineBox: {
     background: '#0f172a',
     border: '1px solid #334155',
-    borderRadius: '22px',
-    padding: '22px',
+    borderRadius: '18px',
+    padding: '16px',
     color: '#e2e8f0',
-    fontSize: '20px',
+    fontSize: '16px',
+    lineHeight: 1.5,
   },
 
   card: {
     background: '#020617',
     border: '1px solid #1e293b',
-    borderRadius: '26px',
-    padding: '28px',
-    marginBottom: '28px',
+    borderRadius: '22px',
+    padding: '20px',
+    marginBottom: '16px',
+    boxSizing: 'border-box',
+    overflow: 'hidden',
   },
 
   sectionTitle: {
-    fontSize: '30px',
-    marginBottom: '16px',
+    fontSize: '22px',
+    margin: '0 0 12px',
+    lineHeight: 1.2,
   },
 
   bodyText: {
     color: '#cbd5e1',
-    lineHeight: 1.8,
-    fontSize: '16px',
+    lineHeight: 1.6,
+    fontSize: '14px',
+    margin: 0,
   },
 
   reasonGrid: {
     display: 'grid',
     gridTemplateColumns:
-      'repeat(auto-fit, minmax(260px, 1fr))',
-    gap: '18px',
+      'repeat(4, minmax(0, 1fr))',
+    gap: '14px',
   },
 
   reasonBlock: {
     background: '#0f172a',
     border: '1px solid #334155',
-    borderRadius: '22px',
-    padding: '22px',
+    borderRadius: '18px',
+    padding: '16px',
+    minHeight: '140px',
   },
 
   reasonValue: {
     display: 'block',
     color: '#a7f3d0',
-    fontSize: '24px',
-    marginBottom: '12px',
+    fontSize: '18px',
+    marginBottom: '10px',
+    overflowWrap: 'anywhere',
   },
 
   tableWrap: {
+    width: '100%',
     overflowX: 'auto',
-    marginTop: '20px',
-    marginBottom: '20px',
+    marginTop: '14px',
+    marginBottom: '16px',
   },
 
   table: {
     width: '100%',
     borderCollapse: 'collapse',
-    minWidth: '1100px',
+    minWidth: '860px',
   },
 
   th: {
     textAlign: 'left',
     color: '#94a3b8',
     borderBottom: '1px solid #334155',
-    padding: '14px',
-    fontSize: '12px',
+    padding: '10px',
+    fontSize: '11px',
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
   },
 
   td: {
     borderBottom: '1px solid #1e293b',
-    padding: '16px 14px',
+    padding: '10px',
     color: '#e2e8f0',
     verticalAlign: 'top',
-    lineHeight: 1.7,
+    lineHeight: 1.55,
+    fontSize: '13px',
   },
 
   primaryButton: {
     width: '100%',
-    padding: '17px',
-    borderRadius: '16px',
+    padding: '14px',
+    borderRadius: '14px',
     border: 'none',
     background: '#67e8f9',
     color: '#082f49',
     fontWeight: 900,
     cursor: 'pointer',
-    fontSize: '16px',
+    fontSize: '15px',
   },
 }
