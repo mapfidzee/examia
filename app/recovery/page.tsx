@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
+import { interpretRecovery } from '@/lib/cgi/interpreters/interpretRecovery'
 import { supabase } from '../../lib/supabase'
 
 type CgiOperationalMetric = {
@@ -30,13 +32,6 @@ type CgiOperationalMetric = {
   dominant_trajectory_signal: string | null
   dominant_memory_pattern: string | null
 }
-
-type RecoveryState =
-  | 'INSUFFICIENT_HISTORY'
-  | 'RECOVERY_STRENGTHENING'
-  | 'RECOVERY_HOLDING'
-  | 'RECOVERY_FRAGILE'
-  | 'RECOVERY_STALLED'
 
 type Interpretation = {
   posture: string
@@ -83,7 +78,9 @@ function RecoveryContent() {
 
   const recovery = useMemo(() => {
     const ordered = [...metrics].sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      (a, b) =>
+        new Date(a.created_at).getTime() -
+        new Date(b.created_at).getTime()
     )
 
     const latest = ordered[ordered.length - 1] || null
@@ -92,16 +89,45 @@ function RecoveryContent() {
     const earlyWindow = ordered.slice(0, 5)
     const recentWindow = ordered.slice(-5)
 
-    const reliability = average(metrics.map((item) => item.recovery_reliability_score))
-    const direction = average(metrics.map((item) => item.recovery_direction))
-    const trend = average(metrics.map((item) => item.stabilization_trend))
-    const confidence = average(metrics.map((item) => item.stabilization_confidence_score))
-    const survivability = average(metrics.map((item) => item.operational_survivability_score))
-    const integrity = average(metrics.map((item) => item.continuity_integrity_score))
-    const unresolved = average(metrics.map((item) => item.unresolved_momentum))
-    const drag = average(metrics.map((item) => item.stabilization_drag))
-    const drift = average(metrics.map((item) => item.continuity_drift))
-    const escalation = average(metrics.map((item) => item.escalation_momentum))
+    const reliability = average(
+      metrics.map((item) => item.recovery_reliability_score)
+    )
+
+    const direction = average(
+      metrics.map((item) => item.recovery_direction)
+    )
+
+    const trend = average(
+      metrics.map((item) => item.stabilization_trend)
+    )
+
+    const confidence = average(
+      metrics.map((item) => item.stabilization_confidence_score)
+    )
+
+    const survivability = average(
+      metrics.map((item) => item.operational_survivability_score)
+    )
+
+    const integrity = average(
+      metrics.map((item) => item.continuity_integrity_score)
+    )
+
+    const unresolved = average(
+      metrics.map((item) => item.unresolved_momentum)
+    )
+
+    const drag = average(
+      metrics.map((item) => item.stabilization_drag)
+    )
+
+    const drift = average(
+      metrics.map((item) => item.continuity_drift)
+    )
+
+    const escalation = average(
+      metrics.map((item) => item.escalation_momentum)
+    )
 
     const burden = average([
       unresolved,
@@ -125,14 +151,20 @@ function RecoveryContent() {
       ])
     )
 
-    const early = average(earlyWindow.map((item) => recoveryConversionFromSnapshot(item)))
-    const recent = average(recentWindow.map((item) => recoveryConversionFromSnapshot(item)))
+    const early = average(
+      earlyWindow.map((item) => recoveryConversionFromSnapshot(item))
+    )
+
+    const recent = average(
+      recentWindow.map((item) => recoveryConversionFromSnapshot(item))
+    )
 
     const velocity = metrics.length < 2 ? 0 : recent - early
 
     const latestMovement =
       latest && previous
-        ? recoveryConversionFromSnapshot(latest) - recoveryConversionFromSnapshot(previous)
+        ? recoveryConversionFromSnapshot(latest) -
+          recoveryConversionFromSnapshot(previous)
         : 0
 
     const volatility = calculateVolatility(
@@ -152,13 +184,12 @@ function RecoveryContent() {
       ])
     )
 
-    const state = getRecoveryState({
-      count: metrics.length,
-      conversion,
-      velocity,
-      volatility,
-      pressure,
-      latest,
+    const centralizedRecovery = interpretRecovery({
+      stabilizationConfidence: confidence,
+      recoveryReliability: reliability,
+      survivabilityScore: survivability,
+      continuityDrift: drift,
+      unresolvedMomentum: unresolved,
     })
 
     const dominantBlocker = strongestDriver({
@@ -172,18 +203,23 @@ function RecoveryContent() {
       'Escalation momentum': escalation,
     })
 
-    const posture = interpretRecoveryPosture(state)
+    const posture = {
+      posture: centralizedRecovery.posture,
+      meaning: centralizedRecovery.summary,
+      action: centralizedRecovery.executiveAction,
+    }
+
     const durability = interpretDurability(conversion)
     const reliabilityMeaning = interpretReliability(reliability)
     const directionMeaning = interpretDirection(velocity || latestMovement)
     const trendMeaning = interpretTrend(trend)
     const survivabilityMeaning = interpretSurvivability(survivability)
-    const pressureMeaning = interpretPressure(pressure)
+    const pressureMeaning = interpretPressureBurden(pressure)
     const volatilityMeaning = interpretVolatility(volatility)
     const driftMeaning = interpretDrift(drift)
     const historyMeaning = interpretHistory(metrics.length)
 
-    const executiveSummary = `${durability.meaning} Dominant blocker: ${dominantBlocker}. ${pressureMeaning.meaning} ${driftMeaning.meaning}`
+    const executiveSummary = `${posture.meaning} Dominant blocker: ${dominantBlocker}. ${pressureMeaning.meaning} ${driftMeaning.meaning}`
 
     const actionCue = compactAction([
       posture.action,
@@ -258,7 +294,9 @@ This recovery view interprets persisted continuity memory. It does not judge peo
       <div style={styles.container}>
         <section style={styles.header}>
           <p style={styles.kicker}>TSINAXA CGI • RECOVERY INTELLIGENCE</p>
+
           <h1 style={styles.title}>Continuity Recovery Intelligence</h1>
+
           <p style={styles.subtitle}>
             Executive interpretation of whether stabilization is becoming durable recovery.
             Internal calculations stay hidden. Leadership sees posture, meaning, and action.
@@ -270,13 +308,22 @@ This recovery view interprets persisted continuity memory. It does not judge peo
         <section style={styles.heroCard}>
           <div>
             <p style={styles.sectionKicker}>Recovery Posture</p>
-            <h2 style={styles.heroPosture}>{recovery.posture.posture}</h2>
-            <p style={styles.heroMeaning}>{recovery.executiveSummary}</p>
+
+            <h2 style={styles.heroPosture}>
+              {recovery.posture.posture}
+            </h2>
+
+            <p style={styles.heroMeaning}>
+              {recovery.executiveSummary}
+            </p>
           </div>
 
           <div style={styles.actionBox}>
             <p style={styles.actionLabel}>Recommended Action</p>
-            <p style={styles.actionText}>{recovery.actionCue}</p>
+
+            <p style={styles.actionText}>
+              {recovery.actionCue}
+            </p>
           </div>
         </section>
 
@@ -318,6 +365,7 @@ This recovery view interprets persisted continuity memory. It does not judge peo
           <div style={styles.cardHeader}>
             <div>
               <h2 style={styles.cardTitle}>Recent Recovery Memory Trail</h2>
+
               <p style={styles.cardNote}>
                 Recent snapshots are displayed as threshold interpretations, not raw scores.
               </p>
@@ -334,9 +382,9 @@ This recovery view interprets persisted continuity memory. It does not judge peo
                 <tr>
                   <th style={styles.th}>Created</th>
                   <th style={styles.th}>Continuity</th>
+                  <th style={styles.th}>Recovery</th>
                   <th style={styles.th}>Reliability</th>
                   <th style={styles.th}>Direction</th>
-                  <th style={styles.th}>Trend</th>
                   <th style={styles.th}>Survivability</th>
                 </tr>
               </thead>
@@ -350,24 +398,60 @@ This recovery view interprets persisted continuity memory. It does not judge peo
                   </tr>
                 )}
 
-                {metrics.slice(0, 8).map((item) => (
-                  <tr key={item.id}>
-                    <td style={styles.td}>{formatDate(item.created_at)}</td>
-                    <td style={styles.td}>{item.continuity_state}</td>
-                    <td style={styles.td}>
-                      {interpretReliability(item.recovery_reliability_score).posture}
-                    </td>
-                    <td style={styles.td}>
-                      {interpretDirection(item.recovery_direction - 50).posture}
-                    </td>
-                    <td style={styles.td}>
-                      {interpretTrend(item.stabilization_trend).posture}
-                    </td>
-                    <td style={styles.td}>
-                      {interpretSurvivability(item.operational_survivability_score).posture}
-                    </td>
-                  </tr>
-                ))}
+                {metrics.slice(0, 8).map((item) => {
+                  const rowRecovery = interpretRecovery({
+                    stabilizationConfidence:
+                      item.stabilization_confidence_score,
+                    recoveryReliability:
+                      item.recovery_reliability_score,
+                    survivabilityScore:
+                      item.operational_survivability_score,
+                    continuityDrift:
+                      item.continuity_drift,
+                    unresolvedMomentum:
+                      item.unresolved_momentum,
+                  })
+
+                  return (
+                    <tr key={item.id}>
+                      <td style={styles.td}>
+                        {formatDate(item.created_at)}
+                      </td>
+
+                      <td style={styles.td}>
+                        {item.continuity_state}
+                      </td>
+
+                      <td style={styles.td}>
+                        {rowRecovery.posture}
+                      </td>
+
+                      <td style={styles.td}>
+                        {
+                          interpretReliability(
+                            item.recovery_reliability_score
+                          ).posture
+                        }
+                      </td>
+
+                      <td style={styles.td}>
+                        {
+                          interpretDirection(
+                            item.recovery_direction - 50
+                          ).posture
+                        }
+                      </td>
+
+                      <td style={styles.td}>
+                        {
+                          interpretSurvivability(
+                            item.operational_survivability_score
+                          ).posture
+                        }
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -407,8 +491,13 @@ function recoveryConversionFromSnapshot(item: CgiOperationalMetric) {
 
 function average(values: number[]) {
   const valid = values.filter((value) => Number.isFinite(value))
+
   if (valid.length === 0) return 0
-  return Math.round(valid.reduce((sum, value) => sum + value, 0) / valid.length)
+
+  return Math.round(
+    valid.reduce((sum, value) => sum + value, 0) /
+      valid.length
+  )
 }
 
 function clamp(value: number) {
@@ -417,12 +506,16 @@ function clamp(value: number) {
 
 function calculateVolatility(values: number[]) {
   const valid = values.filter((value) => Number.isFinite(value))
+
   if (valid.length < 2) return 0
 
   const mean = average(valid)
+
   const variance =
-    valid.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) /
-    valid.length
+    valid.reduce(
+      (sum, value) => sum + Math.pow(value - mean, 2),
+      0
+    ) / valid.length
 
   return Math.min(100, Math.round(Math.sqrt(variance)))
 }
@@ -434,91 +527,29 @@ function strongestDriver(scores: Record<string, number>) {
   )
 }
 
-function getRecoveryState(input: {
-  count: number
-  conversion: number
-  velocity: number
-  volatility: number
-  pressure: number
-  latest: CgiOperationalMetric | null
-}): RecoveryState {
-  if (input.count < 3) return 'INSUFFICIENT_HISTORY'
-  if (
-    input.conversion >= 65 &&
-    input.velocity >= 5 &&
-    input.pressure < 40 &&
-    input.volatility < 25
-  ) {
-    return 'RECOVERY_STRENGTHENING'
-  }
-  if (
-    input.conversion < 35 ||
-    input.velocity <= -10 ||
-    input.pressure >= 65 ||
-    input.latest?.continuity_state === 'UNSTABLE'
-  ) {
-    return 'RECOVERY_STALLED'
-  }
-  if (input.conversion < 50 || input.pressure >= 50 || input.volatility >= 25) {
-    return 'RECOVERY_FRAGILE'
-  }
-  return 'RECOVERY_HOLDING'
-}
-
-function interpretRecoveryPosture(state: RecoveryState): Interpretation {
-  if (state === 'INSUFFICIENT_HISTORY') {
-    return {
-      posture: 'INSUFFICIENT HISTORY',
-      meaning: 'Recovery memory is not yet deep enough to judge durability.',
-      action: 'Continue saving operational snapshots.',
-    }
-  }
-  if (state === 'RECOVERY_STRENGTHENING') {
-    return {
-      posture: 'RECOVERY STRENGTHENING',
-      meaning: 'Recovery signals are improving and stabilization credibility is rising.',
-      action: 'Maintain monitoring and confirm survivability.',
-    }
-  }
-  if (state === 'RECOVERY_STALLED') {
-    return {
-      posture: 'RECOVERY STALLED',
-      meaning: 'Stabilization signals are not converting into durable recovery.',
-      action: 'Escalate recovery review.',
-    }
-  }
-  if (state === 'RECOVERY_FRAGILE') {
-    return {
-      posture: 'RECOVERY FRAGILE',
-      meaning: 'Recovery exists, but unresolved instability may weaken durability.',
-      action: 'Strengthen follow-up and monitoring.',
-    }
-  }
-  return {
-    posture: 'RECOVERY HOLDING',
-    meaning: 'Recovery is visible and holding, but durability still requires confirmation.',
-    action: 'Maintain monitoring.',
-  }
-}
-
 function interpretDurability(score: number): Interpretation {
   if (score >= 70) {
     return {
       posture: 'DURABILITY IMPROVING',
-      meaning: 'Recovery signals are converting into stronger stabilization credibility.',
+      meaning:
+        'Recovery signals are converting into stronger stabilization credibility.',
       action: 'Confirm survivability before closure.',
     }
   }
+
   if (score >= 50) {
     return {
       posture: 'MONITORED RECOVERY',
-      meaning: 'Recovery signals exist, but durability is not yet fully credible.',
+      meaning:
+        'Recovery signals exist, but durability is not yet fully credible.',
       action: 'Maintain governed monitoring.',
     }
   }
+
   return {
     posture: 'DURABILITY NOT CREDIBLE',
-    meaning: 'Recovery evidence is too weak to treat stabilization as durable.',
+    meaning:
+      'Recovery evidence is too weak to treat stabilization as durable.',
     action: 'Escalate recovery review.',
   }
 }
@@ -527,20 +558,25 @@ function interpretReliability(score: number): Interpretation {
   if (score >= 70) {
     return {
       posture: 'RELIABILITY STRENGTHENING',
-      meaning: 'Recovery reliability is moving toward a credible holding pattern.',
+      meaning:
+        'Recovery reliability is moving toward a credible holding pattern.',
       action: 'Preserve current recovery discipline.',
     }
   }
+
   if (score >= 45) {
     return {
       posture: 'RELIABILITY HOLDING',
-      meaning: 'Reliability exists, but still needs confirmation before closure is trusted.',
+      meaning:
+        'Reliability exists, but still needs confirmation before closure is trusted.',
       action: 'Watch for recurrence.',
     }
   }
+
   return {
     posture: 'RELIABILITY WEAK',
-    meaning: 'Reliability is not strong enough to support durable stabilization.',
+    meaning:
+      'Reliability is not strong enough to support durable stabilization.',
     action: 'Review ownership and follow-through.',
   }
 }
@@ -553,6 +589,7 @@ function interpretDirection(value: number): Interpretation {
       action: 'Protect the recovery pathway.',
     }
   }
+
   if (value <= -10) {
     return {
       posture: 'LOSING GROUND',
@@ -560,9 +597,11 @@ function interpretDirection(value: number): Interpretation {
       action: 'Investigate drift and recurrence.',
     }
   }
+
   return {
     posture: 'DIRECTION HOLDING',
-    meaning: 'Recovery is neither clearly improving nor collapsing.',
+    meaning:
+      'Recovery is neither clearly improving nor collapsing.',
     action: 'Continue monitoring.',
   }
 }
@@ -571,17 +610,21 @@ function interpretTrend(score: number): Interpretation {
   if (score >= 70) {
     return {
       posture: 'STRENGTHENING',
-      meaning: 'Stabilization signals are becoming more credible.',
+      meaning:
+        'Stabilization signals are becoming more credible.',
       action: 'Validate survivability.',
     }
   }
+
   if (score >= 45) {
     return {
       posture: 'FRAGILE',
-      meaning: 'Improvement exists, but durability is not yet certain.',
+      meaning:
+        'Improvement exists, but durability is not yet certain.',
       action: 'Keep recovery monitoring active.',
     }
   }
+
   return {
     posture: 'WEAK',
     meaning: 'Stabilization signals remain weak.',
@@ -593,39 +636,48 @@ function interpretSurvivability(score: number): Interpretation {
   if (score >= 70) {
     return {
       posture: 'SURVIVABILITY IMPROVING',
-      meaning: 'The recovery pathway is showing stronger durability.',
+      meaning:
+        'The recovery pathway is showing stronger durability.',
       action: 'Maintain confirmation monitoring.',
     }
   }
+
   if (score >= 45) {
     return {
       posture: 'SURVIVABILITY MONITORED',
-      meaning: 'Survivability exists but remains under review.',
+      meaning:
+        'Survivability exists but remains under review.',
       action: 'Do not assume closure.',
     }
   }
+
   return {
     posture: 'SURVIVABILITY AT RISK',
-    meaning: 'Recovery may not survive continued pressure.',
+    meaning:
+      'Recovery may not survive continued pressure.',
     action: 'Escalate survivability review.',
   }
 }
 
-function interpretPressure(score: number): Interpretation {
+function interpretPressureBurden(score: number): Interpretation {
   if (score >= 65) {
     return {
       posture: 'HIGH RECOVERY PRESSURE',
-      meaning: 'Structural friction threatens recovery durability.',
+      meaning:
+        'Structural friction threatens recovery durability.',
       action: 'Escalate pressure review.',
     }
   }
+
   if (score >= 35) {
     return {
       posture: 'MODERATE FRICTION',
-      meaning: 'Unresolved stabilization drag remains visible.',
+      meaning:
+        'Unresolved stabilization drag remains visible.',
       action: 'Reduce recovery blockers.',
     }
   }
+
   return {
     posture: 'PRESSURE CONTAINED',
     meaning: 'Recovery pressure appears contained.',
@@ -637,17 +689,21 @@ function interpretVolatility(score: number): Interpretation {
   if (score >= 35) {
     return {
       posture: 'VOLATILE',
-      meaning: 'Recovery movement is fluctuating enough to weaken confidence.',
+      meaning:
+        'Recovery movement is fluctuating enough to weaken confidence.',
       action: 'Extend monitoring.',
     }
   }
+
   if (score >= 18) {
     return {
       posture: 'CONTAINED VARIATION',
-      meaning: 'Recovery varies, but not enough to indicate collapse.',
+      meaning:
+        'Recovery varies, but not enough to indicate collapse.',
       action: 'Watch for repeated instability.',
     }
   }
+
   return {
     posture: 'CONSISTENT',
     meaning: 'Recovery movement appears steady.',
@@ -663,13 +719,16 @@ function interpretDrift(score: number): Interpretation {
       action: 'Review drift sources.',
     }
   }
+
   if (score >= 25) {
     return {
       posture: 'DRIFT UNDER WATCH',
-      meaning: 'Some drift is visible and must remain under review.',
+      meaning:
+        'Some drift is visible and must remain under review.',
       action: 'Keep drift visible.',
     }
   }
+
   return {
     posture: 'DRIFT CONTAINED',
     meaning: 'Continuity drift is currently contained.',
@@ -681,20 +740,25 @@ function interpretHistory(count: number): Interpretation {
   if (count < 3) {
     return {
       posture: 'INSUFFICIENT HISTORY',
-      meaning: 'Too few snapshots exist for recovery interpretation.',
+      meaning:
+        'Too few snapshots exist for recovery interpretation.',
       action: 'Continue saving snapshots.',
     }
   }
+
   if (count < 10) {
     return {
       posture: 'EARLY HISTORY',
-      meaning: 'Recovery interpretation has started, but memory remains young.',
+      meaning:
+        'Recovery interpretation has started, but memory remains young.',
       action: 'Build continuity memory.',
     }
   }
+
   return {
     posture: 'MEMORY ESTABLISHED',
-    meaning: 'Persisted memory is sufficient for recovery interpretation.',
+    meaning:
+      'Persisted memory is sufficient for recovery interpretation.',
     action: 'Use posture to guide review.',
   }
 }
@@ -705,6 +769,7 @@ function compactAction(actions: string[]) {
 
 function formatDate(value: string) {
   if (!value) return 'Not recorded'
+
   return new Date(value).toLocaleString()
 }
 
@@ -718,17 +783,32 @@ function PostureCard({
   return (
     <article style={styles.postureCard}>
       <p style={styles.cardKicker}>{title}</p>
-      <h3 style={styles.postureTitle}>{interpretation.posture}</h3>
-      <p style={styles.postureMeaning}>{interpretation.meaning}</p>
+
+      <h3 style={styles.postureTitle}>
+        {interpretation.posture}
+      </h3>
+
+      <p style={styles.postureMeaning}>
+        {interpretation.meaning}
+      </p>
     </article>
   )
 }
 
-function CompactCard({ title, value }: { title: string; value: string }) {
+function CompactCard({
+  title,
+  value,
+}: {
+  title: string
+  value: string
+}) {
   return (
     <article style={styles.compactCard}>
       <p style={styles.cardKicker}>{title}</p>
-      <h3 style={styles.compactValue}>{value}</h3>
+
+      <h3 style={styles.compactValue}>
+        {value}
+      </h3>
     </article>
   )
 }
@@ -743,16 +823,26 @@ function Panel({
   return (
     <section style={styles.card}>
       <h2 style={styles.cardTitle}>{title}</h2>
+
       <div style={styles.infoList}>{children}</div>
     </section>
   )
 }
 
-function Info({ label, value }: { label: string; value: string }) {
+function Info({
+  label,
+  value,
+}: {
+  label: string
+  value: string
+}) {
   return (
     <div style={styles.infoRow}>
       <span style={styles.infoLabel}>{label}</span>
-      <strong style={styles.infoValue}>{value}</strong>
+
+      <strong style={styles.infoValue}>
+        {value}
+      </strong>
     </div>
   )
 }
@@ -763,6 +853,7 @@ const styles: Record<string, CSSProperties> = {
     color: 'white',
     overflowX: 'hidden',
   },
+
   container: {
     width: '100%',
     maxWidth: '1120px',
@@ -770,10 +861,12 @@ const styles: Record<string, CSSProperties> = {
     padding: '0 20px 48px',
     boxSizing: 'border-box',
   },
+
   header: {
     marginBottom: '20px',
     paddingTop: '4px',
   },
+
   kicker: {
     color: '#67e8f9',
     fontSize: '12px',
@@ -781,11 +874,13 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: '2px',
     margin: 0,
   },
+
   title: {
     fontSize: 'clamp(32px, 5vw, 48px)',
     lineHeight: 1.05,
     margin: '10px 0',
   },
+
   subtitle: {
     color: '#cbd5e1',
     maxWidth: '760px',
@@ -793,6 +888,7 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '16px',
     margin: 0,
   },
+
   message: {
     background: '#064e3b',
     color: '#bbf7d0',
@@ -802,9 +898,11 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: '16px',
     fontSize: '14px',
   },
+
   heroCard: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.4fr) minmax(260px, 0.6fr)',
+    gridTemplateColumns:
+      'minmax(0, 1.4fr) minmax(260px, 0.6fr)',
     gap: '16px',
     background: '#020617',
     border: '1px solid #22c55e',
@@ -813,6 +911,7 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: '16px',
     boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
   },
+
   sectionKicker: {
     color: '#94a3b8',
     fontWeight: 900,
@@ -821,6 +920,7 @@ const styles: Record<string, CSSProperties> = {
     margin: 0,
     fontSize: '12px',
   },
+
   heroPosture: {
     fontSize: 'clamp(34px, 6vw, 56px)',
     margin: '8px 0 12px',
@@ -828,12 +928,14 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: '-0.05em',
     lineHeight: 1,
   },
+
   heroMeaning: {
     color: '#dbeafe',
     lineHeight: 1.6,
     margin: 0,
     maxWidth: '720px',
   },
+
   actionBox: {
     background: '#052e16',
     border: '1px solid #22c55e',
@@ -841,6 +943,7 @@ const styles: Record<string, CSSProperties> = {
     padding: '16px',
     alignSelf: 'stretch',
   },
+
   actionLabel: {
     color: '#86efac',
     fontWeight: 900,
@@ -849,18 +952,21 @@ const styles: Record<string, CSSProperties> = {
     textTransform: 'uppercase',
     letterSpacing: '0.12em',
   },
+
   actionText: {
     color: '#dcfce7',
     lineHeight: 1.55,
     margin: 0,
     fontSize: '14px',
   },
+
   postureGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
     gap: '14px',
     marginBottom: '16px',
   },
+
   postureCard: {
     background: '#0f172a',
     border: '1px solid #1e293b',
@@ -869,30 +975,35 @@ const styles: Record<string, CSSProperties> = {
     minHeight: '150px',
     boxSizing: 'border-box',
   },
+
   cardKicker: {
     color: '#94a3b8',
     fontWeight: 800,
     margin: 0,
     fontSize: '12px',
   },
+
   postureTitle: {
     color: '#f8fafc',
     fontSize: '19px',
     margin: '10px 0 8px',
     lineHeight: 1.15,
   },
+
   postureMeaning: {
     color: '#cbd5e1',
     lineHeight: 1.5,
     fontSize: '14px',
     margin: 0,
   },
+
   compactGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
     gap: '14px',
     marginBottom: '16px',
   },
+
   compactCard: {
     background: '#0f172a',
     border: '1px solid #1e293b',
@@ -901,6 +1012,7 @@ const styles: Record<string, CSSProperties> = {
     minHeight: '104px',
     boxSizing: 'border-box',
   },
+
   compactValue: {
     fontSize: '18px',
     lineHeight: 1.2,
@@ -908,12 +1020,14 @@ const styles: Record<string, CSSProperties> = {
     color: '#f8fafc',
     overflowWrap: 'anywhere',
   },
+
   twoColumn: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
     gap: '16px',
     marginBottom: '16px',
   },
+
   card: {
     background: '#020617',
     border: '1px solid #1e293b',
@@ -924,6 +1038,7 @@ const styles: Record<string, CSSProperties> = {
     boxSizing: 'border-box',
     overflow: 'hidden',
   },
+
   cardHeader: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -931,22 +1046,26 @@ const styles: Record<string, CSSProperties> = {
     alignItems: 'flex-start',
     marginBottom: '14px',
   },
+
   cardTitle: {
     fontSize: '22px',
     margin: 0,
     lineHeight: 1.2,
   },
+
   cardNote: {
     color: '#94a3b8',
     lineHeight: 1.5,
     margin: '6px 0 0',
     fontSize: '14px',
   },
+
   infoList: {
     display: 'grid',
     gap: '10px',
     marginTop: '14px',
   },
+
   infoRow: {
     display: 'grid',
     gridTemplateColumns: '160px minmax(0, 1fr)',
@@ -957,25 +1076,30 @@ const styles: Record<string, CSSProperties> = {
     padding: '12px',
     alignItems: 'start',
   },
+
   infoLabel: {
     color: '#94a3b8',
     fontWeight: 800,
     fontSize: '12px',
   },
+
   infoValue: {
     color: '#f8fafc',
     lineHeight: 1.45,
     overflowWrap: 'anywhere',
   },
+
   tableWrap: {
     width: '100%',
     overflowX: 'auto',
   },
+
   table: {
     width: '100%',
     borderCollapse: 'collapse',
     minWidth: '760px',
   },
+
   th: {
     textAlign: 'left',
     color: '#94a3b8',
@@ -984,6 +1108,7 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '11px',
     textTransform: 'uppercase',
   },
+
   td: {
     borderBottom: '1px solid #1e293b',
     padding: '10px',
@@ -992,6 +1117,7 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 700,
     fontSize: '13px',
   },
+
   primaryButton: {
     padding: '10px 14px',
     borderRadius: '12px',
@@ -1003,6 +1129,7 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '14px',
     whiteSpace: 'nowrap',
   },
+
   summaryBox: {
     whiteSpace: 'pre-wrap',
     background: '#0f172a',
