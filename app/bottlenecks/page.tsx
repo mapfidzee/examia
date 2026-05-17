@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+
+import CGIGovernanceShell from '@/components/cgi/CGIGovernanceShell'
+
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -36,65 +39,95 @@ type Responder = {
 }
 
 const REPORT_TEMPLATES = [
-  'Coordination bottleneck visibility brief',
-  'Responder concentration bottleneck brief',
-  'Continuity blockage visibility brief',
-  'Safeguarding bottleneck visibility brief',
-  'Regional coordination bottleneck brief',
+  'Executive bottleneck continuity brief',
+  'Routing blockage governance brief',
+  'Responder concentration governance brief',
+  'Stabilization blockage visibility brief',
+  'Regional continuity bottleneck brief',
 ]
 
 const BOTTLENECK_FOCUS_OPTIONS = [
-  'Routing accumulation visibility',
+  'Routing congestion visibility',
   'Responder concentration pressure',
-  'Unresolved stabilization pathways',
-  'Safeguarding continuity blockage',
-  'Regional coordination bottlenecks',
+  'Stabilization blockage visibility',
+  'Safeguarding continuity escalation',
+  'Regional continuity congestion',
 ]
 
 const OPERATING_SCOPE_OPTIONS = [
-  'National view',
-  'Regional view',
-  'District view',
-  'Responder-focused',
-  'Coordination-focused',
+  'National continuity view',
+  'Regional continuity view',
+  'District continuity view',
+  'Routing governance view',
+  'Executive continuity command',
 ]
 
-function getBottleneckInterpretation(status: string) {
+function interpretBottleneckStatus(status: string) {
   if (status === 'LOW_BOTTLENECK_PRESSURE') {
     return {
+      posture: 'BOTTLENECK CONTAINED',
       interpretation:
-        'Coordination pathways appear stable with minimal operational blockage visibility.',
-      action: 'Maintain standard coordination monitoring.',
-      monitoring: 'Low bottleneck monitoring remains active.',
+        'Operational pathways appear stable with no visible continuity blockage threatening stabilization movement.',
+      action:
+        'Maintain routine continuity monitoring and preserve pathway visibility.',
     }
   }
 
   if (status === 'MODERATE_BOTTLENECK_PRESSURE') {
     return {
+      posture: 'BOTTLENECK PRESSURE VISIBLE',
       interpretation:
-        'Some coordination pathways are slowing and require visibility monitoring.',
-      action: 'Review continuity pathways and monitor stabilization progression.',
-      monitoring: 'Moderate bottleneck monitoring remains active.',
+        'Some stabilization pathways are slowing and require closer continuity visibility.',
+      action:
+        'Review pathway progression and monitor continuity accumulation.',
     }
   }
 
   if (status === 'HIGH_BOTTLENECK_PRESSURE') {
     return {
+      posture: 'BOTTLENECK ESCALATION ACTIVE',
       interpretation:
-        'Visible coordination bottlenecks are slowing stabilization continuity and require intervention review.',
+        'Visible stabilization blockage is slowing continuity movement and increasing operational congestion.',
       action:
-        'Redistribute coordination load and review unresolved stabilization pathways.',
-      monitoring: 'High bottleneck monitoring remains active.',
+        'Redistribute continuity load and review unresolved pathway congestion.',
     }
   }
 
   return {
+    posture: 'CRITICAL BOTTLENECK PRESSURE',
     interpretation:
-      'Critical coordination bottlenecks are visible and continuity fragmentation risk is increasing.',
+      'Critical blockage pressure is threatening stabilization continuity and operational survivability.',
     action:
-      'Escalate operational coordination review and rebalance stabilization infrastructure immediately.',
-    monitoring: 'Critical bottleneck escalation monitoring is active.',
+      'Escalate executive continuity review and rebalance stabilization infrastructure immediately.',
   }
+}
+
+function interpretRoutingCongestion(load: number) {
+  if (load >= 4) return 'ROUTING CONGESTION CRITICAL'
+  if (load >= 2) return 'ROUTING CONGESTION VISIBLE'
+
+  return 'ROUTING FLOW CONTROLLED'
+}
+
+function interpretStabilizationDelay(stalled: number) {
+  if (stalled >= 3) return 'STABILIZATION DELAY CRITICAL'
+  if (stalled >= 1) return 'STABILIZATION DELAY ACTIVE'
+
+  return 'STABILIZATION FLOW ACTIVE'
+}
+
+function interpretSafeguarding(flags: number) {
+  if (flags >= 3) return 'SAFEGUARDING ESCALATION CRITICAL'
+  if (flags >= 1) return 'SAFEGUARDING VISIBILITY ACTIVE'
+
+  return 'SAFEGUARDING PRESSURE CONTAINED'
+}
+
+function interpretResponderPressure(load: number) {
+  if (load >= 4) return 'RESPONDER CONCENTRATION CRITICAL'
+  if (load >= 2) return 'RESPONDER CONCENTRATION VISIBLE'
+
+  return 'RESPONDER LOAD CONTROLLED'
 }
 
 export default function BottlenecksPage() {
@@ -107,8 +140,15 @@ export default function BottlenecksPage() {
   const [message, setMessage] = useState('')
 
   const [reportTemplate, setReportTemplate] = useState(REPORT_TEMPLATES[0])
-  const [bottleneckFocus, setBottleneckFocus] = useState(BOTTLENECK_FOCUS_OPTIONS[0])
-  const [operatingScope, setOperatingScope] = useState(OPERATING_SCOPE_OPTIONS[1])
+
+  const [bottleneckFocus, setBottleneckFocus] = useState(
+    BOTTLENECK_FOCUS_OPTIONS[0]
+  )
+
+  const [operatingScope, setOperatingScope] = useState(
+    OPERATING_SCOPE_OPTIONS[0]
+  )
+
   const [additionalNotes, setAdditionalNotes] = useState('')
 
   useEffect(() => {
@@ -130,23 +170,19 @@ export default function BottlenecksPage() {
       supabase.from('responders').select('*'),
     ])
 
-    if (casesResult.error) console.error(casesResult.error)
-    if (routingResult.error) console.error(routingResult.error)
-    if (interventionsResult.error) console.error(interventionsResult.error)
-    if (outcomesResult.error) console.error(outcomesResult.error)
-    if (respondersResult.error) console.error(respondersResult.error)
-
     setCases(casesResult.data || [])
     setRoutingActions(routingResult.data || [])
     setInterventions(interventionsResult.data || [])
     setOutcomes(outcomesResult.data || [])
     setResponders(respondersResult.data || [])
 
-    setMessage('Coordination bottleneck intelligence refreshed.')
+    setMessage('TSINAXA CGI bottleneck intelligence refreshed.')
   }
 
-  const metrics = useMemo(() => {
-    const safeguardingFlags = cases.filter((item) => item.safeguarding_flag).length
+  const intelligence = useMemo(() => {
+    const safeguardingFlags = cases.filter(
+      (item) => item.safeguarding_flag
+    ).length
 
     const activeCases = cases.filter((item) =>
       [
@@ -159,56 +195,84 @@ export default function BottlenecksPage() {
       ].includes(item.case_status)
     )
 
-    const stabilizedCases = cases.filter(
-      (item) => item.case_status === 'STABILIZED'
-    ).length
+    const interventionCaseIds = new Set(
+      interventions.map((item) => item.case_id)
+    )
 
-    const interventionCaseIds = new Set(interventions.map((item) => item.case_id))
-    const outcomeCaseIds = new Set(outcomes.map((item) => item.case_id))
+    const outcomeCaseIds = new Set(
+      outcomes.map((item) => item.case_id)
+    )
 
     const unresolvedCases = activeCases.filter(
-      (item) => interventionCaseIds.has(item.id) && !outcomeCaseIds.has(item.id)
+      (item) =>
+        interventionCaseIds.has(item.id) &&
+        !outcomeCaseIds.has(item.id)
     ).length
 
     const stalledCases = activeCases.filter(
-      (item) => outcomeCaseIds.has(item.id) && item.case_status !== 'STABILIZED'
+      (item) =>
+        outcomeCaseIds.has(item.id) &&
+        item.case_status !== 'STABILIZED'
     ).length
 
     const responderLoadMap: Record<string, number> = {}
 
     routingActions.forEach((item) => {
-      const responder = item.assigned_responder_id || 'UNASSIGNED'
-      responderLoadMap[responder] = (responderLoadMap[responder] || 0) + 1
+      const responder =
+        item.assigned_responder_id || 'UNASSIGNED'
+
+      responderLoadMap[responder] =
+        (responderLoadMap[responder] || 0) + 1
     })
 
-    const highestResponderLoad = Math.max(...Object.values(responderLoadMap), 0)
+    const highestResponderLoad = Math.max(
+      ...Object.values(responderLoadMap),
+      0
+    )
 
     let bottleneckStatus = 'LOW_BOTTLENECK_PRESSURE'
 
-    if (highestResponderLoad >= 4 || stalledCases >= 3 || safeguardingFlags >= 3) {
+    if (
+      highestResponderLoad >= 4 ||
+      stalledCases >= 3 ||
+      safeguardingFlags >= 3
+    ) {
       bottleneckStatus = 'CRITICAL_BOTTLENECK_PRESSURE'
-    } else if (highestResponderLoad >= 2 || unresolvedCases >= 2 || stalledCases >= 2) {
+    } else if (
+      highestResponderLoad >= 2 ||
+      unresolvedCases >= 2 ||
+      stalledCases >= 2
+    ) {
       bottleneckStatus = 'HIGH_BOTTLENECK_PRESSURE'
-    } else if (unresolvedCases >= 1 || safeguardingFlags >= 1) {
+    } else if (
+      unresolvedCases >= 1 ||
+      safeguardingFlags >= 1
+    ) {
       bottleneckStatus = 'MODERATE_BOTTLENECK_PRESSURE'
     }
 
     return {
-      safeguardingFlags,
-      activeCases: activeCases.length,
-      stabilizedCases,
-      unresolvedCases,
-      stalledCases,
-      highestResponderLoad,
+      bottleneckPosture:
+        interpretBottleneckStatus(bottleneckStatus),
+
+      routingCongestion:
+        interpretRoutingCongestion(highestResponderLoad),
+
+      stabilizationDelay:
+        interpretStabilizationDelay(stalledCases),
+
+      safeguardingVisibility:
+        interpretSafeguarding(safeguardingFlags),
+
+      responderPressure:
+        interpretResponderPressure(highestResponderLoad),
+
       responderLoadMap,
-      bottleneckStatus,
     }
   }, [cases, routingActions, interventions, outcomes])
 
-  const aligned = getBottleneckInterpretation(metrics.bottleneckStatus)
-
   const generatedBrief = `
-EXAMIA LIS COORDINATION BOTTLENECK VISIBILITY BRIEF
+TSINAXA CGI BOTTLENECK INTELLIGENCE BRIEF
 
 Report Template:
 ${reportTemplate}
@@ -219,78 +283,109 @@ ${bottleneckFocus}
 Operating Scope:
 ${operatingScope}
 
-Bottleneck Status:
-${metrics.bottleneckStatus}
+Bottleneck Posture:
+${intelligence.bottleneckPosture.posture}
 
-Bottleneck Metrics:
-Total Cases: ${cases.length}
-Active Stabilization Cases: ${metrics.activeCases}
-Stabilized Cases: ${metrics.stabilizedCases}
-Safeguarding Flags: ${metrics.safeguardingFlags}
-Unresolved Intervention Pathways: ${metrics.unresolvedCases}
-Stalled Stabilization Cases: ${metrics.stalledCases}
-Highest Responder Load: ${metrics.highestResponderLoad}
+Routing Congestion:
+${intelligence.routingCongestion}
 
-Governance Interpretation:
-${aligned.interpretation}
+Stabilization Delay:
+${intelligence.stabilizationDelay}
+
+Responder Concentration:
+${intelligence.responderPressure}
+
+Safeguarding Visibility:
+${intelligence.safeguardingVisibility}
+
+Executive Interpretation:
+${intelligence.bottleneckPosture.interpretation}
 
 Recommended Action:
-${aligned.action}
+${intelligence.bottleneckPosture.action}
 
-Governance-Safe Operational Meaning:
-This coordination bottleneck visibility brief identifies where stabilization pathways are slowing, fragmenting, accumulating, or failing to progress despite routing activity, intervention evidence, or responder assignment. It supports early coordination balancing before operational overload occurs. It does not assign blame to responders, beneficiaries, institutions, or partners.
-
-Governance Monitoring Note:
-${aligned.monitoring}
+Governance-Safe Meaning:
+This bottleneck intelligence view preserves visibility over stabilization blockage, responder concentration, routing congestion, safeguarding escalation, and continuity fragmentation before operational survivability weakens.
 
 Additional Operational Notes:
 ${additionalNotes.trim() || 'No additional operational notes entered.'}
   `.trim()
 
   return (
-    <main style={styles.page}>
-      <div style={styles.container}>
+    <CGIGovernanceShell>
+      <div style={styles.page}>
         <section style={styles.hero}>
           <p style={styles.kicker}>
-            EXAMIA LIS • COORDINATION BOTTLENECK VISIBILITY
+            TSINAXA CGI • BOTTLENECK INTELLIGENCE
           </p>
 
-          <h1 style={styles.title}>Coordination Bottleneck Infrastructure</h1>
+          <h1 style={styles.title}>
+            Continuity Bottleneck Intelligence
+          </h1>
 
           <p style={styles.subtitle}>
-            Detect slowing stabilization pathways, responder concentration,
-            safeguarding accumulation, unresolved interventions, and continuity
-            fragmentation before coordination overload occurs.
+            Executive visibility over stabilization blockage,
+            routing congestion, responder concentration,
+            safeguarding escalation, and continuity fragmentation.
           </p>
         </section>
 
-        {message && <div style={styles.message}>{message}</div>}
+        {message && (
+          <div style={styles.message}>{message}</div>
+        )}
 
-        <section style={styles.metricsGrid}>
-          <Metric label="Bottleneck Status" value={metrics.bottleneckStatus} />
-          <Metric label="Active Cases" value={metrics.activeCases.toString()} />
-          <Metric
-            label="Unresolved Pathways"
-            value={metrics.unresolvedCases.toString()}
+        <section style={styles.postureGrid}>
+          <PostureCard
+            label="Bottleneck Posture"
+            value={intelligence.bottleneckPosture.posture}
           />
-          <Metric label="Stalled Cases" value={metrics.stalledCases.toString()} />
-          <Metric
-            label="Safeguarding Flags"
-            value={metrics.safeguardingFlags.toString()}
+
+          <PostureCard
+            label="Routing Congestion"
+            value={intelligence.routingCongestion}
           />
-          <Metric
-            label="Highest Responder Load"
-            value={metrics.highestResponderLoad.toString()}
+
+          <PostureCard
+            label="Stabilization Delay"
+            value={intelligence.stabilizationDelay}
+          />
+
+          <PostureCard
+            label="Responder Concentration"
+            value={intelligence.responderPressure}
+          />
+
+          <PostureCard
+            label="Safeguarding Visibility"
+            value={intelligence.safeguardingVisibility}
           />
         </section>
 
         <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Coordination Bottleneck Brief Template</h2>
+          <h2 style={styles.sectionTitle}>
+            Executive Interpretation
+          </h2>
 
-          <p style={styles.helper}>
-            Use standardized dropdowns to keep bottleneck visibility
-            governance-safe, operationally coherent, and nationally consistent.
+          <p style={styles.bodyText}>
+            {
+              intelligence.bottleneckPosture
+                .interpretation
+            }
           </p>
+
+          <h3 style={styles.inlineHeading}>
+            Recommended Action
+          </h3>
+
+          <p style={styles.bodyText}>
+            {intelligence.bottleneckPosture.action}
+          </p>
+        </section>
+
+        <section style={styles.card}>
+          <h2 style={styles.sectionTitle}>
+            Bottleneck Brief Template
+          </h2>
 
           <Select
             label="Report Template"
@@ -313,74 +408,54 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
             options={OPERATING_SCOPE_OPTIONS}
           />
 
-          <div style={styles.alignedBox}>
-            <h3 style={styles.alignedTitle}>
-              Auto-Aligned Governance Interpretation
-            </h3>
-
-            <p style={styles.alignedText}>{aligned.interpretation}</p>
-
-            <h3 style={styles.alignedTitle}>Auto-Aligned Recommended Action</h3>
-
-            <p style={styles.alignedText}>{aligned.action}</p>
-
-            <h3 style={styles.alignedTitle}>Auto-Aligned Monitoring Note</h3>
-
-            <p style={styles.alignedText}>{aligned.monitoring}</p>
-          </div>
-
           <label style={styles.label}>
-            Optional Additional Operational Notes
+            Additional Operational Notes
 
             <textarea
               value={additionalNotes}
-              onChange={(event) => setAdditionalNotes(event.target.value)}
-              placeholder="Use operational language only. Avoid blame or unnecessary personal details."
+              onChange={(event) =>
+                setAdditionalNotes(event.target.value)
+              }
+              placeholder="Use governance-safe operational language only."
               style={styles.textarea}
             />
           </label>
 
-          <button onClick={loadData} style={styles.button}>
+          <button
+            onClick={loadData}
+            style={styles.button}
+          >
             Refresh Bottleneck Intelligence
           </button>
         </section>
 
         <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Generated Bottleneck Brief</h2>
+          <h2 style={styles.sectionTitle}>
+            Generated Bottleneck Brief
+          </h2>
 
           <div style={styles.briefBox}>
-            <pre style={styles.pre}>{generatedBrief}</pre>
-          </div>
-        </section>
-
-        <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Responder Concentration Visibility</h2>
-
-          <div style={styles.grid}>
-            {Object.entries(metrics.responderLoadMap).map(([responderId, count]) => {
-              const responder = responders.find((item) => item.id === responderId)
-
-              return (
-                <div key={responderId} style={styles.smallCard}>
-                  <h3 style={styles.smallTitle}>
-                    {responder?.full_name || 'Unassigned'}
-                  </h3>
-
-                  <p style={styles.smallValue}>{count} routed case(s)</p>
-                </div>
-              )
-            })}
+            <pre style={styles.pre}>
+              {generatedBrief}
+            </pre>
           </div>
         </section>
       </div>
-    </main>
+    </CGIGovernanceShell>
   )
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function PostureCard({
+  label,
+  value,
+}: {
+  label: string
+  value: string
+}) {
   return (
     <div style={styles.metricCard}>
       <p style={styles.metricLabel}>{label}</p>
+
       <h2 style={styles.metricValue}>{value}</h2>
     </div>
   )
@@ -418,15 +493,7 @@ function Select({
 
 const styles: Record<string, CSSProperties> = {
   page: {
-    minHeight: '100vh',
-    background: 'linear-gradient(180deg, #020617 0%, #0f172a 100%)',
-    color: 'white',
-    padding: '56px 18px',
-  },
-
-  container: {
-    maxWidth: '1200px',
-    margin: '0 auto',
+    width: '100%',
   },
 
   hero: {
@@ -438,12 +505,14 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 900,
     fontSize: '12px',
     letterSpacing: '2px',
+    textTransform: 'uppercase',
   },
 
   title: {
-    fontSize: 'clamp(34px, 6vw, 56px)',
-    lineHeight: 1.05,
-    margin: '12px 0',
+    fontSize: '42px',
+    lineHeight: 1.1,
+    marginTop: '12px',
+    marginBottom: '16px',
   },
 
   subtitle: {
@@ -454,70 +523,77 @@ const styles: Record<string, CSSProperties> = {
   },
 
   message: {
-    background: '#064e3b',
-    color: '#bbf7d0',
-    padding: '16px',
-    borderRadius: '14px',
-    fontWeight: 800,
+    background: '#082f49',
+    border: '1px solid #155e75',
+    color: '#cffafe',
+    padding: '18px',
+    borderRadius: '18px',
     marginBottom: '24px',
+    fontWeight: 700,
   },
 
-  metricsGrid: {
+  postureGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: '16px',
+    gridTemplateColumns:
+      'repeat(auto-fit, minmax(240px, 1fr))',
+    gap: '18px',
     marginBottom: '24px',
   },
 
   metricCard: {
     background: '#0f172a',
     border: '1px solid #1e293b',
-    borderRadius: '18px',
-    padding: '20px',
+    borderRadius: '24px',
+    padding: '24px',
   },
 
   metricLabel: {
     color: '#94a3b8',
-    fontWeight: 800,
+    fontWeight: 700,
+    marginBottom: '12px',
   },
 
   metricValue: {
-    marginTop: '8px',
-    fontSize: '24px',
-    lineHeight: 1.2,
-    wordBreak: 'break-word',
+    fontSize: '22px',
+    lineHeight: 1.3,
+    margin: 0,
   },
 
   card: {
     background: '#020617',
     border: '1px solid #1e293b',
-    borderRadius: '24px',
-    padding: '24px',
+    borderRadius: '28px',
+    padding: '28px',
     marginBottom: '24px',
   },
 
   sectionTitle: {
     fontSize: '28px',
-    marginBottom: '12px',
+    marginBottom: '16px',
   },
 
-  helper: {
+  inlineHeading: {
+    marginTop: '20px',
+    marginBottom: '10px',
+    color: '#67e8f9',
+  },
+
+  bodyText: {
     color: '#cbd5e1',
-    lineHeight: 1.6,
-    marginBottom: '20px',
+    lineHeight: 1.8,
   },
 
   label: {
     display: 'block',
-    fontWeight: 800,
     marginBottom: '18px',
+    fontWeight: 700,
   },
 
   select: {
     width: '100%',
     marginTop: '8px',
     padding: '14px',
-    borderRadius: '12px',
+    borderRadius: '14px',
     background: '#111827',
     color: 'white',
     border: '1px solid #334155',
@@ -528,7 +604,7 @@ const styles: Record<string, CSSProperties> = {
     minHeight: '120px',
     marginTop: '8px',
     padding: '14px',
-    borderRadius: '12px',
+    borderRadius: '14px',
     background: '#111827',
     color: 'white',
     border: '1px solid #334155',
@@ -538,69 +614,27 @@ const styles: Record<string, CSSProperties> = {
   button: {
     width: '100%',
     padding: '16px',
-    borderRadius: '14px',
+    borderRadius: '16px',
     border: 'none',
     background: '#67e8f9',
     color: '#082f49',
     fontWeight: 900,
     cursor: 'pointer',
-    fontSize: '16px',
-  },
-
-  alignedBox: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '18px',
-    marginBottom: '20px',
-  },
-
-  alignedTitle: {
-    color: '#67e8f9',
-    fontSize: '14px',
-    margin: '0 0 6px',
-  },
-
-  alignedText: {
-    color: '#e2e8f0',
-    lineHeight: 1.6,
-    margin: '0 0 16px',
+    marginTop: '12px',
   },
 
   briefBox: {
     background: '#0f172a',
     border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '20px',
+    borderRadius: '20px',
+    padding: '22px',
   },
 
   pre: {
     whiteSpace: 'pre-wrap',
-    lineHeight: 1.7,
     margin: 0,
+    lineHeight: 1.8,
     fontFamily: 'inherit',
-  },
-
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: '16px',
-  },
-
-  smallCard: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '18px',
-  },
-
-  smallTitle: {
-    margin: 0,
-    fontSize: '20px',
-  },
-
-  smallValue: {
-    marginTop: '10px',
-    color: '#cbd5e1',
+    color: '#e2e8f0',
   },
 }
