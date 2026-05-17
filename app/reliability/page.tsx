@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
+import { interpretReliability } from '@/lib/cgi/interpreters/interpretReliability'
 import { supabase } from '../../lib/supabase'
 
 type CgiOperationalMetric = {
@@ -118,13 +119,36 @@ function ReliabilityContent() {
       ordered.map((item) => item.recovery_reliability_score)
     )
 
-    const reliabilityPosture = interpretReliabilityPosture({
-      reliability,
-      survivability,
-      continuity,
-      pressure,
-      trajectory,
-      memoryRisk,
+    const unresolvedCases = ordered.filter(
+      (item) => item.unresolved_momentum >= 50
+    ).length
+
+    const overdueCases = ordered.filter(
+      (item) => item.continuity_drift >= 50
+    ).length
+
+    const failedRecoveries = ordered.filter(
+      (item) => item.recovery_reliability_score < 45
+    ).length
+
+    const recurrenceRate =
+      ordered.length === 0
+        ? 0
+        : Number(
+            (
+              ordered.filter(
+                (item) =>
+                  item.escalation_pressure_index >= 60 ||
+                  item.structural_memory_risk >= 60
+              ).length / ordered.length
+            ).toFixed(2)
+          )
+
+    const reliabilityInterpretation = interpretReliability({
+      unresolvedCases,
+      overdueCases,
+      failedRecoveries,
+      recurrenceRate,
     })
 
     const survivabilityMeaning = interpretSurvivability(survivability)
@@ -144,20 +168,9 @@ function ReliabilityContent() {
       'Unresolved instability': unresolved,
     })
 
-    const executiveSummary = compactAction([
-      reliabilityPosture.meaning,
-      'Structural friction and unresolved instability remain visible under executive review.',
-    ])
-
-    const actionCue = compactAction([
-      reliabilityPosture.action,
-      driftMeaning.action,
-      unresolvedMeaning.action,
-    ])
-
     return {
       latest,
-      reliabilityPosture,
+      reliabilityInterpretation,
       survivabilityMeaning,
       continuityMeaning,
       driftMeaning,
@@ -165,8 +178,6 @@ function ReliabilityContent() {
       volatilityMeaning,
       historyDepth,
       dominantWeakness,
-      executiveSummary,
-      actionCue,
     }
   }, [metrics])
 
@@ -174,7 +185,7 @@ function ReliabilityContent() {
 TSINAXA CGI RELIABILITY INTELLIGENCE BRIEF
 
 Reliability Posture:
-${intelligence.reliabilityPosture.posture}
+${intelligence.reliabilityInterpretation.posture}
 
 Survivability:
 ${intelligence.survivabilityMeaning.posture}
@@ -195,10 +206,10 @@ Dominant Reliability Threat:
 ${intelligence.dominantWeakness}
 
 Executive Interpretation:
-${intelligence.executiveSummary}
+${intelligence.reliabilityInterpretation.summary}
 
 Recommended Action:
-${intelligence.actionCue}
+${intelligence.reliabilityInterpretation.executiveAction}
 
 Governance-Safe Meaning:
 This reliability view interprets persisted continuity memory. It does not judge people. It evaluates whether stabilization is becoming dependable across time.
@@ -230,15 +241,20 @@ This reliability view interprets persisted continuity memory. It does not judge 
             <p style={styles.sectionKicker}>Reliability Posture</p>
 
             <h2 style={styles.heroPosture}>
-              {intelligence.reliabilityPosture.posture}
+              {intelligence.reliabilityInterpretation.posture}
             </h2>
 
-            <p style={styles.heroMeaning}>{intelligence.executiveSummary}</p>
+            <p style={styles.heroMeaning}>
+              {intelligence.reliabilityInterpretation.summary}
+            </p>
           </div>
 
           <div style={styles.actionBox}>
             <p style={styles.actionLabel}>Recommended Action</p>
-            <p style={styles.actionText}>{intelligence.actionCue}</p>
+
+            <p style={styles.actionText}>
+              {intelligence.reliabilityInterpretation.executiveAction}
+            </p>
           </div>
         </section>
 
@@ -253,7 +269,7 @@ This reliability view interprets persisted continuity memory. It does not judge 
 
         <section style={styles.compactGrid}>
           <CompactCard title="Dominant Reliability Threat" value={intelligence.dominantWeakness} />
-          <CompactCard title="Current Reliability" value={intelligence.reliabilityPosture.posture} />
+          <CompactCard title="Current Reliability" value={intelligence.reliabilityInterpretation.posture} />
           <CompactCard title="Current Drift" value={intelligence.driftMeaning.posture} />
           <CompactCard title="Current Survivability" value={intelligence.survivabilityMeaning.posture} />
         </section>
@@ -268,7 +284,7 @@ This reliability view interprets persisted continuity memory. It does not judge 
           </Panel>
 
           <Panel title="Dependability Reading">
-            <Info label="Reliability" value={intelligence.reliabilityPosture.posture} />
+            <Info label="Reliability" value={intelligence.reliabilityInterpretation.posture} />
             <Info label="Survivability" value={intelligence.survivabilityMeaning.posture} />
             <Info label="Volatility" value={intelligence.volatilityMeaning.posture} />
             <Info label="Dominant Threat" value={intelligence.dominantWeakness} />
@@ -314,33 +330,57 @@ This reliability view interprets persisted continuity memory. It does not judge 
                   </tr>
                 )}
 
-                {metrics.slice(0, 8).map((item) => (
-                  <tr key={item.id}>
-                    <td style={styles.td}>{formatDate(item.created_at)}</td>
-                    <td style={styles.td}>{item.continuity_state}</td>
-                    <td style={styles.td}>
-                      {interpretReliability(item.recovery_reliability_score).posture}
-                    </td>
-                    <td style={styles.td}>
-                      {interpretSurvivability(item.operational_survivability_score).posture}
-                    </td>
-                    <td style={styles.td}>
-                      {
-                        interpretReliabilityPosture({
-                          reliability: item.recovery_reliability_score,
-                          survivability: item.operational_survivability_score,
-                          continuity: item.continuity_integrity_score,
-                          pressure: item.escalation_pressure_index,
-                          trajectory: item.trajectory_risk,
-                          memoryRisk: item.structural_memory_risk,
-                        }).posture
-                      }
-                    </td>
-                    <td style={styles.td}>
-                      {interpretDrift(item.continuity_drift).posture}
-                    </td>
-                  </tr>
-                ))}
+                {metrics.slice(0, 8).map((item) => {
+                  const rowReliability = interpretReliability({
+                    unresolvedCases:
+                      item.unresolved_momentum >= 50 ? 1 : 0,
+                    overdueCases:
+                      item.continuity_drift >= 50 ? 1 : 0,
+                    failedRecoveries:
+                      item.recovery_reliability_score < 45 ? 1 : 0,
+                    recurrenceRate:
+                      item.escalation_pressure_index >= 60 ||
+                      item.structural_memory_risk >= 60
+                        ? 0.5
+                        : 0,
+                  })
+
+                  return (
+                    <tr key={item.id}>
+                      <td style={styles.td}>
+                        {formatDate(item.created_at)}
+                      </td>
+
+                      <td style={styles.td}>
+                        {item.continuity_state}
+                      </td>
+
+                      <td style={styles.td}>
+                        {rowReliability.posture}
+                      </td>
+
+                      <td style={styles.td}>
+                        {
+                          interpretSurvivability(
+                            item.operational_survivability_score
+                          ).posture
+                        }
+                      </td>
+
+                      <td style={styles.td}>
+                        {rowReliability.posture}
+                      </td>
+
+                      <td style={styles.td}>
+                        {
+                          interpretDrift(
+                            item.continuity_drift
+                          ).posture
+                        }
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -357,18 +397,26 @@ This reliability view interprets persisted continuity memory. It does not judge 
 
 function average(values: number[]) {
   const valid = values.filter((value) => Number.isFinite(value))
+
   if (valid.length === 0) return 0
-  return Math.round(valid.reduce((sum, value) => sum + value, 0) / valid.length)
+
+  return Math.round(
+    valid.reduce((sum, value) => sum + value, 0) / valid.length
+  )
 }
 
 function calculateVolatility(values: number[]) {
   const valid = values.filter((value) => Number.isFinite(value))
+
   if (valid.length < 2) return 0
 
   const mean = average(valid)
+
   const variance =
-    valid.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) /
-    valid.length
+    valid.reduce(
+      (sum, value) => sum + Math.pow(value - mean, 2),
+      0
+    ) / valid.length
 
   return Math.min(100, Math.round(Math.sqrt(variance)))
 }
@@ -378,103 +426,6 @@ function strongestDriver(scores: Record<string, number>) {
     Object.entries(scores).sort((a, b) => b[1] - a[1])[0]?.[0] ||
     'No dominant reliability threat detected'
   )
-}
-
-function interpretReliabilityPosture(input: {
-  reliability: number
-  survivability: number
-  continuity: number
-  pressure: number
-  trajectory: number
-  memoryRisk: number
-}): Interpretation {
-  const instability = average([
-    input.pressure,
-    input.trajectory,
-    input.memoryRisk,
-    100 - input.reliability,
-    100 - input.survivability,
-    100 - input.continuity,
-  ])
-
-  if (
-    input.reliability >= 75 &&
-    input.survivability >= 75 &&
-    input.continuity >= 70 &&
-    instability < 35
-  ) {
-    return {
-      posture: 'RELIABILITY STRENGTHENING',
-      meaning:
-        'Continuity stabilization is becoming dependable across persisted memory.',
-      action:
-        'Maintain stabilization discipline and confirm durability before closure.',
-    }
-  }
-
-  if (
-    input.reliability < 40 ||
-    input.survivability < 40 ||
-    instability >= 70
-  ) {
-    return {
-      posture: 'RELIABILITY DETERIORATING',
-      meaning:
-        'Reliability is weakening and may not support durable stabilization.',
-      action:
-        'Escalate reliability review and inspect survivability weakness.',
-    }
-  }
-
-  if (instability >= 50 || input.reliability < 55) {
-    return {
-      posture: 'RELIABILITY UNSTABLE',
-      meaning:
-        'Reliability remains unstable and should not support closure yet.',
-      action:
-        'Review unresolved instability and strengthen stabilization follow-through.',
-    }
-  }
-
-  return {
-    posture: 'RELIABILITY HOLDING',
-    meaning:
-      'Reliability is holding but durability is not yet fully credible.',
-    action:
-      'Maintain governed reliability monitoring and preserve continuity memory.',
-  }
-}
-
-function interpretReliability(value: number): Interpretation {
-  if (value >= 75) {
-    return {
-      posture: 'RELIABILITY STRENGTHENING',
-      meaning: 'Reliability is moving toward dependable continuity.',
-      action: 'Preserve current operating discipline.',
-    }
-  }
-
-  if (value >= 55) {
-    return {
-      posture: 'RELIABILITY HOLDING',
-      meaning: 'Reliability exists but still requires durability confirmation.',
-      action: 'Keep monitoring active.',
-    }
-  }
-
-  if (value >= 40) {
-    return {
-      posture: 'RELIABILITY UNSTABLE',
-      meaning: 'Reliability is visible but vulnerable to instability.',
-      action: 'Review unresolved barriers.',
-    }
-  }
-
-  return {
-    posture: 'RELIABILITY DETERIORATING',
-    meaning: 'Reliability is too weak to support durable continuity.',
-    action: 'Escalate reliability review.',
-  }
 }
 
 function interpretSurvivability(value: number): Interpretation {
@@ -506,7 +457,7 @@ function interpretSurvivability(value: number): Interpretation {
     posture: 'SURVIVABILITY DETERIORATING',
     meaning: 'Survivability is not credible enough for closure.',
     action: 'Escalate survivability review.',
-  }
+    }
 }
 
 function interpretContinuity(value: number): Interpretation {
@@ -637,12 +588,9 @@ function interpretHistory(count: number): Interpretation {
   }
 }
 
-function compactAction(actions: string[]) {
-  return Array.from(new Set(actions.filter(Boolean))).join(' ')
-}
-
 function formatDate(value: string) {
   if (!value) return 'Not recorded'
+
   return new Date(value).toLocaleString()
 }
 
@@ -656,16 +604,29 @@ function PostureCard({
   return (
     <article style={styles.postureCard}>
       <p style={styles.cardKicker}>{title}</p>
-      <h3 style={styles.postureTitle}>{interpretation.posture}</h3>
-      <p style={styles.postureMeaning}>{interpretation.meaning}</p>
+
+      <h3 style={styles.postureTitle}>
+        {interpretation.posture}
+      </h3>
+
+      <p style={styles.postureMeaning}>
+        {interpretation.meaning}
+      </p>
     </article>
   )
 }
 
-function CompactCard({ title, value }: { title: string; value: string }) {
+function CompactCard({
+  title,
+  value,
+}: {
+  title: string
+  value: string
+}) {
   return (
     <article style={styles.compactCard}>
       <p style={styles.cardKicker}>{title}</p>
+
       <h3 style={styles.compactValue}>{value}</h3>
     </article>
   )
@@ -681,15 +642,23 @@ function Panel({
   return (
     <section style={styles.card}>
       <h2 style={styles.cardTitle}>{title}</h2>
+
       <div style={styles.infoList}>{children}</div>
     </section>
   )
 }
 
-function Info({ label, value }: { label: string; value: string }) {
+function Info({
+  label,
+  value,
+}: {
+  label: string
+  value: string
+}) {
   return (
     <div style={styles.infoRow}>
       <span style={styles.infoLabel}>{label}</span>
+
       <strong style={styles.infoValue}>{value}</strong>
     </div>
   )
@@ -701,6 +670,7 @@ const styles: Record<string, CSSProperties> = {
     color: 'white',
     overflowX: 'hidden',
   },
+
   container: {
     width: '100%',
     maxWidth: '1120px',
@@ -708,10 +678,12 @@ const styles: Record<string, CSSProperties> = {
     padding: '0 20px 48px',
     boxSizing: 'border-box',
   },
+
   header: {
     marginBottom: '20px',
     paddingTop: '4px',
   },
+
   kicker: {
     color: '#67e8f9',
     fontSize: '12px',
@@ -719,11 +691,13 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: '2px',
     margin: 0,
   },
+
   title: {
     fontSize: 'clamp(32px, 5vw, 48px)',
     lineHeight: 1.05,
     margin: '10px 0',
   },
+
   subtitle: {
     color: '#cbd5e1',
     maxWidth: '760px',
@@ -731,6 +705,7 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '16px',
     margin: 0,
   },
+
   message: {
     background: '#064e3b',
     color: '#bbf7d0',
@@ -740,9 +715,11 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: '16px',
     fontSize: '14px',
   },
+
   heroCard: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.4fr) minmax(260px, 0.6fr)',
+    gridTemplateColumns:
+      'minmax(0, 1.4fr) minmax(260px, 0.6fr)',
     gap: '16px',
     background: '#020617',
     border: '1px solid #22c55e',
@@ -751,6 +728,7 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: '16px',
     boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
   },
+
   sectionKicker: {
     color: '#94a3b8',
     fontWeight: 900,
@@ -759,6 +737,7 @@ const styles: Record<string, CSSProperties> = {
     margin: 0,
     fontSize: '12px',
   },
+
   heroPosture: {
     fontSize: 'clamp(34px, 6vw, 56px)',
     margin: '8px 0 12px',
@@ -766,12 +745,14 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: '-0.05em',
     lineHeight: 1,
   },
+
   heroMeaning: {
     color: '#dbeafe',
     lineHeight: 1.6,
     margin: 0,
     maxWidth: '720px',
   },
+
   actionBox: {
     background: '#052e16',
     border: '1px solid #22c55e',
@@ -779,6 +760,7 @@ const styles: Record<string, CSSProperties> = {
     padding: '16px',
     alignSelf: 'stretch',
   },
+
   actionLabel: {
     color: '#86efac',
     fontWeight: 900,
@@ -787,18 +769,22 @@ const styles: Record<string, CSSProperties> = {
     textTransform: 'uppercase',
     letterSpacing: '0.12em',
   },
+
   actionText: {
     color: '#dcfce7',
     lineHeight: 1.55,
     margin: 0,
     fontSize: '14px',
   },
+
   postureGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gridTemplateColumns:
+      'repeat(3, minmax(0, 1fr))',
     gap: '14px',
     marginBottom: '16px',
   },
+
   postureCard: {
     background: '#0f172a',
     border: '1px solid #1e293b',
@@ -807,30 +793,36 @@ const styles: Record<string, CSSProperties> = {
     minHeight: '150px',
     boxSizing: 'border-box',
   },
+
   cardKicker: {
     color: '#94a3b8',
     fontWeight: 800,
     margin: 0,
     fontSize: '12px',
   },
+
   postureTitle: {
     color: '#f8fafc',
     fontSize: '19px',
     margin: '10px 0 8px',
     lineHeight: 1.15,
   },
+
   postureMeaning: {
     color: '#cbd5e1',
     lineHeight: 1.5,
     fontSize: '14px',
     margin: 0,
   },
+
   compactGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gridTemplateColumns:
+      'repeat(4, minmax(0, 1fr))',
     gap: '14px',
     marginBottom: '16px',
   },
+
   compactCard: {
     background: '#0f172a',
     border: '1px solid #1e293b',
@@ -839,6 +831,7 @@ const styles: Record<string, CSSProperties> = {
     minHeight: '104px',
     boxSizing: 'border-box',
   },
+
   compactValue: {
     fontSize: '18px',
     lineHeight: 1.2,
@@ -846,12 +839,15 @@ const styles: Record<string, CSSProperties> = {
     color: '#f8fafc',
     overflowWrap: 'anywhere',
   },
+
   twoColumn: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gridTemplateColumns:
+      'repeat(2, minmax(0, 1fr))',
     gap: '16px',
     marginBottom: '16px',
   },
+
   card: {
     background: '#020617',
     border: '1px solid #1e293b',
@@ -862,6 +858,7 @@ const styles: Record<string, CSSProperties> = {
     boxSizing: 'border-box',
     overflow: 'hidden',
   },
+
   cardHeader: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -869,25 +866,30 @@ const styles: Record<string, CSSProperties> = {
     alignItems: 'flex-start',
     marginBottom: '14px',
   },
+
   cardTitle: {
     fontSize: '22px',
     margin: 0,
     lineHeight: 1.2,
   },
+
   cardNote: {
     color: '#94a3b8',
     lineHeight: 1.5,
     margin: '6px 0 0',
     fontSize: '14px',
   },
+
   infoList: {
     display: 'grid',
     gap: '10px',
     marginTop: '14px',
   },
+
   infoRow: {
     display: 'grid',
-    gridTemplateColumns: '160px minmax(0, 1fr)',
+    gridTemplateColumns:
+      '160px minmax(0, 1fr)',
     gap: '12px',
     background: '#0f172a',
     border: '1px solid #334155',
@@ -895,25 +897,30 @@ const styles: Record<string, CSSProperties> = {
     padding: '12px',
     alignItems: 'start',
   },
+
   infoLabel: {
     color: '#94a3b8',
     fontWeight: 800,
     fontSize: '12px',
   },
+
   infoValue: {
     color: '#f8fafc',
     lineHeight: 1.45,
     overflowWrap: 'anywhere',
   },
+
   tableWrap: {
     width: '100%',
     overflowX: 'auto',
   },
+
   table: {
     width: '100%',
     borderCollapse: 'collapse',
     minWidth: '760px',
   },
+
   th: {
     textAlign: 'left',
     color: '#94a3b8',
@@ -922,6 +929,7 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '11px',
     textTransform: 'uppercase',
   },
+
   td: {
     borderBottom: '1px solid #1e293b',
     padding: '10px',
@@ -930,6 +938,7 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 700,
     fontSize: '13px',
   },
+
   primaryButton: {
     padding: '10px 14px',
     borderRadius: '12px',
@@ -941,6 +950,7 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '14px',
     whiteSpace: 'nowrap',
   },
+
   summaryBox: {
     whiteSpace: 'pre-wrap',
     background: '#0f172a',
