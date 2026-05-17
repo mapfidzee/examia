@@ -4,6 +4,12 @@ import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
+import { interpretPressure } from '@/lib/cgi/interpreters/interpretPressure'
+import { interpretTrajectory } from '@/lib/cgi/interpreters/interpretTrajectory'
+import { interpretRecovery } from '@/lib/cgi/interpreters/interpretRecovery'
+import { interpretPredictive } from '@/lib/cgi/interpreters/interpretPredictive'
+import { interpretBottleneck } from '@/lib/cgi/interpreters/interpretBottleneck'
+import { interpretReliability } from '@/lib/cgi/interpreters/interpretReliability'
 import { supabase } from '../../lib/supabase'
 
 type CgiOperationalMetric = {
@@ -106,10 +112,7 @@ export default function SystemPage() {
 }
 
 function ExecutiveStabilityBoard() {
-  const [metrics, setMetrics] = useState<
-    CgiOperationalMetric[]
-  >([])
-
+  const [metrics, setMetrics] = useState<CgiOperationalMetric[]>([])
   const [message, setMessage] = useState('')
 
   useEffect(() => {
@@ -117,33 +120,22 @@ function ExecutiveStabilityBoard() {
   }, [])
 
   async function loadBoardMetrics() {
-    setMessage(
-      'Loading interpretive continuity intelligence...'
-    )
+    setMessage('Loading interpretive continuity intelligence...')
 
     const { data, error } = await supabase
       .from('cgi_operational_metrics')
       .select('*')
-      .order('created_at', {
-        ascending: false,
-      })
+      .order('created_at', { ascending: false })
       .limit(SAMPLE_LIMIT)
 
     if (error) {
       console.error(error)
-
-      setMessage(
-        'Failed to load interpretive continuity intelligence.'
-      )
-
+      setMessage('Failed to load interpretive continuity intelligence.')
       return
     }
 
     setMetrics(data || [])
-
-    setMessage(
-      'Interpretive continuity intelligence loaded.'
-    )
+    setMessage('Interpretive continuity intelligence loaded.')
   }
 
   const board = useMemo(() => {
@@ -160,36 +152,26 @@ function ExecutiveStabilityBoard() {
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.hero}>
-          <p style={styles.kicker}>
-            TSINAXA CGI
-          </p>
+          <p style={styles.kicker}>TSINAXA CGI</p>
 
-          <h1 style={styles.title}>
-            Executive Stability Board
-          </h1>
+          <h1 style={styles.title}>Executive Stability Board</h1>
 
           <p style={styles.enterpriseSubtitle}>
             Interpretive Continuity Infrastructure
           </p>
 
           <p style={styles.subtitle}>
-            Executive interpretation of continuity
-            survivability, pressure propagation,
-            structural recurrence, recovery credibility,
-            and governed command readiness.
+            Executive interpretation of continuity survivability, pressure
+            propagation, structural recurrence, recovery credibility, and
+            governed command readiness.
           </p>
 
           <section style={styles.doctrinePanel}>
-            <p style={styles.doctrineTitle}>
-              CGI DOCTRINE
-            </p>
+            <p style={styles.doctrineTitle}>CGI DOCTRINE</p>
 
             <div style={styles.doctrineGrid}>
               {DOCTRINE.map((item) => (
-                <div
-                  key={item}
-                  style={styles.doctrineCard}
-                >
+                <div key={item} style={styles.doctrineCard}>
                   {item}
                 </div>
               ))}
@@ -197,11 +179,7 @@ function ExecutiveStabilityBoard() {
           </section>
         </section>
 
-        {message && (
-          <div style={styles.message}>
-            {message}
-          </div>
-        )}
+        {message && <div style={styles.message}>{message}</div>}
 
         {!board && (
           <section style={styles.card}>
@@ -210,8 +188,7 @@ function ExecutiveStabilityBoard() {
             </h2>
 
             <p style={styles.bodyText}>
-              Save governed snapshots from
-              Operations to activate executive
+              Save governed snapshots from Operations to activate executive
               interpretation.
             </p>
           </section>
@@ -248,36 +225,26 @@ function ExecutiveStabilityBoard() {
             <section style={styles.interpretiveGrid}>
               <InterpretivePanel
                 title="Pressure Meaning"
-                threshold={
-                  board.pressureThreshold
-                }
+                threshold={board.pressureThreshold}
                 text={
-                  board.latest
-                    .dominant_pressure_source ||
+                  board.latest.dominant_pressure_source ||
                   'No dominant pressure source recorded.'
                 }
               />
 
               <InterpretivePanel
                 title="Trajectory Meaning"
-                threshold={
-                  board.trajectoryThreshold
-                }
+                threshold={board.trajectoryThreshold}
                 text={
-                  board.latest
-                    .dominant_trajectory_signal ||
+                  board.latest.dominant_trajectory_signal ||
                   'No dominant trajectory signal recorded.'
                 }
               />
 
               <InterpretivePanel
                 title="Survivability Meaning"
-                threshold={
-                  board.survivabilityThreshold
-                }
-                text={
-                  board.survivabilityInterpretation
-                }
+                threshold={board.survivabilityThreshold}
+                text={board.survivabilityInterpretation}
               />
 
               <InterpretivePanel
@@ -297,19 +264,13 @@ function ExecutiveStabilityBoard() {
                   {board.actionPosture}
                 </h2>
 
-                <p style={styles.bodyText}>
-                  {board.actionCue}
-                </p>
+                <p style={styles.bodyText}>{board.actionCue}</p>
               </div>
 
               <div style={styles.deadlineBox}>
-                <p style={styles.panelEyebrow}>
-                  Action Window
-                </p>
+                <p style={styles.panelEyebrow}>Action Window</p>
 
-                <strong>
-                  {board.actionDeadline}
-                </strong>
+                <strong>{board.actionDeadline}</strong>
               </div>
             </section>
 
@@ -321,25 +282,19 @@ function ExecutiveStabilityBoard() {
               <div style={styles.reasonGrid}>
                 <ReasonBlock
                   label="Pressure posture"
-                  value={
-                    board.pressureThreshold
-                  }
+                  value={board.pressureThreshold}
                   text={explainPressure(board)}
                 />
 
                 <ReasonBlock
                   label="Recovery posture"
-                  value={
-                    board.recoveryThreshold
-                  }
+                  value={board.recoveryThreshold}
                   text={explainRecovery(board)}
                 />
 
                 <ReasonBlock
                   label="Survivability posture"
-                  value={
-                    board.survivabilityThreshold
-                  }
+                  value={board.survivabilityThreshold}
                   text={explainSurvivability(board)}
                 />
 
@@ -357,100 +312,61 @@ function ExecutiveStabilityBoard() {
               </h2>
 
               <p style={styles.bodyText}>
-                Continuity interpretation remains
-                visible over time so recurrence,
-                survivability pressure, and
-                deterioration do not disappear after
-                workflow completion.
+                Continuity interpretation remains visible over time so
+                recurrence, survivability pressure, and deterioration do not
+                disappear after workflow completion.
               </p>
 
               <div style={styles.tableWrap}>
                 <table style={styles.table}>
                   <thead>
                     <tr>
-                      <th style={styles.th}>
-                        Created
-                      </th>
-
-                      <th style={styles.th}>
-                        Continuity Posture
-                      </th>
-
-                      <th style={styles.th}>
-                        Recovery Credibility
-                      </th>
-
-                      <th style={styles.th}>
-                        Structural Memory
-                      </th>
-
-                      <th style={styles.th}>
-                        Executive Readiness
-                      </th>
-
-                      <th style={styles.th}>
-                        Interpretation
-                      </th>
+                      <th style={styles.th}>Created</th>
+                      <th style={styles.th}>Continuity Posture</th>
+                      <th style={styles.th}>Recovery Credibility</th>
+                      <th style={styles.th}>Structural Memory</th>
+                      <th style={styles.th}>Executive Readiness</th>
+                      <th style={styles.th}>Interpretation</th>
                     </tr>
                   </thead>
 
                   <tbody>
-                    {metrics
-                      .slice(0, 12)
-                      .map((item) => {
-                        const row =
-                          buildInterpretiveBoard(
-                            item
-                          )
+                    {metrics.slice(0, 12).map((item) => {
+                      const row = buildInterpretiveBoard(item)
 
-                        return (
-                          <tr key={item.id}>
-                            <td style={styles.td}>
-                              {formatDate(
-                                item.created_at
-                              )}
-                            </td>
+                      return (
+                        <tr key={item.id}>
+                          <td style={styles.td}>
+                            {formatDate(item.created_at)}
+                          </td>
 
-                            <td style={styles.td}>
-                              {
-                                row.commandPosture
-                              }
-                            </td>
+                          <td style={styles.td}>
+                            {row.commandPosture}
+                          </td>
 
-                            <td style={styles.td}>
-                              {
-                                row.recoveryThreshold
-                              }
-                            </td>
+                          <td style={styles.td}>
+                            {row.recoveryThreshold}
+                          </td>
 
-                            <td style={styles.td}>
-                              {
-                                row.memoryThreshold
-                              }
-                            </td>
+                          <td style={styles.td}>
+                            {row.memoryThreshold}
+                          </td>
 
-                            <td style={styles.td}>
-                              {
-                                row.actionPosture
-                              }
-                            </td>
+                          <td style={styles.td}>
+                            {row.actionPosture}
+                          </td>
 
-                            <td style={styles.td}>
-                              {
-                                row.commandMeaning
-                              }
-                            </td>
-                          </tr>
-                        )
-                      })}
+                          <td style={styles.td}>
+                            {row.commandMeaning}
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
 
-              <button
-                onClick={loadBoardMetrics}
-                style={styles.primaryButton}
-              >
+              <button onClick={loadBoardMetrics} style={styles.primaryButton}>
                 Refresh Executive Stability Board
               </button>
             </section>
@@ -464,139 +380,145 @@ function ExecutiveStabilityBoard() {
 function buildInterpretiveBoard(
   latest: CgiOperationalMetric
 ): InterpretiveBoard {
-  const pressureThreshold =
-    thresholdFromRisk(
-      average([
-        latest.propagation_risk,
-        latest.routing_friction,
-        latest.responder_pressure,
-        latest.escalation_velocity,
-        latest.coordination_instability,
-        latest.stabilization_drag,
-      ])
-    )
+  const centralizedPressure = interpretPressure({
+    escalationPressure: latest.escalation_pressure_index,
+    propagationRisk: latest.propagation_risk,
+    unresolvedMomentum: latest.unresolved_momentum,
+    continuityDrift: latest.continuity_drift,
+  })
 
-  const trajectoryThreshold =
-    thresholdFromRisk(
-      average([
-        latest.trajectory_risk,
-        latest.continuity_drift,
-        latest.escalation_momentum,
-        latest.unresolved_momentum,
-      ])
-    )
+  const centralizedTrajectory = interpretTrajectory({
+    trajectoryRisk: latest.trajectory_risk,
+    continuityDrift: latest.continuity_drift,
+    unresolvedMomentum: latest.unresolved_momentum,
+    survivabilityRisk: 100 - latest.operational_survivability_score,
+  })
 
-  const recoveryThreshold =
-    thresholdFromStrength(
-      average([
-        latest.recovery_reliability_score,
-        latest.recovery_direction,
-        latest.stabilization_trend,
-      ])
-    )
+  const centralizedRecovery = interpretRecovery({
+    stabilizationConfidence: latest.stabilization_confidence_score,
+    recoveryReliability: latest.recovery_reliability_score,
+    survivabilityScore: latest.operational_survivability_score,
+    continuityDrift: latest.continuity_drift,
+    unresolvedMomentum: latest.unresolved_momentum,
+  })
 
-  const survivabilityThreshold =
-    thresholdFromStrength(
-      latest.operational_survivability_score
-    )
+  const centralizedPredictive = interpretPredictive({
+    propagationRisk: latest.propagation_risk,
+    trajectoryRisk: latest.trajectory_risk,
+    structuralMemoryRisk: latest.structural_memory_risk,
+    unresolvedMomentum: latest.unresolved_momentum,
+    stabilizationDrag: latest.stabilization_drag,
+  })
 
-  const memoryThreshold =
-    thresholdFromRisk(
-      average([
-        latest.structural_memory_risk,
-        latest.routing_failure_recurrence,
-        latest.escalation_corridor_recurrence,
-        latest.intervention_failure_pattern,
-        latest.continuity_collapse_recurrence,
-      ])
-    )
+  const centralizedBottleneck = interpretBottleneck({
+    routingCongestion: latest.routing_friction,
+    responderConcentration: latest.responder_pressure,
+    unresolvedMomentum: latest.unresolved_momentum,
+    continuityDrift: latest.continuity_drift,
+    propagationRisk: latest.propagation_risk,
+  })
 
-  const commandPosture =
-    resolveCommandPosture({
-      pressureThreshold,
-      trajectoryThreshold,
-      survivabilityThreshold,
-      memoryThreshold,
-    })
+  const recurrenceRate =
+    average([
+      latest.routing_failure_recurrence,
+      latest.escalation_corridor_recurrence,
+      latest.intervention_failure_pattern,
+      latest.continuity_collapse_recurrence,
+    ]) / 100
+
+  const centralizedReliability = interpretReliability({
+    unresolvedCases: Math.round(latest.unresolved_momentum / 10),
+    overdueCases: Math.round(latest.routing_friction / 10),
+    failedRecoveries: Math.round(latest.intervention_failure_pattern / 10),
+    recurrenceRate,
+  })
+
+  const commandPosture = resolveCommandPosture({
+    pressureSeverity: centralizedPressure.severity,
+    trajectorySeverity: centralizedTrajectory.severity,
+    recoverySeverity: centralizedRecovery.severity,
+    predictiveSeverity: centralizedPredictive.severity,
+    bottleneckSeverity: centralizedBottleneck.severity,
+    reliabilitySeverity: centralizedReliability.severity,
+  })
 
   return {
     latest,
 
     commandPosture,
 
-    commandMeaning:
-      buildCommandMeaning(commandPosture),
+    commandMeaning: buildCommandMeaning(commandPosture),
 
-    executiveImplication:
-      buildExecutiveImplication(
-        commandPosture
-      ),
+    executiveImplication: buildExecutiveImplication(commandPosture),
 
-    actionPosture:
-      resolveActionPosture(
-        commandPosture
-      ),
+    actionPosture: resolveActionPosture(commandPosture),
 
     actionDeadline:
-      latest.executive_action_deadline ||
-      'Next governance cycle',
+      latest.executive_action_deadline || 'Next governance cycle',
 
-    actionCue:
-      latest.action_cue ||
-      'Maintain governed executive continuity review.',
+    actionCue: compactAction([
+      centralizedPressure.executiveAction,
+      centralizedTrajectory.executiveAction,
+      centralizedRecovery.executiveAction,
+      centralizedPredictive.executiveAction,
+      centralizedBottleneck.executiveAction,
+      centralizedReliability.executiveAction,
+    ]),
 
-    pressureThreshold,
-    trajectoryThreshold,
-    survivabilityThreshold,
-    memoryThreshold,
-    recoveryThreshold,
+    pressureThreshold: severityToThreshold(centralizedPressure.severity),
 
-    survivabilityInterpretation:
-      buildSurvivabilityInterpretation(
-        survivabilityThreshold
-      ),
+    trajectoryThreshold: severityToThreshold(centralizedTrajectory.severity),
+
+    survivabilityThreshold: severityToThreshold(centralizedRecovery.severity),
+
+    memoryThreshold: severityToThreshold(centralizedPredictive.severity),
+
+    recoveryThreshold: severityToThreshold(centralizedReliability.severity),
+
+    survivabilityInterpretation: centralizedRecovery.summary,
 
     structuralPattern:
-      latest.dominant_memory_pattern ||
-      'Structural memory remains visible.',
+      latest.dominant_memory_pattern || centralizedPredictive.summary,
   }
 }
 
 function resolveCommandPosture(input: {
-  pressureThreshold: InterpretiveThreshold
-  trajectoryThreshold: InterpretiveThreshold
-  survivabilityThreshold: InterpretiveThreshold
-  memoryThreshold: InterpretiveThreshold
+  pressureSeverity: string
+  trajectorySeverity: string
+  recoverySeverity: string
+  predictiveSeverity: string
+  bottleneckSeverity: string
+  reliabilitySeverity: string
 }): CommandPosture {
   if (
-    input.pressureThreshold ===
-      'SURVIVABILITY THREAT' ||
-    input.trajectoryThreshold ===
-      'SURVIVABILITY THREAT' ||
-    input.survivabilityThreshold ===
-      'SURVIVABILITY THREAT'
+    input.pressureSeverity === 'CRITICAL' ||
+    input.trajectorySeverity === 'CRITICAL' ||
+    input.recoverySeverity === 'CRITICAL' ||
+    input.predictiveSeverity === 'CRITICAL' ||
+    input.bottleneckSeverity === 'CRITICAL' ||
+    input.reliabilitySeverity === 'CRITICAL'
   ) {
     return 'CRITICAL COMMAND'
   }
 
   if (
-    input.pressureThreshold ===
-      'DESTABILIZING' ||
-    input.trajectoryThreshold ===
-      'DESTABILIZING' ||
-    input.memoryThreshold ===
-      'DESTABILIZING'
+    input.pressureSeverity === 'HIGH' ||
+    input.trajectorySeverity === 'HIGH' ||
+    input.recoverySeverity === 'HIGH' ||
+    input.predictiveSeverity === 'HIGH' ||
+    input.bottleneckSeverity === 'HIGH' ||
+    input.reliabilitySeverity === 'HIGH'
   ) {
     return 'ELEVATED COMMAND'
   }
 
   if (
-    input.pressureThreshold ===
-      'WATCHABLE' ||
-    input.trajectoryThreshold ===
-      'WATCHABLE' ||
-    input.memoryThreshold ===
-      'WATCHABLE'
+    input.pressureSeverity === 'MODERATE' ||
+    input.trajectorySeverity === 'MODERATE' ||
+    input.recoverySeverity === 'MODERATE' ||
+    input.predictiveSeverity === 'MODERATE' ||
+    input.bottleneckSeverity === 'MODERATE' ||
+    input.reliabilitySeverity === 'MODERATE'
   ) {
     return 'COMMAND WATCH'
   }
@@ -604,9 +526,7 @@ function resolveCommandPosture(input: {
   return 'STABLE COMMAND'
 }
 
-function buildCommandMeaning(
-  posture: CommandPosture
-) {
+function buildCommandMeaning(posture: CommandPosture) {
   if (posture === 'CRITICAL COMMAND') {
     return 'Continuity survivability is under visible threat and requires executive intervention.'
   }
@@ -622,9 +542,7 @@ function buildCommandMeaning(
   return 'Continuity posture is currently stable with no dominant survivability escalation visible.'
 }
 
-function buildExecutiveImplication(
-  posture: CommandPosture
-) {
+function buildExecutiveImplication(posture: CommandPosture) {
   if (posture === 'CRITICAL COMMAND') {
     return 'Leadership should move from monitoring to direct command intervention.'
   }
@@ -640,9 +558,7 @@ function buildExecutiveImplication(
   return 'Routine governed continuity review remains appropriate.'
 }
 
-function resolveActionPosture(
-  posture: CommandPosture
-) {
+function resolveActionPosture(posture: CommandPosture) {
   if (posture === 'CRITICAL COMMAND') {
     return 'EXECUTIVE INTERVENTION'
   }
@@ -658,168 +574,80 @@ function resolveActionPosture(
   return 'ROUTINE MONITORING'
 }
 
-function buildSurvivabilityInterpretation(
-  threshold: InterpretiveThreshold
-) {
-  if (
-    threshold === 'SURVIVABILITY THREAT'
-  ) {
-    return 'Survivability credibility is weak and should not be treated as stable.'
-  }
-
-  if (
-    threshold === 'DESTABILIZING'
-  ) {
-    return 'Survivability remains vulnerable and requires continued governance review.'
-  }
-
-  if (
-    threshold === 'WATCHABLE'
-  ) {
-    return 'Baseline survivability exists but durability still requires confirmation.'
-  }
-
-  return 'Survivability posture is currently credible.'
-}
-
-function explainPressure(
-  board: InterpretiveBoard
-) {
-  if (
-    board.pressureThreshold ===
-    'SURVIVABILITY THREAT'
-  ) {
+function explainPressure(board: InterpretiveBoard) {
+  if (board.pressureThreshold === 'SURVIVABILITY THREAT') {
     return 'Pressure is threatening operational survivability.'
   }
 
-  if (
-    board.pressureThreshold ===
-    'DESTABILIZING'
-  ) {
+  if (board.pressureThreshold === 'DESTABILIZING') {
     return 'Pressure is intensifying and requires governance attention.'
   }
 
-  if (
-    board.pressureThreshold ===
-    'WATCHABLE'
-  ) {
+  if (board.pressureThreshold === 'WATCHABLE') {
     return 'Pressure remains visible and should continue under review.'
   }
 
   return 'Pressure is currently contained.'
 }
 
-function explainRecovery(
-  board: InterpretiveBoard
-) {
-  if (
-    board.recoveryThreshold ===
-    'SURVIVABILITY THREAT'
-  ) {
+function explainRecovery(board: InterpretiveBoard) {
+  if (board.recoveryThreshold === 'SURVIVABILITY THREAT') {
     return 'Recovery credibility is weak and should not support closure.'
   }
 
-  if (
-    board.recoveryThreshold ===
-    'DESTABILIZING'
-  ) {
+  if (board.recoveryThreshold === 'DESTABILIZING') {
     return 'Recovery remains fragile and requires stabilization reinforcement.'
   }
 
-  if (
-    board.recoveryThreshold ===
-    'WATCHABLE'
-  ) {
+  if (board.recoveryThreshold === 'WATCHABLE') {
     return 'Recovery is visible but durability still requires confirmation.'
   }
 
   return 'Recovery posture is currently credible.'
 }
 
-function explainSurvivability(
-  board: InterpretiveBoard
-) {
-  if (
-    board.survivabilityThreshold ===
-    'SURVIVABILITY THREAT'
-  ) {
+function explainSurvivability(board: InterpretiveBoard) {
+  if (board.survivabilityThreshold === 'SURVIVABILITY THREAT') {
     return 'Survivability posture requires executive attention.'
   }
 
-  if (
-    board.survivabilityThreshold ===
-    'DESTABILIZING'
-  ) {
+  if (board.survivabilityThreshold === 'DESTABILIZING') {
     return 'Survivability is vulnerable and should remain under governance review.'
   }
 
-  if (
-    board.survivabilityThreshold ===
-    'WATCHABLE'
-  ) {
+  if (board.survivabilityThreshold === 'WATCHABLE') {
     return 'Survivability exists but remains watchable.'
   }
 
   return 'Survivability posture is currently stable.'
 }
 
-function explainMemory(
-  board: InterpretiveBoard
-) {
-  if (
-    board.memoryThreshold ===
-    'SURVIVABILITY THREAT'
-  ) {
+function explainMemory(board: InterpretiveBoard) {
+  if (board.memoryThreshold === 'SURVIVABILITY THREAT') {
     return 'Structural recurrence is materially threatening survivability.'
   }
 
-  if (
-    board.memoryThreshold ===
-    'DESTABILIZING'
-  ) {
+  if (board.memoryThreshold === 'DESTABILIZING') {
     return 'Recurring instability patterns remain operationally significant.'
   }
 
-  if (
-    board.memoryThreshold ===
-    'WATCHABLE'
-  ) {
+  if (board.memoryThreshold === 'WATCHABLE') {
     return 'Structural recurrence remains visible.'
   }
 
   return 'No dominant recurrence pattern is currently driving instability.'
 }
 
-function thresholdFromRisk(
-  value: number
-): InterpretiveThreshold {
-  if (value >= 75) {
+function severityToThreshold(severity: string): InterpretiveThreshold {
+  if (severity === 'CRITICAL') {
     return 'SURVIVABILITY THREAT'
   }
 
-  if (value >= 55) {
+  if (severity === 'HIGH') {
     return 'DESTABILIZING'
   }
 
-  if (value >= 35) {
-    return 'WATCHABLE'
-  }
-
-  return 'CONTAINED'
-}
-
-function thresholdFromStrength(
-  value: number
-): InterpretiveThreshold {
-  if (value < 35) {
-    return 'SURVIVABILITY THREAT'
-  }
-
-  if (value < 55) {
-    return 'DESTABILIZING'
-  }
-
-  if (value < 75) {
+  if (severity === 'MODERATE') {
     return 'WATCHABLE'
   }
 
@@ -827,20 +655,19 @@ function thresholdFromStrength(
 }
 
 function average(values: number[]) {
-  const valid = values.filter((value) =>
-    Number.isFinite(value)
-  )
+  const valid = values.filter((value) => Number.isFinite(value))
 
   if (valid.length === 0) {
     return 0
   }
 
   return Math.round(
-    valid.reduce(
-      (sum, value) => sum + value,
-      0
-    ) / valid.length
+    valid.reduce((sum, value) => sum + value, 0) / valid.length
   )
+}
+
+function compactAction(actions: string[]) {
+  return Array.from(new Set(actions.filter(Boolean))).join(' ')
 }
 
 function formatDate(value: string) {
@@ -858,17 +685,11 @@ function InterpretivePanel({
 }) {
   return (
     <article style={styles.interpretivePanel}>
-      <p style={styles.panelEyebrow}>
-        {title}
-      </p>
+      <p style={styles.panelEyebrow}>{title}</p>
 
-      <h3 style={styles.thresholdLabel}>
-        {threshold}
-      </h3>
+      <h3 style={styles.thresholdLabel}>{threshold}</h3>
 
-      <p style={styles.bodyText}>
-        {text}
-      </p>
+      <p style={styles.bodyText}>{text}</p>
     </article>
   )
 }
@@ -884,17 +705,11 @@ function ReasonBlock({
 }) {
   return (
     <div style={styles.reasonBlock}>
-      <p style={styles.panelEyebrow}>
-        {label}
-      </p>
+      <p style={styles.panelEyebrow}>{label}</p>
 
-      <strong style={styles.reasonValue}>
-        {value}
-      </strong>
+      <strong style={styles.reasonValue}>{value}</strong>
 
-      <p style={styles.bodyText}>
-        {text}
-      </p>
+      <p style={styles.bodyText}>{text}</p>
     </div>
   )
 }
@@ -968,8 +783,7 @@ const styles: Record<string, CSSProperties> = {
 
   doctrineGrid: {
     display: 'grid',
-    gridTemplateColumns:
-      'repeat(3, minmax(0, 1fr))',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
     gap: '12px',
   },
 
@@ -996,16 +810,14 @@ const styles: Record<string, CSSProperties> = {
 
   commandPanel: {
     display: 'grid',
-    gridTemplateColumns:
-      'minmax(0, 1.4fr) minmax(260px, 0.6fr)',
+    gridTemplateColumns: 'minmax(0, 1.4fr) minmax(260px, 0.6fr)',
     gap: '16px',
     background: '#020617',
     border: '1px solid #67e8f9',
     borderRadius: '24px',
     padding: '22px',
     marginBottom: '16px',
-    boxShadow:
-      '0 20px 50px rgba(0,0,0,0.28)',
+    boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
   },
 
   panelEyebrow: {
@@ -1051,8 +863,7 @@ const styles: Record<string, CSSProperties> = {
 
   interpretiveGrid: {
     display: 'grid',
-    gridTemplateColumns:
-      'repeat(4, minmax(0, 1fr))',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
     gap: '14px',
     marginBottom: '16px',
   },
@@ -1076,8 +887,7 @@ const styles: Record<string, CSSProperties> = {
 
   actionPanel: {
     display: 'grid',
-    gridTemplateColumns:
-      'minmax(0, 1fr) minmax(220px, 0.45fr)',
+    gridTemplateColumns: 'minmax(0, 1fr) minmax(220px, 0.45fr)',
     gap: '16px',
     background: '#020617',
     border: '1px solid #334155',
@@ -1128,8 +938,7 @@ const styles: Record<string, CSSProperties> = {
 
   reasonGrid: {
     display: 'grid',
-    gridTemplateColumns:
-      'repeat(4, minmax(0, 1fr))',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
     gap: '14px',
   },
 
