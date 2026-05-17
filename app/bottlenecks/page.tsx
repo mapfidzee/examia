@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 
-import CGIGovernanceShell from '@/components/cgi/CGIGovernanceShell'
+import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 
 import { supabase } from '../../lib/supabase'
 
