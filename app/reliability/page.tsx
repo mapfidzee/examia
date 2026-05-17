@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { supabase } from '../../lib/supabase'
@@ -10,25 +10,21 @@ type CgiOperationalMetric = {
   id: string
   created_at: string
   scope: string
-
   continuity_state: string
   pressure_propagation_state: string
   trajectory_direction: string
   structural_memory_state: string
-
   continuity_integrity_score: number
   stabilization_confidence_score: number
   escalation_pressure_index: number
   recovery_reliability_score: number
   operational_survivability_score: number
-
   propagation_risk: number
   trajectory_risk: number
   structural_memory_risk: number
   unresolved_momentum: number
   stabilization_drag: number
   continuity_drift: number
-
   dominant_pressure_source: string | null
   dominant_trajectory_signal: string | null
   dominant_memory_pattern: string | null
@@ -79,32 +75,44 @@ function ReliabilityContent() {
 
   const intelligence = useMemo(() => {
     const ordered = [...metrics].sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      (a, b) =>
+        new Date(a.created_at).getTime() -
+        new Date(b.created_at).getTime()
     )
 
     const latest = ordered[ordered.length - 1] || null
 
-    const reliability = average(ordered.map((item) => item.recovery_reliability_score))
-    const survivability = average(ordered.map((item) => item.operational_survivability_score))
-    const continuity = average(ordered.map((item) => item.continuity_integrity_score))
-    const confidence = average(ordered.map((item) => item.stabilization_confidence_score))
-    const pressure = average(ordered.map((item) => item.escalation_pressure_index))
-    const propagation = average(ordered.map((item) => item.propagation_risk))
-    const trajectory = average(ordered.map((item) => item.trajectory_risk))
-    const memoryRisk = average(ordered.map((item) => item.structural_memory_risk))
-    const drift = average(ordered.map((item) => item.continuity_drift))
-    const unresolved = average(ordered.map((item) => item.unresolved_momentum))
-    const drag = average(ordered.map((item) => item.stabilization_drag))
+    const reliability = average(
+      ordered.map((item) => item.recovery_reliability_score)
+    )
 
-    const instabilityBurden = average([
-      pressure,
-      propagation,
-      trajectory,
-      memoryRisk,
-      unresolved,
-      drag,
-      drift,
-    ])
+    const survivability = average(
+      ordered.map((item) => item.operational_survivability_score)
+    )
+
+    const continuity = average(
+      ordered.map((item) => item.continuity_integrity_score)
+    )
+
+    const pressure = average(
+      ordered.map((item) => item.escalation_pressure_index)
+    )
+
+    const trajectory = average(
+      ordered.map((item) => item.trajectory_risk)
+    )
+
+    const memoryRisk = average(
+      ordered.map((item) => item.structural_memory_risk)
+    )
+
+    const drift = average(
+      ordered.map((item) => item.continuity_drift)
+    )
+
+    const unresolved = average(
+      ordered.map((item) => item.unresolved_momentum)
+    )
 
     const volatility = calculateVolatility(
       ordered.map((item) => item.recovery_reliability_score)
@@ -114,52 +122,47 @@ function ReliabilityContent() {
       reliability,
       survivability,
       continuity,
-      instabilityBurden,
-      volatility,
+      pressure,
+      trajectory,
+      memoryRisk,
     })
 
-    const reliabilityDirection = interpretReliability(reliability)
     const survivabilityMeaning = interpretSurvivability(survivability)
     const continuityMeaning = interpretContinuity(continuity)
-    const stabilizationConfidence = interpretConfidence(confidence)
-    const instabilityMeaning = interpretInstability(instabilityBurden)
-    const volatilityMeaning = interpretVolatility(volatility)
     const driftMeaning = interpretDrift(drift)
     const unresolvedMeaning = interpretUnresolved(unresolved)
+    const volatilityMeaning = interpretVolatility(volatility)
     const historyDepth = interpretHistory(ordered.length)
 
     const dominantWeakness = strongestDriver({
       'Reliability weakness': 100 - reliability,
       'Survivability weakness': 100 - survivability,
-      'Continuity integrity weakness': 100 - continuity,
-      'Stabilization confidence weakness': 100 - confidence,
-      'Escalation pressure': pressure,
-      'Trajectory risk': trajectory,
-      'Structural memory risk': memoryRisk,
+      'Pressure instability': pressure,
+      'Trajectory instability': trajectory,
+      'Structural memory instability': memoryRisk,
       'Continuity drift': drift,
-      'Unresolved momentum': unresolved,
+      'Unresolved instability': unresolved,
     })
 
-    const executiveSummary = `${reliabilityPosture.meaning} Dominant weakness: ${dominantWeakness}. ${instabilityMeaning.meaning} ${driftMeaning.meaning}`
+    const executiveSummary = compactAction([
+      reliabilityPosture.meaning,
+      'Structural friction and unresolved instability remain visible under executive review.',
+    ])
 
     const actionCue = compactAction([
       reliabilityPosture.action,
-      instabilityMeaning.action,
       driftMeaning.action,
-      volatilityMeaning.action,
+      unresolvedMeaning.action,
     ])
 
     return {
       latest,
       reliabilityPosture,
-      reliabilityDirection,
       survivabilityMeaning,
       continuityMeaning,
-      stabilizationConfidence,
-      instabilityMeaning,
-      volatilityMeaning,
       driftMeaning,
       unresolvedMeaning,
+      volatilityMeaning,
       historyDepth,
       dominantWeakness,
       executiveSummary,
@@ -173,28 +176,22 @@ TSINAXA CGI RELIABILITY INTELLIGENCE BRIEF
 Reliability Posture:
 ${intelligence.reliabilityPosture.posture}
 
-Reliability Direction:
-${intelligence.reliabilityDirection.posture}
-
 Survivability:
 ${intelligence.survivabilityMeaning.posture}
 
 Continuity Integrity:
 ${intelligence.continuityMeaning.posture}
 
-Stabilization Confidence:
-${intelligence.stabilizationConfidence.posture}
-
-Instability Burden:
-${intelligence.instabilityMeaning.posture}
-
-Volatility:
-${intelligence.volatilityMeaning.posture}
-
 Continuity Drift:
 ${intelligence.driftMeaning.posture}
 
-Dominant Weakness:
+Unresolved Stability Pressure:
+${intelligence.unresolvedMeaning.posture}
+
+Reliability Volatility:
+${intelligence.volatilityMeaning.posture}
+
+Dominant Reliability Threat:
 ${intelligence.dominantWeakness}
 
 Executive Interpretation:
@@ -204,20 +201,25 @@ Recommended Action:
 ${intelligence.actionCue}
 
 Governance-Safe Meaning:
-This reliability view interprets persisted continuity memory. It does not judge people. It asks whether stabilization is becoming dependable across time.
+This reliability view interprets persisted continuity memory. It does not judge people. It evaluates whether stabilization is becoming dependable across time.
   `.trim()
 
   return (
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.header}>
-          <p style={styles.kicker}>TSINAXA CGI • RELIABILITY INTELLIGENCE</p>
+          <p style={styles.kicker}>
+            TSINAXA CGI • RELIABILITY INTELLIGENCE
+          </p>
 
-          <h1 style={styles.title}>Continuity Reliability Intelligence</h1>
+          <h1 style={styles.title}>
+            Continuity Reliability Intelligence
+          </h1>
 
           <p style={styles.subtitle}>
-            Executive interpretation of whether continuity stabilization is becoming
-            dependable, fragile, unstable, or deteriorating across persisted memory.
+            Executive interpretation of whether continuity stabilization is
+            becoming dependable, unstable, fragile, or deteriorating across
+            persisted memory.
           </p>
         </section>
 
@@ -241,19 +243,19 @@ This reliability view interprets persisted continuity memory. It does not judge 
         </section>
 
         <section style={styles.postureGrid}>
-          <PostureCard title="Reliability Direction" interpretation={intelligence.reliabilityDirection} />
           <PostureCard title="Survivability" interpretation={intelligence.survivabilityMeaning} />
           <PostureCard title="Continuity Integrity" interpretation={intelligence.continuityMeaning} />
-          <PostureCard title="Stabilization Confidence" interpretation={intelligence.stabilizationConfidence} />
-          <PostureCard title="Instability Burden" interpretation={intelligence.instabilityMeaning} />
+          <PostureCard title="Continuity Drift" interpretation={intelligence.driftMeaning} />
+          <PostureCard title="Unresolved Stability Pressure" interpretation={intelligence.unresolvedMeaning} />
           <PostureCard title="Reliability Volatility" interpretation={intelligence.volatilityMeaning} />
+          <PostureCard title="Memory Depth" interpretation={intelligence.historyDepth} />
         </section>
 
         <section style={styles.compactGrid}>
-          <CompactCard title="History Depth" value={intelligence.historyDepth.posture} />
-          <CompactCard title="Dominant Weakness" value={intelligence.dominantWeakness} />
-          <CompactCard title="Continuity Drift" value={intelligence.driftMeaning.posture} />
-          <CompactCard title="Unresolved Momentum" value={intelligence.unresolvedMeaning.posture} />
+          <CompactCard title="Dominant Reliability Threat" value={intelligence.dominantWeakness} />
+          <CompactCard title="Current Reliability" value={intelligence.reliabilityPosture.posture} />
+          <CompactCard title="Current Drift" value={intelligence.driftMeaning.posture} />
+          <CompactCard title="Current Survivability" value={intelligence.survivabilityMeaning.posture} />
         </section>
 
         <section style={styles.twoColumn}>
@@ -266,20 +268,22 @@ This reliability view interprets persisted continuity memory. It does not judge 
           </Panel>
 
           <Panel title="Dependability Reading">
-            <Info label="Reliability Posture" value={intelligence.reliabilityPosture.posture} />
+            <Info label="Reliability" value={intelligence.reliabilityPosture.posture} />
             <Info label="Survivability" value={intelligence.survivabilityMeaning.posture} />
             <Info label="Volatility" value={intelligence.volatilityMeaning.posture} />
-            <Info label="Dominant Weakness" value={intelligence.dominantWeakness} />
-            <Info label="Current Reading" value={intelligence.reliabilityDirection.posture} />
+            <Info label="Dominant Threat" value={intelligence.dominantWeakness} />
+            <Info label="Drift" value={intelligence.driftMeaning.posture} />
           </Panel>
         </section>
 
         <section style={styles.card}>
           <div style={styles.cardHeader}>
             <div>
-              <h2 style={styles.cardTitle}>Recent Reliability Memory Trail</h2>
+              <h2 style={styles.cardTitle}>Recent Reliability Memory</h2>
+
               <p style={styles.cardNote}>
-                Recent snapshots are displayed as threshold interpretations, not raw scores.
+                Recent snapshots are displayed as reliability posture memory,
+                not raw scoring.
               </p>
             </div>
 
@@ -321,7 +325,16 @@ This reliability view interprets persisted continuity memory. It does not judge 
                       {interpretSurvivability(item.operational_survivability_score).posture}
                     </td>
                     <td style={styles.td}>
-                      {interpretInstability(item.escalation_pressure_index).posture}
+                      {
+                        interpretReliabilityPosture({
+                          reliability: item.recovery_reliability_score,
+                          survivability: item.operational_survivability_score,
+                          continuity: item.continuity_integrity_score,
+                          pressure: item.escalation_pressure_index,
+                          trajectory: item.trajectory_risk,
+                          memoryRisk: item.structural_memory_risk,
+                        }).posture
+                      }
                     </td>
                     <td style={styles.td}>
                       {interpretDrift(item.continuity_drift).posture}
@@ -363,7 +376,7 @@ function calculateVolatility(values: number[]) {
 function strongestDriver(scores: Record<string, number>) {
   return (
     Object.entries(scores).sort((a, b) => b[1] - a[1])[0]?.[0] ||
-    'No dominant weakness detected'
+    'No dominant reliability threat detected'
   )
 }
 
@@ -371,51 +384,64 @@ function interpretReliabilityPosture(input: {
   reliability: number
   survivability: number
   continuity: number
-  instabilityBurden: number
-  volatility: number
+  pressure: number
+  trajectory: number
+  memoryRisk: number
 }): Interpretation {
+  const instability = average([
+    input.pressure,
+    input.trajectory,
+    input.memoryRisk,
+    100 - input.reliability,
+    100 - input.survivability,
+    100 - input.continuity,
+  ])
+
   if (
     input.reliability >= 75 &&
     input.survivability >= 75 &&
     input.continuity >= 70 &&
-    input.instabilityBurden <= 35
+    instability < 35
   ) {
     return {
       posture: 'RELIABILITY STRENGTHENING',
       meaning:
         'Continuity stabilization is becoming dependable across persisted memory.',
-      action: 'Maintain current stabilization discipline and confirm durability.',
+      action:
+        'Maintain stabilization discipline and confirm durability before closure.',
     }
   }
 
   if (
-    input.reliability <= 40 ||
-    input.survivability <= 40 ||
-    input.instabilityBurden >= 70
+    input.reliability < 40 ||
+    input.survivability < 40 ||
+    instability >= 70
   ) {
     return {
       posture: 'RELIABILITY DETERIORATING',
       meaning:
-        'Continuity reliability is weakening and may not support durable stabilization.',
+        'Reliability is weakening and may not support durable stabilization.',
       action:
-        'Escalate review of recurring pressure, survivability weakness, and unresolved momentum.',
+        'Escalate reliability review and inspect survivability weakness.',
     }
   }
 
-  if (input.volatility >= 25 || input.instabilityBurden >= 50) {
+  if (instability >= 50 || input.reliability < 55) {
     return {
       posture: 'RELIABILITY UNSTABLE',
       meaning:
-        'Reliability is fluctuating and has not settled into dependable continuity.',
-      action: 'Inspect volatility drivers and compare against drift and recurrence.',
+        'Reliability remains unstable and should not support closure yet.',
+      action:
+        'Review unresolved instability and strengthen stabilization follow-through.',
     }
   }
 
   return {
     posture: 'RELIABILITY HOLDING',
     meaning:
-      'Reliability exists and is holding, but dependability still requires confirmation.',
-    action: 'Maintain monitoring and continue saving operational memory.',
+      'Reliability is holding but durability is not yet fully credible.',
+    action:
+      'Maintain governed reliability monitoring and preserve continuity memory.',
   }
 }
 
@@ -438,7 +464,7 @@ function interpretReliability(value: number): Interpretation {
 
   if (value >= 40) {
     return {
-      posture: 'RELIABILITY FRAGILE',
+      posture: 'RELIABILITY UNSTABLE',
       meaning: 'Reliability is visible but vulnerable to instability.',
       action: 'Review unresolved barriers.',
     }
@@ -515,94 +541,6 @@ function interpretContinuity(value: number): Interpretation {
   }
 }
 
-function interpretConfidence(value: number): Interpretation {
-  if (value >= 75) {
-    return {
-      posture: 'CONFIDENCE STRONG',
-      meaning: 'Stabilization confidence is becoming credible.',
-      action: 'Confirm durability before closure.',
-    }
-  }
-
-  if (value >= 55) {
-    return {
-      posture: 'CONFIDENCE MODERATE',
-      meaning: 'Stabilization confidence exists but is not final proof.',
-      action: 'Maintain review.',
-    }
-  }
-
-  if (value >= 40) {
-    return {
-      posture: 'CONFIDENCE FRAGILE',
-      meaning: 'Stabilization confidence remains vulnerable.',
-      action: 'Strengthen follow-through.',
-    }
-  }
-
-  return {
-    posture: 'CONFIDENCE WEAK',
-    meaning: 'Stabilization confidence is too weak for closure.',
-    action: 'Escalate stabilization review.',
-  }
-}
-
-function interpretInstability(value: number): Interpretation {
-  if (value >= 70) {
-    return {
-      posture: 'HEAVY INSTABILITY BURDEN',
-      meaning: 'Instability burden is strong enough to threaten dependability.',
-      action: 'Escalate instability review.',
-    }
-  }
-
-  if (value >= 50) {
-    return {
-      posture: 'MODERATE STRUCTURAL FRICTION',
-      meaning: 'Structural friction remains visible.',
-      action: 'Reduce reliability blockers.',
-    }
-  }
-
-  if (value >= 35) {
-    return {
-      posture: 'INSTABILITY MONITORED',
-      meaning: 'Instability is visible but not dominant.',
-      action: 'Keep under review.',
-    }
-  }
-
-  return {
-    posture: 'INSTABILITY CONTAINED',
-    meaning: 'Instability burden appears contained.',
-    action: 'Continue monitoring.',
-  }
-}
-
-function interpretVolatility(value: number): Interpretation {
-  if (value >= 30) {
-    return {
-      posture: 'HIGH VOLATILITY',
-      meaning: 'Reliability movement is fluctuating too much for confidence.',
-      action: 'Extend monitoring.',
-    }
-  }
-
-  if (value >= 18) {
-    return {
-      posture: 'CONTAINED VARIATION',
-      meaning: 'Variation exists but is not showing collapse.',
-      action: 'Watch for repeated instability.',
-    }
-  }
-
-  return {
-    posture: 'STABLE MOVEMENT',
-    meaning: 'Reliability movement appears steady.',
-    action: 'Maintain confirmation monitoring.',
-  }
-}
-
 function interpretDrift(value: number): Interpretation {
   if (value >= 60) {
     return {
@@ -630,31 +568,55 @@ function interpretDrift(value: number): Interpretation {
 function interpretUnresolved(value: number): Interpretation {
   if (value >= 65) {
     return {
-      posture: 'HEAVY UNRESOLVED MOMENTUM',
-      meaning: 'Unresolved momentum may undermine dependability.',
+      posture: 'HEAVY UNRESOLVED STABILITY PRESSURE',
+      meaning: 'Unresolved pressure may undermine dependability.',
       action: 'Escalate unresolved pressure review.',
     }
   }
 
   if (value >= 45) {
     return {
-      posture: 'MODERATE UNRESOLVED MOMENTUM',
-      meaning: 'Unresolved momentum remains visible.',
+      posture: 'UNRESOLVED STABILITY PRESSURE VISIBLE',
+      meaning: 'Unresolved stability pressure remains visible.',
       action: 'Keep ownership and follow-up active.',
     }
   }
 
   return {
-    posture: 'UNRESOLVED MOMENTUM CONTAINED',
-    meaning: 'Unresolved momentum appears contained.',
+    posture: 'UNRESOLVED PRESSURE CONTAINED',
+    meaning: 'Unresolved stability pressure appears contained.',
     action: 'Continue monitoring.',
+  }
+}
+
+function interpretVolatility(value: number): Interpretation {
+  if (value >= 30) {
+    return {
+      posture: 'RELIABILITY VOLATILE',
+      meaning: 'Reliability movement is fluctuating too much for confidence.',
+      action: 'Extend monitoring.',
+    }
+  }
+
+  if (value >= 18) {
+    return {
+      posture: 'VARIATION CONTAINED',
+      meaning: 'Variation exists but is not showing collapse.',
+      action: 'Watch for repeated instability.',
+    }
+  }
+
+  return {
+    posture: 'RELIABILITY MOVEMENT STABLE',
+    meaning: 'Reliability movement appears steady.',
+    action: 'Maintain confirmation monitoring.',
   }
 }
 
 function interpretHistory(count: number): Interpretation {
   if (count < 3) {
     return {
-      posture: 'INSUFFICIENT HISTORY',
+      posture: 'INSUFFICIENT MEMORY',
       meaning: 'Too few snapshots exist for reliability interpretation.',
       action: 'Continue saving operational snapshots.',
     }
@@ -662,7 +624,7 @@ function interpretHistory(count: number): Interpretation {
 
   if (count < 10) {
     return {
-      posture: 'EARLY HISTORY',
+      posture: 'EARLY MEMORY',
       meaning: 'Reliability memory has started but remains young.',
       action: 'Continue building continuity memory.',
     }
@@ -676,7 +638,7 @@ function interpretHistory(count: number): Interpretation {
 }
 
 function compactAction(actions: string[]) {
-  return Array.from(new Set(actions)).join(' ')
+  return Array.from(new Set(actions.filter(Boolean))).join(' ')
 }
 
 function formatDate(value: string) {
@@ -714,7 +676,7 @@ function Panel({
   children,
 }: {
   title: string
-  children: React.ReactNode
+  children: ReactNode
 }) {
   return (
     <section style={styles.card}>
