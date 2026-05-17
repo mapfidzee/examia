@@ -5,6 +5,12 @@ import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
+import { interpretPressure } from '@/lib/cgi/interpreters/interpretPressure'
+import { interpretTrajectory } from '@/lib/cgi/interpreters/interpretTrajectory'
+import { interpretRecovery } from '@/lib/cgi/interpreters/interpretRecovery'
+import { interpretPredictive } from '@/lib/cgi/interpreters/interpretPredictive'
+import { interpretBottleneck } from '@/lib/cgi/interpreters/interpretBottleneck'
+import { interpretReliability } from '@/lib/cgi/interpreters/interpretReliability'
 import { evaluateContinuityIntelligence } from '../lib/continuityIntelligence'
 import { evaluatePressurePropagation } from '../lib/pressurePropagation'
 import { evaluateTrajectoryIntelligence } from '../lib/trajectoryIntelligence'
@@ -396,48 +402,83 @@ function CommandCenterContent() {
       responders: mappedResponders,
     })
 
-    const predictiveStatus =
-      escalatedCases >= 3 || safeguardingFlags >= 3
-        ? 'HIGH_FORECAST_PRESSURE'
-        : activeCases >= Math.max(stabilizedCases, 1) ||
-            highestResponderLoad >= 2
-          ? 'MODERATE_FORECAST_PRESSURE'
-          : 'CONTROLLED_FORECAST_PRESSURE'
+    const recurrenceRate =
+      totalCases === 0
+        ? 0
+        : Number(
+            (
+              (escalatedCases + safeguardingFlags + unresolvedInterventionPathways) /
+              totalCases
+            ).toFixed(2)
+          )
 
-    const routingPressureStatus =
-      routedWithoutResponder >= 3 ||
-      highestResponderLoad >= 3 ||
-      safeguardingFlags >= 3
-        ? 'CRITICAL_ROUTING_PRESSURE'
-        : highestResponderLoad >= 2 ||
-            highestRegionalPressure >= 3 ||
-            routedWithoutResponder >= 2
-          ? 'HIGH_ROUTING_PRESSURE'
-          : highestRegionalPressure >= 2 ||
-              activeCases >= 2 ||
-              activeWithoutRouting >= 1
-            ? 'MODERATE_ROUTING_PRESSURE'
-            : 'LOW_ROUTING_PRESSURE'
+    const centralizedReliability = interpretReliability({
+      unresolvedCases: activeWithoutOutcome,
+      overdueCases: routedWithoutResponder + activeWithoutRouting,
+      failedRecoveries: stalledCases,
+      recurrenceRate,
+    })
 
-    const bottleneckStatus =
-      highestResponderLoad >= 4 || stalledCases >= 3 || safeguardingFlags >= 3
-        ? 'CRITICAL_BOTTLENECK_PRESSURE'
-        : highestResponderLoad >= 2 ||
-            unresolvedInterventionPathways >= 2 ||
-            stalledCases >= 2
-          ? 'HIGH_BOTTLENECK_PRESSURE'
-          : unresolvedInterventionPathways >= 1 || safeguardingFlags >= 1
-            ? 'MODERATE_BOTTLENECK_PRESSURE'
-            : 'LOW_BOTTLENECK_PRESSURE'
+    const centralizedPressure = interpretPressure({
+      escalationPressure: clamp(escalatedCases * 20 + criticalCases * 15),
+      propagationRisk: clamp(safeguardingFlags * 25),
+      unresolvedMomentum: clamp(
+        unresolvedInterventionPathways * 20 + activeWithoutRouting * 10
+      ),
+      continuityDrift: clamp(stalledCases * 25),
+    })
 
-    const recoveryStatus =
-      stabilizationRate >= 70 &&
-      interventionCoverage >= 70 &&
-      outcomeCoverage >= 70
-        ? 'RECOVERY_CONFIRMED'
-        : interventionCoverage >= 50 && outcomeCoverage >= 50
-          ? 'RECOVERY_IN_PROGRESS'
-          : 'RECOVERY_FRAGMENTATION_RISK'
+    const centralizedTrajectory = interpretTrajectory({
+      trajectoryRisk: clamp(escalatedCases * 20 + activeCases * 6),
+      continuityDrift: clamp(stalledCases * 25 + activeWithoutOutcome * 8),
+      unresolvedMomentum: clamp(unresolvedInterventionPathways * 20),
+      survivabilityRisk: clamp(100 - stabilizationRate),
+    })
+
+    const centralizedRecovery = interpretRecovery({
+      stabilizationConfidence: stabilizationRate,
+      recoveryReliability: outcomeCoverage,
+      survivabilityScore: interventionCoverage,
+      continuityDrift: clamp(stalledCases * 25),
+      unresolvedMomentum: clamp(unresolvedInterventionPathways * 20),
+    })
+
+    const centralizedPredictive = interpretPredictive({
+      propagationRisk: clamp(safeguardingFlags * 25),
+      trajectoryRisk: clamp(escalatedCases * 20 + activeCases * 6),
+      structuralMemoryRisk: clamp(
+        activeWithoutRouting * 20 + routedWithoutResponder * 20
+      ),
+      unresolvedMomentum: clamp(unresolvedInterventionPathways * 20),
+      stabilizationDrag: clamp(stalledCases * 25),
+    })
+
+    const centralizedBottleneck = interpretBottleneck({
+      routingCongestion: clamp(highestResponderLoad * 20),
+      responderConcentration: clamp(highestResponderLoad * 20),
+      unresolvedMomentum: clamp(unresolvedInterventionPathways * 20),
+      continuityDrift: clamp(stalledCases * 25),
+      propagationRisk: clamp(safeguardingFlags * 25),
+    })
+
+    const commandStatus = resolveCommandStatus({
+      pressureSeverity: centralizedPressure.severity,
+      trajectorySeverity: centralizedTrajectory.severity,
+      recoverySeverity: centralizedRecovery.severity,
+      predictiveSeverity: centralizedPredictive.severity,
+      bottleneckSeverity: centralizedBottleneck.severity,
+      reliabilitySeverity: centralizedReliability.severity,
+      governanceIntegrityStatus:
+        activeWithoutRouting >= 3 ||
+        routedWithoutResponder >= 3 ||
+        unresolvedInterventionPathways >= 3
+          ? 'GOVERNANCE_GAP_CRITICAL'
+          : activeWithoutRouting >= 1 ||
+              routedWithoutResponder >= 1 ||
+              unresolvedInterventionPathways >= 1
+            ? 'GOVERNANCE_REVIEW_REQUIRED'
+            : 'GOVERNANCE_TRACEABILITY_STABLE',
+    })
 
     const governanceIntegrityStatus =
       activeWithoutRouting >= 3 ||
@@ -450,37 +491,57 @@ function CommandCenterContent() {
           ? 'GOVERNANCE_REVIEW_REQUIRED'
           : 'GOVERNANCE_TRACEABILITY_STABLE'
 
-    const commandStatus = resolveCommandStatus({
-      pressureState: pressurePropagation.pressurePropagationState,
-      trajectoryState: trajectoryIntelligence.trajectoryDirection,
-      memoryState: structuralMemory.structuralMemoryState,
-      predictiveStatus,
-      routingPressureStatus,
-      bottleneckStatus,
-      recoveryStatus,
-      governanceIntegrityStatus,
-    })
-
     const commandGuidance = interpretCommandStatus(commandStatus)
-    const pressurePosture = interpretPressureState(
-      pressurePropagation.pressurePropagationState
-    )
-    const trajectoryPosture = interpretTrajectoryState(
-      trajectoryIntelligence.trajectoryDirection
-    )
+
+    const pressurePosture = {
+      posture: centralizedPressure.posture,
+      meaning: centralizedPressure.summary,
+      action: centralizedPressure.executiveAction,
+    }
+
+    const trajectoryPosture = {
+      posture: centralizedTrajectory.posture,
+      meaning: centralizedTrajectory.summary,
+      action: centralizedTrajectory.executiveAction,
+    }
+
+    const continuityPosture = {
+      posture: centralizedReliability.posture,
+      meaning: centralizedReliability.summary,
+      action: centralizedReliability.executiveAction,
+    }
+
+    const recoveryPosture = {
+      posture: centralizedRecovery.posture,
+      meaning: centralizedRecovery.summary,
+      action: centralizedRecovery.executiveAction,
+    }
+
+    const bottleneckPosture = {
+      posture: centralizedBottleneck.posture,
+      meaning: centralizedBottleneck.summary,
+      action: centralizedBottleneck.executiveAction,
+    }
+
+    const predictivePosture = {
+      posture: centralizedPredictive.posture,
+      meaning: centralizedPredictive.summary,
+      action: centralizedPredictive.executiveAction,
+    }
+
     const memoryPosture = interpretMemoryState(
       structuralMemory.structuralMemoryState
     )
-    const continuityPosture = interpretContinuityState(
-      continuityScores.continuityState
-    )
-    const recoveryPosture = interpretRecoveryStatus(recoveryStatus)
     const governancePosture = interpretGovernanceIntegrity(
       governanceIntegrityStatus
     )
-    const routingPosture = interpretRoutingPressure(routingPressureStatus)
-    const bottleneckPosture = interpretBottleneckStatus(bottleneckStatus)
-    const predictivePosture = interpretPredictiveStatus(predictiveStatus)
+    const routingPosture = interpretRoutingPressure({
+      highestResponderLoad,
+      highestRegionalPressure,
+      routedWithoutResponder,
+      activeWithoutRouting,
+      safeguardingFlags,
+    })
     const activeCasePosture = interpretCaseLoad(activeCases)
     const safeguardingPosture = interpretSafeguarding(safeguardingFlags)
     const responderPosture = interpretResponderReadiness(activeResponders)
@@ -834,43 +895,49 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
   )
 }
 
+function clamp(value: number) {
+  return Math.max(0, Math.min(100, Math.round(value)))
+}
+
 function resolveCommandStatus(input: {
-  pressureState: string
-  trajectoryState: string
-  memoryState: string
-  predictiveStatus: string
-  routingPressureStatus: string
-  bottleneckStatus: string
-  recoveryStatus: string
+  pressureSeverity: string
+  trajectorySeverity: string
+  recoverySeverity: string
+  predictiveSeverity: string
+  bottleneckSeverity: string
+  reliabilitySeverity: string
   governanceIntegrityStatus: string
 }) {
   if (
-    input.pressureState === 'CASCADE_RISK' ||
-    input.trajectoryState === 'COLLAPSE_RISK' ||
-    input.memoryState === 'SYSTEMIC_MEMORY_RISK' ||
-    input.routingPressureStatus === 'CRITICAL_ROUTING_PRESSURE' ||
-    input.bottleneckStatus === 'CRITICAL_BOTTLENECK_PRESSURE' ||
+    input.pressureSeverity === 'CRITICAL' ||
+    input.trajectorySeverity === 'CRITICAL' ||
+    input.recoverySeverity === 'CRITICAL' ||
+    input.predictiveSeverity === 'CRITICAL' ||
+    input.bottleneckSeverity === 'CRITICAL' ||
+    input.reliabilitySeverity === 'CRITICAL' ||
     input.governanceIntegrityStatus === 'GOVERNANCE_GAP_CRITICAL'
   ) {
     return 'CRITICAL_COMMAND_STATUS'
   }
 
   if (
-    input.pressureState === 'SPREADING' ||
-    input.trajectoryState === 'DETERIORATING' ||
-    input.memoryState === 'STRUCTURAL_FRAGILITY' ||
-    input.predictiveStatus === 'HIGH_FORECAST_PRESSURE' ||
-    input.recoveryStatus === 'RECOVERY_FRAGMENTATION_RISK'
+    input.pressureSeverity === 'HIGH' ||
+    input.trajectorySeverity === 'HIGH' ||
+    input.recoverySeverity === 'HIGH' ||
+    input.predictiveSeverity === 'HIGH' ||
+    input.bottleneckSeverity === 'HIGH' ||
+    input.reliabilitySeverity === 'HIGH'
   ) {
     return 'ELEVATED_COMMAND_STATUS'
   }
 
   if (
-    input.pressureState === 'BUILDING' ||
-    input.trajectoryState === 'DRIFTING' ||
-    input.memoryState === 'RECURRING_PATTERN' ||
-    input.routingPressureStatus === 'MODERATE_ROUTING_PRESSURE' ||
-    input.bottleneckStatus === 'MODERATE_BOTTLENECK_PRESSURE' ||
+    input.pressureSeverity === 'MODERATE' ||
+    input.trajectorySeverity === 'MODERATE' ||
+    input.recoverySeverity === 'MODERATE' ||
+    input.predictiveSeverity === 'MODERATE' ||
+    input.bottleneckSeverity === 'MODERATE' ||
+    input.reliabilitySeverity === 'MODERATE' ||
     input.governanceIntegrityStatus === 'GOVERNANCE_REVIEW_REQUIRED'
   ) {
     return 'WATCH_COMMAND_STATUS'
@@ -919,70 +986,6 @@ function interpretCommandStatus(status: string): Interpretation {
   }
 }
 
-function interpretPressureState(state: string): Interpretation {
-  if (state === 'CASCADE_RISK') {
-    return {
-      posture: 'PRESSURE CASCADE RISK',
-      meaning: 'Pressure may be spreading beyond containment.',
-      action: 'Activate pressure containment review.',
-    }
-  }
-
-  if (state === 'SPREADING') {
-    return {
-      posture: 'PRESSURE SPREADING',
-      meaning: 'Pressure is moving across operational pathways.',
-      action: 'Review spread points and rebalance ownership.',
-    }
-  }
-
-  if (state === 'BUILDING') {
-    return {
-      posture: 'PRESSURE BUILDING',
-      meaning: 'Pressure buildup is visible and requires watch.',
-      action: 'Increase pressure monitoring.',
-    }
-  }
-
-  return {
-    posture: 'PRESSURE CONTAINED',
-    meaning: 'Pressure appears contained in the current command view.',
-    action: 'Maintain pressure monitoring.',
-  }
-}
-
-function interpretTrajectoryState(state: string): Interpretation {
-  if (state === 'COLLAPSE_RISK') {
-    return {
-      posture: 'TRAJECTORY COLLAPSE RISK',
-      meaning: 'Trajectory may be moving toward system-level instability.',
-      action: 'Activate trajectory escalation review.',
-    }
-  }
-
-  if (state === 'DETERIORATING') {
-    return {
-      posture: 'TRAJECTORY DETERIORATING',
-      meaning: 'Continuity direction is weakening.',
-      action: 'Review drift, recovery, and stabilization movement.',
-    }
-  }
-
-  if (state === 'DRIFTING') {
-    return {
-      posture: 'TRAJECTORY DRIFTING',
-      meaning: 'Trajectory has not collapsed, but direction is not yet reliable.',
-      action: 'Strengthen monitoring and recovery ownership.',
-    }
-  }
-
-  return {
-    posture: 'TRAJECTORY HOLDING',
-    meaning: 'Trajectory is currently holding.',
-    action: 'Maintain trajectory monitoring.',
-  }
-}
-
 function interpretMemoryState(state: string): Interpretation {
   if (state === 'SYSTEMIC_MEMORY_RISK') {
     return {
@@ -1015,54 +1018,6 @@ function interpretMemoryState(state: string): Interpretation {
   }
 }
 
-function interpretContinuityState(state: string): Interpretation {
-  if (state === 'UNSTABLE') {
-    return {
-      posture: 'CONTINUITY UNSTABLE',
-      meaning: 'Continuity is not credible enough for closure.',
-      action: 'Escalate continuity review.',
-    }
-  }
-
-  if (state === 'STRAINED') {
-    return {
-      posture: 'CONTINUITY STRAINED',
-      meaning: 'Continuity pressure remains visible.',
-      action: 'Keep continuity under review.',
-    }
-  }
-
-  return {
-    posture: 'CONTINUITY HOLDING',
-    meaning: 'Continuity is currently holding.',
-    action: 'Maintain continuity monitoring.',
-  }
-}
-
-function interpretRecoveryStatus(status: string): Interpretation {
-  if (status === 'RECOVERY_CONFIRMED') {
-    return {
-      posture: 'RECOVERY CREDIBLE',
-      meaning: 'Recovery evidence appears strong enough to support confidence.',
-      action: 'Maintain recovery monitoring.',
-    }
-  }
-
-  if (status === 'RECOVERY_IN_PROGRESS') {
-    return {
-      posture: 'RECOVERY IN PROGRESS',
-      meaning: 'Recovery movement exists but still needs confirmation.',
-      action: 'Strengthen outcome confirmation.',
-    }
-  }
-
-  return {
-    posture: 'RECOVERY FRAGMENTED',
-    meaning: 'Recovery evidence is incomplete or fragmented.',
-    action: 'Review unresolved recovery pathways.',
-  }
-}
-
 function interpretGovernanceIntegrity(status: string): Interpretation {
   if (status === 'GOVERNANCE_GAP_CRITICAL') {
     return {
@@ -1087,32 +1042,18 @@ function interpretGovernanceIntegrity(status: string): Interpretation {
   }
 }
 
-function interpretPredictiveStatus(status: string): Interpretation {
-  if (status === 'HIGH_FORECAST_PRESSURE') {
-    return {
-      posture: 'FORECAST PRESSURE HIGH',
-      meaning: 'Forecast pressure suggests near-term command attention is needed.',
-      action: 'Review predictive pressure drivers.',
-    }
-  }
-
-  if (status === 'MODERATE_FORECAST_PRESSURE') {
-    return {
-      posture: 'FORECAST UNDER WATCH',
-      meaning: 'Forecast pressure is visible and should remain under watch.',
-      action: 'Compare upcoming continuity movement.',
-    }
-  }
-
-  return {
-    posture: 'FORECAST CONTROLLED',
-    meaning: 'Forecast pressure is currently controlled.',
-    action: 'Maintain predictive monitoring.',
-  }
-}
-
-function interpretRoutingPressure(status: string): Interpretation {
-  if (status === 'CRITICAL_ROUTING_PRESSURE') {
+function interpretRoutingPressure(input: {
+  highestResponderLoad: number
+  highestRegionalPressure: number
+  routedWithoutResponder: number
+  activeWithoutRouting: number
+  safeguardingFlags: number
+}): Interpretation {
+  if (
+    input.routedWithoutResponder >= 3 ||
+    input.highestResponderLoad >= 3 ||
+    input.safeguardingFlags >= 3
+  ) {
     return {
       posture: 'ROUTING PRESSURE CRITICAL',
       meaning: 'Routing ownership pressure may threaten continuity.',
@@ -1120,7 +1061,11 @@ function interpretRoutingPressure(status: string): Interpretation {
     }
   }
 
-  if (status === 'HIGH_ROUTING_PRESSURE') {
+  if (
+    input.highestResponderLoad >= 2 ||
+    input.highestRegionalPressure >= 3 ||
+    input.routedWithoutResponder >= 2
+  ) {
     return {
       posture: 'ROUTING PRESSURE HIGH',
       meaning: 'Routing pressure is elevated.',
@@ -1128,7 +1073,10 @@ function interpretRoutingPressure(status: string): Interpretation {
     }
   }
 
-  if (status === 'MODERATE_ROUTING_PRESSURE') {
+  if (
+    input.highestRegionalPressure >= 2 ||
+    input.activeWithoutRouting >= 1
+  ) {
     return {
       posture: 'ROUTING PRESSURE VISIBLE',
       meaning: 'Routing pressure remains visible.',
@@ -1140,38 +1088,6 @@ function interpretRoutingPressure(status: string): Interpretation {
     posture: 'ROUTING PRESSURE CONTAINED',
     meaning: 'Routing pressure is currently contained.',
     action: 'Maintain routing traceability.',
-  }
-}
-
-function interpretBottleneckStatus(status: string): Interpretation {
-  if (status === 'CRITICAL_BOTTLENECK_PRESSURE') {
-    return {
-      posture: 'BOTTLENECK CRITICAL',
-      meaning: 'Bottleneck pressure may be blocking stabilization.',
-      action: 'Escalate bottleneck review.',
-    }
-  }
-
-  if (status === 'HIGH_BOTTLENECK_PRESSURE') {
-    return {
-      posture: 'BOTTLENECK PRESSURE HIGH',
-      meaning: 'Bottleneck pressure is elevated.',
-      action: 'Review stuck pathways.',
-    }
-  }
-
-  if (status === 'MODERATE_BOTTLENECK_PRESSURE') {
-    return {
-      posture: 'BOTTLENECK VISIBLE',
-      meaning: 'Bottleneck pressure remains visible.',
-      action: 'Keep bottlenecks under review.',
-    }
-  }
-
-  return {
-    posture: 'BOTTLENECK CONTAINED',
-    meaning: 'Bottleneck pressure is currently contained.',
-    action: 'Maintain pathway monitoring.',
   }
 }
 
@@ -1280,7 +1196,7 @@ function interpretRegionalPressure(value: number): Interpretation {
 }
 
 function compactAction(actions: string[]) {
-  return Array.from(new Set(actions)).join(' ')
+  return Array.from(new Set(actions.filter(Boolean))).join(' ')
 }
 
 function PostureCard({
