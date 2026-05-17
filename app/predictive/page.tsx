@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { supabase } from '../../lib/supabase'
 
@@ -9,41 +10,31 @@ type CgiOperationalMetric = {
   id: string
   created_at: string
   scope: string
-  region: string | null
-  institution_id: string | null
+
+  continuity_state: string
+  pressure_propagation_state: string
+  trajectory_direction: string
+  structural_memory_state: string
+
   continuity_integrity_score: number
   stabilization_confidence_score: number
   escalation_pressure_index: number
   recovery_reliability_score: number
   operational_survivability_score: number
-  continuity_state: string
+
   propagation_risk: number
-  routing_friction: number
-  responder_pressure: number
-  escalation_velocity: number
-  coordination_instability: number
-  stabilization_drag: number
-  pressure_propagation_state: string
   trajectory_risk: number
+  structural_memory_risk: number
+
   continuity_drift: number
   escalation_momentum: number
   recovery_direction: number
   stabilization_trend: number
   unresolved_momentum: number
-  trajectory_direction: string
-  structural_memory_risk: number
-  routing_failure_recurrence: number
-  escalation_corridor_recurrence: number
-  institutional_fragility_signature: number
-  intervention_failure_pattern: number
-  responder_strain_recurrence: number
-  continuity_collapse_recurrence: number
-  structural_memory_state: string
+
   dominant_pressure_source: string | null
   dominant_trajectory_signal: string | null
   dominant_memory_pattern: string | null
-  executive_summary: string | null
-  action_cue: string | null
 }
 
 type PredictionState =
@@ -53,9 +44,10 @@ type PredictionState =
   | 'RISING_INSTABILITY'
   | 'HIGH_COLLAPSE_RISK'
 
-type PanelRow = {
-  label: string
-  value: string
+type Interpretation = {
+  posture: string
+  meaning: string
+  action: string
 }
 
 const SAMPLE_LIMIT = 120
@@ -77,7 +69,7 @@ function PredictiveContent() {
   }, [])
 
   async function loadPredictiveMetrics() {
-    setMessage('Loading persisted CGI predictive metrics...')
+    setMessage('Loading predictive intelligence...')
 
     const { data, error } = await supabase
       .from('cgi_operational_metrics')
@@ -87,18 +79,17 @@ function PredictiveContent() {
 
     if (error) {
       console.error(error)
-      setMessage('Failed to load persisted CGI predictive metrics.')
+      setMessage('Predictive intelligence could not be loaded.')
       return
     }
 
     setMetrics(data || [])
-    setMessage('Persisted CGI predictive metrics loaded.')
+    setMessage('Predictive intelligence loaded.')
   }
 
-  const prediction = useMemo(() => {
+  const intelligence = useMemo(() => {
     const ordered = [...metrics].sort(
-      (a, b) =>
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
     )
 
     const latest = ordered[ordered.length - 1] || null
@@ -107,23 +98,27 @@ function PredictiveContent() {
     const earlyWindow = ordered.slice(0, 5)
     const recentWindow = ordered.slice(-5)
 
-    const averagePropagationRisk = average(metrics.map((item) => item.propagation_risk))
-    const averageTrajectoryRisk = average(metrics.map((item) => item.trajectory_risk))
-    const averageMemoryRisk = average(metrics.map((item) => item.structural_memory_risk))
-    const averageEscalationPressure = average(
-      metrics.map((item) => item.escalation_pressure_index),
+    const propagationRisk = average(ordered.map((item) => item.propagation_risk))
+    const trajectoryRisk = average(ordered.map((item) => item.trajectory_risk))
+    const memoryRisk = average(ordered.map((item) => item.structural_memory_risk))
+    const escalationPressure = average(
+      ordered.map((item) => item.escalation_pressure_index)
     )
-    const averageContinuityIntegrity = average(
-      metrics.map((item) => item.continuity_integrity_score),
+
+    const continuityIntegrity = average(
+      ordered.map((item) => item.continuity_integrity_score)
     )
-    const averageStabilizationConfidence = average(
-      metrics.map((item) => item.stabilization_confidence_score),
+
+    const stabilizationConfidence = average(
+      ordered.map((item) => item.stabilization_confidence_score)
     )
-    const averageReliability = average(
-      metrics.map((item) => item.recovery_reliability_score),
+
+    const recoveryReliability = average(
+      ordered.map((item) => item.recovery_reliability_score)
     )
-    const averageSurvivability = average(
-      metrics.map((item) => item.operational_survivability_score),
+
+    const survivability = average(
+      ordered.map((item) => item.operational_survivability_score)
     )
 
     const earlyRisk = average(
@@ -133,8 +128,8 @@ function PredictiveContent() {
           item.trajectory_risk,
           item.structural_memory_risk,
           item.escalation_pressure_index,
-        ]),
-      ),
+        ])
+      )
     )
 
     const recentRisk = average(
@@ -144,11 +139,11 @@ function PredictiveContent() {
           item.trajectory_risk,
           item.structural_memory_risk,
           item.escalation_pressure_index,
-        ]),
-      ),
+        ])
+      )
     )
 
-    const riskVelocity = metrics.length < 2 ? 0 : recentRisk - earlyRisk
+    const riskVelocity = ordered.length < 2 ? 0 : recentRisk - earlyRisk
 
     const earlyReliability = average(
       earlyWindow.map((item) =>
@@ -157,8 +152,8 @@ function PredictiveContent() {
           item.stabilization_confidence_score,
           item.recovery_reliability_score,
           item.operational_survivability_score,
-        ]),
-      ),
+        ])
+      )
     )
 
     const recentReliability = average(
@@ -168,12 +163,12 @@ function PredictiveContent() {
           item.stabilization_confidence_score,
           item.recovery_reliability_score,
           item.operational_survivability_score,
-        ]),
-      ),
+        ])
+      )
     )
 
     const reliabilityVelocity =
-      metrics.length < 2 ? 0 : recentReliability - earlyReliability
+      ordered.length < 2 ? 0 : recentReliability - earlyReliability
 
     const latestRiskMovement =
       latest && previous
@@ -198,25 +193,25 @@ function PredictiveContent() {
         : 0
 
     const volatility = calculateVolatility(
-      metrics.map((item) =>
+      ordered.map((item) =>
         average([
           item.propagation_risk,
           item.trajectory_risk,
           item.structural_memory_risk,
           item.escalation_pressure_index,
-        ]),
-      ),
+        ])
+      )
     )
 
     const instabilityLoad = average([
-      averagePropagationRisk,
-      averageTrajectoryRisk,
-      averageMemoryRisk,
-      averageEscalationPressure,
-      100 - averageContinuityIntegrity,
-      100 - averageStabilizationConfidence,
-      100 - averageReliability,
-      100 - averageSurvivability,
+      propagationRisk,
+      trajectoryRisk,
+      memoryRisk,
+      escalationPressure,
+      100 - continuityIntegrity,
+      100 - stabilizationConfidence,
+      100 - recoveryReliability,
+      100 - survivability,
     ])
 
     const predictiveRiskScore = clamp(
@@ -225,11 +220,11 @@ function PredictiveContent() {
         Math.max(-reliabilityVelocity, 0) * 0.2 +
         volatility * 0.16 +
         Math.max(latestRiskMovement, 0) * 0.05 +
-        Math.max(-latestReliabilityMovement, 0) * 0.05,
+        Math.max(-latestReliabilityMovement, 0) * 0.05
     )
 
-    const predictionState = getPredictionState({
-      count: metrics.length,
+    const state = getPredictionState({
+      count: ordered.length,
       predictiveRiskScore,
       riskVelocity,
       reliabilityVelocity,
@@ -237,358 +232,229 @@ function PredictiveContent() {
       latest,
     })
 
-    const forecastHorizon = getForecastHorizon(predictionState)
-    const dominantForecastDriver = strongestDriver({
-      'Pressure propagation risk': averagePropagationRisk,
-      'Trajectory risk': averageTrajectoryRisk,
-      'Structural memory risk': averageMemoryRisk,
-      'Escalation pressure': averageEscalationPressure,
-      'Continuity weakness': 100 - averageContinuityIntegrity,
-      'Stabilization weakness': 100 - averageStabilizationConfidence,
-      'Recovery reliability weakness': 100 - averageReliability,
-      'Survivability weakness': 100 - averageSurvivability,
+    const predictionPosture = interpretPredictionState(state)
+    const forecastHorizon = interpretForecastHorizon(state)
+    const pressureForecast = interpretPressureForecast(escalationPressure)
+    const trajectoryForecast = interpretTrajectoryForecast(trajectoryRisk)
+    const memoryForecast = interpretMemoryForecast(memoryRisk)
+    const riskMovement = interpretRiskMovement(riskVelocity)
+    const reliabilityMovement = interpretReliabilityMovement(reliabilityVelocity)
+    const volatilityMeaning = interpretVolatility(volatility)
+    const survivabilityForecast = interpretSurvivability(survivability)
+    const historyDepth = interpretHistory(ordered.length)
+
+    const dominantDriver = strongestDriver({
+      'Pressure propagation risk': propagationRisk,
+      'Trajectory risk': trajectoryRisk,
+      'Structural memory risk': memoryRisk,
+      'Escalation pressure': escalationPressure,
+      'Continuity weakness': 100 - continuityIntegrity,
+      'Stabilization weakness': 100 - stabilizationConfidence,
+      'Recovery reliability weakness': 100 - recoveryReliability,
+      'Survivability weakness': 100 - survivability,
       'Risk velocity': Math.max(riskVelocity, 0),
       'Reliability decline': Math.max(-reliabilityVelocity, 0),
       Volatility: volatility,
     })
 
-    const executiveSummary = getExecutiveSummary(predictionState)
-    const actionCue = getActionCue(predictionState)
+    const executiveSummary = `${predictionPosture.meaning} Dominant forecast driver: ${dominantDriver}. ${riskMovement.meaning} ${reliabilityMovement.meaning}`
+
+    const actionCue = compactAction([
+      predictionPosture.action,
+      forecastHorizon.action,
+      pressureForecast.action,
+      reliabilityMovement.action,
+    ])
 
     return {
-      ordered,
       latest,
-      previous,
-      averagePropagationRisk,
-      averageTrajectoryRisk,
-      averageMemoryRisk,
-      averageEscalationPressure,
-      averageContinuityIntegrity,
-      averageStabilizationConfidence,
-      averageReliability,
-      averageSurvivability,
-      earlyRisk,
-      recentRisk,
-      riskVelocity,
-      earlyReliability,
-      recentReliability,
-      reliabilityVelocity,
-      latestRiskMovement,
-      latestReliabilityMovement,
-      volatility,
-      instabilityLoad,
-      predictiveRiskScore,
-      predictionState,
+      predictionPosture,
       forecastHorizon,
-      dominantForecastDriver,
+      pressureForecast,
+      trajectoryForecast,
+      memoryForecast,
+      riskMovement,
+      reliabilityMovement,
+      volatilityMeaning,
+      survivabilityForecast,
+      historyDepth,
+      dominantDriver,
       executiveSummary,
       actionCue,
     }
   }, [metrics])
 
-  const latestRows: PanelRow[] = prediction.latest
-    ? [
-        {
-          label: 'Latest Continuity State',
-          value: prediction.latest.continuity_state,
-        },
-        {
-          label: 'Latest Pressure State',
-          value: prediction.latest.pressure_propagation_state,
-        },
-        {
-          label: 'Latest Trajectory Direction',
-          value: prediction.latest.trajectory_direction,
-        },
-        {
-          label: 'Latest Structural Memory State',
-          value: prediction.latest.structural_memory_state,
-        },
-        {
-          label: 'Dominant Pressure Source',
-          value:
-            prediction.latest.dominant_pressure_source ||
-            'No pressure source recorded',
-        },
-        {
-          label: 'Dominant Trajectory Signal',
-          value:
-            prediction.latest.dominant_trajectory_signal ||
-            'No trajectory signal recorded',
-        },
-        {
-          label: 'Dominant Memory Pattern',
-          value:
-            prediction.latest.dominant_memory_pattern ||
-            'No memory pattern recorded',
-        },
-      ]
-    : []
-
-  const forecastRows: PanelRow[] = [
-    {
-      label: 'Forecast Horizon',
-      value: prediction.forecastHorizon,
-    },
-    {
-      label: 'Dominant Forecast Driver',
-      value: prediction.dominantForecastDriver,
-    },
-    {
-      label: 'Risk Velocity',
-      value: formatDelta(prediction.riskVelocity),
-    },
-    {
-      label: 'Reliability Velocity',
-      value: formatDelta(prediction.reliabilityVelocity),
-    },
-    {
-      label: 'Latest Risk Movement',
-      value: formatDelta(prediction.latestRiskMovement),
-    },
-    {
-      label: 'Latest Reliability Movement',
-      value: formatDelta(prediction.latestReliabilityMovement),
-    },
-    {
-      label: 'Volatility',
-      value: `${prediction.volatility}/100`,
-    },
-  ]
-
   const brief = `
 TSINAXA CGI PREDICTIVE INTELLIGENCE BRIEF
 
-Prediction State:
-${prediction.predictionState}
+Prediction Posture:
+${intelligence.predictionPosture.posture}
 
 Forecast Horizon:
-${prediction.forecastHorizon}
+${intelligence.forecastHorizon.posture}
 
-Snapshots Reviewed:
-${metrics.length}
+Pressure Forecast:
+${intelligence.pressureForecast.posture}
 
-Predictive Risk Score:
-${prediction.predictiveRiskScore}/100
+Trajectory Forecast:
+${intelligence.trajectoryForecast.posture}
 
-Dominant Forecast Driver:
-${prediction.dominantForecastDriver}
+Structural Memory Forecast:
+${intelligence.memoryForecast.posture}
 
-Recent Risk Average:
-${prediction.recentRisk}/100
+Risk Movement:
+${intelligence.riskMovement.posture}
 
-Early Risk Average:
-${prediction.earlyRisk}/100
-
-Risk Velocity:
-${prediction.riskVelocity}
-
-Recent Reliability Average:
-${prediction.recentReliability}/100
-
-Early Reliability Average:
-${prediction.earlyReliability}/100
-
-Reliability Velocity:
-${prediction.reliabilityVelocity}
+Reliability Movement:
+${intelligence.reliabilityMovement.posture}
 
 Volatility:
-${prediction.volatility}/100
+${intelligence.volatilityMeaning.posture}
 
-Instability Load:
-${prediction.instabilityLoad}/100
+Survivability Forecast:
+${intelligence.survivabilityForecast.posture}
 
-Average Propagation Risk:
-${prediction.averagePropagationRisk}/100
-
-Average Trajectory Risk:
-${prediction.averageTrajectoryRisk}/100
-
-Average Structural Memory Risk:
-${prediction.averageMemoryRisk}/100
-
-Average Escalation Pressure:
-${prediction.averageEscalationPressure}/100
-
-Average Continuity Integrity:
-${prediction.averageContinuityIntegrity}/100
-
-Average Stabilization Confidence:
-${prediction.averageStabilizationConfidence}/100
-
-Average Recovery Reliability:
-${prediction.averageReliability}/100
-
-Average Survivability:
-${prediction.averageSurvivability}/100
+Dominant Forecast Driver:
+${intelligence.dominantDriver}
 
 Executive Interpretation:
-${prediction.executiveSummary}
+${intelligence.executiveSummary}
 
 Recommended Action:
-${prediction.actionCue}
+${intelligence.actionCue}
 
 Governance-Safe Meaning:
-This predictive view uses persisted CGI operational metric snapshots to forecast whether visible continuity instability is likely to remain controlled, enter watch status, rise toward instability, or approach collapse risk. It does not judge people. It reads system-level historical patterns.
+This predictive view interprets persisted continuity memory. It does not judge people. It forecasts system-level instability posture, deterioration risk, and executive action urgency.
   `.trim()
 
   return (
     <main style={styles.page}>
       <div style={styles.container}>
-        <section style={styles.hero}>
+        <section style={styles.header}>
           <p style={styles.kicker}>TSINAXA CGI • PREDICTIVE INTELLIGENCE</p>
 
           <h1 style={styles.title}>Continuity Predictive Intelligence</h1>
 
           <p style={styles.subtitle}>
-            Use persisted CGI operational metric snapshots to forecast whether continuity
-            instability is likely to remain controlled, require watch, rise toward
-            instability, or approach collapse risk.
+            Executive foresight into whether continuity instability is contained,
+            entering watch status, rising, or approaching collapse risk.
           </p>
         </section>
 
         {message && <div style={styles.message}>{message}</div>}
 
-        <section style={styles.predictiveHero}>
+        <section style={styles.heroCard}>
           <div>
-            <p style={styles.scoreLabel}>Prediction State</p>
-            <h2 style={styles.predictionState}>{prediction.predictionState}</h2>
-            <p style={styles.panelNote}>{prediction.executiveSummary}</p>
-          </div>
+            <p style={styles.sectionKicker}>Prediction Posture</p>
 
-          <div style={styles.scoreGrid}>
-            <ScoreMetric
-              label="Predictive Risk Score"
-              value={prediction.predictiveRiskScore}
-            />
-            <ScoreMetric
-              label="Instability Load"
-              value={prediction.instabilityLoad}
-            />
-            <ScoreMetric label="Risk Velocity" value={prediction.riskVelocity} />
-            <ScoreMetric
-              label="Reliability Velocity"
-              value={prediction.reliabilityVelocity}
-            />
-            <ScoreMetric label="Volatility" value={prediction.volatility} />
-            <ScoreMetric
-              label="Recent Risk Average"
-              value={prediction.recentRisk}
-            />
+            <h2 style={styles.heroPosture}>
+              {intelligence.predictionPosture.posture}
+            </h2>
+
+            <p style={styles.heroMeaning}>{intelligence.executiveSummary}</p>
           </div>
 
           <div style={styles.actionBox}>
-            <strong>Recommended Action:</strong>
-            <span>{prediction.actionCue}</span>
+            <p style={styles.actionLabel}>Recommended Action</p>
+            <p style={styles.actionText}>{intelligence.actionCue}</p>
           </div>
         </section>
 
-        <section style={styles.metricsGrid}>
-          <Metric label="Snapshots Reviewed" value={metrics.length} />
-          <Metric label="Forecast Horizon" value={prediction.forecastHorizon} />
-          <Metric
-            label="Dominant Forecast Driver"
-            value={prediction.dominantForecastDriver}
-          />
-          <Metric
-            label="Average Propagation Risk"
-            value={`${prediction.averagePropagationRisk}/100`}
-          />
-          <Metric
-            label="Average Trajectory Risk"
-            value={`${prediction.averageTrajectoryRisk}/100`}
-          />
-          <Metric
-            label="Average Memory Risk"
-            value={`${prediction.averageMemoryRisk}/100`}
-          />
-          <Metric
-            label="Average Escalation Pressure"
-            value={`${prediction.averageEscalationPressure}/100`}
-          />
-          <Metric
-            label="Average Survivability"
-            value={`${prediction.averageSurvivability}/100`}
-          />
+        <section style={styles.postureGrid}>
+          <PostureCard title="Forecast Horizon" interpretation={intelligence.forecastHorizon} />
+          <PostureCard title="Pressure Forecast" interpretation={intelligence.pressureForecast} />
+          <PostureCard title="Trajectory Forecast" interpretation={intelligence.trajectoryForecast} />
+          <PostureCard title="Structural Memory" interpretation={intelligence.memoryForecast} />
+          <PostureCard title="Risk Movement" interpretation={intelligence.riskMovement} />
+          <PostureCard title="Reliability Movement" interpretation={intelligence.reliabilityMovement} />
         </section>
 
-        <section style={styles.layoutGrid}>
-          <Panel
-            title="Latest Persisted State"
-            note="Most recent saved operational intelligence snapshot."
-            rows={latestRows}
-          />
+        <section style={styles.compactGrid}>
+          <CompactCard title="History Depth" value={intelligence.historyDepth.posture} />
+          <CompactCard title="Dominant Forecast Driver" value={intelligence.dominantDriver} />
+          <CompactCard title="Volatility" value={intelligence.volatilityMeaning.posture} />
+          <CompactCard title="Survivability Forecast" value={intelligence.survivabilityForecast.posture} />
+        </section>
 
-          <Panel
-            title="Forecast Drivers"
-            note="Signals used to interpret near-term continuity risk."
-            rows={forecastRows}
-          />
+        <section style={styles.twoColumn}>
+          <Panel title="Latest Predictive Context">
+            <Info label="Continuity State" value={intelligence.latest?.continuity_state || 'Not recorded'} />
+            <Info label="Pressure State" value={intelligence.latest?.pressure_propagation_state || 'Not recorded'} />
+            <Info label="Trajectory Direction" value={intelligence.latest?.trajectory_direction || 'Not recorded'} />
+            <Info label="Structural Memory" value={intelligence.latest?.structural_memory_state || 'Not recorded'} />
+            <Info label="Dominant Pressure" value={intelligence.latest?.dominant_pressure_source || 'Not recorded'} />
+          </Panel>
+
+          <Panel title="Forecast Reading">
+            <Info label="Prediction Posture" value={intelligence.predictionPosture.posture} />
+            <Info label="Forecast Horizon" value={intelligence.forecastHorizon.posture} />
+            <Info label="Dominant Driver" value={intelligence.dominantDriver} />
+            <Info label="Risk Movement" value={intelligence.riskMovement.posture} />
+            <Info label="Reliability Movement" value={intelligence.reliabilityMovement.posture} />
+          </Panel>
         </section>
 
         <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Recent Predictive Snapshot Trail</h2>
+          <div style={styles.cardHeader}>
+            <div>
+              <h2 style={styles.cardTitle}>Recent Predictive Memory Trail</h2>
+              <p style={styles.cardNote}>
+                Recent snapshots are displayed as threshold forecasts, not raw risk scores.
+              </p>
+            </div>
 
-          <p style={styles.panelNote}>
-            Latest saved rows from <code>cgi_operational_metrics</code>. These are
-            historical predictive inputs, not live recalculations.
-          </p>
+            <button onClick={loadPredictiveMetrics} style={styles.primaryButton}>
+              Refresh
+            </button>
+          </div>
 
           <div style={styles.tableWrap}>
             <table style={styles.table}>
               <thead>
                 <tr>
                   <th style={styles.th}>Created</th>
-                  <th style={styles.th}>Scope</th>
                   <th style={styles.th}>Continuity</th>
                   <th style={styles.th}>Pressure</th>
                   <th style={styles.th}>Trajectory</th>
                   <th style={styles.th}>Memory</th>
-                  <th style={styles.th}>Risk</th>
-                  <th style={styles.th}>Reliability</th>
+                  <th style={styles.th}>Forecast</th>
                 </tr>
               </thead>
 
               <tbody>
                 {metrics.length === 0 && (
                   <tr>
-                    <td style={styles.td} colSpan={8}>
-                      No persisted CGI operational metrics found yet.
+                    <td style={styles.td} colSpan={6}>
+                      No persisted predictive memory found yet.
                     </td>
                   </tr>
                 )}
 
-                {metrics.slice(0, 12).map((item) => (
+                {metrics.slice(0, 8).map((item) => (
                   <tr key={item.id}>
                     <td style={styles.td}>{formatDate(item.created_at)}</td>
-                    <td style={styles.td}>{item.scope}</td>
                     <td style={styles.td}>{item.continuity_state}</td>
-                    <td style={styles.td}>{item.pressure_propagation_state}</td>
-                    <td style={styles.td}>{item.trajectory_direction}</td>
-                    <td style={styles.td}>{item.structural_memory_state}</td>
                     <td style={styles.td}>
-                      {average([
-                        item.propagation_risk,
-                        item.trajectory_risk,
-                        item.structural_memory_risk,
-                        item.escalation_pressure_index,
-                      ])}
-                      /100
+                      {interpretPressureForecast(item.escalation_pressure_index).posture}
                     </td>
-                    <td style={styles.td}>{item.recovery_reliability_score}/100</td>
+                    <td style={styles.td}>
+                      {interpretTrajectoryForecast(item.trajectory_risk).posture}
+                    </td>
+                    <td style={styles.td}>
+                      {interpretMemoryForecast(item.structural_memory_risk).posture}
+                    </td>
+                    <td style={styles.td}>
+                      {interpretSurvivability(item.operational_survivability_score).posture}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-
-          <button onClick={loadPredictiveMetrics} style={styles.primaryButton}>
-            Refresh Predictive Metrics
-          </button>
         </section>
 
         <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Generated Predictive Brief</h2>
+          <h2 style={styles.cardTitle}>Generated Predictive Brief</h2>
           <pre style={styles.summaryBox}>{brief}</pre>
         </section>
       </div>
@@ -598,9 +464,7 @@ This predictive view uses persisted CGI operational metric snapshots to forecast
 
 function average(values: number[]) {
   const valid = values.filter((value) => Number.isFinite(value))
-
   if (valid.length === 0) return 0
-
   return Math.round(valid.reduce((sum, value) => sum + value, 0) / valid.length)
 }
 
@@ -610,16 +474,21 @@ function clamp(value: number) {
 
 function calculateVolatility(values: number[]) {
   const valid = values.filter((value) => Number.isFinite(value))
-
   if (valid.length < 2) return 0
 
   const mean = average(valid)
-
   const variance =
     valid.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) /
     valid.length
 
   return Math.min(100, Math.round(Math.sqrt(variance)))
+}
+
+function strongestDriver(scores: Record<string, number>) {
+  return (
+    Object.entries(scores).sort((a, b) => b[1] - a[1])[0]?.[0] ||
+    'No dominant forecast driver detected'
+  )
 }
 
 function getPredictionState(input: {
@@ -662,114 +531,352 @@ function getPredictionState(input: {
   return 'LOW_NEAR_TERM_RISK'
 }
 
-function getForecastHorizon(state: PredictionState) {
-  if (state === 'INSUFFICIENT_HISTORY') return 'More snapshots required'
-  if (state === 'HIGH_COLLAPSE_RISK') return 'Immediate command review'
-  if (state === 'RISING_INSTABILITY') return 'Near-term risk window'
-  if (state === 'WATCH_RISK') return 'Watch window'
-  return 'Routine monitoring window'
-}
-
-function getExecutiveSummary(state: PredictionState) {
+function interpretPredictionState(state: PredictionState): Interpretation {
   if (state === 'INSUFFICIENT_HISTORY') {
-    return 'There are not enough persisted snapshots yet to make a reliable predictive judgment. Continue saving operational snapshots across meaningful operating periods.'
+    return {
+      posture: 'INSUFFICIENT HISTORY',
+      meaning: 'Predictive memory is not yet deep enough to forecast instability.',
+      action: 'Continue saving operational snapshots before relying on forecast posture.',
+    }
   }
 
   if (state === 'HIGH_COLLAPSE_RISK') {
-    return 'Predictive intelligence shows high collapse risk. Risk velocity, reliability decline, or unstable continuity signals suggest command review should happen immediately.'
+    return {
+      posture: 'HIGH COLLAPSE RISK',
+      meaning:
+        'Forecast signals suggest instability may exceed containment if command review does not occur.',
+      action: 'Activate command review and inspect pressure, trajectory, memory, and reliability weak points.',
+    }
   }
 
   if (state === 'RISING_INSTABILITY') {
-    return 'Predictive intelligence shows rising instability. Risk is increasing faster than stabilization confidence or reliability is improving.'
+    return {
+      posture: 'RISING INSTABILITY',
+      meaning:
+        'Risk is increasing faster than stabilization confidence or reliability is improving.',
+      action: 'Review rising drivers and intervene before instability becomes collapse risk.',
+    }
   }
 
   if (state === 'WATCH_RISK') {
-    return 'Predictive intelligence shows watch-level risk. The system is not collapsing, but instability signals need closer monitoring.'
+    return {
+      posture: 'WATCH RISK',
+      meaning:
+        'The system is not collapsing, but instability signals require closer monitoring.',
+      action: 'Increase monitoring frequency and compare upcoming snapshots.',
+    }
   }
 
-  return 'Predictive intelligence shows low near-term risk. Current persisted snapshots do not show major rising instability.'
+  return {
+    posture: 'LOW NEAR-TERM RISK',
+    meaning:
+      'Persisted memory does not currently show major rising instability.',
+    action: 'Maintain routine monitoring and continue saving snapshots.',
+  }
 }
 
-function getActionCue(state: PredictionState) {
-  if (state === 'INSUFFICIENT_HISTORY') {
-    return 'Save more operational snapshots before relying on forecast signals.'
-  }
-
+function interpretForecastHorizon(state: PredictionState): Interpretation {
   if (state === 'HIGH_COLLAPSE_RISK') {
-    return 'Activate command review, inspect risk velocity, and prioritize pressure, trajectory, structural memory, and reliability weak points.'
+    return {
+      posture: 'IMMEDIATE COMMAND WINDOW',
+      meaning: 'Forecast posture requires immediate command visibility.',
+      action: 'Do not wait for another cycle before review.',
+    }
   }
 
   if (state === 'RISING_INSTABILITY') {
-    return 'Review rising risk drivers and intervene before instability becomes operational collapse.'
+    return {
+      posture: 'NEAR-TERM RISK WINDOW',
+      meaning: 'Instability is rising within the current operating horizon.',
+      action: 'Review pressure and trajectory before the next cycle.',
+    }
   }
 
   if (state === 'WATCH_RISK') {
-    return 'Increase monitoring frequency and compare upcoming snapshots against current risk velocity.'
+    return {
+      posture: 'WATCH WINDOW',
+      meaning: 'Instability signals should remain visible under closer monitoring.',
+      action: 'Compare upcoming snapshots against current posture.',
+    }
   }
 
-  return 'Maintain routine monitoring and continue saving snapshots to detect early movement.'
+  if (state === 'INSUFFICIENT_HISTORY') {
+    return {
+      posture: 'MORE MEMORY REQUIRED',
+      meaning: 'Forecast horizon cannot be trusted with limited history.',
+      action: 'Build predictive memory.',
+    }
+  }
+
+  return {
+    posture: 'ROUTINE MONITORING WINDOW',
+    meaning: 'Current forecast posture supports routine monitoring.',
+    action: 'Maintain snapshot discipline.',
+  }
 }
 
-function strongestDriver(scores: Record<string, number>) {
-  return (
-    Object.entries(scores).sort((a, b) => b[1] - a[1])[0]?.[0] ||
-    'No dominant forecast driver detected'
-  )
+function interpretPressureForecast(value: number): Interpretation {
+  if (value >= 70) {
+    return {
+      posture: 'PRESSURE ESCALATING',
+      meaning: 'Pressure is high enough to threaten continuity containment.',
+      action: 'Escalate pressure review.',
+    }
+  }
+
+  if (value >= 50) {
+    return {
+      posture: 'PRESSURE UNDER WATCH',
+      meaning: 'Pressure remains visible and may shape near-term instability.',
+      action: 'Keep pressure visible.',
+    }
+  }
+
+  if (value >= 35) {
+    return {
+      posture: 'PRESSURE MONITORED',
+      meaning: 'Pressure exists but is not dominant.',
+      action: 'Continue monitoring.',
+    }
+  }
+
+  return {
+    posture: 'PRESSURE CONTAINED',
+    meaning: 'Pressure appears contained in the reviewed memory.',
+    action: 'Maintain monitoring.',
+  }
 }
 
-function formatDelta(value: number) {
-  if (value > 0) return `+${value}`
-  return `${value}`
+function interpretTrajectoryForecast(value: number): Interpretation {
+  if (value >= 70) {
+    return {
+      posture: 'TRAJECTORY DETERIORATING',
+      meaning: 'Trajectory risk suggests the system may be moving toward instability.',
+      action: 'Review trajectory immediately.',
+    }
+  }
+
+  if (value >= 50) {
+    return {
+      posture: 'TRAJECTORY UNDER WATCH',
+      meaning: 'Trajectory requires closer review before deterioration becomes visible.',
+      action: 'Keep trajectory under governance watch.',
+    }
+  }
+
+  return {
+    posture: 'TRAJECTORY CONTAINED',
+    meaning: 'Trajectory risk is currently contained.',
+    action: 'Maintain directional monitoring.',
+  }
+}
+
+function interpretMemoryForecast(value: number): Interpretation {
+  if (value >= 70) {
+    return {
+      posture: 'MEMORY RISK HIGH',
+      meaning: 'Recurring instability patterns are strong enough to threaten survivability.',
+      action: 'Review recurrence patterns.',
+    }
+  }
+
+  if (value >= 50) {
+    return {
+      posture: 'MEMORY RISK UNDER WATCH',
+      meaning: 'Structural memory patterns remain visible.',
+      action: 'Keep recurrence visible.',
+    }
+  }
+
+  return {
+    posture: 'MEMORY RISK CONTAINED',
+    meaning: 'Structural memory risk appears contained.',
+    action: 'Maintain continuity memory.',
+  }
+}
+
+function interpretRiskMovement(value: number): Interpretation {
+  if (value >= 10) {
+    return {
+      posture: 'RISK RISING',
+      meaning: 'Risk is increasing across the reviewed memory window.',
+      action: 'Review forecast drivers.',
+    }
+  }
+
+  if (value <= -10) {
+    return {
+      posture: 'RISK EASING',
+      meaning: 'Risk movement is easing across the reviewed memory window.',
+      action: 'Maintain monitoring.',
+    }
+  }
+
+  return {
+    posture: 'RISK HOLDING',
+    meaning: 'Risk is neither clearly rising nor clearly easing.',
+    action: 'Continue comparison across future snapshots.',
+  }
+}
+
+function interpretReliabilityMovement(value: number): Interpretation {
+  if (value >= 10) {
+    return {
+      posture: 'RELIABILITY IMPROVING',
+      meaning: 'Reliability is improving against forecast risk.',
+      action: 'Protect recovery discipline.',
+    }
+  }
+
+  if (value <= -10) {
+    return {
+      posture: 'RELIABILITY WEAKENING',
+      meaning: 'Reliability is weakening while predictive risk remains visible.',
+      action: 'Review reliability deterioration.',
+    }
+  }
+
+  return {
+    posture: 'RELIABILITY HOLDING',
+    meaning: 'Reliability movement is currently holding.',
+    action: 'Maintain monitoring.',
+  }
+}
+
+function interpretVolatility(value: number): Interpretation {
+  if (value >= 30) {
+    return {
+      posture: 'FORECAST VOLATILE',
+      meaning: 'Predictive signals are fluctuating enough to weaken forecast confidence.',
+      action: 'Extend the observation window.',
+    }
+  }
+
+  if (value >= 18) {
+    return {
+      posture: 'VARIATION CONTAINED',
+      meaning: 'Some forecast variation exists, but not enough to indicate collapse.',
+      action: 'Watch for repeated instability.',
+    }
+  }
+
+  return {
+    posture: 'FORECAST CONSISTENT',
+    meaning: 'Predictive movement appears steady.',
+    action: 'Maintain routine monitoring.',
+  }
+}
+
+function interpretSurvivability(value: number): Interpretation {
+  if (value >= 75) {
+    return {
+      posture: 'SURVIVABILITY FAVORABLE',
+      meaning: 'Survivability signals support continued stability.',
+      action: 'Confirm durability.',
+    }
+  }
+
+  if (value >= 55) {
+    return {
+      posture: 'SURVIVABILITY MONITORED',
+      meaning: 'Survivability exists but still requires review.',
+      action: 'Do not assume closure.',
+    }
+  }
+
+  if (value >= 40) {
+    return {
+      posture: 'SURVIVABILITY FRAGILE',
+      meaning: 'Survivability may weaken if pressure continues.',
+      action: 'Continue survivability review.',
+    }
+  }
+
+  return {
+    posture: 'SURVIVABILITY AT RISK',
+    meaning: 'Survivability is too weak for confidence.',
+    action: 'Escalate survivability review.',
+  }
+}
+
+function interpretHistory(count: number): Interpretation {
+  if (count < 3) {
+    return {
+      posture: 'INSUFFICIENT HISTORY',
+      meaning: 'Too few snapshots exist for predictive interpretation.',
+      action: 'Continue saving operational snapshots.',
+    }
+  }
+
+  if (count < 10) {
+    return {
+      posture: 'EARLY MEMORY',
+      meaning: 'Predictive memory has started but remains early.',
+      action: 'Build more continuity memory.',
+    }
+  }
+
+  return {
+    posture: 'PREDICTIVE MEMORY ESTABLISHED',
+    meaning: 'Persisted memory supports forecast interpretation.',
+    action: 'Use posture to guide executive review.',
+  }
+}
+
+function compactAction(actions: string[]) {
+  return Array.from(new Set(actions)).join(' ')
 }
 
 function formatDate(value: string) {
   if (!value) return 'Not recorded'
-
   return new Date(value).toLocaleString()
 }
 
-function Metric({ label, value }: { label: string; value: string | number }) {
+function PostureCard({
+  title,
+  interpretation,
+}: {
+  title: string
+  interpretation: Interpretation
+}) {
   return (
-    <div style={styles.metricCard}>
-      <p style={styles.metricLabel}>{label}</p>
-      <h2 style={styles.metricValue}>{value}</h2>
-    </div>
+    <article style={styles.postureCard}>
+      <p style={styles.cardKicker}>{title}</p>
+      <h3 style={styles.postureTitle}>{interpretation.posture}</h3>
+      <p style={styles.postureMeaning}>{interpretation.meaning}</p>
+    </article>
   )
 }
 
-function ScoreMetric({ label, value }: { label: string; value: number }) {
+function CompactCard({ title, value }: { title: string; value: string }) {
   return (
-    <div style={styles.scoreCard}>
-      <p style={styles.scoreMetricLabel}>{label}</p>
-      <h3 style={styles.scoreMetricValue}>{value}/100</h3>
-    </div>
+    <article style={styles.compactCard}>
+      <p style={styles.cardKicker}>{title}</p>
+      <h3 style={styles.compactValue}>{value}</h3>
+    </article>
   )
 }
 
 function Panel({
   title,
-  note,
-  rows,
+  children,
 }: {
   title: string
-  note: string
-  rows: PanelRow[]
+  children: React.ReactNode
 }) {
   return (
-    <div style={styles.card}>
-      <h2 style={styles.sectionTitle}>{title}</h2>
-      <p style={styles.panelNote}>{note}</p>
+    <section style={styles.card}>
+      <h2 style={styles.cardTitle}>{title}</h2>
+      <div style={styles.infoList}>{children}</div>
+    </section>
+  )
+}
 
-      <div style={styles.panelList}>
-        {rows.length === 0 && <p style={styles.emptyText}>No data available yet.</p>}
-
-        {rows.map((row, index) => (
-          <div key={`${row.label}-${index}`} style={styles.panelRow}>
-            <span>{row.label}</span>
-            <strong>{row.value}</strong>
-          </div>
-        ))}
-      </div>
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={styles.infoRow}>
+      <span style={styles.infoLabel}>{label}</span>
+      <strong style={styles.infoValue}>{value}</strong>
     </div>
   )
 }
@@ -778,195 +885,258 @@ const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
     color: 'white',
+    overflowX: 'hidden',
   },
   container: {
-    maxWidth: '1280px',
+    width: '100%',
+    maxWidth: '1120px',
     margin: '0 auto',
+    padding: '0 20px 48px',
+    boxSizing: 'border-box',
   },
-  hero: {
-    marginBottom: '32px',
+  header: {
+    marginBottom: '20px',
+    paddingTop: '4px',
   },
   kicker: {
-    color: '#67e8f9',
+    color: '#fdba74',
     fontSize: '12px',
     fontWeight: 900,
     letterSpacing: '2px',
+    margin: 0,
   },
   title: {
-    fontSize: 'clamp(34px, 6vw, 58px)',
+    fontSize: 'clamp(32px, 5vw, 48px)',
     lineHeight: 1.05,
-    margin: '12px 0',
+    margin: '10px 0',
   },
   subtitle: {
     color: '#cbd5e1',
-    maxWidth: '980px',
-    lineHeight: 1.7,
-    fontSize: '18px',
+    maxWidth: '760px',
+    lineHeight: 1.65,
+    fontSize: '16px',
+    margin: 0,
   },
   message: {
-    background: '#064e3b',
-    color: '#bbf7d0',
-    padding: '16px',
+    background: '#431407',
+    color: '#ffedd5',
+    padding: '12px 14px',
     borderRadius: '14px',
     fontWeight: 800,
-    marginBottom: '20px',
+    marginBottom: '16px',
+    fontSize: '14px',
   },
-  predictiveHero: {
+  heroCard: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.4fr) minmax(260px, 0.6fr)',
+    gap: '16px',
     background: '#020617',
     border: '1px solid #f97316',
-    borderRadius: '28px',
-    padding: '24px',
-    marginBottom: '24px',
-    boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
+    borderRadius: '24px',
+    padding: '22px',
+    marginBottom: '16px',
+    boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
   },
-  scoreLabel: {
+  sectionKicker: {
     color: '#94a3b8',
     fontWeight: 900,
     letterSpacing: '0.12em',
     textTransform: 'uppercase',
     margin: 0,
+    fontSize: '12px',
   },
-  predictionState: {
-    fontSize: 'clamp(36px, 7vw, 68px)',
-    margin: '8px 0 20px',
+  heroPosture: {
+    fontSize: 'clamp(34px, 6vw, 56px)',
+    margin: '8px 0 12px',
     color: '#fdba74',
     letterSpacing: '-0.05em',
+    lineHeight: 1,
   },
-  scoreGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
-    gap: '14px',
-  },
-  scoreCard: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '18px',
-  },
-  scoreMetricLabel: {
-    color: '#94a3b8',
-    fontWeight: 800,
+  heroMeaning: {
+    color: '#ffedd5',
+    lineHeight: 1.6,
     margin: 0,
-  },
-  scoreMetricValue: {
-    color: '#f8fafc',
-    fontSize: '28px',
-    margin: '10px 0 0',
+    maxWidth: '720px',
   },
   actionBox: {
-    display: 'grid',
-    gap: '8px',
     background: '#431407',
     border: '1px solid #f97316',
     borderRadius: '18px',
-    padding: '18px',
-    marginTop: '16px',
+    padding: '16px',
+    alignSelf: 'stretch',
+  },
+  actionLabel: {
+    color: '#fdba74',
+    fontWeight: 900,
+    margin: '0 0 8px',
+    fontSize: '12px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.12em',
+  },
+  actionText: {
     color: '#ffedd5',
+    lineHeight: 1.55,
+    margin: 0,
+    fontSize: '14px',
   },
-  metricsGrid: {
+  postureGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
     gap: '14px',
-    marginBottom: '24px',
+    marginBottom: '16px',
   },
-  metricCard: {
+  postureCard: {
     background: '#0f172a',
     border: '1px solid #1e293b',
     borderRadius: '18px',
-    padding: '20px',
-    overflow: 'hidden',
+    padding: '16px',
+    minHeight: '150px',
+    boxSizing: 'border-box',
   },
-  metricLabel: {
+  cardKicker: {
     color: '#94a3b8',
     fontWeight: 800,
     margin: 0,
+    fontSize: '12px',
   },
-  metricValue: {
-    fontSize: 'clamp(22px, 4vw, 34px)',
-    margin: '8px 0 0',
+  postureTitle: {
+    color: '#f8fafc',
+    fontSize: '19px',
+    margin: '10px 0 8px',
+    lineHeight: 1.15,
+  },
+  postureMeaning: {
+    color: '#cbd5e1',
+    lineHeight: 1.5,
+    fontSize: '14px',
+    margin: 0,
+  },
+  compactGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: '14px',
+    marginBottom: '16px',
+  },
+  compactCard: {
+    background: '#0f172a',
+    border: '1px solid #1e293b',
+    borderRadius: '18px',
+    padding: '16px',
+    minHeight: '104px',
+    boxSizing: 'border-box',
+  },
+  compactValue: {
+    fontSize: '18px',
+    lineHeight: 1.2,
+    margin: '10px 0 0',
+    color: '#f8fafc',
     overflowWrap: 'anywhere',
   },
-  layoutGrid: {
+  twoColumn: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-    gap: '20px',
-    marginBottom: '28px',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: '16px',
+    marginBottom: '16px',
   },
   card: {
     background: '#020617',
     border: '1px solid #1e293b',
-    borderRadius: '24px',
-    padding: '24px',
-    marginBottom: '28px',
-    boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
+    borderRadius: '22px',
+    padding: '20px',
+    marginBottom: '16px',
+    boxShadow: '0 20px 50px rgba(0,0,0,0.24)',
+    boxSizing: 'border-box',
+    overflow: 'hidden',
   },
-  sectionTitle: {
-    fontSize: '26px',
-    margin: '0 0 10px',
-  },
-  panelNote: {
-    color: '#cbd5e1',
-    lineHeight: 1.6,
-    marginBottom: '18px',
-  },
-  panelList: {
-    display: 'grid',
-    gap: '10px',
-  },
-  panelRow: {
+  cardHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     gap: '16px',
+    alignItems: 'flex-start',
+    marginBottom: '14px',
+  },
+  cardTitle: {
+    fontSize: '22px',
+    margin: 0,
+    lineHeight: 1.2,
+  },
+  cardNote: {
+    color: '#94a3b8',
+    lineHeight: 1.5,
+    margin: '6px 0 0',
+    fontSize: '14px',
+  },
+  infoList: {
+    display: 'grid',
+    gap: '10px',
+    marginTop: '14px',
+  },
+  infoRow: {
+    display: 'grid',
+    gridTemplateColumns: '160px minmax(0, 1fr)',
+    gap: '12px',
     background: '#0f172a',
     border: '1px solid #334155',
     borderRadius: '14px',
-    padding: '14px',
+    padding: '12px',
+    alignItems: 'start',
   },
-  emptyText: {
+  infoLabel: {
     color: '#94a3b8',
+    fontWeight: 800,
+    fontSize: '12px',
+  },
+  infoValue: {
+    color: '#f8fafc',
+    lineHeight: 1.45,
+    overflowWrap: 'anywhere',
   },
   tableWrap: {
+    width: '100%',
     overflowX: 'auto',
-    marginBottom: '20px',
   },
   table: {
     width: '100%',
     borderCollapse: 'collapse',
-    minWidth: '900px',
+    minWidth: '760px',
   },
   th: {
     textAlign: 'left',
     color: '#94a3b8',
     borderBottom: '1px solid #334155',
-    padding: '12px',
-    fontSize: '12px',
+    padding: '10px',
+    fontSize: '11px',
     textTransform: 'uppercase',
   },
   td: {
     borderBottom: '1px solid #1e293b',
-    padding: '12px',
+    padding: '10px',
     color: '#e2e8f0',
     verticalAlign: 'top',
+    fontWeight: 700,
+    fontSize: '13px',
   },
   primaryButton: {
-    width: '100%',
-    padding: '16px',
-    borderRadius: '14px',
+    padding: '10px 14px',
+    borderRadius: '12px',
     border: 'none',
-    background: '#67e8f9',
-    color: '#082f49',
+    background: '#fdba74',
+    color: '#431407',
     fontWeight: 900,
     cursor: 'pointer',
-    fontSize: '16px',
+    fontSize: '14px',
+    whiteSpace: 'nowrap',
   },
   summaryBox: {
     whiteSpace: 'pre-wrap',
     background: '#0f172a',
     border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '18px',
+    borderRadius: '16px',
+    padding: '16px',
     color: '#e2e8f0',
-    lineHeight: 1.6,
-    minHeight: '360px',
+    lineHeight: 1.55,
+    minHeight: '260px',
+    fontSize: '14px',
+    overflowX: 'auto',
   },
 }
