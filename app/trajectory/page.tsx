@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
+import { interpretTrajectory } from '@/lib/cgi/interpreters/interpretTrajectory'
 import { supabase } from '../../lib/supabase'
 
 type CgiOperationalMetric = {
@@ -34,13 +35,6 @@ type CgiOperationalMetric = {
   dominant_trajectory_signal: string | null
   dominant_memory_pattern: string | null
 }
-
-type TrajectoryState =
-  | 'INSUFFICIENT_HISTORY'
-  | 'TRAJECTORY_RECOVERING'
-  | 'TRAJECTORY_HOLDING'
-  | 'TRAJECTORY_DRIFTING'
-  | 'TRAJECTORY_DETERIORATING'
 
 type Interpretation = {
   posture: string
@@ -87,7 +81,9 @@ function TrajectoryContent() {
 
   const trajectory = useMemo(() => {
     const ordered = [...metrics].sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      (a, b) =>
+        new Date(a.created_at).getTime() -
+        new Date(b.created_at).getTime()
     )
 
     const latest = ordered[ordered.length - 1] || null
@@ -95,20 +91,53 @@ function TrajectoryContent() {
     const earlyWindow = ordered.slice(0, 5)
     const recentWindow = ordered.slice(-5)
 
-    const trajectoryRisk = average(ordered.map((item) => item.trajectory_risk))
-    const drift = average(ordered.map((item) => item.continuity_drift))
-    const escalationMomentum = average(ordered.map((item) => item.escalation_momentum))
-    const recoveryDirection = average(ordered.map((item) => item.recovery_direction))
-    const stabilizationTrend = average(ordered.map((item) => item.stabilization_trend))
-    const unresolvedMomentum = average(ordered.map((item) => item.unresolved_momentum))
-    const continuityIntegrity = average(ordered.map((item) => item.continuity_integrity_score))
+    const trajectoryRisk = average(
+      ordered.map((item) => item.trajectory_risk)
+    )
+
+    const drift = average(
+      ordered.map((item) => item.continuity_drift)
+    )
+
+    const escalationMomentum = average(
+      ordered.map((item) => item.escalation_momentum)
+    )
+
+    const recoveryDirection = average(
+      ordered.map((item) => item.recovery_direction)
+    )
+
+    const stabilizationTrend = average(
+      ordered.map((item) => item.stabilization_trend)
+    )
+
+    const unresolvedMomentum = average(
+      ordered.map((item) => item.unresolved_momentum)
+    )
+
+    const continuityIntegrity = average(
+      ordered.map((item) => item.continuity_integrity_score)
+    )
+
     const stabilizationConfidence = average(
       ordered.map((item) => item.stabilization_confidence_score)
     )
-    const reliability = average(ordered.map((item) => item.recovery_reliability_score))
-    const survivability = average(ordered.map((item) => item.operational_survivability_score))
-    const propagation = average(ordered.map((item) => item.propagation_risk))
-    const memoryRisk = average(ordered.map((item) => item.structural_memory_risk))
+
+    const reliability = average(
+      ordered.map((item) => item.recovery_reliability_score)
+    )
+
+    const survivability = average(
+      ordered.map((item) => item.operational_survivability_score)
+    )
+
+    const propagation = average(
+      ordered.map((item) => item.propagation_risk)
+    )
+
+    const memoryRisk = average(
+      ordered.map((item) => item.structural_memory_risk)
+    )
 
     const earlyPressure = average(
       earlyWindow.map((item) =>
@@ -207,14 +236,11 @@ function TrajectoryContent() {
       memoryRisk,
     ])
 
-    const state = getTrajectoryState({
-      count: ordered.length,
-      directionStrength,
-      deteriorationLoad,
-      trajectoryPressureMovement,
-      stabilizationMovement,
-      trajectoryVolatility,
-      latest,
+    const centralizedTrajectory = interpretTrajectory({
+      trajectoryRisk,
+      continuityDrift: drift,
+      unresolvedMomentum,
+      survivabilityRisk: 100 - survivability,
     })
 
     const dominantDriver = strongestDriver({
@@ -231,7 +257,12 @@ function TrajectoryContent() {
       'Trajectory volatility': trajectoryVolatility,
     })
 
-    const trajectoryPosture = interpretTrajectoryState(state)
+    const trajectoryPosture = {
+      posture: centralizedTrajectory.posture,
+      meaning: centralizedTrajectory.summary,
+      action: centralizedTrajectory.executiveAction,
+    }
+
     const directionPosture = interpretDirectionStrength(directionStrength)
     const driftPosture = interpretDrift(drift)
     const deteriorationSignal = interpretDeterioration(deteriorationLoad)
@@ -419,24 +450,33 @@ This trajectory view interprets persisted continuity memory. It does not judge p
                   </tr>
                 )}
 
-                {metrics.slice(0, 8).map((item) => (
-                  <tr key={item.id}>
-                    <td style={styles.td}>{formatDate(item.created_at)}</td>
-                    <td style={styles.td}>{item.trajectory_direction}</td>
-                    <td style={styles.td}>
-                      {interpretDeterioration(item.trajectory_risk).posture}
-                    </td>
-                    <td style={styles.td}>
-                      {interpretDrift(item.continuity_drift).posture}
-                    </td>
-                    <td style={styles.td}>
-                      {interpretMomentum(item.escalation_momentum).posture}
-                    </td>
-                    <td style={styles.td}>
-                      {interpretStabilization(item.stabilization_trend).posture}
-                    </td>
-                  </tr>
-                ))}
+                {metrics.slice(0, 8).map((item) => {
+                  const rowTrajectory = interpretTrajectory({
+                    trajectoryRisk: item.trajectory_risk,
+                    continuityDrift: item.continuity_drift,
+                    unresolvedMomentum: item.unresolved_momentum,
+                    survivabilityRisk: 100 - item.operational_survivability_score,
+                  })
+
+                  return (
+                    <tr key={item.id}>
+                      <td style={styles.td}>{formatDate(item.created_at)}</td>
+                      <td style={styles.td}>{rowTrajectory.posture}</td>
+                      <td style={styles.td}>
+                        {interpretDeterioration(item.trajectory_risk).posture}
+                      </td>
+                      <td style={styles.td}>
+                        {interpretDrift(item.continuity_drift).posture}
+                      </td>
+                      <td style={styles.td}>
+                        {interpretMomentum(item.escalation_momentum).posture}
+                      </td>
+                      <td style={styles.td}>
+                        {interpretStabilization(item.stabilization_trend).posture}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -474,88 +514,6 @@ function strongestDriver(scores: Record<string, number>) {
     Object.entries(scores).sort((a, b) => b[1] - a[1])[0]?.[0] ||
     'No dominant trajectory driver detected'
   )
-}
-
-function getTrajectoryState(input: {
-  count: number
-  directionStrength: number
-  deteriorationLoad: number
-  trajectoryPressureMovement: number
-  stabilizationMovement: number
-  trajectoryVolatility: number
-  latest: CgiOperationalMetric | null
-}): TrajectoryState {
-  if (input.count < 3) return 'INSUFFICIENT_HISTORY'
-
-  if (
-    input.deteriorationLoad >= 65 ||
-    input.trajectoryPressureMovement >= 15 ||
-    input.stabilizationMovement <= -15 ||
-    input.latest?.trajectory_direction === 'DETERIORATING' ||
-    input.latest?.trajectory_direction === 'COLLAPSE_RISK'
-  ) {
-    return 'TRAJECTORY_DETERIORATING'
-  }
-
-  if (
-    input.deteriorationLoad >= 45 ||
-    input.trajectoryPressureMovement >= 8 ||
-    input.stabilizationMovement <= -8 ||
-    input.trajectoryVolatility >= 25 ||
-    input.latest?.trajectory_direction === 'DRIFTING'
-  ) {
-    return 'TRAJECTORY_DRIFTING'
-  }
-
-  if (
-    input.directionStrength >= 60 &&
-    input.stabilizationMovement >= 5 &&
-    input.deteriorationLoad < 45
-  ) {
-    return 'TRAJECTORY_RECOVERING'
-  }
-
-  return 'TRAJECTORY_HOLDING'
-}
-
-function interpretTrajectoryState(state: TrajectoryState): Interpretation {
-  if (state === 'INSUFFICIENT_HISTORY') {
-    return {
-      posture: 'INSUFFICIENT HISTORY',
-      meaning: 'Trajectory memory is not yet deep enough to judge direction.',
-      action: 'Continue saving operational snapshots.',
-    }
-  }
-
-  if (state === 'TRAJECTORY_DETERIORATING') {
-    return {
-      posture: 'TRAJECTORY DETERIORATING',
-      meaning: 'Continuity direction is weakening and may threaten stabilization credibility.',
-      action: 'Activate trajectory review immediately.',
-    }
-  }
-
-  if (state === 'TRAJECTORY_DRIFTING') {
-    return {
-      posture: 'TRAJECTORY DRIFTING',
-      meaning: 'Continuity has not collapsed, but direction is not yet reliable.',
-      action: 'Strengthen ownership, intervention completion, and recovery monitoring.',
-    }
-  }
-
-  if (state === 'TRAJECTORY_RECOVERING') {
-    return {
-      posture: 'TRAJECTORY RECOVERING',
-      meaning: 'Recovery direction and stabilization movement are improving.',
-      action: 'Preserve recovery discipline and confirm durability.',
-    }
-  }
-
-  return {
-    posture: 'TRAJECTORY HOLDING',
-    meaning: 'Trajectory is holding without strong recovery acceleration or clear deterioration.',
-    action: 'Maintain monitoring and continue saving trajectory memory.',
-  }
 }
 
 function interpretDirectionStrength(value: number): Interpretation {
