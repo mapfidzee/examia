@@ -4,13 +4,20 @@ import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
-import { interpretPressure } from '@/lib/cgi/interpreters/interpretPressure'
-import { interpretTrajectory } from '@/lib/cgi/interpreters/interpretTrajectory'
-import { interpretRecovery } from '@/lib/cgi/interpreters/interpretRecovery'
-import { interpretPredictive } from '@/lib/cgi/interpreters/interpretPredictive'
+import {
+  deriveCommandActionPosture,
+  deriveCommandImplication,
+  deriveCommandPosture,
+  explainCommandPosture,
+  type CGICommandPosture,
+} from '@/lib/cgi/deriveCommandPosture'
 import { interpretBottleneck } from '@/lib/cgi/interpreters/interpretBottleneck'
-import { interpretReliability } from '@/lib/cgi/interpreters/interpretReliability'
 import { combineExecutiveActions } from '@/lib/cgi/interpreters/combineExecutiveActions'
+import { interpretPredictive } from '@/lib/cgi/interpreters/interpretPredictive'
+import { interpretPressure } from '@/lib/cgi/interpreters/interpretPressure'
+import { interpretRecovery } from '@/lib/cgi/interpreters/interpretRecovery'
+import { interpretReliability } from '@/lib/cgi/interpreters/interpretReliability'
+import { interpretTrajectory } from '@/lib/cgi/interpreters/interpretTrajectory'
 import { supabase } from '../../lib/supabase'
 
 type CgiOperationalMetric = {
@@ -63,15 +70,9 @@ type InterpretiveThreshold =
   | 'DESTABILIZING'
   | 'SURVIVABILITY THREAT'
 
-type CommandPosture =
-  | 'STABLE COMMAND'
-  | 'COMMAND WATCH'
-  | 'ELEVATED COMMAND'
-  | 'CRITICAL COMMAND'
-
 type InterpretiveBoard = {
   latest: CgiOperationalMetric
-  commandPosture: CommandPosture
+  commandPosture: CGICommandPosture
   commandMeaning: string
   executiveImplication: string
   actionPosture: string
@@ -295,7 +296,9 @@ function ExecutiveStabilityBoard() {
 
                       return (
                         <tr key={item.id}>
-                          <td style={styles.td}>{formatDate(item.created_at)}</td>
+                          <td style={styles.td}>
+                            {formatDate(item.created_at)}
+                          </td>
                           <td style={styles.td}>{row.commandPosture}</td>
                           <td style={styles.td}>{row.recoveryThreshold}</td>
                           <td style={styles.td}>{row.memoryThreshold}</td>
@@ -375,7 +378,7 @@ function buildInterpretiveBoard(
     recurrenceRate,
   })
 
-  const commandPosture = resolveCommandPosture({
+  const commandPosture = deriveCommandPosture({
     pressureSeverity: centralizedPressure.severity,
     trajectorySeverity: centralizedTrajectory.severity,
     recoverySeverity: centralizedRecovery.severity,
@@ -387,9 +390,9 @@ function buildInterpretiveBoard(
   return {
     latest,
     commandPosture,
-    commandMeaning: buildCommandMeaning(commandPosture),
-    executiveImplication: buildExecutiveImplication(commandPosture),
-    actionPosture: resolveActionPosture(commandPosture),
+    commandMeaning: explainCommandPosture(commandPosture),
+    executiveImplication: deriveCommandImplication(commandPosture),
+    actionPosture: deriveCommandActionPosture(commandPosture),
     actionDeadline: latest.executive_action_deadline || 'Next governance cycle',
     actionCue: combineExecutiveActions([
       centralizedPressure.executiveAction,
@@ -408,89 +411,6 @@ function buildInterpretiveBoard(
     structuralPattern:
       latest.dominant_memory_pattern || centralizedPredictive.summary,
   }
-}
-
-function resolveCommandPosture(input: {
-  pressureSeverity: string
-  trajectorySeverity: string
-  recoverySeverity: string
-  predictiveSeverity: string
-  bottleneckSeverity: string
-  reliabilitySeverity: string
-}): CommandPosture {
-  if (
-    input.pressureSeverity === 'CRITICAL' ||
-    input.trajectorySeverity === 'CRITICAL' ||
-    input.recoverySeverity === 'CRITICAL' ||
-    input.predictiveSeverity === 'CRITICAL' ||
-    input.bottleneckSeverity === 'CRITICAL' ||
-    input.reliabilitySeverity === 'CRITICAL'
-  ) {
-    return 'CRITICAL COMMAND'
-  }
-
-  if (
-    input.pressureSeverity === 'HIGH' ||
-    input.trajectorySeverity === 'HIGH' ||
-    input.recoverySeverity === 'HIGH' ||
-    input.predictiveSeverity === 'HIGH' ||
-    input.bottleneckSeverity === 'HIGH' ||
-    input.reliabilitySeverity === 'HIGH'
-  ) {
-    return 'ELEVATED COMMAND'
-  }
-
-  if (
-    input.pressureSeverity === 'MODERATE' ||
-    input.trajectorySeverity === 'MODERATE' ||
-    input.recoverySeverity === 'MODERATE' ||
-    input.predictiveSeverity === 'MODERATE' ||
-    input.bottleneckSeverity === 'MODERATE' ||
-    input.reliabilitySeverity === 'MODERATE'
-  ) {
-    return 'COMMAND WATCH'
-  }
-
-  return 'STABLE COMMAND'
-}
-
-function buildCommandMeaning(posture: CommandPosture) {
-  if (posture === 'CRITICAL COMMAND') {
-    return 'Continuity survivability is under visible threat and requires executive intervention.'
-  }
-
-  if (posture === 'ELEVATED COMMAND') {
-    return 'Visible instability is intensifying and requires executive prioritization.'
-  }
-
-  if (posture === 'COMMAND WATCH') {
-    return 'Instability remains visible and should not be treated as resolved.'
-  }
-
-  return 'Continuity posture is currently stable with no dominant survivability escalation visible.'
-}
-
-function buildExecutiveImplication(posture: CommandPosture) {
-  if (posture === 'CRITICAL COMMAND') {
-    return 'Leadership should move from monitoring to direct command intervention.'
-  }
-
-  if (posture === 'ELEVATED COMMAND') {
-    return 'Leadership should prioritize stabilization before survivability deteriorates further.'
-  }
-
-  if (posture === 'COMMAND WATCH') {
-    return 'Governed monitoring should remain active until stabilization credibility becomes durable.'
-  }
-
-  return 'Routine governed continuity review remains appropriate.'
-}
-
-function resolveActionPosture(posture: CommandPosture) {
-  if (posture === 'CRITICAL COMMAND') return 'EXECUTIVE INTERVENTION'
-  if (posture === 'ELEVATED COMMAND') return 'EXECUTIVE PRIORITIZATION'
-  if (posture === 'COMMAND WATCH') return 'GOVERNED REVIEW'
-  return 'ROUTINE MONITORING'
 }
 
 function explainPressure(board: InterpretiveBoard) {
