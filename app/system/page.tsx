@@ -10,20 +10,19 @@ import { interpretRecovery } from '@/lib/cgi/interpreters/interpretRecovery'
 import { interpretPredictive } from '@/lib/cgi/interpreters/interpretPredictive'
 import { interpretBottleneck } from '@/lib/cgi/interpreters/interpretBottleneck'
 import { interpretReliability } from '@/lib/cgi/interpreters/interpretReliability'
+import { combineExecutiveActions } from '@/lib/cgi/interpreters/combineExecutiveActions'
 import { supabase } from '../../lib/supabase'
 
 type CgiOperationalMetric = {
   id: string
   created_at: string
   scope: string
-
   continuity_integrity_score: number
   stabilization_confidence_score: number
   escalation_pressure_index: number
   recovery_reliability_score: number
   operational_survivability_score: number
   continuity_state: string
-
   propagation_risk: number
   routing_friction: number
   responder_pressure: number
@@ -31,7 +30,6 @@ type CgiOperationalMetric = {
   coordination_instability: number
   stabilization_drag: number
   pressure_propagation_state: string
-
   trajectory_risk: number
   continuity_drift: number
   escalation_momentum: number
@@ -39,7 +37,6 @@ type CgiOperationalMetric = {
   stabilization_trend: number
   unresolved_momentum: number
   trajectory_direction: string
-
   structural_memory_risk: number
   routing_failure_recurrence: number
   escalation_corridor_recurrence: number
@@ -48,14 +45,11 @@ type CgiOperationalMetric = {
   responder_strain_recurrence: number
   continuity_collapse_recurrence: number
   structural_memory_state: string
-
   dominant_pressure_source: string | null
   dominant_trajectory_signal: string | null
   dominant_memory_pattern: string | null
-
   executive_summary: string | null
   action_cue: string | null
-
   executive_priority_score: number | null
   survivability_threat_level: string | null
   executive_action_urgency: string | null
@@ -77,20 +71,17 @@ type CommandPosture =
 
 type InterpretiveBoard = {
   latest: CgiOperationalMetric
-
   commandPosture: CommandPosture
   commandMeaning: string
   executiveImplication: string
   actionPosture: string
   actionDeadline: string
   actionCue: string
-
   pressureThreshold: InterpretiveThreshold
   trajectoryThreshold: InterpretiveThreshold
   survivabilityThreshold: InterpretiveThreshold
   memoryThreshold: InterpretiveThreshold
   recoveryThreshold: InterpretiveThreshold
-
   survivabilityInterpretation: string
   structuralPattern: string
 }
@@ -140,11 +131,7 @@ function ExecutiveStabilityBoard() {
 
   const board = useMemo(() => {
     const latest = metrics[0]
-
-    if (!latest) {
-      return null
-    }
-
+    if (!latest) return null
     return buildInterpretiveBoard(latest)
   }, [metrics])
 
@@ -153,13 +140,10 @@ function ExecutiveStabilityBoard() {
       <div style={styles.container}>
         <section style={styles.hero}>
           <p style={styles.kicker}>TSINAXA CGI</p>
-
           <h1 style={styles.title}>Executive Stability Board</h1>
-
           <p style={styles.enterpriseSubtitle}>
             Interpretive Continuity Infrastructure
           </p>
-
           <p style={styles.subtitle}>
             Executive interpretation of continuity survivability, pressure
             propagation, structural recurrence, recovery credibility, and
@@ -168,7 +152,6 @@ function ExecutiveStabilityBoard() {
 
           <section style={styles.doctrinePanel}>
             <p style={styles.doctrineTitle}>CGI DOCTRINE</p>
-
             <div style={styles.doctrineGrid}>
               {DOCTRINE.map((item) => (
                 <div key={item} style={styles.doctrineCard}>
@@ -186,7 +169,6 @@ function ExecutiveStabilityBoard() {
             <h2 style={styles.sectionTitle}>
               No continuity memory available yet.
             </h2>
-
             <p style={styles.bodyText}>
               Save governed snapshots from Operations to activate executive
               interpretation.
@@ -198,24 +180,13 @@ function ExecutiveStabilityBoard() {
           <>
             <section style={styles.commandPanel}>
               <div>
-                <p style={styles.panelEyebrow}>
-                  Executive Command Posture
-                </p>
-
-                <h2 style={styles.commandPosture}>
-                  {board.commandPosture}
-                </h2>
-
-                <p style={styles.commandMeaning}>
-                  {board.commandMeaning}
-                </p>
+                <p style={styles.panelEyebrow}>Executive Command Posture</p>
+                <h2 style={styles.commandPosture}>{board.commandPosture}</h2>
+                <p style={styles.commandMeaning}>{board.commandMeaning}</p>
               </div>
 
               <div style={styles.implicationBox}>
-                <p style={styles.panelEyebrow}>
-                  Executive Implication
-                </p>
-
+                <p style={styles.panelEyebrow}>Executive Implication</p>
                 <p style={styles.implicationText}>
                   {board.executiveImplication}
                 </p>
@@ -259,45 +230,34 @@ function ExecutiveStabilityBoard() {
                 <p style={styles.panelEyebrow}>
                   Executive Action Requirement
                 </p>
-
-                <h2 style={styles.actionThreshold}>
-                  {board.actionPosture}
-                </h2>
-
+                <h2 style={styles.actionThreshold}>{board.actionPosture}</h2>
                 <p style={styles.bodyText}>{board.actionCue}</p>
               </div>
 
               <div style={styles.deadlineBox}>
                 <p style={styles.panelEyebrow}>Action Window</p>
-
                 <strong>{board.actionDeadline}</strong>
               </div>
             </section>
 
             <section style={styles.card}>
-              <h2 style={styles.sectionTitle}>
-                Why This Posture Was Reached
-              </h2>
-
+              <h2 style={styles.sectionTitle}>Why This Posture Was Reached</h2>
               <div style={styles.reasonGrid}>
                 <ReasonBlock
                   label="Pressure posture"
                   value={board.pressureThreshold}
                   text={explainPressure(board)}
                 />
-
                 <ReasonBlock
                   label="Recovery posture"
                   value={board.recoveryThreshold}
                   text={explainRecovery(board)}
                 />
-
                 <ReasonBlock
                   label="Survivability posture"
                   value={board.survivabilityThreshold}
                   text={explainSurvivability(board)}
                 />
-
                 <ReasonBlock
                   label="Structural recurrence"
                   value={board.memoryThreshold}
@@ -310,7 +270,6 @@ function ExecutiveStabilityBoard() {
               <h2 style={styles.sectionTitle}>
                 Recent Continuity Memory Trail
               </h2>
-
               <p style={styles.bodyText}>
                 Continuity interpretation remains visible over time so
                 recurrence, survivability pressure, and deterioration do not
@@ -336,29 +295,12 @@ function ExecutiveStabilityBoard() {
 
                       return (
                         <tr key={item.id}>
-                          <td style={styles.td}>
-                            {formatDate(item.created_at)}
-                          </td>
-
-                          <td style={styles.td}>
-                            {row.commandPosture}
-                          </td>
-
-                          <td style={styles.td}>
-                            {row.recoveryThreshold}
-                          </td>
-
-                          <td style={styles.td}>
-                            {row.memoryThreshold}
-                          </td>
-
-                          <td style={styles.td}>
-                            {row.actionPosture}
-                          </td>
-
-                          <td style={styles.td}>
-                            {row.commandMeaning}
-                          </td>
+                          <td style={styles.td}>{formatDate(item.created_at)}</td>
+                          <td style={styles.td}>{row.commandPosture}</td>
+                          <td style={styles.td}>{row.recoveryThreshold}</td>
+                          <td style={styles.td}>{row.memoryThreshold}</td>
+                          <td style={styles.td}>{row.actionPosture}</td>
+                          <td style={styles.td}>{row.commandMeaning}</td>
                         </tr>
                       )
                     })}
@@ -444,19 +386,12 @@ function buildInterpretiveBoard(
 
   return {
     latest,
-
     commandPosture,
-
     commandMeaning: buildCommandMeaning(commandPosture),
-
     executiveImplication: buildExecutiveImplication(commandPosture),
-
     actionPosture: resolveActionPosture(commandPosture),
-
-    actionDeadline:
-      latest.executive_action_deadline || 'Next governance cycle',
-
-    actionCue: compactAction([
+    actionDeadline: latest.executive_action_deadline || 'Next governance cycle',
+    actionCue: combineExecutiveActions([
       centralizedPressure.executiveAction,
       centralizedTrajectory.executiveAction,
       centralizedRecovery.executiveAction,
@@ -464,19 +399,12 @@ function buildInterpretiveBoard(
       centralizedBottleneck.executiveAction,
       centralizedReliability.executiveAction,
     ]),
-
     pressureThreshold: severityToThreshold(centralizedPressure.severity),
-
     trajectoryThreshold: severityToThreshold(centralizedTrajectory.severity),
-
     survivabilityThreshold: severityToThreshold(centralizedRecovery.severity),
-
     memoryThreshold: severityToThreshold(centralizedPredictive.severity),
-
     recoveryThreshold: severityToThreshold(centralizedReliability.severity),
-
     survivabilityInterpretation: centralizedRecovery.summary,
-
     structuralPattern:
       latest.dominant_memory_pattern || centralizedPredictive.summary,
   }
@@ -559,18 +487,9 @@ function buildExecutiveImplication(posture: CommandPosture) {
 }
 
 function resolveActionPosture(posture: CommandPosture) {
-  if (posture === 'CRITICAL COMMAND') {
-    return 'EXECUTIVE INTERVENTION'
-  }
-
-  if (posture === 'ELEVATED COMMAND') {
-    return 'EXECUTIVE PRIORITIZATION'
-  }
-
-  if (posture === 'COMMAND WATCH') {
-    return 'GOVERNED REVIEW'
-  }
-
+  if (posture === 'CRITICAL COMMAND') return 'EXECUTIVE INTERVENTION'
+  if (posture === 'ELEVATED COMMAND') return 'EXECUTIVE PRIORITIZATION'
+  if (posture === 'COMMAND WATCH') return 'GOVERNED REVIEW'
   return 'ROUTINE MONITORING'
 }
 
@@ -639,35 +558,20 @@ function explainMemory(board: InterpretiveBoard) {
 }
 
 function severityToThreshold(severity: string): InterpretiveThreshold {
-  if (severity === 'CRITICAL') {
-    return 'SURVIVABILITY THREAT'
-  }
-
-  if (severity === 'HIGH') {
-    return 'DESTABILIZING'
-  }
-
-  if (severity === 'MODERATE') {
-    return 'WATCHABLE'
-  }
-
+  if (severity === 'CRITICAL') return 'SURVIVABILITY THREAT'
+  if (severity === 'HIGH') return 'DESTABILIZING'
+  if (severity === 'MODERATE') return 'WATCHABLE'
   return 'CONTAINED'
 }
 
 function average(values: number[]) {
   const valid = values.filter((value) => Number.isFinite(value))
 
-  if (valid.length === 0) {
-    return 0
-  }
+  if (valid.length === 0) return 0
 
   return Math.round(
     valid.reduce((sum, value) => sum + value, 0) / valid.length
   )
-}
-
-function compactAction(actions: string[]) {
-  return Array.from(new Set(actions.filter(Boolean))).join(' ')
 }
 
 function formatDate(value: string) {
@@ -686,9 +590,7 @@ function InterpretivePanel({
   return (
     <article style={styles.interpretivePanel}>
       <p style={styles.panelEyebrow}>{title}</p>
-
       <h3 style={styles.thresholdLabel}>{threshold}</h3>
-
       <p style={styles.bodyText}>{text}</p>
     </article>
   )
@@ -706,9 +608,7 @@ function ReasonBlock({
   return (
     <div style={styles.reasonBlock}>
       <p style={styles.panelEyebrow}>{label}</p>
-
       <strong style={styles.reasonValue}>{value}</strong>
-
       <p style={styles.bodyText}>{text}</p>
     </div>
   )
@@ -720,7 +620,6 @@ const styles: Record<string, CSSProperties> = {
     color: 'white',
     overflowX: 'hidden',
   },
-
   container: {
     width: '100%',
     maxWidth: '1120px',
@@ -728,12 +627,10 @@ const styles: Record<string, CSSProperties> = {
     padding: '0 20px 48px',
     boxSizing: 'border-box',
   },
-
   hero: {
     marginBottom: '20px',
     paddingTop: '4px',
   },
-
   kicker: {
     color: '#67e8f9',
     fontSize: '12px',
@@ -741,21 +638,18 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: '2px',
     margin: 0,
   },
-
   title: {
     fontSize: 'clamp(32px, 5vw, 48px)',
     lineHeight: 1.05,
     margin: '10px 0',
     letterSpacing: '-0.04em',
   },
-
   enterpriseSubtitle: {
     color: '#a7f3d0',
     fontSize: 'clamp(20px, 3vw, 28px)',
     fontWeight: 900,
     margin: '0 0 10px',
   },
-
   subtitle: {
     color: '#cbd5e1',
     maxWidth: '760px',
@@ -763,7 +657,6 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '16px',
     margin: 0,
   },
-
   doctrinePanel: {
     background: '#020617',
     border: '1px solid #334155',
@@ -772,7 +665,6 @@ const styles: Record<string, CSSProperties> = {
     marginTop: '18px',
     marginBottom: '16px',
   },
-
   doctrineTitle: {
     color: '#67e8f9',
     fontSize: '12px',
@@ -780,13 +672,11 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: '0.16em',
     margin: '0 0 14px',
   },
-
   doctrineGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
     gap: '12px',
   },
-
   doctrineCard: {
     background: '#0f172a',
     border: '1px solid #334155',
@@ -797,7 +687,6 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.5,
     fontSize: '14px',
   },
-
   message: {
     background: '#064e3b',
     color: '#bbf7d0',
@@ -807,7 +696,6 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: '16px',
     fontSize: '14px',
   },
-
   commandPanel: {
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1.4fr) minmax(260px, 0.6fr)',
@@ -819,7 +707,6 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: '16px',
     boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
   },
-
   panelEyebrow: {
     color: '#94a3b8',
     fontWeight: 900,
@@ -828,7 +715,6 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '12px',
     margin: '0 0 8px',
   },
-
   commandPosture: {
     fontSize: 'clamp(34px, 6vw, 56px)',
     lineHeight: 1,
@@ -836,7 +722,6 @@ const styles: Record<string, CSSProperties> = {
     color: '#67e8f9',
     letterSpacing: '-0.05em',
   },
-
   commandMeaning: {
     color: '#e2e8f0',
     fontSize: '16px',
@@ -844,7 +729,6 @@ const styles: Record<string, CSSProperties> = {
     maxWidth: '720px',
     margin: 0,
   },
-
   implicationBox: {
     background: '#082f49',
     border: '1px solid #0891b2',
@@ -852,7 +736,6 @@ const styles: Record<string, CSSProperties> = {
     padding: '16px',
     alignSelf: 'stretch',
   },
-
   implicationText: {
     color: '#cffafe',
     fontSize: '14px',
@@ -860,14 +743,12 @@ const styles: Record<string, CSSProperties> = {
     margin: 0,
     fontWeight: 700,
   },
-
   interpretiveGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
     gap: '14px',
     marginBottom: '16px',
   },
-
   interpretivePanel: {
     background: '#0f172a',
     border: '1px solid #1e293b',
@@ -876,7 +757,6 @@ const styles: Record<string, CSSProperties> = {
     minHeight: '150px',
     boxSizing: 'border-box',
   },
-
   thresholdLabel: {
     color: '#a7f3d0',
     fontSize: '22px',
@@ -884,7 +764,6 @@ const styles: Record<string, CSSProperties> = {
     margin: '8px 0 10px',
     overflowWrap: 'anywhere',
   },
-
   actionPanel: {
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1fr) minmax(220px, 0.45fr)',
@@ -895,14 +774,12 @@ const styles: Record<string, CSSProperties> = {
     padding: '20px',
     marginBottom: '16px',
   },
-
   actionThreshold: {
     color: '#67e8f9',
     fontSize: 'clamp(28px, 4vw, 38px)',
     lineHeight: 1.05,
     margin: '8px 0 10px',
   },
-
   deadlineBox: {
     background: '#0f172a',
     border: '1px solid #334155',
@@ -912,7 +789,6 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '16px',
     lineHeight: 1.5,
   },
-
   card: {
     background: '#020617',
     border: '1px solid #1e293b',
@@ -922,26 +798,22 @@ const styles: Record<string, CSSProperties> = {
     boxSizing: 'border-box',
     overflow: 'hidden',
   },
-
   sectionTitle: {
     fontSize: '22px',
     margin: '0 0 12px',
     lineHeight: 1.2,
   },
-
   bodyText: {
     color: '#cbd5e1',
     lineHeight: 1.6,
     fontSize: '14px',
     margin: 0,
   },
-
   reasonGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
     gap: '14px',
   },
-
   reasonBlock: {
     background: '#0f172a',
     border: '1px solid #334155',
@@ -949,7 +821,6 @@ const styles: Record<string, CSSProperties> = {
     padding: '16px',
     minHeight: '140px',
   },
-
   reasonValue: {
     display: 'block',
     color: '#a7f3d0',
@@ -957,20 +828,17 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: '10px',
     overflowWrap: 'anywhere',
   },
-
   tableWrap: {
     width: '100%',
     overflowX: 'auto',
     marginTop: '14px',
     marginBottom: '16px',
   },
-
   table: {
     width: '100%',
     borderCollapse: 'collapse',
     minWidth: '860px',
   },
-
   th: {
     textAlign: 'left',
     color: '#94a3b8',
@@ -980,7 +848,6 @@ const styles: Record<string, CSSProperties> = {
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
   },
-
   td: {
     borderBottom: '1px solid #1e293b',
     padding: '10px',
@@ -989,7 +856,6 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.55,
     fontSize: '13px',
   },
-
   primaryButton: {
     width: '100%',
     padding: '14px',
