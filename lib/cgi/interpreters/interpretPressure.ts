@@ -1,14 +1,13 @@
+import {
+  compactExecutiveAction,
+  type CGISeverity,
+} from './compactExecutiveAction'
+
 export type PressurePosture =
   | 'PRESSURE CONTAINED'
   | 'PRESSURE ELEVATED'
   | 'PRESSURE ESCALATING'
   | 'PRESSURE CRITICAL'
-
-export type PressureSeverity =
-  | 'LOW'
-  | 'MODERATE'
-  | 'HIGH'
-  | 'CRITICAL'
 
 type InterpretPressureInput = {
   escalationPressure: number
@@ -19,7 +18,7 @@ type InterpretPressureInput = {
 
 type PressureInterpretation = {
   posture: PressurePosture
-  severity: PressureSeverity
+  severity: CGISeverity
   summary: string
   executiveAction: string
 }
@@ -52,8 +51,15 @@ export function interpretPressure(
       severity: 'CRITICAL',
       summary:
         'Operational pressure is propagating across continuity pathways and may undermine stabilization credibility.',
-      executiveAction:
-        'Immediate executive continuity review recommended. Prevent instability propagation and preserve continuity visibility.',
+      executiveAction: compactExecutiveAction({
+        severity: 'CRITICAL',
+        primaryConcern:
+          'Pressure propagation is becoming operationally destabilizing.',
+        stabilizationNeed:
+          'Prevent continuity deterioration before escalation spreads further.',
+        escalationTrigger:
+          'Executive continuity review is recommended immediately.',
+      }),
     }
   }
 
@@ -67,8 +73,13 @@ export function interpretPressure(
       severity: 'HIGH',
       summary:
         'Pressure escalation is becoming operationally visible across continuity operations.',
-      executiveAction:
-        'Strengthen stabilization coordination and monitor unresolved operational pressure.',
+      executiveAction: compactExecutiveAction({
+        severity: 'HIGH',
+        primaryConcern:
+          'Operational pressure accumulation is intensifying.',
+        stabilizationNeed:
+          'Confirm whether stabilization coordination is reducing escalation exposure.',
+      }),
     }
   }
 
@@ -80,9 +91,14 @@ export function interpretPressure(
       posture: 'PRESSURE ELEVATED',
       severity: 'MODERATE',
       summary:
-        'Operational pressure remains active but currently governed.',
-      executiveAction:
-        'Continue continuity monitoring and preserve escalation visibility.',
+        'Operational pressure remains visible and requires continued continuity monitoring.',
+      executiveAction: compactExecutiveAction({
+        severity: 'MODERATE',
+        primaryConcern:
+          'Pressure remains operationally active.',
+        stabilizationNeed:
+          'Preserve escalation visibility and monitor continuity drift.',
+      }),
     }
   }
 
@@ -91,7 +107,10 @@ export function interpretPressure(
     severity: 'LOW',
     summary:
       'Operational pressure currently appears contained within continuity tolerance.',
-    executiveAction:
-      'Maintain continuity governance and ongoing operational observation.',
+    executiveAction: compactExecutiveAction({
+      severity: 'LOW',
+      primaryConcern:
+        'Maintain continuity governance and operational visibility.',
+    }),
   }
 }
