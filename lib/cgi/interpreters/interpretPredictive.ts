@@ -1,14 +1,13 @@
+import {
+  compactExecutiveAction,
+  type CGISeverity,
+} from './compactExecutiveAction'
+
 export type PredictivePosture =
   | 'PREDICTIVE RISK LOW'
   | 'PREDICTIVE RISK WATCHED'
   | 'PREDICTIVE RISK ELEVATED'
   | 'PREDICTIVE RISK CRITICAL'
-
-export type PredictiveSeverity =
-  | 'LOW'
-  | 'MODERATE'
-  | 'HIGH'
-  | 'CRITICAL'
 
 type InterpretPredictiveInput = {
   propagationRisk: number
@@ -20,7 +19,7 @@ type InterpretPredictiveInput = {
 
 type PredictiveInterpretation = {
   posture: PredictivePosture
-  severity: PredictiveSeverity
+  severity: CGISeverity
   summary: string
   executiveAction: string
 }
@@ -54,9 +53,16 @@ export function interpretPredictive(
       posture: 'PREDICTIVE RISK CRITICAL',
       severity: 'CRITICAL',
       summary:
-        'Forecast signals indicate high probability of continuity disruption if no intervention occurs.',
-      executiveAction:
-        'Immediate executive prevention review recommended. Treat this as a pre-disruption continuity warning.',
+        'Forecast signals indicate severe continuity risk exposure if instability propagation continues.',
+      executiveAction: compactExecutiveAction({
+        severity: 'CRITICAL',
+        primaryConcern:
+          'Predictive continuity risk exposure is becoming operationally severe.',
+        stabilizationNeed:
+          'Prevent instability propagation before visible disruption intensifies.',
+        escalationTrigger:
+          'Immediate executive prevention review is recommended.',
+      }),
     }
   }
 
@@ -70,8 +76,13 @@ export function interpretPredictive(
       severity: 'HIGH',
       summary:
         'Predictive signals show rising continuity risk across operational memory.',
-      executiveAction:
-        'Strengthen prevention actions before visible disruption escalates.',
+      executiveAction: compactExecutiveAction({
+        severity: 'HIGH',
+        primaryConcern:
+          'Continuity risk exposure is increasing across predictive indicators.',
+        stabilizationNeed:
+          'Strengthen prevention actions before visible disruption escalates.',
+      }),
     }
   }
 
@@ -84,8 +95,13 @@ export function interpretPredictive(
       severity: 'MODERATE',
       summary:
         'Predictive risk remains visible and should stay under governed observation.',
-      executiveAction:
-        'Continue monitoring risk movement and preserve early-warning visibility.',
+      executiveAction: compactExecutiveAction({
+        severity: 'MODERATE',
+        primaryConcern:
+          'Early continuity risk indicators remain operationally visible.',
+        stabilizationNeed:
+          'Continue monitoring risk movement and preserve early-warning visibility.',
+      }),
     }
   }
 
@@ -93,8 +109,11 @@ export function interpretPredictive(
     posture: 'PREDICTIVE RISK LOW',
     severity: 'LOW',
     summary:
-      'Predictive signals currently suggest low near-term continuity disruption risk.',
-    executiveAction:
-      'Maintain visibility and continue disciplined operational monitoring.',
+      'Predictive signals currently show low immediate continuity risk exposure.',
+    executiveAction: compactExecutiveAction({
+      severity: 'LOW',
+      primaryConcern:
+        'Maintain visibility and disciplined operational monitoring.',
+    }),
   }
 }
