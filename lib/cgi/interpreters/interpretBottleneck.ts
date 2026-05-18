@@ -1,14 +1,13 @@
+import {
+  compactExecutiveAction,
+  type CGISeverity,
+} from './compactExecutiveAction'
+
 export type BottleneckPosture =
   | 'BOTTLENECK CONTAINED'
   | 'BOTTLENECK VISIBLE'
   | 'BOTTLENECK ESCALATING'
   | 'BOTTLENECK CRITICAL'
-
-export type BottleneckSeverity =
-  | 'LOW'
-  | 'MODERATE'
-  | 'HIGH'
-  | 'CRITICAL'
 
 type InterpretBottleneckInput = {
   routingCongestion: number
@@ -20,7 +19,7 @@ type InterpretBottleneckInput = {
 
 type BottleneckInterpretation = {
   posture: BottleneckPosture
-  severity: BottleneckSeverity
+  severity: CGISeverity
   summary: string
   executiveAction: string
 }
@@ -55,8 +54,15 @@ export function interpretBottleneck(
       severity: 'CRITICAL',
       summary:
         'Operational bottlenecks are severely restricting continuity flow and stabilization responsiveness.',
-      executiveAction:
-        'Immediate continuity flow review required. Reduce concentration dependency and restore operational movement.',
+      executiveAction: compactExecutiveAction({
+        severity: 'CRITICAL',
+        primaryConcern:
+          'Bottleneck pressure is severely restricting continuity flow.',
+        stabilizationNeed:
+          'Reduce concentration dependency and restore operational movement.',
+        escalationTrigger:
+          'Immediate continuity flow review is required.',
+      }),
     }
   }
 
@@ -70,8 +76,13 @@ export function interpretBottleneck(
       severity: 'HIGH',
       summary:
         'Operational bottlenecks are increasing continuity strain across workflow pathways.',
-      executiveAction:
-        'Redistribute operational load and monitor continuity congestion escalation.',
+      executiveAction: compactExecutiveAction({
+        severity: 'HIGH',
+        primaryConcern:
+          'Bottleneck pressure is increasing continuity strain.',
+        stabilizationNeed:
+          'Redistribute operational load and monitor congestion escalation.',
+      }),
     }
   }
 
@@ -83,9 +94,14 @@ export function interpretBottleneck(
       posture: 'BOTTLENECK VISIBLE',
       severity: 'MODERATE',
       summary:
-        'Bottleneck pressure remains visible but currently governed.',
-      executiveAction:
-        'Continue bottleneck monitoring and preserve continuity visibility.',
+        'Bottleneck pressure remains visible and requires continued continuity review.',
+      executiveAction: compactExecutiveAction({
+        severity: 'MODERATE',
+        primaryConcern:
+          'Bottleneck pressure remains operationally visible.',
+        stabilizationNeed:
+          'Continue bottleneck monitoring and preserve continuity visibility.',
+      }),
     }
   }
 
@@ -94,7 +110,10 @@ export function interpretBottleneck(
     severity: 'LOW',
     summary:
       'Operational flow currently appears stable without major bottleneck concentration.',
-    executiveAction:
-      'Maintain operational distribution discipline and continuity oversight.',
+    executiveAction: compactExecutiveAction({
+      severity: 'LOW',
+      primaryConcern:
+        'Maintain operational distribution discipline and continuity oversight.',
+    }),
   }
 }
