@@ -34,63 +34,54 @@ export function interpretReliability(
   } = input
 
   const instabilityLoad =
-    unresolvedCases +
-    overdueCases +
-    failedRecoveries
+    unresolvedCases + overdueCases + failedRecoveries
 
-  if (
-    instabilityLoad >= 20 ||
-    recurrenceRate >= 0.45
-  ) {
+  if (instabilityLoad >= 20 || recurrenceRate >= 0.45) {
     return {
       posture: 'RELIABILITY UNSTABLE',
       severity: 'CRITICAL',
       summary:
-        'Continuity reliability is degrading under repeated instability pressure.',
+        'Continuity reliability is degrading under repeated unresolved instability.',
       executiveAction: compactExecutiveAction({
         severity: 'CRITICAL',
         primaryConcern:
-          'Repeated instability signals remain unresolved across continuity operations.',
+          'Repeated instability remains unresolved across continuity operations.',
         stabilizationNeed:
-          'Recovery credibility should be reviewed immediately.',
+          'Recovery credibility is not yet safe to trust.',
         escalationTrigger:
           'Executive continuity intervention may be required.',
       }),
     }
   }
 
-  if (
-    instabilityLoad >= 12 ||
-    recurrenceRate >= 0.3
-  ) {
+  if (instabilityLoad >= 12 || recurrenceRate >= 0.3) {
     return {
       posture: 'RELIABILITY STRAINING',
       severity: 'HIGH',
       summary:
-        'Reliability posture shows visible strain and elevated recurrence exposure.',
+        'Continuity reliability is under visible strain and recurrence exposure is elevated.',
       executiveAction: compactExecutiveAction({
         severity: 'HIGH',
         primaryConcern:
           'Operational continuity pressure is accumulating.',
         stabilizationNeed:
-          'Monitor recurrence and unresolved operational recovery.',
+          'Confirm whether recovery evidence is reducing recurrence, delay, and unresolved load.',
       }),
     }
   }
 
-  if (
-    instabilityLoad >= 5 ||
-    recurrenceRate >= 0.15
-  ) {
+  if (instabilityLoad >= 5 || recurrenceRate >= 0.15) {
     return {
       posture: 'RELIABILITY HOLDING',
       severity: 'MODERATE',
       summary:
-        'Continuity reliability remains active but currently controlled.',
+        'Continuity reliability is holding, but durability still requires monitoring.',
       executiveAction: compactExecutiveAction({
         severity: 'MODERATE',
         primaryConcern:
           'Operational recovery remains dependent on continued monitoring.',
+        stabilizationNeed:
+          'Watch for recurrence, delay, or unresolved load before treating reliability as stable.',
       }),
     }
   }
