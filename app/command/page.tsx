@@ -6,11 +6,18 @@ import type { CSSProperties, ReactNode } from 'react'
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import {
-  deriveCommandActionPosture,
   deriveCommandImplication,
   deriveCommandPosture,
   explainCommandPosture,
 } from '@/lib/cgi/deriveCommandPosture'
+import {
+  buildSmartCommandActions,
+  type SmartCommandAction,
+} from '@/lib/cgi/buildSmartCommandAction'
+import {
+  selectCommandDrivers,
+  type CGICommandDriver,
+} from '@/lib/cgi/selectCommandDrivers'
 import { interpretBottleneck } from '@/lib/cgi/interpreters/interpretBottleneck'
 import { combineExecutiveActions } from '@/lib/cgi/interpreters/combineExecutiveActions'
 import { interpretGovernanceIntegrity } from '@/lib/cgi/interpreters/interpretGovernanceIntegrity'
@@ -24,7 +31,6 @@ import { interpretResponderReadiness } from '@/lib/cgi/interpreters/interpretRes
 import { interpretRoutingPressure } from '@/lib/cgi/interpreters/interpretRoutingPressure'
 import { interpretSafeguarding } from '@/lib/cgi/interpreters/interpretSafeguarding'
 import { interpretTrajectory } from '@/lib/cgi/interpreters/interpretTrajectory'
-import { evaluateContinuityIntelligence } from '../lib/continuityIntelligence'
 import { evaluatePressurePropagation } from '../lib/pressurePropagation'
 import { evaluateTrajectoryIntelligence } from '../lib/trajectoryIntelligence'
 import { evaluateStructuralMemory } from '../lib/structuralMemory'
@@ -220,10 +226,6 @@ function CommandCenterContent() {
 
     const activeCases = cases.filter((item) =>
       ACTIVE_CASE_STATUSES.includes(item.case_status)
-    ).length
-
-    const routedCases = cases.filter((item) =>
-      ['ROUTED', 'RESPONDER_ASSIGNED'].includes(item.case_status)
     ).length
 
     const stabilizedCases = cases.filter(
@@ -453,44 +455,34 @@ function CommandCenterContent() {
       propagationRisk: clamp(safeguardingFlags * 25),
     })
 
-    const governancePosture = toInterpretation(
-      interpretGovernanceIntegrity({
-        activeWithoutRouting,
-        routedWithoutResponder,
-        unresolvedInterventionPathways,
-      })
-    )
+    const centralizedGovernance = interpretGovernanceIntegrity({
+      activeWithoutRouting,
+      routedWithoutResponder,
+      unresolvedInterventionPathways,
+    })
 
-    const routingPosture = toInterpretation(
-      interpretRoutingPressure({
-        highestResponderLoad,
-        highestRegionalPressure,
-        routedWithoutResponder,
-        activeWithoutRouting,
-        safeguardingFlags,
-      })
-    )
+    const centralizedRouting = interpretRoutingPressure({
+      highestResponderLoad,
+      highestRegionalPressure,
+      routedWithoutResponder,
+      activeWithoutRouting,
+      safeguardingFlags,
+    })
 
-    const safeguardingPosture = toInterpretation(
-      interpretSafeguarding({
-        safeguardingFlags,
-      })
-    )
+    const centralizedSafeguarding = interpretSafeguarding({
+      safeguardingFlags,
+    })
 
-    const responderPosture = toInterpretation(
-      interpretResponderReadiness({
-        highestResponderLoad,
-        routedWithoutResponder,
-        unresolvedInterventionPathways,
-      })
-    )
+    const centralizedResponder = interpretResponderReadiness({
+      highestResponderLoad,
+      routedWithoutResponder,
+      unresolvedInterventionPathways,
+    })
 
-    const institutionPosture = toInterpretation(
-      interpretInstitutionReadiness({
-        activeInstitutions,
-        totalInstitutions: institutions.length,
-      })
-    )
+    const centralizedInstitution = interpretInstitutionReadiness({
+      activeInstitutions,
+      totalInstitutions: institutions.length,
+    })
 
     const pressurePosture = toInterpretation(centralizedPressure)
     const trajectoryPosture = toInterpretation(centralizedTrajectory)
@@ -498,6 +490,11 @@ function CommandCenterContent() {
     const recoveryPosture = toInterpretation(centralizedRecovery)
     const bottleneckPosture = toInterpretation(centralizedBottleneck)
     const predictivePosture = toInterpretation(centralizedPredictive)
+    const governancePosture = toInterpretation(centralizedGovernance)
+    const routingPosture = toInterpretation(centralizedRouting)
+    const safeguardingPosture = toInterpretation(centralizedSafeguarding)
+    const responderPosture = toInterpretation(centralizedResponder)
+    const institutionPosture = toInterpretation(centralizedInstitution)
 
     const memoryPosture: Interpretation = {
       posture: normalizePosture(structuralMemory.structuralMemoryState),
@@ -528,22 +525,6 @@ function CommandCenterContent() {
             : 'Maintain monitoring.',
     }
 
-    const outcomeConfirmationPosture: CommandSignal = {
-      label: 'Outcome Confirmation',
-      posture:
-        activeWithoutOutcome > 0
-          ? 'OUTCOME CONFIRMATION PENDING'
-          : 'OUTCOME CONFIRMATION CONTROLLED',
-      meaning:
-        activeWithoutOutcome > 0
-          ? 'Some active pathways still require outcome confirmation.'
-          : 'Outcome confirmation is not currently showing visible command pressure.',
-      action:
-        activeWithoutOutcome > 0
-          ? 'Strengthen outcome confirmation.'
-          : 'Maintain outcome monitoring.',
-    }
-
     const commandPosture = deriveCommandPosture({
       pressureSeverity: centralizedPressure.severity,
       trajectorySeverity: centralizedTrajectory.severity,
@@ -551,12 +532,7 @@ function CommandCenterContent() {
       predictiveSeverity: centralizedPredictive.severity,
       bottleneckSeverity: centralizedBottleneck.severity,
       reliabilitySeverity: centralizedReliability.severity,
-      governanceSeverity:
-        governancePosture.posture === 'GOVERNANCE GAP CRITICAL'
-          ? 'CRITICAL'
-          : governancePosture.posture === 'GOVERNANCE REVIEW REQUIRED'
-            ? 'MODERATE'
-            : 'LOW',
+      governanceSeverity: centralizedGovernance.severity,
     })
 
     const commandGuidance: Interpretation = {
@@ -565,20 +541,122 @@ function CommandCenterContent() {
       action: deriveCommandImplication(commandPosture),
     }
 
-    const executiveSummary = `${commandGuidance.meaning} ${pressurePosture.meaning} ${trajectoryPosture.meaning} ${memoryPosture.meaning}`
+    const commandDrivers: CGICommandDriver[] = [
+      {
+        label: 'Pressure Propagation',
+        posture: centralizedPressure.posture,
+        severity: centralizedPressure.severity,
+        meaning: centralizedPressure.summary,
+        action: centralizedPressure.executiveAction,
+      },
+      {
+        label: 'Trajectory Direction',
+        posture: centralizedTrajectory.posture,
+        severity: centralizedTrajectory.severity,
+        meaning: centralizedTrajectory.summary,
+        action: centralizedTrajectory.executiveAction,
+      },
+      {
+        label: 'Recovery Credibility',
+        posture: centralizedRecovery.posture,
+        severity: centralizedRecovery.severity,
+        meaning: centralizedRecovery.summary,
+        action: centralizedRecovery.executiveAction,
+      },
+      {
+        label: 'Predictive Forecast',
+        posture: centralizedPredictive.posture,
+        severity: centralizedPredictive.severity,
+        meaning: centralizedPredictive.summary,
+        action: centralizedPredictive.executiveAction,
+      },
+      {
+        label: 'Bottleneck Pressure',
+        posture: centralizedBottleneck.posture,
+        severity: centralizedBottleneck.severity,
+        meaning: centralizedBottleneck.summary,
+        action: centralizedBottleneck.executiveAction,
+      },
+      {
+        label: 'Continuity Reliability',
+        posture: centralizedReliability.posture,
+        severity: centralizedReliability.severity,
+        meaning: centralizedReliability.summary,
+        action: centralizedReliability.executiveAction,
+      },
+      {
+        label: 'Governance Integrity',
+        posture: centralizedGovernance.posture,
+        severity: centralizedGovernance.severity,
+        meaning: centralizedGovernance.summary,
+        action: centralizedGovernance.executiveAction,
+      },
+      {
+        label: 'Routing Ownership',
+        posture: centralizedRouting.posture,
+        severity: centralizedRouting.severity,
+        meaning: centralizedRouting.summary,
+        action: centralizedRouting.executiveAction,
+      },
+      {
+        label: 'Safeguarding Visibility',
+        posture: centralizedSafeguarding.posture,
+        severity: centralizedSafeguarding.severity,
+        meaning: centralizedSafeguarding.summary,
+        action: centralizedSafeguarding.executiveAction,
+      },
+      {
+        label: 'Responder Readiness',
+        posture: centralizedResponder.posture,
+        severity: centralizedResponder.severity,
+        meaning: centralizedResponder.summary,
+        action: centralizedResponder.executiveAction,
+      },
+      {
+        label: 'Institution Readiness',
+        posture: centralizedInstitution.posture,
+        severity: centralizedInstitution.severity,
+        meaning: centralizedInstitution.summary,
+        action: centralizedInstitution.executiveAction,
+      },
+    ]
 
-    const actionCue = combineExecutiveActions([
-      deriveCommandActionPosture(commandPosture),
-      commandGuidance.action,
-      pressurePosture.action,
-      trajectoryPosture.action,
-      memoryPosture.action,
-      governancePosture.action,
-      routingPosture.action,
-      safeguardingPosture.action,
-      responderPosture.action,
-      institutionPosture.action,
-    ])
+    const primaryDrivers = selectCommandDrivers(commandDrivers)
+
+    const smartActions = buildSmartCommandActions(
+      primaryDrivers.map((driver) => ({
+        ...driver,
+        evidenceMetric: buildEvidenceMetric(driver.label, {
+          activeCases,
+          activeWithoutOutcome,
+          activeWithoutRouting,
+          routedWithoutResponder,
+          unresolvedInterventionPathways,
+          stalledCases,
+          safeguardingFlags,
+          highestResponderLoad,
+          highestRegionalPressure,
+          activeInstitutions,
+          totalInstitutions: institutions.length,
+          stabilizationRate,
+          outcomeCoverage,
+          interventionCoverage,
+        }),
+      }))
+    )
+
+    const executiveSummary =
+      primaryDrivers.length > 0
+        ? `${commandGuidance.meaning} Primary command drivers are ${primaryDrivers
+            .map((driver) => driver.label)
+            .join(', ')}.`
+        : `${commandGuidance.meaning} No elevated command driver is currently dominating the operating view.`
+
+    const actionCue = combineExecutiveActions(
+      smartActions.length > 0
+        ? smartActions.map((action) => action.executiveAction)
+        : [commandGuidance.action]
+    )
 
     const operationalSignals: CommandSignal[] = [
       {
@@ -628,13 +706,29 @@ function CommandCenterContent() {
         label: 'Safeguarding Visibility',
         ...safeguardingPosture,
       },
-      outcomeConfirmationPosture,
+      {
+        label: 'Outcome Confirmation',
+        posture:
+          activeWithoutOutcome > 0
+            ? 'OUTCOME CONFIRMATION PENDING'
+            : 'OUTCOME CONFIRMATION CONTROLLED',
+        meaning:
+          activeWithoutOutcome > 0
+            ? 'Some active pathways still require outcome confirmation.'
+            : 'Outcome confirmation is not currently showing visible command pressure.',
+        action:
+          activeWithoutOutcome > 0
+            ? 'Strengthen outcome confirmation.'
+            : 'Maintain outcome monitoring.',
+      },
     ]
 
     return {
       commandGuidance,
       executiveSummary,
       actionCue,
+      primaryDrivers,
+      smartActions,
       pressurePosture,
       trajectoryPosture,
       memoryPosture,
@@ -671,6 +765,30 @@ ${commandScope}
 
 Overall Command Posture:
 ${intelligence.commandGuidance.posture}
+
+Primary Command Drivers:
+${
+  intelligence.primaryDrivers.length > 0
+    ? intelligence.primaryDrivers
+        .map(
+          (driver, index) =>
+            `${index + 1}. ${driver.label}: ${driver.posture} (${driver.severity})`
+        )
+        .join('\n')
+    : 'No elevated command drivers currently selected.'
+}
+
+SMART Command Actions:
+${
+  intelligence.smartActions.length > 0
+    ? intelligence.smartActions
+        .map(
+          (action, index) =>
+            `${index + 1}. ${action.executiveAction}`
+        )
+        .join('\n')
+    : intelligence.commandGuidance.action
+}
 
 Continuity Posture:
 ${intelligence.continuityPosture.posture}
@@ -762,9 +880,57 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
           </div>
 
           <div style={styles.actionBox}>
-            <p style={styles.actionLabel}>Recommended Action</p>
+            <p style={styles.actionLabel}>Primary Command Action</p>
             <p style={styles.actionText}>{intelligence.actionCue}</p>
           </div>
+        </section>
+
+        <section style={styles.card}>
+          <h2 style={styles.cardTitle}>Top Command Drivers</h2>
+
+          <p style={styles.cardNote}>
+            These are the highest-priority signals driving the current command
+            posture. Lower-priority signals remain visible as supporting
+            evidence below.
+          </p>
+
+          {intelligence.primaryDrivers.length === 0 ? (
+            <p style={styles.emptyText}>
+              No elevated command drivers are currently dominating the operating
+              view.
+            </p>
+          ) : (
+            <div style={styles.driverGrid}>
+              {intelligence.primaryDrivers.map((driver, index) => (
+                <DriverCard key={driver.label} driver={driver} index={index} />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section style={styles.card}>
+          <h2 style={styles.cardTitle}>SMART Command Actions</h2>
+
+          <p style={styles.cardNote}>
+            Each command action is specific, measurable, achievable, relevant,
+            and time-bound.
+          </p>
+
+          {intelligence.smartActions.length === 0 ? (
+            <p style={styles.emptyText}>
+              Routine command monitoring remains appropriate.
+            </p>
+          ) : (
+            <div style={styles.smartGrid}>
+              {intelligence.smartActions.map((action, index) => (
+                <SmartActionCard
+                  key={`${action.label}-${index}`}
+                  action={action}
+                  index={index}
+                />
+              ))}
+            </div>
+          )}
         </section>
 
         <section style={styles.postureGrid}>
@@ -784,13 +950,13 @@ ${additionalNotes.trim() || 'No additional operational notes entered.'}
         </section>
 
         <section style={styles.twoColumn}>
-          <Panel title="Operational Command Signals">
+          <Panel title="Supporting Command Signals">
             {intelligence.operationalSignals.map((signal) => (
               <SignalCard key={signal.label} signal={signal} />
             ))}
           </Panel>
 
-          <Panel title="Continuity Risk Zones">
+          <Panel title="Supporting Continuity Risk Zones">
             {intelligence.riskZones.map((signal) => (
               <SignalCard key={signal.label} signal={signal} />
             ))}
@@ -899,6 +1065,110 @@ function toInterpretation(input: {
 
 function normalizePosture(value: string | null | undefined) {
   return String(value || 'MEMORY CONTAINED').replaceAll('_', ' ')
+}
+
+function buildEvidenceMetric(
+  label: string,
+  evidence: {
+    activeCases: number
+    activeWithoutOutcome: number
+    activeWithoutRouting: number
+    routedWithoutResponder: number
+    unresolvedInterventionPathways: number
+    stalledCases: number
+    safeguardingFlags: number
+    highestResponderLoad: number
+    highestRegionalPressure: number
+    activeInstitutions: number
+    totalInstitutions: number
+    stabilizationRate: number
+    outcomeCoverage: number
+    interventionCoverage: number
+  }
+) {
+  if (label === 'Routing Ownership') {
+    return `${evidence.routedWithoutResponder} routed actions without responders and ${evidence.activeWithoutRouting} active cases without routing.`
+  }
+
+  if (label === 'Governance Integrity') {
+    return `${evidence.activeWithoutRouting} active cases without routing, ${evidence.routedWithoutResponder} routed actions without responders, and ${evidence.unresolvedInterventionPathways} unresolved intervention pathways.`
+  }
+
+  if (label === 'Recovery Credibility') {
+    return `${evidence.stabilizationRate}% stabilization rate, ${evidence.outcomeCoverage}% outcome coverage, and ${evidence.unresolvedInterventionPathways} unresolved intervention pathways.`
+  }
+
+  if (label === 'Pressure Propagation') {
+    return `${evidence.safeguardingFlags} safeguarding flags, ${evidence.stalledCases} stalled cases, and ${evidence.unresolvedInterventionPathways} unresolved intervention pathways.`
+  }
+
+  if (label === 'Trajectory Direction') {
+    return `${evidence.activeCases} active cases and ${evidence.activeWithoutOutcome} active cases without outcomes.`
+  }
+
+  if (label === 'Predictive Forecast') {
+    return `${evidence.unresolvedInterventionPathways} unresolved intervention pathways, ${evidence.stalledCases} stalled cases, and ${evidence.activeWithoutRouting} active cases without routing.`
+  }
+
+  if (label === 'Bottleneck Pressure') {
+    return `Highest responder load is ${evidence.highestResponderLoad}, and highest regional pressure is ${evidence.highestRegionalPressure}.`
+  }
+
+  if (label === 'Continuity Reliability') {
+    return `${evidence.activeWithoutOutcome} active cases without outcomes and ${evidence.stalledCases} stalled cases.`
+  }
+
+  if (label === 'Safeguarding Visibility') {
+    return `${evidence.safeguardingFlags} safeguarding flags are visible.`
+  }
+
+  if (label === 'Responder Readiness') {
+    return `Highest responder load is ${evidence.highestResponderLoad}, with ${evidence.routedWithoutResponder} routed actions without responders.`
+  }
+
+  if (label === 'Institution Readiness') {
+    return `${evidence.activeInstitutions} active institutions out of ${evidence.totalInstitutions}.`
+  }
+
+  return 'Current CGI signal evidence is visible in the supporting command panels.'
+}
+
+function DriverCard({
+  driver,
+  index,
+}: {
+  driver: CGICommandDriver
+  index: number
+}) {
+  return (
+    <article style={styles.driverCard}>
+      <p style={styles.cardKicker}>Driver {index + 1}</p>
+      <h3 style={styles.driverTitle}>{driver.label}</h3>
+      <strong style={styles.driverPosture}>{driver.posture}</strong>
+      <p style={styles.signalText}>{driver.meaning}</p>
+    </article>
+  )
+}
+
+function SmartActionCard({
+  action,
+  index,
+}: {
+  action: SmartCommandAction
+  index: number
+}) {
+  return (
+    <article style={styles.smartCard}>
+      <p style={styles.cardKicker}>SMART Action {index + 1}</p>
+      <h3 style={styles.driverTitle}>{action.label}</h3>
+
+      <Info label="Specific" value={action.specific} />
+      <Info label="Measurable" value={action.measurable} />
+      <Info label="Achievable" value={action.achievable} />
+      <Info label="Relevant" value={action.relevant} />
+      <Info label="Time Bound" value={action.timeBound} />
+    </article>
+  )
 }
 
 function PostureCard({
@@ -1092,6 +1362,46 @@ const styles: Record<string, CSSProperties> = {
     margin: 0,
     fontSize: '14px',
   },
+  driverGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: '14px',
+  },
+  driverCard: {
+    background: '#082f49',
+    border: '1px solid #22d3ee',
+    borderRadius: '18px',
+    padding: '16px',
+    minHeight: '170px',
+  },
+  driverTitle: {
+    color: '#f8fafc',
+    fontSize: '20px',
+    lineHeight: 1.15,
+    margin: '8px 0',
+  },
+  driverPosture: {
+    display: 'block',
+    color: '#67e8f9',
+    fontSize: '15px',
+    marginBottom: '10px',
+    overflowWrap: 'anywhere',
+  },
+  smartGrid: {
+    display: 'grid',
+    gap: '14px',
+  },
+  smartCard: {
+    background: '#0f172a',
+    border: '1px solid #22d3ee',
+    borderRadius: '18px',
+    padding: '16px',
+  },
+  emptyText: {
+    color: '#cbd5e1',
+    lineHeight: 1.6,
+    margin: 0,
+  },
   postureGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
@@ -1186,6 +1496,7 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: '14px',
     padding: '12px',
     alignItems: 'start',
+    marginTop: '8px',
   },
   infoLabel: {
     color: '#94a3b8',
