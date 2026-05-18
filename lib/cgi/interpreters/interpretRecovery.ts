@@ -1,14 +1,13 @@
+import {
+  compactExecutiveAction,
+  type CGISeverity,
+} from './compactExecutiveAction'
+
 export type RecoveryPosture =
   | 'RECOVERY CREDIBLE'
   | 'RECOVERY MONITORED'
   | 'RECOVERY FRAGILE'
   | 'RECOVERY NOT CREDIBLE'
-
-export type RecoverySeverity =
-  | 'LOW'
-  | 'MODERATE'
-  | 'HIGH'
-  | 'CRITICAL'
 
 type InterpretRecoveryInput = {
   stabilizationConfidence: number
@@ -20,7 +19,7 @@ type InterpretRecoveryInput = {
 
 type RecoveryInterpretation = {
   posture: RecoveryPosture
-  severity: RecoverySeverity
+  severity: CGISeverity
   summary: string
   executiveAction: string
 }
@@ -60,8 +59,15 @@ export function interpretRecovery(
       severity: 'CRITICAL',
       summary:
         'Recovery evidence is not strong enough to support stabilization credibility.',
-      executiveAction:
-        'Immediate executive recovery review required. Do not treat visible closure as durable stabilization.',
+      executiveAction: compactExecutiveAction({
+        severity: 'CRITICAL',
+        primaryConcern:
+          'Recovery evidence is not strong enough to support stabilization credibility.',
+        stabilizationNeed:
+          'Do not treat visible closure as durable stabilization.',
+        escalationTrigger:
+          'Immediate executive recovery review is required.',
+      }),
     }
   }
 
@@ -75,8 +81,13 @@ export function interpretRecovery(
       severity: 'HIGH',
       summary:
         'Recovery remains fragile and may weaken under unresolved continuity pressure.',
-      executiveAction:
-        'Strengthen recovery follow-through and preserve continuity evidence before closure.',
+      executiveAction: compactExecutiveAction({
+        severity: 'HIGH',
+        primaryConcern:
+          'Recovery remains fragile under unresolved continuity pressure.',
+        stabilizationNeed:
+          'Strengthen recovery follow-through and preserve continuity evidence before closure.',
+      }),
     }
   }
 
@@ -89,8 +100,13 @@ export function interpretRecovery(
       severity: 'MODERATE',
       summary:
         'Recovery is visible but still requires governed durability confirmation.',
-      executiveAction:
-        'Continue recovery monitoring and verify stabilization credibility across time.',
+      executiveAction: compactExecutiveAction({
+        severity: 'MODERATE',
+        primaryConcern:
+          'Recovery is visible but durability is not yet fully proven.',
+        stabilizationNeed:
+          'Verify stabilization credibility across time before treating recovery as durable.',
+      }),
     }
   }
 
@@ -99,7 +115,10 @@ export function interpretRecovery(
     severity: 'LOW',
     summary:
       'Recovery evidence currently supports credible continuity stabilization.',
-    executiveAction:
-      'Maintain recovery discipline and preserve stabilization memory.',
+    executiveAction: compactExecutiveAction({
+      severity: 'LOW',
+      primaryConcern:
+        'Maintain recovery discipline and preserve stabilization memory.',
+    }),
   }
 }
