@@ -78,7 +78,7 @@ function deriveOwnerRole(input: CGICommandInput): string {
 
 function deriveDeadline(urgency: CGICommandUrgency): string {
   if (urgency === 'IMMEDIATE') {
-    return 'Act now and document stabilization evidence before the next command review.'
+    return 'Act now and record stabilization evidence before the next command review.'
   }
 
   if (urgency === 'URGENT') {
@@ -86,10 +86,10 @@ function deriveDeadline(urgency: CGICommandUrgency): string {
   }
 
   if (urgency === 'NEAR_TERM') {
-    return 'Review and document response within 72 hours.'
+    return 'Review the condition and document response within 72 hours.'
   }
 
-  return 'Continue routine monitoring during the next review cycle.'
+  return 'Continue monitoring through the next review cycle.'
 }
 
 function deriveContinuityRisk(input: CGICommandInput): string {
@@ -98,7 +98,7 @@ function deriveContinuityRisk(input: CGICommandInput): string {
   const pressure = input.derivation.survivabilityPressure
 
   if (condition === 'SURVIVABILITY_THREAT') {
-    return 'Continuity survivability is at risk if leadership does not intervene.'
+    return 'Institutional survivability may weaken if leadership does not intervene.'
   }
 
   if (condition === 'RECURRENCE_RISK') {
@@ -110,7 +110,7 @@ function deriveContinuityRisk(input: CGICommandInput): string {
   }
 
   if (condition === 'ESCALATED_INSTABILITY') {
-    return 'Escalated instability may spread or worsen without command control.'
+    return 'Escalated instability may spread or intensify without command control.'
   }
 
   if (condition === 'ACTIVE_INSTABILITY') {
@@ -118,14 +118,14 @@ function deriveContinuityRisk(input: CGICommandInput): string {
   }
 
   if (condition === 'EARLY_STRAIN') {
-    return 'Early strain may become visible instability if left unattended.'
+    return 'Early strain may mature into visible disruption if left unattended.'
   }
 
   if (confidence === 'HIGH' && pressure === 'LOW') {
     return 'Current continuity risk is low.'
   }
 
-  return 'Continuity credibility may weaken if monitoring is not maintained.'
+  return 'Stabilization reliability may weaken if monitoring is not maintained.'
 }
 
 function deriveConsequenceIfUnresolved(input: CGICommandInput): string {
@@ -136,7 +136,7 @@ function deriveConsequenceIfUnresolved(input: CGICommandInput): string {
   }
 
   if (condition === 'RECURRENCE_RISK') {
-    return 'Failure to act may allow repeated instability to become a structural pattern.'
+    return 'Failure to act may allow repeated instability to harden into a structural pattern.'
   }
 
   if (condition === 'FRAGILE_RECOVERY') {
@@ -167,7 +167,15 @@ function buildCommandNarrative(input: {
   evidence: string
   consequence: string
 }): string {
-  return `${input.dominantTruth} ${input.primaryDriver} ${input.owner} must ensure the required action is completed: ${input.action} Deadline: ${input.deadline} Required evidence: ${input.evidence} Consequence if unresolved: ${input.consequence}`
+  return [
+    input.dominantTruth,
+    input.primaryDriver,
+    `${input.owner} is responsible for ensuring the required action is completed.`,
+    `Required action: ${input.action}`,
+    `Timing expectation: ${input.deadline}`,
+    `Evidence standard: ${input.evidence}`,
+    `Consequence if unresolved: ${input.consequence}`,
+  ].join(' ')
 }
 
 export function buildCGIExecutiveCommand(
