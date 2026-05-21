@@ -1,657 +1,445 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
-import InfrastructureQuickNav from '@/components/InfrastructureQuickNav'
-import { createSnapshotAuditLog } from '@/lib/snapshotAudit'
-import { persistOperationalSnapshot } from '@/lib/cgi/persistOperationalSnapshot'
+import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
+import { evaluateCGILiveOperationalIntegration } from '@/lib/cgiLiveOperationalIntegrationEngine'
 
-import { supabase } from '../lib/supabase'
-
-import {
-  buildSnapshotGovernancePayload,
-  type ExecutiveVisibilityLevel,
-  type SnapshotType,
-  type StabilizationConfidence,
-} from '../lib/snapshotGovernance'
-
-import { calculateExecutivePrioritization } from '../lib/executivePrioritization'
-
-type SaveState = 'IDLE' | 'SAVING' | 'SAVED' | 'ERROR'
-
-const GOVERNANCE_INSTITUTION = 'TSINAXA CGI'
-
-const pageStyle: CSSProperties = {
-  minHeight: '100vh',
-  background: '#020617',
-  color: '#f8fafc',
-  padding: '32px',
-}
-
-const containerStyle: CSSProperties = {
-  maxWidth: '1180px',
-  margin: '0 auto',
-}
-
-const cardStyle: CSSProperties = {
-  border: '1px solid rgba(255,255,255,0.12)',
-  borderRadius: '18px',
-  padding: '18px',
-  background: 'rgba(255,255,255,0.04)',
-}
-
-const metricGridStyle: CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-  gap: '16px',
-  marginTop: '28px',
-}
-
-const formGridStyle: CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-  gap: '16px',
-}
-
-const labelStyle: CSSProperties = {
-  display: 'block',
-  fontSize: '13px',
-  color: '#cbd5e1',
-  marginBottom: '6px',
-}
-
-const inputStyle: CSSProperties = {
-  width: '100%',
-  padding: '12px',
-  borderRadius: '12px',
-  border: '1px solid rgba(255,255,255,0.16)',
-  background: '#111827',
-  color: '#f9fafb',
+function formatLabel(value: string): string {
+  return value.replaceAll('_', ' ')
 }
 
 export default function OperationsPage() {
-  const [saveState, setSaveState] = useState<SaveState>('IDLE')
-  const [errorMessage, setErrorMessage] = useState('')
-
-  const [snapshotReason, setSnapshotReason] = useState(
-    'Scheduled executive continuity review'
-  )
-
-  const [snapshotScope, setSnapshotScope] = useState(
-    'Institution-wide CGI operations'
-  )
-
-  const [snapshotType, setSnapshotType] =
-    useState<SnapshotType>('DAILY_CONTINUITY_REVIEW')
-
-  const [governanceNote, setGovernanceNote] = useState(
-    'Snapshot preserved for continuity posture review, historical comparison, executive visibility, and action prioritization.'
-  )
-
-  const [reviewPeriod, setReviewPeriod] = useState(
-    'Current operational cycle'
-  )
-
-  const [reviewOwner, setReviewOwner] = useState(
-    'Continuity Governance Lead'
-  )
-
-  const [executiveVisibilityLevel, setExecutiveVisibilityLevel] =
-    useState<ExecutiveVisibilityLevel>('EXECUTIVE')
-
-  const [stabilizationConfidence, setStabilizationConfidence] =
-    useState<StabilizationConfidence>('MODERATE')
-
-  const metrics = useMemo(() => {
-    const baseMetrics = {
-      scope: 'CGI_CONTINUITY_OPERATIONS',
-      region: 'GLOBAL',
-      institution_id: null,
-      governance_institution: GOVERNANCE_INSTITUTION,
-
-      continuity_integrity_score: 86,
-      stabilization_confidence_score: 78,
-      escalation_pressure_index: 42,
-      recovery_reliability_score: 74,
-      operational_survivability_score: 81,
-
-      continuity_state: 'STABILIZING',
-
-      propagation_risk: 42,
-      routing_friction: 21,
-      responder_pressure: 48,
-      escalation_velocity: 36,
-      coordination_instability: 24,
-      stabilization_drag: 44,
-
-      pressure_propagation_state: 'CONTAINED_PRESSURE',
-
-      trajectory_risk: 39,
-      continuity_drift: 18,
-      escalation_momentum: 32,
-      recovery_direction: 71,
-      stabilization_trend: 76,
-      unresolved_momentum: 46,
-
-      trajectory_direction: 'STABILIZING',
-
-      structural_memory_risk: 38,
-      routing_failure_recurrence: 22,
-      escalation_corridor_recurrence: 49,
-      institutional_fragility_signature: 35,
-      intervention_failure_pattern: 19,
-      responder_strain_recurrence: 43,
-      continuity_collapse_recurrence: 16,
-
-      structural_memory_state: 'ACTIVE_MEMORY',
-
-      dominant_pressure_source:
-        'Coordination load and unresolved continuity drag',
-
-      dominant_trajectory_signal:
-        'Improving recovery with moderate unresolved momentum',
-
-      dominant_memory_pattern:
-        'Recurring pressure corridors require executive review',
-    }
-
-    const prioritization = calculateExecutivePrioritization({
-      escalationPressureIndex:
-        baseMetrics.escalation_pressure_index,
-      operationalSurvivabilityScore:
-        baseMetrics.operational_survivability_score,
-      recoveryReliabilityScore:
-        baseMetrics.recovery_reliability_score,
-      unresolvedMomentum:
-        baseMetrics.unresolved_momentum,
-      continuityCollapseRecurrence:
-        baseMetrics.continuity_collapse_recurrence,
-      escalationCorridorRecurrence:
-        baseMetrics.escalation_corridor_recurrence,
-      responderStrainRecurrence:
-        baseMetrics.responder_strain_recurrence,
-    })
-
-    return {
-      ...baseMetrics,
-
-      executive_priority_score:
-        prioritization.executivePriorityScore,
-
-      survivability_threat_level:
-        prioritization.survivabilityThreatLevel,
-
-      executive_action_urgency:
-        prioritization.executiveActionUrgency,
-
-      structural_deterioration_state:
-        prioritization.structuralDeteriorationState,
-
-      executive_action_deadline:
-        prioritization.executiveActionDeadline,
-
-      executive_summary:
-        `CGI continuity posture is ${baseMetrics.continuity_state.toLowerCase()}, with ${prioritization.survivabilityThreatLevel.toLowerCase()} survivability threat and ${prioritization.executiveActionUrgency.toLowerCase()} executive action urgency. Recurring pressure corridors and unresolved momentum require governed review before stabilization can be considered durable.`,
-
-      action_cue:
-        `Priority score ${prioritization.executivePriorityScore}/100. Review pressure corridor recurrence, verify recovery durability, and complete executive action ${prioritization.executiveActionDeadline.toLowerCase()}.`,
-    }
-  }, [])
-
-  async function saveGovernedSnapshot() {
-    setSaveState('SAVING')
-    setErrorMessage('')
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    const governancePayload = buildSnapshotGovernancePayload({
-      snapshotReason,
-      snapshotScope,
-      snapshotType,
-      governanceNote,
-      reviewPeriod,
-      continuityPosture: metrics.continuity_state,
-      pressureClassification: metrics.pressure_propagation_state,
-      trajectoryState: metrics.trajectory_direction,
-      recoveryStatus: String(metrics.recovery_direction),
-      stabilizationConfidence,
-      executiveVisibilityLevel,
-      snapshotTrigger:
-        'Manual governed snapshot from CGI operations page',
-      reviewOwner,
-      savedBy: user?.id ?? null,
-      savedByEmail: user?.email ?? null,
-    })
-
-    let snapshot: { id: string } | null = null
-
-    try {
-      snapshot = await persistOperationalSnapshot({
-        scope: metrics.scope,
-        region: metrics.region,
-        institutionId: metrics.institution_id,
-
-        continuityState: metrics.continuity_state,
-        pressurePropagationState:
-          metrics.pressure_propagation_state,
-        trajectoryDirection: metrics.trajectory_direction,
-        structuralMemoryState: metrics.structural_memory_state,
-
-        continuityIntegrityScore:
-          metrics.continuity_integrity_score,
-        stabilizationConfidenceScore:
-          metrics.stabilization_confidence_score,
-        escalationPressureIndex:
-          metrics.escalation_pressure_index,
-        recoveryReliabilityScore:
-          metrics.recovery_reliability_score,
-        operationalSurvivabilityScore:
-          metrics.operational_survivability_score,
-
-        propagationRisk: metrics.propagation_risk,
-        trajectoryRisk: metrics.trajectory_risk,
-        structuralMemoryRisk: metrics.structural_memory_risk,
-
-        recoveryDirection: metrics.recovery_direction,
-        stabilizationTrend: metrics.stabilization_trend,
-        unresolvedMomentum: metrics.unresolved_momentum,
-        stabilizationDrag: metrics.stabilization_drag,
-        continuityDrift: metrics.continuity_drift,
-        escalationMomentum: metrics.escalation_momentum,
-
-        dominantPressureSource:
-          metrics.dominant_pressure_source,
-        dominantTrajectorySignal:
-          metrics.dominant_trajectory_signal,
-        dominantMemoryPattern:
-          metrics.dominant_memory_pattern,
-        executiveSummary: metrics.executive_summary,
-        actionCue: metrics.action_cue,
-      })
-    } catch (error) {
-      setSaveState('ERROR')
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : 'Snapshot was not returned after save.'
-      )
-      return
-    }
-
-    if (!snapshot?.id) {
-      setSaveState('ERROR')
-      setErrorMessage('Snapshot was not returned after save.')
-      return
-    }
-
-    const auditResult = await createSnapshotAuditLog({
-      snapshotId: snapshot.id,
-      auditAction: 'GOVERNED_SNAPSHOT_CREATED',
-      auditReason: snapshotReason,
-      governanceScope: snapshotScope,
-      governanceInstitution: GOVERNANCE_INSTITUTION,
-      performedBy: user?.id ?? null,
-      performedByEmail: user?.email ?? null,
-      continuityPosture: metrics.continuity_state,
-      trajectoryState: metrics.trajectory_direction,
-      pressureClassification: metrics.pressure_propagation_state,
-      recoveryStatus: String(metrics.recovery_direction),
-      executiveVisibilityLevel,
-    })
-
-    if (!auditResult.success) {
-      setSaveState('ERROR')
-      setErrorMessage(
-        'Snapshot saved, but audit logging failed. Review audit trail before relying on this snapshot.'
-      )
-      return
-    }
-
-    setSaveState('SAVED')
-  }
-
   return (
     <GovernanceRouteGuard
       allowedRoles={[
         'SUPER_ADMIN',
         'COMMAND_ADMIN',
         'GOVERNANCE_OFFICER',
-        'INSTITUTION_COORDINATOR',
       ]}
     >
-      <main style={pageStyle}>
-        <InfrastructureQuickNav />
-
-        <section style={containerStyle}>
-          <p style={{ color: '#94a3b8', marginBottom: '8px' }}>
-            TSINAXA CGI · Continuity Governance Infrastructure
-          </p>
-
-          <h1 style={{ fontSize: '38px', marginBottom: '10px' }}>
-            Operations Snapshot Governance
-          </h1>
-
-          <p
-            style={{
-              color: '#cbd5e1',
-              maxWidth: '900px',
-              lineHeight: 1.7,
-            }}
-          >
-            This surface preserves operational continuity snapshots as governed
-            evidence. Each snapshot now carries institution ownership, audit
-            traceability, executive visibility, survivability threat level, and
-            action prioritization.
-          </p>
-
-          <div style={metricGridStyle}>
-            <div style={cardStyle}>
-              <p style={{ color: '#94a3b8' }}>
-                Executive Priority Score
-              </p>
-
-              <h2>{metrics.executive_priority_score}/100</h2>
-
-              <p>{metrics.executive_action_urgency}</p>
-            </div>
-
-            <div style={cardStyle}>
-              <p style={{ color: '#94a3b8' }}>
-                Survivability Threat
-              </p>
-
-              <h2>{metrics.survivability_threat_level}</h2>
-
-              <p>{metrics.executive_action_deadline}</p>
-            </div>
-
-            <div style={cardStyle}>
-              <p style={{ color: '#94a3b8' }}>
-                Continuity Integrity
-              </p>
-
-              <h2>{metrics.continuity_integrity_score}%</h2>
-
-              <p>{metrics.continuity_state}</p>
-            </div>
-
-            <div style={cardStyle}>
-              <p style={{ color: '#94a3b8' }}>
-                Structural Deterioration
-              </p>
-
-              <h2>{metrics.structural_deterioration_state}</h2>
-
-              <p>Not closure. Survivability review required.</p>
-            </div>
-          </div>
-
-          <section
-            style={{
-              ...cardStyle,
-              marginTop: '28px',
-            }}
-          >
-            <h2 style={{ marginBottom: '16px' }}>
-              Snapshot Governance Protocol
-            </h2>
-
-            <div style={formGridStyle}>
-              <div>
-                <label style={labelStyle} htmlFor="snapshot-reason">
-                  Snapshot Reason
-                </label>
-
-                <input
-                  id="snapshot-reason"
-                  name="snapshotReason"
-                  style={inputStyle}
-                  value={snapshotReason}
-                  onChange={(event) =>
-                    setSnapshotReason(event.target.value)
-                  }
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle} htmlFor="snapshot-scope">
-                  Snapshot Scope
-                </label>
-
-                <input
-                  id="snapshot-scope"
-                  name="snapshotScope"
-                  style={inputStyle}
-                  value={snapshotScope}
-                  onChange={(event) =>
-                    setSnapshotScope(event.target.value)
-                  }
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle} htmlFor="snapshot-type">
-                  Snapshot Type
-                </label>
-
-                <select
-                  id="snapshot-type"
-                  name="snapshotType"
-                  style={inputStyle}
-                  value={snapshotType}
-                  onChange={(event) =>
-                    setSnapshotType(
-                      event.target.value as SnapshotType
-                    )
-                  }
-                >
-                  <option value="DAILY_CONTINUITY_REVIEW">
-                    Daily Continuity Review
-                  </option>
-
-                  <option value="WEEKLY_EXECUTIVE_REVIEW">
-                    Weekly Executive Review
-                  </option>
-
-                  <option value="PRESSURE_ESCALATION_REVIEW">
-                    Pressure Escalation Review
-                  </option>
-
-                  <option value="RECOVERY_REVIEW">
-                    Recovery Review
-                  </option>
-
-                  <option value="RELIABILITY_REVIEW">
-                    Reliability Review
-                  </option>
-
-                  <option value="MANUAL_GOVERNANCE_SNAPSHOT">
-                    Manual Governance Snapshot
-                  </option>
-                </select>
-              </div>
-
-              <div>
-                <label style={labelStyle} htmlFor="review-period">
-                  Review Period
-                </label>
-
-                <input
-                  id="review-period"
-                  name="reviewPeriod"
-                  style={inputStyle}
-                  value={reviewPeriod}
-                  onChange={(event) =>
-                    setReviewPeriod(event.target.value)
-                  }
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle} htmlFor="executive-visibility">
-                  Executive Visibility
-                </label>
-
-                <select
-                  id="executive-visibility"
-                  name="executiveVisibilityLevel"
-                  style={inputStyle}
-                  value={executiveVisibilityLevel}
-                  onChange={(event) =>
-                    setExecutiveVisibilityLevel(
-                      event.target.value as ExecutiveVisibilityLevel
-                    )
-                  }
-                >
-                  <option value="OPERATIONAL">Operational</option>
-                  <option value="GOVERNANCE">Governance</option>
-                  <option value="EXECUTIVE">Executive</option>
-                  <option value="BOARD_LEVEL">Board Level</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={labelStyle} htmlFor="stabilization-confidence">
-                  Stabilization Confidence
-                </label>
-
-                <select
-                  id="stabilization-confidence"
-                  name="stabilizationConfidence"
-                  style={inputStyle}
-                  value={stabilizationConfidence}
-                  onChange={(event) =>
-                    setStabilizationConfidence(
-                      event.target.value as StabilizationConfidence
-                    )
-                  }
-                >
-                  <option value="LOW">Low</option>
-                  <option value="MODERATE">Moderate</option>
-                  <option value="HIGH">High</option>
-                  <option value="NOT_YET_CREDIBLE">
-                    Not Yet Credible
-                  </option>
-                </select>
-              </div>
-
-              <div>
-                <label style={labelStyle} htmlFor="review-owner">
-                  Review Owner
-                </label>
-
-                <input
-                  id="review-owner"
-                  name="reviewOwner"
-                  style={inputStyle}
-                  value={reviewOwner}
-                  onChange={(event) =>
-                    setReviewOwner(event.target.value)
-                  }
-                />
-              </div>
-            </div>
-
-            <div style={{ marginTop: '16px' }}>
-              <label style={labelStyle} htmlFor="governance-note">
-                Governance Note
-              </label>
-
-              <textarea
-                id="governance-note"
-                name="governanceNote"
-                style={{
-                  ...inputStyle,
-                  minHeight: '110px',
-                }}
-                value={governanceNote}
-                onChange={(event) =>
-                  setGovernanceNote(event.target.value)
-                }
-              />
-            </div>
-
-            <button
-              onClick={saveGovernedSnapshot}
-              disabled={saveState === 'SAVING'}
-              style={{
-                marginTop: '18px',
-                padding: '13px 18px',
-                borderRadius: '14px',
-                border: 'none',
-                background:
-                  saveState === 'SAVING'
-                    ? '#475569'
-                    : '#f8fafc',
-                color: '#020617',
-                fontWeight: 700,
-                cursor:
-                  saveState === 'SAVING'
-                    ? 'not-allowed'
-                    : 'pointer',
-              }}
-            >
-              {saveState === 'SAVING'
-                ? 'Saving governed snapshot...'
-                : 'Save Governed Snapshot'}
-            </button>
-
-            {saveState === 'SAVED' && (
-              <p
-                style={{
-                  color: '#86efac',
-                  marginTop: '12px',
-                }}
-              >
-                Governed snapshot saved. Historical continuity intelligence,
-                prioritization signal, and audit trail preserved.
-              </p>
-            )}
-
-            {saveState === 'ERROR' && (
-              <p
-                style={{
-                  color: '#fca5a5',
-                  marginTop: '12px',
-                }}
-              >
-                Snapshot save failed: {errorMessage}
-              </p>
-            )}
-          </section>
-
-          <section
-            style={{
-              ...cardStyle,
-              marginTop: '28px',
-            }}
-          >
-            <h2>Executive Interpretation</h2>
-
-            <p
-              style={{
-                color: '#cbd5e1',
-                lineHeight: 1.7,
-              }}
-            >
-              {metrics.executive_summary}
-            </p>
-
-            <p
-              style={{
-                color: '#f8fafc',
-                lineHeight: 1.7,
-              }}
-            >
-              <strong>Action Cue:</strong> {metrics.action_cue}
-            </p>
-          </section>
-        </section>
-      </main>
+      <CGIGovernanceShell>
+        <OperationsContent />
+      </CGIGovernanceShell>
     </GovernanceRouteGuard>
   )
+}
+
+function OperationsContent() {
+  const operationsIntelligence = evaluateCGILiveOperationalIntegration({
+    route: 'OPERATIONS',
+    openCases: 7,
+    escalatedCases: 2,
+    repeatedInstabilityCount: 3,
+    unresolvedCriticalCount: 0,
+    recoveryFailures: 1,
+    verifiedRecoveries: 1,
+    coordinationIssues: 4,
+    averageUnresolvedDays: 8,
+    unresolvedDurationDays: 8,
+    reburnCount: 1,
+    priorEscalationCount: 2,
+    priorSurvivabilityThreatCount: 0,
+    ownerAssigned: true,
+    actionStarted: true,
+    evidenceSubmitted: false,
+    evidenceVerified: false,
+    deadlineMissed: false,
+  })
+
+  return (
+    <main style={styles.page}>
+      <div style={styles.container}>
+        <section style={styles.header}>
+          <p style={styles.kicker}>TSINAXA CGI • OPERATIONS</p>
+
+          <h1 style={styles.title}>Operational Continuity Intelligence</h1>
+
+          <p style={styles.subtitle}>
+            Operations view for interpreting active strain, coordination
+            weakness, recovery credibility, structural memory, and
+            stabilization capacity.
+          </p>
+        </section>
+
+        <section style={styles.heroCard}>
+          <div>
+            <p style={styles.sectionKicker}>Executive Focus</p>
+
+            <h2 style={styles.heroTitle}>
+              {operationsIntelligence.executiveFocus}
+            </h2>
+
+            <p style={styles.heroMeaning}>
+              {operationsIntelligence.routePurpose}
+            </p>
+          </div>
+
+          <div style={styles.toneBox}>
+            <p style={styles.toneLabel}>Shell Tone</p>
+            <p style={styles.toneValue}>
+              {operationsIntelligence.shell.severityTone}
+            </p>
+          </div>
+        </section>
+
+        <section style={styles.gridThree}>
+          <Panel
+            title="Continuity Condition"
+            value={formatLabel(
+              operationsIntelligence.derivation.continuityCondition
+            )}
+          >
+            {operationsIntelligence.shell.continuityPanel.interpretation}
+          </Panel>
+
+          <Panel
+            title="Continuity Confidence"
+            value={formatLabel(
+              operationsIntelligence.derivation.continuityConfidence
+            )}
+          >
+            {operationsIntelligence.shell.confidencePanel.interpretation}
+          </Panel>
+
+          <Panel
+            title="Operational Posture"
+            value={formatLabel(
+              operationsIntelligence.derivation.executivePosture
+            )}
+          >
+            {operationsIntelligence.shell.commandPanel.interpretation}
+          </Panel>
+        </section>
+
+        <section style={styles.gridTwo}>
+          <Panel title="Dominant Operational Truth">
+            {operationsIntelligence.command.dominantTruth}
+          </Panel>
+
+          <Panel title="Primary Driver">
+            {operationsIntelligence.command.primaryDriver}
+          </Panel>
+        </section>
+
+        <section style={styles.gridThree}>
+          <Panel
+            title="Recovery Credibility"
+            value={formatLabel(
+              operationsIntelligence.derivation.recoveryCredibility
+            )}
+          >
+            {operationsIntelligence.shell.recoveryPanel.interpretation}
+          </Panel>
+
+          <Panel
+            title="Structural Memory"
+            value={formatLabel(
+              operationsIntelligence.memory.primaryMemorySignal
+            )}
+          >
+            {operationsIntelligence.memory.executiveMemoryWarning}
+          </Panel>
+
+          <Panel
+            title="Accountability"
+            value={formatLabel(
+              operationsIntelligence.accountability.accountabilityStatus
+            )}
+          >
+            {operationsIntelligence.accountability.escalationRule}
+          </Panel>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Operational Interpretation</p>
+
+          <h2 style={styles.cardTitle}>
+            Operations must protect stabilization capacity.
+          </h2>
+
+          <p style={styles.bodyText}>
+            {operationsIntelligence.operationalNarrative}
+          </p>
+        </section>
+
+        <section style={styles.gridTwo}>
+          <Panel title="Required Action">
+            {operationsIntelligence.command.requiredAction}
+          </Panel>
+
+          <Panel title="Required Evidence">
+            {operationsIntelligence.command.requiredEvidence}
+          </Panel>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Operations Doctrine</p>
+
+          <h2 style={styles.cardTitle}>
+            Operations is where instability either stabilizes or spreads.
+          </h2>
+
+          <p style={styles.bodyText}>
+            CGI operations intelligence does not simply show workload. It
+            interprets whether coordination, recovery, recurrence, and
+            accountability are strengthening or weakening continuity
+            credibility.
+          </p>
+        </section>
+
+        <section style={styles.gridTwo}>
+          <OperationsPrinciple
+            title="Coordination"
+            body="Operational strain becomes dangerous when coordination weakens and unresolved pathways accumulate."
+          />
+
+          <OperationsPrinciple
+            title="Recovery"
+            body="Operational recovery must be verified before leadership can trust that stabilization is durable."
+          />
+
+          <OperationsPrinciple
+            title="Memory"
+            body="Repeated instability in operations should be treated as a structural signal, not isolated noise."
+          />
+
+          <OperationsPrinciple
+            title="Action"
+            body="Every serious operational strain must move toward owner, action, evidence, and verification."
+          />
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Legacy Preservation</p>
+
+          <h2 style={styles.cardTitle}>
+            Previous operations intelligence is preserved.
+          </h2>
+
+          <p style={styles.bodyText}>
+            The earlier operations page was backed up as{' '}
+            <strong>app/operations/page.legacy.tsx</strong>. Valuable legacy
+            logic can now be reintroduced later as smaller governed components.
+          </p>
+        </section>
+      </div>
+    </main>
+  )
+}
+
+function Panel({
+  title,
+  value,
+  children,
+}: {
+  title: string
+  value?: string
+  children?: ReactNode
+}) {
+  return (
+    <section style={styles.panel}>
+      <p style={styles.panelKicker}>{title}</p>
+
+      {value ? <h3 style={styles.panelValue}>{value}</h3> : null}
+
+      {children ? <div style={styles.panelBody}>{children}</div> : null}
+    </section>
+  )
+}
+
+function OperationsPrinciple({
+  title,
+  body,
+}: {
+  title: string
+  body: ReactNode
+}) {
+  return (
+    <article style={styles.principleCard}>
+      <p style={styles.principleKicker}>CGI Operations Principle</p>
+      <h3 style={styles.principleTitle}>{title}</h3>
+      <p style={styles.principleBody}>{body}</p>
+    </article>
+  )
+}
+
+const styles: Record<string, CSSProperties> = {
+  page: {
+    minHeight: '100vh',
+    color: 'white',
+    overflowX: 'hidden',
+  },
+  container: {
+    width: '100%',
+    maxWidth: '1120px',
+    margin: '0 auto',
+    padding: '0 20px 48px',
+    boxSizing: 'border-box',
+  },
+  header: {
+    marginBottom: '20px',
+    paddingTop: '4px',
+  },
+  kicker: {
+    color: '#67e8f9',
+    fontSize: '12px',
+    fontWeight: 900,
+    letterSpacing: '2px',
+    margin: 0,
+  },
+  title: {
+    fontSize: 'clamp(32px, 5vw, 48px)',
+    lineHeight: 1.05,
+    margin: '10px 0',
+  },
+  subtitle: {
+    color: '#cbd5e1',
+    maxWidth: '780px',
+    lineHeight: 1.65,
+    fontSize: '16px',
+    margin: 0,
+  },
+  heroCard: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.4fr) minmax(220px, 0.6fr)',
+    gap: '16px',
+    background: '#020617',
+    border: '1px solid #22d3ee',
+    borderRadius: '24px',
+    padding: '22px',
+    marginBottom: '16px',
+    boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
+  },
+  sectionKicker: {
+    color: '#94a3b8',
+    fontWeight: 900,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+    margin: 0,
+    fontSize: '12px',
+  },
+  heroTitle: {
+    color: '#f8fafc',
+    fontSize: 'clamp(28px, 4vw, 42px)',
+    lineHeight: 1.1,
+    margin: '10px 0',
+  },
+  heroMeaning: {
+    color: '#cbd5e1',
+    lineHeight: 1.65,
+    margin: 0,
+    maxWidth: '760px',
+  },
+  toneBox: {
+    background: '#083344',
+    border: '1px solid #22d3ee',
+    borderRadius: '18px',
+    padding: '16px',
+    alignSelf: 'stretch',
+  },
+  toneLabel: {
+    color: '#67e8f9',
+    fontWeight: 900,
+    margin: '0 0 8px',
+    fontSize: '12px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.12em',
+  },
+  toneValue: {
+    color: '#cffafe',
+    fontSize: '28px',
+    lineHeight: 1.1,
+    margin: 0,
+    fontWeight: 900,
+  },
+  gridThree: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: '14px',
+    marginBottom: '16px',
+  },
+  gridTwo: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: '16px',
+    marginBottom: '16px',
+  },
+  panel: {
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '18px',
+    padding: '16px',
+    minHeight: '150px',
+    boxSizing: 'border-box',
+  },
+  panelKicker: {
+    color: '#94a3b8',
+    fontSize: '12px',
+    fontWeight: 900,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    margin: 0,
+  },
+  panelValue: {
+    color: '#f8fafc',
+    fontSize: '20px',
+    lineHeight: 1.15,
+    margin: '10px 0 0',
+  },
+  panelBody: {
+    color: '#cbd5e1',
+    fontSize: '14px',
+    lineHeight: 1.6,
+    marginTop: '10px',
+  },
+  card: {
+    background: '#020617',
+    border: '1px solid #1e293b',
+    borderRadius: '22px',
+    padding: '20px',
+    marginBottom: '16px',
+    boxShadow: '0 20px 50px rgba(0,0,0,0.24)',
+    boxSizing: 'border-box',
+    overflow: 'hidden',
+  },
+  cardTitle: {
+    color: '#f8fafc',
+    fontSize: '26px',
+    lineHeight: 1.15,
+    margin: '10px 0 10px',
+  },
+  bodyText: {
+    color: '#cbd5e1',
+    lineHeight: 1.7,
+    margin: 0,
+    maxWidth: '880px',
+  },
+  principleCard: {
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '18px',
+    padding: '18px',
+    minHeight: '160px',
+  },
+  principleKicker: {
+    color: '#94a3b8',
+    fontSize: '12px',
+    fontWeight: 900,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    margin: 0,
+  },
+  principleTitle: {
+    color: '#f8fafc',
+    fontSize: '22px',
+    lineHeight: 1.15,
+    margin: '10px 0',
+  },
+  principleBody: {
+    color: '#cbd5e1',
+    lineHeight: 1.6,
+    margin: 0,
+  },
 }
