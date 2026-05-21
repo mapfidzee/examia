@@ -97,15 +97,15 @@ function buildContinuityInterpretation(input: CGIShellInput): string {
   const driver = input.command.primaryDriver
 
   if (condition === 'SURVIVABILITY_THREAT') {
-    return `${driver} Continuity credibility has moved beyond routine operational containment. Executive stabilization oversight is required before survivability weakens further.`
+    return `${driver} The institution is moving beyond routine operational containment. Executive stabilization oversight is required before survivability weakens further.`
   }
 
   if (condition === 'RECURRENCE_RISK') {
-    return `${driver} The repeated pattern suggests the institution may be cycling through instability instead of achieving durable stabilization.`
+    return `${driver} The repeated pattern suggests the institution may be cycling through instability instead of reaching dependable stabilization.`
   }
 
   if (condition === 'FRAGILE_RECOVERY') {
-    return `${driver} Recovery is visible, but CGI has not yet accepted it as durable. Stabilization must be verified before confidence is restored.`
+    return `${driver} Recovery is visible, but durability is not yet proven. Stabilization must be verified before leadership restores confidence.`
   }
 
   if (condition === 'ESCALATED_INSTABILITY') {
@@ -117,10 +117,10 @@ function buildContinuityInterpretation(input: CGIShellInput): string {
   }
 
   if (condition === 'EARLY_STRAIN') {
-    return `${driver} Early strain is visible. Action now can prevent a larger continuity disruption.`
+    return `${driver} Early strain is visible. Timely action can prevent a larger continuity disruption.`
   }
 
-  return 'Continuity is currently stable under the available evidence. Monitoring should continue so early strain does not go unseen.'
+  return 'The current condition appears stable under available evidence. Monitoring should continue so early strain does not go unseen.'
 }
 
 function buildConfidenceInterpretation(input: CGIShellInput): string {
@@ -128,11 +128,11 @@ function buildConfidenceInterpretation(input: CGIShellInput): string {
   const condition = formatStateLabel(input.derivation.continuityCondition)
 
   if (confidence === 'CRITICAL') {
-    return `${condition} is active and confidence is critically weakened. Leadership should not assume the institution can self-correct without direct stabilization oversight.`
+    return `${condition} is active and stabilization confidence is critically weakened. Leadership should not assume the institution can self-correct without direct oversight.`
   }
 
   if (confidence === 'DEGRADING') {
-    return `${condition} is active and confidence is weakening. The system is showing signs that stabilization reliability is declining.`
+    return `${condition} is active and institutional reliability is weakening. The system is showing signs that stabilization capacity is declining.`
   }
 
   if (confidence === 'FRAGILE') {
@@ -140,10 +140,10 @@ function buildConfidenceInterpretation(input: CGIShellInput): string {
   }
 
   if (confidence === 'GUARDED') {
-    return `${condition} is active. Confidence exists, but leadership should continue close review until pressure, recurrence, or recovery uncertainty is reduced.`
+    return `${condition} is active. Confidence exists, but leadership should continue close review until pressure, recurrence, or recovery uncertainty reduces.`
   }
 
-  return 'Continuity confidence is high because current evidence does not show serious instability, recurrence, or survivability pressure.'
+  return 'Confidence is high because current evidence does not show serious instability, recurrence, or survivability pressure.'
 }
 
 function buildRecoveryInterpretation(input: CGIShellInput): string {
@@ -155,7 +155,7 @@ function buildRecoveryInterpretation(input: CGIShellInput): string {
   }
 
   if (recovery === 'CREDIBLE') {
-    return 'Recovery appears credible, but the current condition still requires verification before leadership treats stabilization as durable.'
+    return 'Recovery activity appears operationally credible, but stabilization durability remains unverified under the current condition.'
   }
 
   if (recovery === 'PARTIAL') {
@@ -282,7 +282,7 @@ export function buildCGIUnifiedExecutiveShell(
       label: 'Required Action',
       value: input.command.requiredAction,
       interpretation:
-        'This is the action required to protect continuity credibility under the current condition.',
+        'This is the action required to protect stabilization reliability under the current condition.',
     },
     evidencePanel: {
       label: 'Required Evidence',
