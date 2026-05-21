@@ -1,849 +1,291 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 
+import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
-import { interpretRecovery } from '@/lib/cgi/interpreters/interpretRecovery'
-import { supabase } from '../../lib/supabase'
+import { evaluateCGILiveOperationalIntegration } from '@/lib/cgiLiveOperationalIntegrationEngine'
 
-type CgiOperationalMetric = {
-  id: string
-  created_at: string
-  scope: string
-  continuity_state: string
-  pressure_propagation_state: string
-  trajectory_direction: string
-  structural_memory_state: string
-  continuity_integrity_score: number
-  stabilization_confidence_score: number
-  recovery_reliability_score: number
-  operational_survivability_score: number
-  recovery_direction: number
-  stabilization_trend: number
-  unresolved_momentum: number
-  stabilization_drag: number
-  continuity_drift: number
-  escalation_momentum: number
-  propagation_risk: number
-  trajectory_risk: number
-  structural_memory_risk: number
-  dominant_pressure_source: string | null
-  dominant_trajectory_signal: string | null
-  dominant_memory_pattern: string | null
+function formatLabel(value: string): string {
+  return value.replaceAll('_', ' ')
 }
-
-type Interpretation = {
-  posture: string
-  meaning: string
-  action: string
-}
-
-const SAMPLE_LIMIT = 120
 
 export default function RecoveryPage() {
   return (
-    <CGIGovernanceShell>
-      <RecoveryContent />
-    </CGIGovernanceShell>
+    <GovernanceRouteGuard
+      allowedRoles={[
+        'SUPER_ADMIN',
+        'COMMAND_ADMIN',
+        'GOVERNANCE_OFFICER',
+      ]}
+    >
+      <CGIGovernanceShell>
+        <RecoveryContent />
+      </CGIGovernanceShell>
+    </GovernanceRouteGuard>
   )
 }
 
 function RecoveryContent() {
-  const [metrics, setMetrics] = useState<CgiOperationalMetric[]>([])
-  const [message, setMessage] = useState('')
-
-  useEffect(() => {
-    loadRecoveryMetrics()
-  }, [])
-
-  async function loadRecoveryMetrics() {
-    setMessage('Loading recovery intelligence...')
-
-    const { data, error } = await supabase
-      .from('cgi_operational_metrics')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(SAMPLE_LIMIT)
-
-    if (error) {
-      console.error(error)
-      setMessage('Recovery intelligence could not be loaded.')
-      return
-    }
-
-    setMetrics(data || [])
-    setMessage('Recovery intelligence loaded.')
-  }
-
-  const recovery = useMemo(() => {
-    const ordered = [...metrics].sort(
-      (a, b) =>
-        new Date(a.created_at).getTime() -
-        new Date(b.created_at).getTime()
-    )
-
-    const latest = ordered[ordered.length - 1] || null
-    const previous = ordered[ordered.length - 2] || null
-
-    const earlyWindow = ordered.slice(0, 5)
-    const recentWindow = ordered.slice(-5)
-
-    const reliability = average(
-      metrics.map((item) => item.recovery_reliability_score)
-    )
-
-    const direction = average(
-      metrics.map((item) => item.recovery_direction)
-    )
-
-    const trend = average(
-      metrics.map((item) => item.stabilization_trend)
-    )
-
-    const confidence = average(
-      metrics.map((item) => item.stabilization_confidence_score)
-    )
-
-    const survivability = average(
-      metrics.map((item) => item.operational_survivability_score)
-    )
-
-    const integrity = average(
-      metrics.map((item) => item.continuity_integrity_score)
-    )
-
-    const unresolved = average(
-      metrics.map((item) => item.unresolved_momentum)
-    )
-
-    const drag = average(
-      metrics.map((item) => item.stabilization_drag)
-    )
-
-    const drift = average(
-      metrics.map((item) => item.continuity_drift)
-    )
-
-    const escalation = average(
-      metrics.map((item) => item.escalation_momentum)
-    )
-
-    const burden = average([
-      unresolved,
-      drag,
-      drift,
-      escalation,
-      average(metrics.map((item) => item.propagation_risk)),
-      average(metrics.map((item) => item.trajectory_risk)),
-      average(metrics.map((item) => item.structural_memory_risk)),
-    ])
-
-    const conversion = clamp(
-      average([
-        reliability,
-        direction,
-        trend,
-        confidence,
-        survivability,
-        integrity,
-        100 - burden,
-      ])
-    )
-
-    const early = average(
-      earlyWindow.map((item) => recoveryConversionFromSnapshot(item))
-    )
-
-    const recent = average(
-      recentWindow.map((item) => recoveryConversionFromSnapshot(item))
-    )
-
-    const velocity = metrics.length < 2 ? 0 : recent - early
-
-    const latestMovement =
-      latest && previous
-        ? recoveryConversionFromSnapshot(latest) -
-          recoveryConversionFromSnapshot(previous)
-        : 0
-
-    const volatility = calculateVolatility(
-      metrics.map((item) => recoveryConversionFromSnapshot(item))
-    )
-
-    const pressure = clamp(
-      average([
-        unresolved,
-        drag,
-        drift,
-        escalation,
-        100 - reliability,
-        100 - direction,
-        100 - trend,
-        100 - survivability,
-      ])
-    )
-
-    const centralizedRecovery = interpretRecovery({
-      stabilizationConfidence: confidence,
-      recoveryReliability: reliability,
-      survivabilityScore: survivability,
-      continuityDrift: drift,
-      unresolvedMomentum: unresolved,
-    })
-
-    const dominantBlocker = strongestDriver({
-      'Stabilization trend weakness': 100 - trend,
-      'Recovery reliability weakness': 100 - reliability,
-      'Recovery direction weakness': 100 - direction,
-      'Survivability weakness': 100 - survivability,
-      'Unresolved momentum': unresolved,
-      'Stabilization drag': drag,
-      'Continuity drift': drift,
-      'Escalation momentum': escalation,
-    })
-
-    const posture = {
-      posture: centralizedRecovery.posture,
-      meaning: centralizedRecovery.summary,
-      action: centralizedRecovery.executiveAction,
-    }
-
-    const durability = interpretDurability(conversion)
-    const reliabilityMeaning = interpretReliability(reliability)
-    const directionMeaning = interpretDirection(velocity || latestMovement)
-    const trendMeaning = interpretTrend(trend)
-    const survivabilityMeaning = interpretSurvivability(survivability)
-    const pressureMeaning = interpretPressureBurden(pressure)
-    const volatilityMeaning = interpretVolatility(volatility)
-    const driftMeaning = interpretDrift(drift)
-    const historyMeaning = interpretHistory(metrics.length)
-
-    const executiveSummary = `${posture.meaning} Dominant blocker: ${dominantBlocker}. ${pressureMeaning.meaning} ${driftMeaning.meaning}`
-
-    const actionCue = compactAction([
-      posture.action,
-      pressureMeaning.action,
-      driftMeaning.action,
-      volatilityMeaning.action,
-    ])
-
-    return {
-      latest,
-      posture,
-      durability,
-      reliabilityMeaning,
-      directionMeaning,
-      trendMeaning,
-      survivabilityMeaning,
-      pressureMeaning,
-      volatilityMeaning,
-      driftMeaning,
-      historyMeaning,
-      dominantBlocker,
-      executiveSummary,
-      actionCue,
-    }
-  }, [metrics])
-
-  const brief = `
-TSINAXA CGI RECOVERY INTELLIGENCE BRIEF
-
-Recovery Posture:
-${recovery.posture.posture}
-
-Recovery Durability:
-${recovery.durability.posture}
-
-Recovery Reliability:
-${recovery.reliabilityMeaning.posture}
-
-Recovery Direction:
-${recovery.directionMeaning.posture}
-
-Stabilization Trend:
-${recovery.trendMeaning.posture}
-
-Survivability:
-${recovery.survivabilityMeaning.posture}
-
-Recovery Pressure:
-${recovery.pressureMeaning.posture}
-
-Volatility:
-${recovery.volatilityMeaning.posture}
-
-Continuity Drift:
-${recovery.driftMeaning.posture}
-
-Dominant Blocker:
-${recovery.dominantBlocker}
-
-Executive Interpretation:
-${recovery.executiveSummary}
-
-Recommended Action:
-${recovery.actionCue}
-
-Governance-Safe Meaning:
-This recovery view interprets persisted continuity memory. It does not judge people. It asks whether stabilization is becoming durable recovery.
-  `.trim()
+  const recoveryIntelligence = evaluateCGILiveOperationalIntegration({
+    route: 'RECOVERY',
+    openCases: 4,
+    escalatedCases: 1,
+    repeatedInstabilityCount: 4,
+    unresolvedCriticalCount: 0,
+    recoveryFailures: 2,
+    verifiedRecoveries: 0,
+    coordinationIssues: 2,
+    averageUnresolvedDays: 10,
+    unresolvedDurationDays: 10,
+    reburnCount: 2,
+    priorEscalationCount: 3,
+    priorSurvivabilityThreatCount: 0,
+    ownerAssigned: true,
+    actionStarted: true,
+    evidenceSubmitted: true,
+    evidenceVerified: false,
+    deadlineMissed: false,
+  })
 
   return (
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.header}>
-          <p style={styles.kicker}>TSINAXA CGI • RECOVERY INTELLIGENCE</p>
+          <p style={styles.kicker}>TSINAXA CGI • RECOVERY</p>
 
-          <h1 style={styles.title}>Continuity Recovery Intelligence</h1>
+          <h1 style={styles.title}>Recovery Credibility Intelligence</h1>
 
           <p style={styles.subtitle}>
-            Executive interpretation of whether stabilization is becoming durable recovery.
-            Internal calculations stay hidden. Leadership sees posture, meaning, and action.
+            Recovery view for distinguishing visible recovery from durable
+            stabilization, detecting reburn, and requiring evidence before
+            confidence is restored.
           </p>
         </section>
 
-        {message && <div style={styles.message}>{message}</div>}
-
         <section style={styles.heroCard}>
           <div>
-            <p style={styles.sectionKicker}>Recovery Posture</p>
+            <p style={styles.sectionKicker}>Executive Focus</p>
 
-            <h2 style={styles.heroPosture}>
-              {recovery.posture.posture}
+            <h2 style={styles.heroTitle}>
+              {recoveryIntelligence.executiveFocus}
             </h2>
 
             <p style={styles.heroMeaning}>
-              {recovery.executiveSummary}
+              {recoveryIntelligence.routePurpose}
             </p>
           </div>
 
-          <div style={styles.actionBox}>
-            <p style={styles.actionLabel}>Recommended Action</p>
-
-            <p style={styles.actionText}>
-              {recovery.actionCue}
+          <div style={styles.toneBox}>
+            <p style={styles.toneLabel}>Shell Tone</p>
+            <p style={styles.toneValue}>
+              {recoveryIntelligence.shell.severityTone}
             </p>
           </div>
         </section>
 
-        <section style={styles.postureGrid}>
-          <PostureCard title="Recovery Durability" interpretation={recovery.durability} />
-          <PostureCard title="Recovery Reliability" interpretation={recovery.reliabilityMeaning} />
-          <PostureCard title="Recovery Direction" interpretation={recovery.directionMeaning} />
-          <PostureCard title="Stabilization Trend" interpretation={recovery.trendMeaning} />
-          <PostureCard title="Survivability" interpretation={recovery.survivabilityMeaning} />
-          <PostureCard title="Recovery Pressure" interpretation={recovery.pressureMeaning} />
-        </section>
-
-        <section style={styles.compactGrid}>
-          <CompactCard title="History Depth" value={recovery.historyMeaning.posture} />
-          <CompactCard title="Dominant Blocker" value={recovery.dominantBlocker} />
-          <CompactCard title="Volatility" value={recovery.volatilityMeaning.posture} />
-          <CompactCard title="Continuity Drift" value={recovery.driftMeaning.posture} />
-        </section>
-
-        <section style={styles.twoColumn}>
-          <Panel title="Latest Recovery Context">
-            <Info label="Continuity State" value={recovery.latest?.continuity_state || 'Not recorded'} />
-            <Info label="Trajectory Direction" value={recovery.latest?.trajectory_direction || 'Not recorded'} />
-            <Info label="Pressure State" value={recovery.latest?.pressure_propagation_state || 'Not recorded'} />
-            <Info label="Structural Memory" value={recovery.latest?.structural_memory_state || 'Not recorded'} />
-            <Info label="Dominant Pressure" value={recovery.latest?.dominant_pressure_source || 'Not recorded'} />
+        <section style={styles.gridThree}>
+          <Panel
+            title="Recovery Credibility"
+            value={formatLabel(
+              recoveryIntelligence.derivation.recoveryCredibility
+            )}
+          >
+            {recoveryIntelligence.shell.recoveryPanel.interpretation}
           </Panel>
 
-          <Panel title="Interpretive Reading">
-            <Info label="Recovery Volatility" value={recovery.volatilityMeaning.posture} />
-            <Info label="Continuity Drift" value={recovery.driftMeaning.posture} />
-            <Info label="Instability Burden" value={recovery.pressureMeaning.posture} />
-            <Info label="Dominant Blocker" value={recovery.dominantBlocker} />
-            <Info label="Current Reading" value={recovery.posture.posture} />
+          <Panel
+            title="Continuity Condition"
+            value={formatLabel(
+              recoveryIntelligence.derivation.continuityCondition
+            )}
+          >
+            {recoveryIntelligence.shell.continuityPanel.interpretation}
+          </Panel>
+
+          <Panel
+            title="Continuity Confidence"
+            value={formatLabel(
+              recoveryIntelligence.derivation.continuityConfidence
+            )}
+          >
+            {recoveryIntelligence.shell.confidencePanel.interpretation}
+          </Panel>
+        </section>
+
+        <section style={styles.gridTwo}>
+          <Panel title="Dominant Recovery Truth">
+            {recoveryIntelligence.command.dominantTruth}
+          </Panel>
+
+          <Panel title="Primary Recovery Driver">
+            {recoveryIntelligence.command.primaryDriver}
+          </Panel>
+        </section>
+
+        <section style={styles.gridThree}>
+          <Panel
+            title="Structural Memory"
+            value={formatLabel(
+              recoveryIntelligence.memory.primaryMemorySignal
+            )}
+          >
+            {recoveryIntelligence.memory.executiveMemoryWarning}
+          </Panel>
+
+          <Panel
+            title="Reburn Detected"
+            value={recoveryIntelligence.memory.reburnDetected ? 'YES' : 'NO'}
+          >
+            Reburn means instability returned after apparent recovery.
+          </Panel>
+
+          <Panel
+            title="Recovery Collapse"
+            value={
+              recoveryIntelligence.memory.recoveryCollapseDetected
+                ? 'YES'
+                : 'NO'
+            }
+          >
+            Recovery collapse means earlier recovery did not hold.
           </Panel>
         </section>
 
         <section style={styles.card}>
-          <div style={styles.cardHeader}>
-            <div>
-              <h2 style={styles.cardTitle}>Recent Recovery Memory Trail</h2>
+          <p style={styles.sectionKicker}>Recovery Doctrine</p>
 
-              <p style={styles.cardNote}>
-                Recent snapshots are displayed as threshold interpretations, not raw scores.
-              </p>
-            </div>
+          <h2 style={styles.cardTitle}>
+            Visible recovery must prove durability.
+          </h2>
 
-            <button onClick={loadRecoveryMetrics} style={styles.primaryButton}>
-              Refresh
-            </button>
-          </div>
+          <p style={styles.bodyText}>
+            CGI does not restore trust simply because a case appears recovered.
+            Recovery must hold across time without reburn, relapse, unresolved
+            pressure, or recurring instability.
+          </p>
+        </section>
 
-          <div style={styles.tableWrap}>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Created</th>
-                  <th style={styles.th}>Continuity</th>
-                  <th style={styles.th}>Recovery</th>
-                  <th style={styles.th}>Reliability</th>
-                  <th style={styles.th}>Direction</th>
-                  <th style={styles.th}>Survivability</th>
-                </tr>
-              </thead>
+        <section style={styles.gridTwo}>
+          <Panel title="Required Recovery Action">
+            {recoveryIntelligence.command.requiredAction}
+          </Panel>
 
-              <tbody>
-                {metrics.length === 0 && (
-                  <tr>
-                    <td style={styles.td} colSpan={6}>
-                      No persisted recovery memory found yet.
-                    </td>
-                  </tr>
-                )}
+          <Panel title="Required Recovery Evidence">
+            {recoveryIntelligence.command.requiredEvidence}
+          </Panel>
+        </section>
 
-                {metrics.slice(0, 8).map((item) => {
-                  const rowRecovery = interpretRecovery({
-                    stabilizationConfidence:
-                      item.stabilization_confidence_score,
-                    recoveryReliability:
-                      item.recovery_reliability_score,
-                    survivabilityScore:
-                      item.operational_survivability_score,
-                    continuityDrift:
-                      item.continuity_drift,
-                    unresolvedMomentum:
-                      item.unresolved_momentum,
-                  })
+        <section style={styles.gridThree}>
+          <Panel
+            title="Accountability Status"
+            value={formatLabel(
+              recoveryIntelligence.accountability.accountabilityStatus
+            )}
+          >
+            {recoveryIntelligence.accountability.escalationRule}
+          </Panel>
 
-                  return (
-                    <tr key={item.id}>
-                      <td style={styles.td}>
-                        {formatDate(item.created_at)}
-                      </td>
+          <Panel
+            title="Accountability Risk"
+            value={formatLabel(
+              recoveryIntelligence.accountability.accountabilityRisk
+            )}
+          >
+            Recovery accountability must remain active until stabilization is
+            verified.
+          </Panel>
 
-                      <td style={styles.td}>
-                        {item.continuity_state}
-                      </td>
-
-                      <td style={styles.td}>
-                        {rowRecovery.posture}
-                      </td>
-
-                      <td style={styles.td}>
-                        {
-                          interpretReliability(
-                            item.recovery_reliability_score
-                          ).posture
-                        }
-                      </td>
-
-                      <td style={styles.td}>
-                        {
-                          interpretDirection(
-                            item.recovery_direction - 50
-                          ).posture
-                        }
-                      </td>
-
-                      <td style={styles.td}>
-                        {
-                          interpretSurvivability(
-                            item.operational_survivability_score
-                          ).posture
-                        }
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+          <Panel title="Verification Standard" value="Evidence Required">
+            {recoveryIntelligence.accountability.verificationStandard}
+          </Panel>
         </section>
 
         <section style={styles.card}>
-          <h2 style={styles.cardTitle}>Generated Recovery Brief</h2>
-          <pre style={styles.summaryBox}>{brief}</pre>
+          <p style={styles.sectionKicker}>Recovery Interpretation</p>
+
+          <h2 style={styles.cardTitle}>
+            Recovery is a credibility test, not a status label.
+          </h2>
+
+          <p style={styles.bodyText}>
+            {recoveryIntelligence.operationalNarrative}
+          </p>
+        </section>
+
+        <section style={styles.gridTwo}>
+          <RecoveryPrinciple
+            title="Do not trust appearance alone"
+            body="A recovery status is not enough. CGI requires evidence that stabilization is actually holding."
+          />
+
+          <RecoveryPrinciple
+            title="Watch for reburn"
+            body="If instability returns after apparent recovery, the system must treat it as a structural warning."
+          />
+
+          <RecoveryPrinciple
+            title="Verify before confidence"
+            body="Confidence should only improve after durable recovery evidence is visible."
+          />
+
+          <RecoveryPrinciple
+            title="Protect against false closure"
+            body="False closure creates leadership confidence before the institution has actually stabilized."
+          />
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Legacy Preservation</p>
+
+          <h2 style={styles.cardTitle}>
+            Previous recovery intelligence is preserved.
+          </h2>
+
+          <p style={styles.bodyText}>
+            The earlier recovery page was backed up as{' '}
+            <strong>app/recovery/page.legacy.tsx</strong>. Valuable legacy
+            logic can now be reintroduced later as smaller governed components.
+          </p>
         </section>
       </div>
     </main>
   )
 }
 
-function recoveryConversionFromSnapshot(item: CgiOperationalMetric) {
-  return clamp(
-    average([
-      item.recovery_reliability_score,
-      item.recovery_direction,
-      item.stabilization_trend,
-      item.stabilization_confidence_score,
-      item.operational_survivability_score,
-      item.continuity_integrity_score,
-      100 -
-        average([
-          item.unresolved_momentum,
-          item.stabilization_drag,
-          item.continuity_drift,
-          item.escalation_momentum,
-          item.propagation_risk,
-          item.trajectory_risk,
-          item.structural_memory_risk,
-        ]),
-    ])
-  )
-}
-
-function average(values: number[]) {
-  const valid = values.filter((value) => Number.isFinite(value))
-
-  if (valid.length === 0) return 0
-
-  return Math.round(
-    valid.reduce((sum, value) => sum + value, 0) /
-      valid.length
-  )
-}
-
-function clamp(value: number) {
-  return Math.max(0, Math.min(100, Math.round(value)))
-}
-
-function calculateVolatility(values: number[]) {
-  const valid = values.filter((value) => Number.isFinite(value))
-
-  if (valid.length < 2) return 0
-
-  const mean = average(valid)
-
-  const variance =
-    valid.reduce(
-      (sum, value) => sum + Math.pow(value - mean, 2),
-      0
-    ) / valid.length
-
-  return Math.min(100, Math.round(Math.sqrt(variance)))
-}
-
-function strongestDriver(scores: Record<string, number>) {
-  return (
-    Object.entries(scores).sort((a, b) => b[1] - a[1])[0]?.[0] ||
-    'No dominant blocker detected'
-  )
-}
-
-function interpretDurability(score: number): Interpretation {
-  if (score >= 70) {
-    return {
-      posture: 'DURABILITY IMPROVING',
-      meaning:
-        'Recovery signals are converting into stronger stabilization credibility.',
-      action: 'Confirm survivability before closure.',
-    }
-  }
-
-  if (score >= 50) {
-    return {
-      posture: 'MONITORED RECOVERY',
-      meaning:
-        'Recovery signals exist, but durability is not yet fully credible.',
-      action: 'Maintain governed monitoring.',
-    }
-  }
-
-  return {
-    posture: 'DURABILITY NOT CREDIBLE',
-    meaning:
-      'Recovery evidence is too weak to treat stabilization as durable.',
-    action: 'Escalate recovery review.',
-  }
-}
-
-function interpretReliability(score: number): Interpretation {
-  if (score >= 70) {
-    return {
-      posture: 'RELIABILITY STRENGTHENING',
-      meaning:
-        'Recovery reliability is moving toward a credible holding pattern.',
-      action: 'Preserve current recovery discipline.',
-    }
-  }
-
-  if (score >= 45) {
-    return {
-      posture: 'RELIABILITY HOLDING',
-      meaning:
-        'Reliability exists, but still needs confirmation before closure is trusted.',
-      action: 'Watch for recurrence.',
-    }
-  }
-
-  return {
-    posture: 'RELIABILITY WEAK',
-    meaning:
-      'Reliability is not strong enough to support durable stabilization.',
-    action: 'Review ownership and follow-through.',
-  }
-}
-
-function interpretDirection(value: number): Interpretation {
-  if (value >= 10) {
-    return {
-      posture: 'MOVING FORWARD',
-      meaning: 'Recovery direction is improving.',
-      action: 'Protect the recovery pathway.',
-    }
-  }
-
-  if (value <= -10) {
-    return {
-      posture: 'LOSING GROUND',
-      meaning: 'Recovery direction is weakening.',
-      action: 'Investigate drift and recurrence.',
-    }
-  }
-
-  return {
-    posture: 'DIRECTION HOLDING',
-    meaning:
-      'Recovery is neither clearly improving nor collapsing.',
-    action: 'Continue monitoring.',
-  }
-}
-
-function interpretTrend(score: number): Interpretation {
-  if (score >= 70) {
-    return {
-      posture: 'STRENGTHENING',
-      meaning:
-        'Stabilization signals are becoming more credible.',
-      action: 'Validate survivability.',
-    }
-  }
-
-  if (score >= 45) {
-    return {
-      posture: 'FRAGILE',
-      meaning:
-        'Improvement exists, but durability is not yet certain.',
-      action: 'Keep recovery monitoring active.',
-    }
-  }
-
-  return {
-    posture: 'WEAK',
-    meaning: 'Stabilization signals remain weak.',
-    action: 'Review unresolved barriers.',
-  }
-}
-
-function interpretSurvivability(score: number): Interpretation {
-  if (score >= 70) {
-    return {
-      posture: 'SURVIVABILITY IMPROVING',
-      meaning:
-        'The recovery pathway is showing stronger durability.',
-      action: 'Maintain confirmation monitoring.',
-    }
-  }
-
-  if (score >= 45) {
-    return {
-      posture: 'SURVIVABILITY MONITORED',
-      meaning:
-        'Survivability exists but remains under review.',
-      action: 'Do not assume closure.',
-    }
-  }
-
-  return {
-    posture: 'SURVIVABILITY AT RISK',
-    meaning:
-      'Recovery may not survive continued pressure.',
-    action: 'Escalate survivability review.',
-  }
-}
-
-function interpretPressureBurden(score: number): Interpretation {
-  if (score >= 65) {
-    return {
-      posture: 'HIGH RECOVERY PRESSURE',
-      meaning:
-        'Structural friction threatens recovery durability.',
-      action: 'Escalate pressure review.',
-    }
-  }
-
-  if (score >= 35) {
-    return {
-      posture: 'MODERATE FRICTION',
-      meaning:
-        'Unresolved stabilization drag remains visible.',
-      action: 'Reduce recovery blockers.',
-    }
-  }
-
-  return {
-    posture: 'PRESSURE CONTAINED',
-    meaning: 'Recovery pressure appears contained.',
-    action: 'Continue routine monitoring.',
-  }
-}
-
-function interpretVolatility(score: number): Interpretation {
-  if (score >= 35) {
-    return {
-      posture: 'VOLATILE',
-      meaning:
-        'Recovery movement is fluctuating enough to weaken confidence.',
-      action: 'Extend monitoring.',
-    }
-  }
-
-  if (score >= 18) {
-    return {
-      posture: 'CONTAINED VARIATION',
-      meaning:
-        'Recovery varies, but not enough to indicate collapse.',
-      action: 'Watch for repeated instability.',
-    }
-  }
-
-  return {
-    posture: 'CONSISTENT',
-    meaning: 'Recovery movement appears steady.',
-    action: 'Maintain confirmation monitoring.',
-  }
-}
-
-function interpretDrift(score: number): Interpretation {
-  if (score >= 55) {
-    return {
-      posture: 'DRIFT RISING',
-      meaning: 'Continuity drift is becoming more visible.',
-      action: 'Review drift sources.',
-    }
-  }
-
-  if (score >= 25) {
-    return {
-      posture: 'DRIFT UNDER WATCH',
-      meaning:
-        'Some drift is visible and must remain under review.',
-      action: 'Keep drift visible.',
-    }
-  }
-
-  return {
-    posture: 'DRIFT CONTAINED',
-    meaning: 'Continuity drift is currently contained.',
-    action: 'Maintain monitoring.',
-  }
-}
-
-function interpretHistory(count: number): Interpretation {
-  if (count < 3) {
-    return {
-      posture: 'INSUFFICIENT HISTORY',
-      meaning:
-        'Too few snapshots exist for recovery interpretation.',
-      action: 'Continue saving snapshots.',
-    }
-  }
-
-  if (count < 10) {
-    return {
-      posture: 'EARLY HISTORY',
-      meaning:
-        'Recovery interpretation has started, but memory remains young.',
-      action: 'Build continuity memory.',
-    }
-  }
-
-  return {
-    posture: 'MEMORY ESTABLISHED',
-    meaning:
-      'Persisted memory is sufficient for recovery interpretation.',
-    action: 'Use posture to guide review.',
-  }
-}
-
-function compactAction(actions: string[]) {
-  return Array.from(new Set(actions)).join(' ')
-}
-
-function formatDate(value: string) {
-  if (!value) return 'Not recorded'
-
-  return new Date(value).toLocaleString()
-}
-
-function PostureCard({
-  title,
-  interpretation,
-}: {
-  title: string
-  interpretation: Interpretation
-}) {
-  return (
-    <article style={styles.postureCard}>
-      <p style={styles.cardKicker}>{title}</p>
-
-      <h3 style={styles.postureTitle}>
-        {interpretation.posture}
-      </h3>
-
-      <p style={styles.postureMeaning}>
-        {interpretation.meaning}
-      </p>
-    </article>
-  )
-}
-
-function CompactCard({
-  title,
-  value,
-}: {
-  title: string
-  value: string
-}) {
-  return (
-    <article style={styles.compactCard}>
-      <p style={styles.cardKicker}>{title}</p>
-
-      <h3 style={styles.compactValue}>
-        {value}
-      </h3>
-    </article>
-  )
-}
-
 function Panel({
   title,
+  value,
   children,
 }: {
   title: string
-  children: React.ReactNode
+  value?: string
+  children?: ReactNode
 }) {
   return (
-    <section style={styles.card}>
-      <h2 style={styles.cardTitle}>{title}</h2>
+    <section style={styles.panel}>
+      <p style={styles.panelKicker}>{title}</p>
 
-      <div style={styles.infoList}>{children}</div>
+      {value ? <h3 style={styles.panelValue}>{value}</h3> : null}
+
+      {children ? <div style={styles.panelBody}>{children}</div> : null}
     </section>
   )
 }
 
-function Info({
-  label,
-  value,
+function RecoveryPrinciple({
+  title,
+  body,
 }: {
-  label: string
-  value: string
+  title: string
+  body: ReactNode
 }) {
   return (
-    <div style={styles.infoRow}>
-      <span style={styles.infoLabel}>{label}</span>
-
-      <strong style={styles.infoValue}>
-        {value}
-      </strong>
-    </div>
+    <article style={styles.principleCard}>
+      <p style={styles.principleKicker}>CGI Recovery Principle</p>
+      <h3 style={styles.principleTitle}>{title}</h3>
+      <p style={styles.principleBody}>{body}</p>
+    </article>
   )
 }
 
@@ -853,7 +295,6 @@ const styles: Record<string, CSSProperties> = {
     color: 'white',
     overflowX: 'hidden',
   },
-
   container: {
     width: '100%',
     maxWidth: '1120px',
@@ -861,12 +302,10 @@ const styles: Record<string, CSSProperties> = {
     padding: '0 20px 48px',
     boxSizing: 'border-box',
   },
-
   header: {
     marginBottom: '20px',
     paddingTop: '4px',
   },
-
   kicker: {
     color: '#67e8f9',
     fontSize: '12px',
@@ -874,160 +313,111 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: '2px',
     margin: 0,
   },
-
   title: {
     fontSize: 'clamp(32px, 5vw, 48px)',
     lineHeight: 1.05,
     margin: '10px 0',
   },
-
   subtitle: {
     color: '#cbd5e1',
-    maxWidth: '760px',
+    maxWidth: '780px',
     lineHeight: 1.65,
     fontSize: '16px',
     margin: 0,
   },
-
-  message: {
-    background: '#064e3b',
-    color: '#bbf7d0',
-    padding: '12px 14px',
-    borderRadius: '14px',
-    fontWeight: 800,
-    marginBottom: '16px',
-    fontSize: '14px',
-  },
-
   heroCard: {
     display: 'grid',
-    gridTemplateColumns:
-      'minmax(0, 1.4fr) minmax(260px, 0.6fr)',
+    gridTemplateColumns: 'minmax(0, 1.4fr) minmax(220px, 0.6fr)',
     gap: '16px',
     background: '#020617',
-    border: '1px solid #22c55e',
+    border: '1px solid #22d3ee',
     borderRadius: '24px',
     padding: '22px',
     marginBottom: '16px',
     boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
   },
-
   sectionKicker: {
     color: '#94a3b8',
     fontWeight: 900,
-    letterSpacing: '0.12em',
+    letterSpacing: '0.14em',
     textTransform: 'uppercase',
     margin: 0,
     fontSize: '12px',
   },
-
-  heroPosture: {
-    fontSize: 'clamp(34px, 6vw, 56px)',
-    margin: '8px 0 12px',
-    color: '#86efac',
-    letterSpacing: '-0.05em',
-    lineHeight: 1,
+  heroTitle: {
+    color: '#f8fafc',
+    fontSize: 'clamp(28px, 4vw, 42px)',
+    lineHeight: 1.1,
+    margin: '10px 0',
   },
-
   heroMeaning: {
-    color: '#dbeafe',
-    lineHeight: 1.6,
+    color: '#cbd5e1',
+    lineHeight: 1.65,
     margin: 0,
-    maxWidth: '720px',
+    maxWidth: '760px',
   },
-
-  actionBox: {
-    background: '#052e16',
-    border: '1px solid #22c55e',
+  toneBox: {
+    background: '#083344',
+    border: '1px solid #22d3ee',
     borderRadius: '18px',
     padding: '16px',
     alignSelf: 'stretch',
   },
-
-  actionLabel: {
-    color: '#86efac',
+  toneLabel: {
+    color: '#67e8f9',
     fontWeight: 900,
     margin: '0 0 8px',
     fontSize: '12px',
     textTransform: 'uppercase',
     letterSpacing: '0.12em',
   },
-
-  actionText: {
-    color: '#dcfce7',
-    lineHeight: 1.55,
+  toneValue: {
+    color: '#cffafe',
+    fontSize: '28px',
+    lineHeight: 1.1,
     margin: 0,
-    fontSize: '14px',
+    fontWeight: 900,
   },
-
-  postureGrid: {
+  gridThree: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
     gap: '14px',
     marginBottom: '16px',
   },
-
-  postureCard: {
-    background: '#0f172a',
-    border: '1px solid #1e293b',
-    borderRadius: '18px',
-    padding: '16px',
-    minHeight: '150px',
-    boxSizing: 'border-box',
-  },
-
-  cardKicker: {
-    color: '#94a3b8',
-    fontWeight: 800,
-    margin: 0,
-    fontSize: '12px',
-  },
-
-  postureTitle: {
-    color: '#f8fafc',
-    fontSize: '19px',
-    margin: '10px 0 8px',
-    lineHeight: 1.15,
-  },
-
-  postureMeaning: {
-    color: '#cbd5e1',
-    lineHeight: 1.5,
-    fontSize: '14px',
-    margin: 0,
-  },
-
-  compactGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '14px',
-    marginBottom: '16px',
-  },
-
-  compactCard: {
-    background: '#0f172a',
-    border: '1px solid #1e293b',
-    borderRadius: '18px',
-    padding: '16px',
-    minHeight: '104px',
-    boxSizing: 'border-box',
-  },
-
-  compactValue: {
-    fontSize: '18px',
-    lineHeight: 1.2,
-    margin: '10px 0 0',
-    color: '#f8fafc',
-    overflowWrap: 'anywhere',
-  },
-
-  twoColumn: {
+  gridTwo: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
     gap: '16px',
     marginBottom: '16px',
   },
-
+  panel: {
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '18px',
+    padding: '16px',
+    minHeight: '150px',
+    boxSizing: 'border-box',
+  },
+  panelKicker: {
+    color: '#94a3b8',
+    fontSize: '12px',
+    fontWeight: 900,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    margin: 0,
+  },
+  panelValue: {
+    color: '#f8fafc',
+    fontSize: '20px',
+    lineHeight: 1.15,
+    margin: '10px 0 0',
+  },
+  panelBody: {
+    color: '#cbd5e1',
+    fontSize: '14px',
+    lineHeight: 1.6,
+    marginTop: '10px',
+  },
   card: {
     background: '#020617',
     border: '1px solid #1e293b',
@@ -1038,108 +428,42 @@ const styles: Record<string, CSSProperties> = {
     boxSizing: 'border-box',
     overflow: 'hidden',
   },
-
-  cardHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    gap: '16px',
-    alignItems: 'flex-start',
-    marginBottom: '14px',
-  },
-
   cardTitle: {
-    fontSize: '22px',
-    margin: 0,
-    lineHeight: 1.2,
-  },
-
-  cardNote: {
-    color: '#94a3b8',
-    lineHeight: 1.5,
-    margin: '6px 0 0',
-    fontSize: '14px',
-  },
-
-  infoList: {
-    display: 'grid',
-    gap: '10px',
-    marginTop: '14px',
-  },
-
-  infoRow: {
-    display: 'grid',
-    gridTemplateColumns: '160px minmax(0, 1fr)',
-    gap: '12px',
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '14px',
-    padding: '12px',
-    alignItems: 'start',
-  },
-
-  infoLabel: {
-    color: '#94a3b8',
-    fontWeight: 800,
-    fontSize: '12px',
-  },
-
-  infoValue: {
     color: '#f8fafc',
-    lineHeight: 1.45,
-    overflowWrap: 'anywhere',
+    fontSize: '26px',
+    lineHeight: 1.15,
+    margin: '10px 0 10px',
   },
-
-  tableWrap: {
-    width: '100%',
-    overflowX: 'auto',
+  bodyText: {
+    color: '#cbd5e1',
+    lineHeight: 1.7,
+    margin: 0,
+    maxWidth: '880px',
   },
-
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    minWidth: '760px',
-  },
-
-  th: {
-    textAlign: 'left',
-    color: '#94a3b8',
-    borderBottom: '1px solid #334155',
-    padding: '10px',
-    fontSize: '11px',
-    textTransform: 'uppercase',
-  },
-
-  td: {
-    borderBottom: '1px solid #1e293b',
-    padding: '10px',
-    color: '#e2e8f0',
-    verticalAlign: 'top',
-    fontWeight: 700,
-    fontSize: '13px',
-  },
-
-  primaryButton: {
-    padding: '10px 14px',
-    borderRadius: '12px',
-    border: 'none',
-    background: '#67e8f9',
-    color: '#082f49',
-    fontWeight: 900,
-    cursor: 'pointer',
-    fontSize: '14px',
-    whiteSpace: 'nowrap',
-  },
-
-  summaryBox: {
-    whiteSpace: 'pre-wrap',
+  principleCard: {
     background: '#0f172a',
     border: '1px solid #334155',
-    borderRadius: '16px',
-    padding: '16px',
-    color: '#e2e8f0',
-    lineHeight: 1.55,
-    minHeight: '260px',
-    fontSize: '14px',
-    overflowX: 'auto',
+    borderRadius: '18px',
+    padding: '18px',
+    minHeight: '160px',
+  },
+  principleKicker: {
+    color: '#94a3b8',
+    fontSize: '12px',
+    fontWeight: 900,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    margin: 0,
+  },
+  principleTitle: {
+    color: '#f8fafc',
+    fontSize: '22px',
+    lineHeight: 1.15,
+    margin: '10px 0',
+  },
+  principleBody: {
+    color: '#cbd5e1',
+    lineHeight: 1.6,
+    margin: 0,
   },
 }
