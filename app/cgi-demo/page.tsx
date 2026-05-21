@@ -2,6 +2,7 @@ import {
   buildCGIDemoScenario,
   cgiDemoScenarioKeys,
 } from '../../lib/cgiDemoScenarioEngine'
+import { buildCGIExecutiveWalkthrough } from '../../lib/cgiExecutiveWalkthroughEngine'
 
 function formatLabel(value: string): string {
   return value.replaceAll('_', ' ')
@@ -39,6 +40,7 @@ export default function CGIDemoPage() {
   )
 
   const featured = buildCGIDemoScenario('REBURN_RECURRENCE')
+  const walkthrough = buildCGIExecutiveWalkthrough('REBURN_RECURRENCE')
 
   return (
     <main className="min-h-screen bg-black px-6 py-10 text-white">
@@ -137,6 +139,70 @@ export default function CGIDemoPage() {
           <Panel title="Executive Summary">
             {featured.shell.executiveSummary}
           </Panel>
+        </section>
+
+        <section className="rounded-3xl border border-zinc-800 bg-zinc-950 p-8">
+          <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">
+            Executive Walkthrough
+          </p>
+          <h2 className="mt-3 text-3xl font-bold">
+            {walkthrough.walkthroughTitle}
+          </h2>
+          <p className="mt-4 max-w-4xl leading-8 text-zinc-300">
+            {walkthrough.walkthroughPurpose}
+          </p>
+
+          <div className="mt-8 space-y-5">
+            {walkthrough.steps.map((step) => (
+              <article
+                key={step.stepNumber}
+                className="rounded-2xl border border-zinc-800 bg-black p-6"
+              >
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                      Step {step.stepNumber} ·{' '}
+                      {formatLabel(step.stepType)}
+                    </p>
+                    <h3 className="mt-2 text-2xl font-semibold">
+                      {step.title}
+                    </h3>
+                  </div>
+                  <p className="max-w-md rounded-xl border border-zinc-800 px-4 py-3 text-sm text-zinc-300">
+                    {step.executiveQuestion}
+                  </p>
+                </div>
+
+                <div className="mt-5 grid gap-5 md:grid-cols-2">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                      System Answer
+                    </p>
+                    <p className="mt-2 leading-7 text-zinc-200">
+                      {step.systemAnswer}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                      Why It Matters
+                    </p>
+                    <p className="mt-2 leading-7 text-zinc-300">
+                      {step.whyItMatters}
+                    </p>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="mt-8 grid gap-5 md:grid-cols-2">
+            <Panel title="Closing Doctrine">
+              {walkthrough.closingDoctrine}
+            </Panel>
+            <Panel title="Executive Takeaway">
+              {walkthrough.executiveTakeaway}
+            </Panel>
+          </div>
         </section>
 
         <section className="rounded-3xl border border-zinc-800 bg-zinc-950 p-8">
