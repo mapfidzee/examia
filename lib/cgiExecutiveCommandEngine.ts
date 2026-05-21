@@ -1,0 +1,204 @@
+import type { CGIDerivationOutput } from './cgiDerivationEngine'
+import type { CGITransitionDecision } from './cgiContinuityStateEngine'
+
+export type CGICommandUrgency =
+  | 'ROUTINE'
+  | 'NEAR_TERM'
+  | 'URGENT'
+  | 'IMMEDIATE'
+
+export type CGICommandOutput = {
+  dominantTruth: string
+  primaryDriver: string
+  executivePosture: string
+  requiredAction: string
+  accountableOwner: string
+  actionDeadline: string
+  requiredEvidence: string
+  consequenceIfUnresolved: string
+  continuityRisk: string
+  commandNarrative: string
+}
+
+export type CGICommandInput = {
+  derivation: CGIDerivationOutput
+  stateDecision: CGITransitionDecision
+  ownerRole?: string
+}
+
+function normalizeUrgency(timePressure: string): CGICommandUrgency {
+  if (timePressure === 'Immediate') return 'IMMEDIATE'
+  if (timePressure === 'Urgent') return 'URGENT'
+  if (timePressure === 'Near-term') return 'NEAR_TERM'
+  return 'ROUTINE'
+}
+
+function deriveOwnerRole(input: CGICommandInput): string {
+  if (input.ownerRole && input.ownerRole.trim().length > 0) {
+    return input.ownerRole
+  }
+
+  if (
+    input.derivation.executivePosture === 'EXECUTIVE_INTERVENTION' ||
+    input.derivation.continuityCondition === 'SURVIVABILITY_THREAT'
+  ) {
+    return 'Executive Lead'
+  }
+
+  if (
+    input.derivation.executivePosture === 'COMMAND' ||
+    input.derivation.continuityCondition === 'ESCALATED_INSTABILITY'
+  ) {
+    return 'Command Owner'
+  }
+
+  if (
+    input.derivation.executivePosture === 'COORDINATE' ||
+    input.derivation.continuityCondition === 'ACTIVE_INSTABILITY'
+  ) {
+    return 'Coordination Lead'
+  }
+
+  if (
+    input.derivation.executivePosture === 'VERIFY' ||
+    input.derivation.continuityCondition === 'FRAGILE_RECOVERY'
+  ) {
+    return 'Recovery Verification Owner'
+  }
+
+  if (
+    input.derivation.executivePosture === 'REINFORCE' ||
+    input.derivation.continuityCondition === 'RECURRENCE_RISK'
+  ) {
+    return 'Stabilization Reinforcement Owner'
+  }
+
+  return 'Monitoring Owner'
+}
+
+function deriveDeadline(urgency: CGICommandUrgency): string {
+  if (urgency === 'IMMEDIATE') {
+    return 'Act now and document stabilization evidence before the next command review.'
+  }
+
+  if (urgency === 'URGENT') {
+    return 'Assign ownership and document action within 24 hours.'
+  }
+
+  if (urgency === 'NEAR_TERM') {
+    return 'Review and document response within 72 hours.'
+  }
+
+  return 'Continue routine monitoring during the next review cycle.'
+}
+
+function deriveContinuityRisk(input: CGICommandInput): string {
+  const condition = input.derivation.continuityCondition
+  const confidence = input.derivation.continuityConfidence
+  const pressure = input.derivation.survivabilityPressure
+
+  if (condition === 'SURVIVABILITY_THREAT') {
+    return 'Continuity survivability is at risk if leadership does not intervene.'
+  }
+
+  if (condition === 'RECURRENCE_RISK') {
+    return 'Repeated instability may become normalized as structural weakness.'
+  }
+
+  if (condition === 'FRAGILE_RECOVERY') {
+    return 'Visible recovery may collapse if durability is not verified.'
+  }
+
+  if (condition === 'ESCALATED_INSTABILITY') {
+    return 'Escalated instability may spread or worsen without command control.'
+  }
+
+  if (condition === 'ACTIVE_INSTABILITY') {
+    return 'Active instability may escalate if coordination remains weak.'
+  }
+
+  if (condition === 'EARLY_STRAIN') {
+    return 'Early strain may become visible instability if left unattended.'
+  }
+
+  if (confidence === 'HIGH' && pressure === 'LOW') {
+    return 'Current continuity risk is low.'
+  }
+
+  return 'Continuity credibility may weaken if monitoring is not maintained.'
+}
+
+function deriveConsequenceIfUnresolved(input: CGICommandInput): string {
+  const condition = input.derivation.continuityCondition
+
+  if (condition === 'SURVIVABILITY_THREAT') {
+    return 'Failure to act may compromise institutional continuity, executive credibility, and stabilization capacity.'
+  }
+
+  if (condition === 'RECURRENCE_RISK') {
+    return 'Failure to act may allow repeated instability to become a structural pattern.'
+  }
+
+  if (condition === 'FRAGILE_RECOVERY') {
+    return 'Failure to verify may create false confidence and allow reburn after apparent recovery.'
+  }
+
+  if (condition === 'ESCALATED_INSTABILITY') {
+    return 'Failure to act may increase escalation load, unresolved duration, and command pressure.'
+  }
+
+  if (condition === 'ACTIVE_INSTABILITY') {
+    return 'Failure to coordinate may allow active instability to escalate.'
+  }
+
+  if (condition === 'EARLY_STRAIN') {
+    return 'Failure to prepare may allow early strain to mature into visible disruption.'
+  }
+
+  return 'Failure to monitor may reduce early warning visibility.'
+}
+
+function buildCommandNarrative(input: {
+  dominantTruth: string
+  primaryDriver: string
+  owner: string
+  action: string
+  deadline: string
+  evidence: string
+  consequence: string
+}): string {
+  return `${input.dominantTruth} ${input.primaryDriver} ${input.owner} must ensure the required action is completed: ${input.action} Deadline: ${input.deadline} Required evidence: ${input.evidence} Consequence if unresolved: ${input.consequence}`
+}
+
+export function buildCGIExecutiveCommand(
+  input: CGICommandInput
+): CGICommandOutput {
+  const urgency = normalizeUrgency(input.derivation.timePressure)
+  const accountableOwner = deriveOwnerRole(input)
+  const actionDeadline = deriveDeadline(urgency)
+  const continuityRisk = deriveContinuityRisk(input)
+  const consequenceIfUnresolved = deriveConsequenceIfUnresolved(input)
+
+  const commandNarrative = buildCommandNarrative({
+    dominantTruth: input.derivation.dominantOperationalTruth,
+    primaryDriver: input.derivation.primaryDriver,
+    owner: accountableOwner,
+    action: input.derivation.requiredAction,
+    deadline: actionDeadline,
+    evidence: input.stateDecision.requiredEvidence,
+    consequence: consequenceIfUnresolved,
+  })
+
+  return {
+    dominantTruth: input.derivation.dominantOperationalTruth,
+    primaryDriver: input.derivation.primaryDriver,
+    executivePosture: input.derivation.executivePosture,
+    requiredAction: input.derivation.requiredAction,
+    accountableOwner,
+    actionDeadline,
+    requiredEvidence: input.stateDecision.requiredEvidence,
+    consequenceIfUnresolved,
+    continuityRisk,
+    commandNarrative,
+  }
+}
