@@ -137,14 +137,13 @@ function derivePreviousState(input: CGILiveOperationalInput) {
 }
 
 function buildOperationalNarrative(input: {
-  route: CGILiveOperationalRoute
   commandTruth: string
   primaryDriver: string
   requiredAction: string
   memoryWarning: string
   accountabilityStatus: string
 }): string {
-  return `${input.route} interpretation: ${input.commandTruth} ${input.primaryDriver} ${input.requiredAction} Memory warning: ${input.memoryWarning} Accountability status: ${input.accountabilityStatus}.`
+  return `Operational interpretation: ${input.commandTruth} ${input.primaryDriver} ${input.requiredAction} Memory warning: ${input.memoryWarning} Accountability status: ${input.accountabilityStatus}.`
 }
 
 export function evaluateCGILiveOperationalIntegration(
@@ -226,7 +225,6 @@ export function evaluateCGILiveOperationalIntegration(
     memory,
     accountability,
     operationalNarrative: buildOperationalNarrative({
-      route: input.route,
       commandTruth: command.dominantTruth,
       primaryDriver: command.primaryDriver,
       requiredAction: command.requiredAction,
