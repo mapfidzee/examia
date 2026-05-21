@@ -68,21 +68,6 @@ export default function CommandPage() {
                 body="Continuity risk must become owned, evidenced, and time-bound responsibility."
               />
             </section>
-
-            <section style={styles.card}>
-              <p style={styles.sectionKicker}>Legacy Preservation</p>
-
-              <h2 style={styles.cardTitle}>
-                Previous command intelligence is preserved.
-              </h2>
-
-              <p style={styles.bodyText}>
-                The earlier command center was backed up as{' '}
-                <strong>app/command/page.legacy.tsx</strong>. Valuable legacy
-                logic can now be reintroduced carefully as smaller governed
-                components instead of keeping one oversized command file.
-              </p>
-            </section>
           </div>
         </main>
       </CGIGovernanceShell>
