@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
+import InfrastructureNav from '@/components/InfrastructureNav'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { buildCGIContinuitySnapshot } from '@/lib/cgiContinuitySnapshotEngine'
 import { reviewCGIExecutiveHistory } from '@/lib/cgiExecutiveHistoryEngine'
@@ -68,6 +69,8 @@ function ExecutiveReportContent() {
   return (
     <main style={styles.page}>
       <div style={styles.container}>
+        <InfrastructureNav />
+
         <section style={styles.header}>
           <p style={styles.kicker}>TSINAXA CGI • EXECUTIVE REPORT</p>
 
@@ -129,12 +132,17 @@ function ExecutiveReportContent() {
           </p>
 
           <div style={styles.priorityGrid}>
-            <PriorityItem title="Dominant Concern" body={report.dominantConcern} />
-            <PriorityItem title="Required Evidence" body={report.requiredEvidence} />
             <PriorityItem
-              title="Generated"
-              body={report.generatedAt}
+              title="Dominant Concern"
+              body={report.dominantConcern}
             />
+
+            <PriorityItem
+              title="Required Evidence"
+              body={report.requiredEvidence}
+            />
+
+            <PriorityItem title="Generated" body={report.generatedAt} />
           </div>
         </section>
 
@@ -172,25 +180,41 @@ function SignalCard({
   return (
     <article style={styles.signalCard}>
       <p style={styles.panelKicker}>{title}</p>
+
       <h3 style={styles.signalValue}>{value}</h3>
+
       <p style={styles.panelBody}>{body}</p>
     </article>
   )
 }
 
-function PriorityItem({ title, body }: { title: string; body: string }) {
+function PriorityItem({
+  title,
+  body,
+}: {
+  title: string
+  body: string
+}) {
   return (
     <article style={styles.priorityItem}>
       <p style={styles.panelKicker}>{title}</p>
+
       <p style={styles.priorityBody}>{body}</p>
     </article>
   )
 }
 
-function Panel({ title, children }: { title: string; children: ReactNode }) {
+function Panel({
+  title,
+  children,
+}: {
+  title: string
+  children: ReactNode
+}) {
   return (
     <section style={styles.panel}>
       <p style={styles.panelKicker}>{title}</p>
+
       <div style={styles.panelBody}>{children}</div>
     </section>
   )
