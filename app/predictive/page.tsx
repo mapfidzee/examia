@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { interpretPredictive } from '@/lib/cgi/interpreters/interpretPredictive'
@@ -54,7 +54,7 @@ function PredictiveContent() {
   }, [])
 
   async function loadPredictiveMetrics() {
-    setMessage('Loading predictive intelligence...')
+    setMessage('Loading continuity early-warning memory...')
 
     const { data, error } = await supabase
       .from('cgi_operational_metrics')
@@ -64,12 +64,12 @@ function PredictiveContent() {
 
     if (error) {
       console.error(error)
-      setMessage('Predictive intelligence could not be loaded.')
+      setMessage('Continuity early-warning memory could not be loaded.')
       return
     }
 
     setMetrics(data || [])
-    setMessage('Predictive intelligence loaded.')
+    setMessage('Continuity early-warning memory loaded.')
   }
 
   const predictive = useMemo(() => {
@@ -141,13 +141,11 @@ function PredictiveContent() {
 
     const memoryMeaning = interpretRisk(
       structuralMemoryRisk,
-      'MEMORY'
+      'STRUCTURAL MEMORY'
     )
 
     const unresolvedMeaning = interpretMomentum(unresolvedMomentum)
-
     const dragMeaning = interpretDrag(stabilizationDrag)
-
     const driftMeaning = interpretDrift(continuityDrift)
 
     const survivabilityMeaning = interpretWeakness(
@@ -161,7 +159,6 @@ function PredictiveContent() {
     )
 
     const pressureMeaning = interpretPressure(escalationPressure)
-
     const historyMeaning = interpretHistory(ordered.length)
 
     const dominantForecastDriver = strongestDriver({
@@ -176,7 +173,7 @@ function PredictiveContent() {
       'Reliability weakness': reliabilityWeakness,
     })
 
-    const executiveSummary = `${predictiveInterpretation.summary} Dominant forecast driver: ${dominantForecastDriver}. ${propagationMeaning.meaning} ${memoryMeaning.meaning}`
+    const executiveSummary = `${predictiveInterpretation.summary} The dominant early-warning driver is ${dominantForecastDriver}. ${propagationMeaning.meaning} ${memoryMeaning.meaning}`
 
     const actionCue = compactAction([
       predictiveInterpretation.executiveAction,
@@ -205,9 +202,9 @@ function PredictiveContent() {
   }, [metrics])
 
   const brief = `
-TSINAXA CGI PREDICTIVE INTELLIGENCE BRIEF
+TSINAXA CGI CONTINUITY EARLY-WARNING BRIEF
 
-Predictive Posture:
+Early-Warning Posture:
 ${predictive.predictiveInterpretation.posture}
 
 Propagation Risk:
@@ -234,30 +231,30 @@ ${predictive.survivabilityMeaning.posture}
 Reliability Weakness:
 ${predictive.reliabilityMeaning.posture}
 
-Dominant Forecast Driver:
+Dominant Early-Warning Driver:
 ${predictive.dominantForecastDriver}
 
 Executive Interpretation:
 ${predictive.executiveSummary}
 
-Recommended Action:
+Executive Action:
 ${predictive.actionCue}
 
 Governance-Safe Meaning:
-This predictive view interprets continuity risk before disruption becomes fully visible. It does not judge people. It preserves early-warning visibility for executive prevention.
+This view does not predict personal failure or assign blame. It reads continuity memory to identify pressure that may become visible disruption if leadership prevention does not hold.
   `.trim()
 
   return (
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.header}>
-          <p style={styles.kicker}>TSINAXA CGI • PREDICTIVE INTELLIGENCE</p>
+          <p style={styles.kicker}>TSINAXA CGI • EARLY-WARNING INTELLIGENCE</p>
 
-          <h1 style={styles.title}>Continuity Predictive Intelligence</h1>
+          <h1 style={styles.title}>Continuity Early-Warning Intelligence</h1>
 
           <p style={styles.subtitle}>
-            Executive early-warning interpretation of whether continuity risk is
-            low, watched, elevated, or critical before disruption becomes fully visible.
+            Executive prevention visibility into continuity pressure that may
+            become visible disruption if stabilization does not hold.
           </p>
         </section>
 
@@ -265,7 +262,7 @@ This predictive view interprets continuity risk before disruption becomes fully 
 
         <section style={styles.heroCard}>
           <div>
-            <p style={styles.sectionKicker}>Predictive Posture</p>
+            <p style={styles.sectionKicker}>Early-Warning Posture</p>
 
             <h2 style={styles.heroPosture}>
               {predictive.predictiveInterpretation.posture}
@@ -277,7 +274,7 @@ This predictive view interprets continuity risk before disruption becomes fully 
           </div>
 
           <div style={styles.actionBox}>
-            <p style={styles.actionLabel}>Recommended Action</p>
+            <p style={styles.actionLabel}>Executive Action</p>
 
             <p style={styles.actionText}>
               {predictive.actionCue}
@@ -295,14 +292,14 @@ This predictive view interprets continuity risk before disruption becomes fully 
         </section>
 
         <section style={styles.compactGrid}>
-          <CompactCard title="History Depth" value={predictive.historyMeaning.posture} />
-          <CompactCard title="Dominant Forecast Driver" value={predictive.dominantForecastDriver} />
+          <CompactCard title="Memory Depth" value={predictive.historyMeaning.posture} />
+          <CompactCard title="Dominant Driver" value={predictive.dominantForecastDriver} />
           <CompactCard title="Survivability Weakness" value={predictive.survivabilityMeaning.posture} />
           <CompactCard title="Reliability Weakness" value={predictive.reliabilityMeaning.posture} />
         </section>
 
         <section style={styles.twoColumn}>
-          <Panel title="Latest Predictive Context">
+          <Panel title="Latest Continuity Context">
             <Info label="Continuity State" value={predictive.latest?.continuity_state || 'Not recorded'} />
             <Info label="Pressure State" value={predictive.latest?.pressure_propagation_state || 'Not recorded'} />
             <Info label="Trajectory Direction" value={predictive.latest?.trajectory_direction || 'Not recorded'} />
@@ -310,10 +307,10 @@ This predictive view interprets continuity risk before disruption becomes fully 
             <Info label="Dominant Memory Pattern" value={predictive.latest?.dominant_memory_pattern || 'Not recorded'} />
           </Panel>
 
-          <Panel title="Forecast Reading">
-            <Info label="Predictive Posture" value={predictive.predictiveInterpretation.posture} />
+          <Panel title="Early-Warning Reading">
+            <Info label="Early-Warning Posture" value={predictive.predictiveInterpretation.posture} />
             <Info label="Pressure Reading" value={predictive.pressureMeaning.posture} />
-            <Info label="Dominant Forecast Driver" value={predictive.dominantForecastDriver} />
+            <Info label="Dominant Driver" value={predictive.dominantForecastDriver} />
             <Info label="Unresolved Momentum" value={predictive.unresolvedMeaning.posture} />
             <Info label="Stabilization Drag" value={predictive.dragMeaning.posture} />
           </Panel>
@@ -322,10 +319,11 @@ This predictive view interprets continuity risk before disruption becomes fully 
         <section style={styles.card}>
           <div style={styles.cardHeader}>
             <div>
-              <h2 style={styles.cardTitle}>Recent Predictive Memory Trail</h2>
+              <h2 style={styles.cardTitle}>Recent Early-Warning Memory Trail</h2>
 
               <p style={styles.cardNote}>
-                Recent snapshots are displayed as predictive postures, not raw scores.
+                Recent snapshots are shown as continuity prevention readings,
+                not personal performance judgments.
               </p>
             </div>
 
@@ -339,7 +337,7 @@ This predictive view interprets continuity risk before disruption becomes fully 
               <thead>
                 <tr>
                   <th style={styles.th}>Created</th>
-                  <th style={styles.th}>Predictive</th>
+                  <th style={styles.th}>Warning</th>
                   <th style={styles.th}>Propagation</th>
                   <th style={styles.th}>Trajectory</th>
                   <th style={styles.th}>Memory</th>
@@ -351,7 +349,7 @@ This predictive view interprets continuity risk before disruption becomes fully 
                 {metrics.length === 0 && (
                   <tr>
                     <td style={styles.td} colSpan={6}>
-                      No persisted predictive memory found yet.
+                      No persisted continuity early-warning memory found yet.
                     </td>
                   </tr>
                 )}
@@ -369,10 +367,18 @@ This predictive view interprets continuity risk before disruption becomes fully 
                     <tr key={item.id}>
                       <td style={styles.td}>{formatDate(item.created_at)}</td>
                       <td style={styles.td}>{rowPredictive.posture}</td>
-                      <td style={styles.td}>{interpretRisk(item.propagation_risk, 'PROPAGATION').posture}</td>
-                      <td style={styles.td}>{interpretRisk(item.trajectory_risk, 'TRAJECTORY').posture}</td>
-                      <td style={styles.td}>{interpretRisk(item.structural_memory_risk, 'MEMORY').posture}</td>
-                      <td style={styles.td}>{interpretDrag(item.stabilization_drag).posture}</td>
+                      <td style={styles.td}>
+                        {interpretRisk(item.propagation_risk, 'PROPAGATION').posture}
+                      </td>
+                      <td style={styles.td}>
+                        {interpretRisk(item.trajectory_risk, 'TRAJECTORY').posture}
+                      </td>
+                      <td style={styles.td}>
+                        {interpretRisk(item.structural_memory_risk, 'STRUCTURAL MEMORY').posture}
+                      </td>
+                      <td style={styles.td}>
+                        {interpretDrag(item.stabilization_drag).posture}
+                      </td>
                     </tr>
                   )
                 })}
@@ -382,7 +388,7 @@ This predictive view interprets continuity risk before disruption becomes fully 
         </section>
 
         <section style={styles.card}>
-          <h2 style={styles.cardTitle}>Generated Predictive Brief</h2>
+          <h2 style={styles.cardTitle}>Generated Early-Warning Brief</h2>
           <pre style={styles.summaryBox}>{brief}</pre>
         </section>
       </div>
@@ -403,30 +409,32 @@ function average(values: number[]) {
 function strongestDriver(scores: Record<string, number>) {
   return (
     Object.entries(scores).sort((a, b) => b[1] - a[1])[0]?.[0] ||
-    'No dominant forecast driver detected'
+    'No dominant early-warning driver detected'
   )
 }
 
 function interpretRisk(value: number, label: string): Interpretation {
+  const normalizedLabel = label.toLowerCase()
+
   if (value >= 70) {
     return {
       posture: `${label} RISK HIGH`,
-      meaning: `${label.toLowerCase()} risk is high enough to threaten continuity stability.`,
-      action: `Escalate ${label.toLowerCase()} risk review.`,
+      meaning: `${normalizedLabel} risk is high enough to threaten continuity prevention.`,
+      action: `Escalate ${normalizedLabel} risk review.`,
     }
   }
 
   if (value >= 45) {
     return {
       posture: `${label} RISK VISIBLE`,
-      meaning: `${label.toLowerCase()} risk is visible and should remain under review.`,
-      action: `Keep ${label.toLowerCase()} risk visible.`,
+      meaning: `${normalizedLabel} risk is visible and should remain under governance review.`,
+      action: `Keep ${normalizedLabel} risk visible.`,
     }
   }
 
   return {
     posture: `${label} RISK CONTAINED`,
-    meaning: `${label.toLowerCase()} risk appears contained.`,
+    meaning: `${normalizedLabel} risk appears contained.`,
     action: 'Maintain monitoring.',
   }
 }
@@ -435,7 +443,7 @@ function interpretMomentum(value: number): Interpretation {
   if (value >= 65) {
     return {
       posture: 'UNRESOLVED MOMENTUM HIGH',
-      meaning: 'Unresolved momentum may convert forecast risk into visible disruption.',
+      meaning: 'Unresolved momentum may convert early warning into visible disruption.',
       action: 'Escalate unresolved momentum review.',
     }
   }
@@ -459,7 +467,7 @@ function interpretDrag(value: number): Interpretation {
   if (value >= 65) {
     return {
       posture: 'STABILIZATION DRAG HIGH',
-      meaning: 'Stabilization drag may delay prevention and recovery credibility.',
+      meaning: 'Stabilization drag may delay prevention and weaken recovery credibility.',
       action: 'Escalate stabilization drag review.',
     }
   }
@@ -504,25 +512,27 @@ function interpretDrift(value: number): Interpretation {
 }
 
 function interpretWeakness(value: number, label: string): Interpretation {
+  const normalizedLabel = label.toLowerCase()
+
   if (value >= 60) {
     return {
       posture: `${label} WEAKNESS HIGH`,
-      meaning: `${label.toLowerCase()} weakness may undermine continuity prevention.`,
-      action: `Escalate ${label.toLowerCase()} weakness review.`,
+      meaning: `${normalizedLabel} weakness may undermine continuity prevention.`,
+      action: `Escalate ${normalizedLabel} weakness review.`,
     }
   }
 
   if (value >= 35) {
     return {
       posture: `${label} WEAKNESS VISIBLE`,
-      meaning: `${label.toLowerCase()} weakness remains visible.`,
-      action: `Keep ${label.toLowerCase()} weakness under review.`,
+      meaning: `${normalizedLabel} weakness remains visible.`,
+      action: `Keep ${normalizedLabel} weakness under review.`,
     }
   }
 
   return {
     posture: `${label} WEAKNESS CONTAINED`,
-    meaning: `${label.toLowerCase()} weakness appears contained.`,
+    meaning: `${normalizedLabel} weakness appears contained.`,
     action: 'Maintain monitoring.',
   }
 }
@@ -554,24 +564,24 @@ function interpretPressure(value: number): Interpretation {
 function interpretHistory(count: number): Interpretation {
   if (count < 3) {
     return {
-      posture: 'INSUFFICIENT HISTORY',
-      meaning: 'Too few snapshots exist for predictive interpretation.',
+      posture: 'INSUFFICIENT MEMORY',
+      meaning: 'Too few snapshots exist for reliable early-warning interpretation.',
       action: 'Continue saving operational snapshots.',
     }
   }
 
   if (count < 10) {
     return {
-      posture: 'EARLY PREDICTIVE MEMORY',
-      meaning: 'Predictive memory has started but remains early.',
+      posture: 'EARLY WARNING MEMORY',
+      meaning: 'Continuity early-warning memory has started but remains early.',
       action: 'Continue building continuity memory.',
     }
   }
 
   return {
-    posture: 'PREDICTIVE MEMORY ESTABLISHED',
-    meaning: 'Persisted memory supports predictive interpretation.',
-    action: 'Use posture to guide prevention review.',
+    posture: 'EARLY WARNING MEMORY ESTABLISHED',
+    meaning: 'Persisted memory supports continuity prevention interpretation.',
+    action: 'Use early-warning posture to guide executive prevention review.',
   }
 }
 
@@ -610,13 +620,7 @@ function CompactCard({ title, value }: { title: string; value: string }) {
   )
 }
 
-function Panel({
-  title,
-  children,
-}: {
-  title: string
-  children: React.ReactNode
-}) {
+function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section style={styles.card}>
       <h2 style={styles.cardTitle}>{title}</h2>
