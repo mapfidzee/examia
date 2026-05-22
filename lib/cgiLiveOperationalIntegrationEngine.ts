@@ -48,11 +48,11 @@ export type CGILiveOperationalOutput = {
 
 function deriveRoutePurpose(route: CGILiveOperationalRoute): string {
   if (route === 'COMMAND') {
-    return 'Compress continuity intelligence into executive command visibility.'
+    return 'Translate continuity pressure into executive command visibility.'
   }
 
   if (route === 'OPERATIONS') {
-    return 'Interpret operational strain through continuity credibility.'
+    return 'Interpret operational strain through stabilization credibility.'
   }
 
   if (route === 'RECOVERY') {
@@ -60,19 +60,19 @@ function deriveRoutePurpose(route: CGILiveOperationalRoute): string {
   }
 
   if (route === 'PRESSURE') {
-    return 'Identify pressure accumulation that may weaken survivability.'
+    return 'Identify accumulated pressure that may weaken continuity survivability.'
   }
 
-  return 'Track continuity movement across time and condition change.'
+  return 'Track whether continuity is moving toward stabilization or degradation.'
 }
 
 function deriveExecutiveFocus(route: CGILiveOperationalRoute): string {
   if (route === 'COMMAND') {
-    return 'What must leadership know and do now?'
+    return 'What must leadership understand, coordinate, and protect now?'
   }
 
   if (route === 'OPERATIONS') {
-    return 'Where is operational strain affecting stabilization capacity?'
+    return 'Where is operational strain weakening stabilization capacity?'
   }
 
   if (route === 'RECOVERY') {
@@ -80,15 +80,16 @@ function deriveExecutiveFocus(route: CGILiveOperationalRoute): string {
   }
 
   if (route === 'PRESSURE') {
-    return 'Is pressure accumulating into continuity risk?'
+    return 'Is pressure accumulating into survivability risk?'
   }
 
-  return 'Is the institution moving toward stability or degradation?'
+  return 'Is the institution stabilizing, stalling, or degrading?'
 }
 
 function deriveDominantSeverity(input: CGILiveOperationalInput) {
   if (input.unresolvedCriticalCount > 0) return 'CRITICAL' as const
   if (input.escalatedCases >= 3) return 'HIGH' as const
+
   if (input.openCases > 0 || input.coordinationIssues > 0) {
     return 'MODERATE' as const
   }
@@ -143,7 +144,13 @@ function buildOperationalNarrative(input: {
   memoryWarning: string
   accountabilityStatus: string
 }): string {
-  return `Operational interpretation: ${input.commandTruth} ${input.primaryDriver} ${input.requiredAction} Memory warning: ${input.memoryWarning} Accountability status: ${input.accountabilityStatus}.`
+  return [
+    `The current continuity reading indicates that ${input.commandTruth}`,
+    `${input.primaryDriver}`,
+    `${input.requiredAction}`,
+    `Structural memory adds caution: ${input.memoryWarning}`,
+    `Accountability remains ${input.accountabilityStatus.toLowerCase()}.`,
+  ].join(' ')
 }
 
 export function evaluateCGILiveOperationalIntegration(
@@ -197,8 +204,7 @@ export function evaluateCGILiveOperationalIntegration(
     reburnCount: input.reburnCount,
     unresolvedDurationDays: input.unresolvedDurationDays,
     priorEscalationCount: input.priorEscalationCount,
-    priorSurvivabilityThreatCount:
-      input.priorSurvivabilityThreatCount,
+    priorSurvivabilityThreatCount: input.priorSurvivabilityThreatCount,
   })
 
   const accountability = evaluateCGIAccountability({
