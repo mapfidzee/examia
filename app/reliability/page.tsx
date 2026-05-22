@@ -5,6 +5,13 @@ import type { CSSProperties, ReactNode } from 'react'
 
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { interpretReliability } from '@/lib/cgi/interpreters/interpretReliability'
+import { buildCGIExecutiveBriefing } from '@/lib/cgiExecutiveBriefingGenerator'
+import {
+  formatCGIExecutivePosture,
+  formatCGIEvidenceLanguage,
+  formatCGISurvivabilityLanguage,
+  formatCGIGovernanceSafeLanguage,
+} from '@/lib/cgiExecutivePostureFormatter'
 import { supabase } from '../../lib/supabase'
 
 type CgiOperationalMetric = {
@@ -66,9 +73,7 @@ function ReliabilityContent() {
 
     if (error) {
       console.error(error)
-      setMessage(
-        'Continuity trustworthiness memory could not be loaded.'
-      )
+      setMessage('Continuity trustworthiness memory could not be loaded.')
       return
     }
 
@@ -154,15 +159,10 @@ function ReliabilityContent() {
     })
 
     const survivabilityMeaning = interpretSurvivability(survivability)
-
     const continuityMeaning = interpretContinuity(continuity)
-
     const driftMeaning = interpretDrift(drift)
-
     const unresolvedMeaning = interpretUnresolved(unresolved)
-
     const volatilityMeaning = interpretVolatility(volatility)
-
     const historyDepth = interpretHistory(ordered.length)
 
     const dominantWeakness = strongestDriver({
@@ -199,11 +199,71 @@ function ReliabilityContent() {
     }
   }, [metrics])
 
+  const synchronizedBriefing = buildCGIExecutiveBriefing({
+    pressurePosture: intelligence.unresolvedMeaning.posture.includes('HIGH')
+      ? 'CRITICAL'
+      : intelligence.unresolvedMeaning.posture.includes('VISIBLE')
+        ? 'ELEVATED'
+        : 'WATCHED',
+
+    trajectoryPosture: intelligence.driftMeaning.posture.includes('SEVERE')
+      ? 'CRITICAL'
+      : intelligence.driftMeaning.posture.includes('WATCH')
+        ? 'ELEVATED'
+        : 'WATCHED',
+
+    predictivePosture: intelligence.volatilityMeaning.posture.includes(
+      'VOLATILE'
+    )
+      ? 'CRITICAL'
+      : intelligence.volatilityMeaning.posture.includes('VARIATION')
+        ? 'ELEVATED'
+        : 'WATCHED',
+
+    recoveryPosture:
+      intelligence.reliabilityInterpretation.posture.includes('FRAGILE') ||
+      intelligence.reliabilityInterpretation.posture.includes('DANGEROUS')
+        ? 'CRITICAL'
+        : intelligence.reliabilityInterpretation.posture.includes('MONITORED')
+          ? 'ELEVATED'
+          : 'WATCHED',
+
+    reliabilityPosture:
+      intelligence.reliabilityInterpretation.posture.includes('DANGEROUS') ||
+      intelligence.reliabilityInterpretation.posture.includes('FRAGILE')
+        ? 'CRITICAL'
+        : intelligence.reliabilityInterpretation.posture.includes('MONITORED')
+          ? 'ELEVATED'
+          : 'WATCHED',
+
+    evidenceVerified: false,
+    accountabilityActive: true,
+    structuralMemoryVisible: true,
+  })
+
+  const synchronizedPosture = formatCGIExecutivePosture(
+    synchronizedBriefing.synthesis.synthesisPosture
+  )
+
+  const synchronizedEvidence = formatCGIEvidenceLanguage(
+    false,
+    synchronizedBriefing.synthesis.synthesisPosture
+  )
+
+  const synchronizedSurvivability = formatCGISurvivabilityLanguage(
+    synchronizedBriefing.synthesis.synthesisPosture
+  )
+
+  const synchronizedGovernance = formatCGIGovernanceSafeLanguage()
+
   const brief = `
 TSINAXA CGI CONTINUITY TRUSTWORTHINESS BRIEF
 
 Reliability Posture:
 ${intelligence.reliabilityInterpretation.posture}
+
+Synchronized Executive Posture:
+${synchronizedPosture.label}
 
 Survivability:
 ${intelligence.survivabilityMeaning.posture}
@@ -224,13 +284,19 @@ Dominant Trustworthiness Threat:
 ${intelligence.dominantWeakness}
 
 Executive Interpretation:
-${intelligence.executiveSummary}
+${synchronizedBriefing.executiveSummary}
 
 Executive Action:
-${intelligence.actionCue}
+${synchronizedPosture.actionLanguage}
+
+Evidence Requirement:
+${synchronizedEvidence}
+
+Survivability Language:
+${synchronizedSurvivability}
 
 Governance-Safe Meaning:
-This trustworthiness view does not judge people or assign blame. It evaluates whether stabilization credibility can still be trusted under sustained operational pressure across persisted continuity memory.
+${synchronizedGovernance}
   `.trim()
 
   return (
@@ -265,7 +331,7 @@ This trustworthiness view does not judge people or assign blame. It evaluates wh
             </h2>
 
             <p style={styles.heroMeaning}>
-              {intelligence.executiveSummary}
+              {synchronizedBriefing.executiveSummary}
             </p>
           </div>
 
@@ -273,8 +339,39 @@ This trustworthiness view does not judge people or assign blame. It evaluates wh
             <p style={styles.actionLabel}>Executive Action</p>
 
             <p style={styles.actionText}>
-              {intelligence.actionCue}
+              {synchronizedPosture.actionLanguage}
             </p>
+          </div>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>
+            Synchronized Continuity Reading
+          </p>
+
+          <h2 style={styles.cardTitle}>
+            {synchronizedPosture.label}
+          </h2>
+
+          <p style={styles.bodyText}>
+            {synchronizedPosture.description}
+          </p>
+
+          <div style={styles.infoList}>
+            <Info
+              label="Evidence"
+              value={synchronizedEvidence}
+            />
+
+            <Info
+              label="Survivability"
+              value={synchronizedSurvivability}
+            />
+
+            <Info
+              label="Governance"
+              value={synchronizedGovernance}
+            />
           </div>
         </section>
 
@@ -322,8 +419,8 @@ This trustworthiness view does not judge people or assign blame. It evaluates wh
           />
 
           <CompactCard
-            title="Current Drift"
-            value={intelligence.driftMeaning.posture}
+            title="Synchronized Posture"
+            value={synchronizedBriefing.synthesis.synthesisPosture}
           />
 
           <CompactCard
@@ -1039,6 +1136,13 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '22px',
     margin: 0,
     lineHeight: 1.2,
+  },
+
+  bodyText: {
+    color: '#cbd5e1',
+    lineHeight: 1.7,
+    margin: '10px 0 0',
+    maxWidth: '880px',
   },
 
   cardNote: {
