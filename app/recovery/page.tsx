@@ -5,9 +5,49 @@ import type { CSSProperties, ReactNode } from 'react'
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { evaluateCGILiveOperationalIntegration } from '@/lib/cgiLiveOperationalIntegrationEngine'
+import { buildCGIExecutiveBriefing } from '@/lib/cgiExecutiveBriefingGenerator'
+import {
+  formatCGIExecutivePosture,
+  formatCGIEvidenceLanguage,
+  formatCGISurvivabilityLanguage,
+  formatCGIGovernanceSafeLanguage,
+} from '@/lib/cgiExecutivePostureFormatter'
+import type { CGIRouteSynthesisPosture } from '@/lib/cgiCrossRouteContinuitySynthesisEngine'
 
 function formatLabel(value: string): string {
   return value.replaceAll('_', ' ')
+}
+
+function mapToSynthesisPosture(value: unknown): CGIRouteSynthesisPosture {
+  const normalized = String(value).toUpperCase()
+
+  if (
+    normalized.includes('SURVIVABILITY_THREAT') ||
+    normalized.includes('CRITICAL') ||
+    normalized.includes('HIGH') ||
+    normalized.includes('FAILED') ||
+    normalized.includes('COLLAPSE') ||
+    normalized.includes('SEVERE')
+  ) {
+    return 'CRITICAL'
+  }
+
+  if (
+    normalized.includes('ELEVATED') ||
+    normalized.includes('MODERATE') ||
+    normalized.includes('ACTIVE_INSTABILITY') ||
+    normalized.includes('FRAGILE') ||
+    normalized.includes('PARTIAL') ||
+    normalized.includes('UNCERTAIN') ||
+    normalized.includes('LOW') ||
+    normalized.includes('WEAK') ||
+    normalized.includes('CONDITIONAL') ||
+    normalized.includes('REPEAT')
+  ) {
+    return 'ELEVATED'
+  }
+
+  return 'WATCHED'
 }
 
 export default function RecoveryPage() {
@@ -48,6 +88,42 @@ function RecoveryContent() {
     deadlineMissed: false,
   })
 
+  const synchronizedBriefing = buildCGIExecutiveBriefing({
+    pressurePosture: mapToSynthesisPosture(
+      recoveryIntelligence.derivation.survivabilityPressure
+    ),
+    trajectoryPosture: mapToSynthesisPosture(
+      recoveryIntelligence.derivation.continuityCondition
+    ),
+    predictivePosture: mapToSynthesisPosture(
+      recoveryIntelligence.memory.memoryRiskLevel
+    ),
+    recoveryPosture: mapToSynthesisPosture(
+      recoveryIntelligence.derivation.recoveryCredibility
+    ),
+    reliabilityPosture: mapToSynthesisPosture(
+      recoveryIntelligence.derivation.continuityConfidence
+    ),
+    evidenceVerified: false,
+    accountabilityActive: true,
+    structuralMemoryVisible: true,
+  })
+
+  const synchronizedPosture = formatCGIExecutivePosture(
+    synchronizedBriefing.synthesis.synthesisPosture
+  )
+
+  const synchronizedEvidence = formatCGIEvidenceLanguage(
+    false,
+    synchronizedBriefing.synthesis.synthesisPosture
+  )
+
+  const synchronizedSurvivability = formatCGISurvivabilityLanguage(
+    synchronizedBriefing.synthesis.synthesisPosture
+  )
+
+  const synchronizedGovernance = formatCGIGovernanceSafeLanguage()
+
   return (
     <main style={styles.page}>
       <div style={styles.container}>
@@ -72,7 +148,7 @@ function RecoveryContent() {
             </h2>
 
             <p style={styles.heroMeaning}>
-              {recoveryIntelligence.routePurpose}
+              {synchronizedBriefing.executiveSummary}
             </p>
           </div>
 
@@ -81,6 +157,20 @@ function RecoveryContent() {
             <p style={styles.toneValue}>
               {recoveryIntelligence.shell.severityTone}
             </p>
+          </div>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Synchronized Continuity Reading</p>
+
+          <h2 style={styles.cardTitle}>{synchronizedPosture.label}</h2>
+
+          <p style={styles.bodyText}>{synchronizedPosture.description}</p>
+
+          <div style={styles.infoList}>
+            <Info label="Evidence" value={synchronizedEvidence} />
+            <Info label="Survivability" value={synchronizedSurvivability} />
+            <Info label="Governance" value={synchronizedGovernance} />
           </div>
         </section>
 
@@ -168,11 +258,11 @@ function RecoveryContent() {
 
         <section style={styles.gridTwo}>
           <Panel title="Required Recovery Action">
-            {recoveryIntelligence.command.requiredAction}
+            {synchronizedPosture.actionLanguage}
           </Panel>
 
           <Panel title="Required Recovery Evidence">
-            {recoveryIntelligence.command.requiredEvidence}
+            {synchronizedEvidence}
           </Panel>
         </section>
 
@@ -236,16 +326,17 @@ function RecoveryContent() {
         </section>
 
         <section style={styles.card}>
-          <p style={styles.sectionKicker}>Legacy Preservation</p>
+          <p style={styles.sectionKicker}>Expansion Readiness</p>
 
           <h2 style={styles.cardTitle}>
-            Previous recovery intelligence is preserved.
+            Recovery intelligence now supports continuity trustworthiness.
           </h2>
 
           <p style={styles.bodyText}>
-            The earlier recovery page was backed up as{' '}
-            <strong>app/recovery/page.legacy.tsx</strong>. Valuable legacy
-            logic can now be reintroduced later as smaller governed components.
+            This synchronized recovery layer supports executive briefing
+            automation, continuity trustworthiness boards, survivability
+            monitoring, governance intelligence layers, and cross-site
+            continuity coordination.
           </p>
         </section>
       </div>
@@ -270,6 +361,15 @@ function Panel({
 
       {children ? <div style={styles.panelBody}>{children}</div> : null}
     </section>
+  )
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={styles.infoRow}>
+      <span style={styles.infoLabel}>{label}</span>
+      <strong style={styles.infoValue}>{value}</strong>
+    </div>
   )
 }
 
@@ -439,6 +539,31 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.7,
     margin: 0,
     maxWidth: '880px',
+  },
+  infoList: {
+    display: 'grid',
+    gap: '10px',
+    marginTop: '14px',
+  },
+  infoRow: {
+    display: 'grid',
+    gridTemplateColumns: '160px minmax(0, 1fr)',
+    gap: '12px',
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '14px',
+    padding: '12px',
+    alignItems: 'start',
+  },
+  infoLabel: {
+    color: '#94a3b8',
+    fontWeight: 800,
+    fontSize: '12px',
+  },
+  infoValue: {
+    color: '#f8fafc',
+    lineHeight: 1.45,
+    overflowWrap: 'anywhere',
   },
   principleCard: {
     background: '#0f172a',
