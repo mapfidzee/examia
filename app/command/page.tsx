@@ -3,6 +3,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
+import InfrastructureNav from '@/components/InfrastructureNav'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import CGICommandContinuityPanel from '@/components/cgi-command/CGICommandContinuityPanel'
 import {
@@ -29,6 +30,8 @@ export default function CommandPage() {
       <CGIGovernanceShell>
         <main style={styles.page}>
           <div style={styles.container}>
+            <InfrastructureNav />
+
             <section style={styles.header}>
               <p style={styles.kicker}>TSINAXA CGI • COMMAND</p>
 
@@ -53,9 +56,7 @@ export default function CommandPage() {
                 {commandPosture.headline}
               </p>
 
-              <p style={styles.bodyText}>
-                {commandPosture.description}
-              </p>
+              <p style={styles.bodyText}>{commandPosture.description}</p>
 
               <div style={styles.commandGrid}>
                 <CommandSignal
