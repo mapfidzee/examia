@@ -1,6 +1,15 @@
 import {
   buildCGIInstitutionalPilotPackage,
 } from '../../lib/cgiInstitutionalPilotPackageEngine'
+import {
+  buildCGIExecutiveBriefing,
+} from '../../lib/cgiExecutiveBriefingGenerator'
+import {
+  formatCGIExecutivePosture,
+  formatCGIEvidenceLanguage,
+  formatCGISurvivabilityLanguage,
+  formatCGIGovernanceSafeLanguage,
+} from '../../lib/cgiExecutivePostureFormatter'
 
 function Section({
   eyebrow,
@@ -69,9 +78,55 @@ function IntelligenceCard({
   )
 }
 
+function BriefingCard({
+  label,
+  value,
+}: {
+  label: string
+  value: string
+}) {
+  return (
+    <div className="rounded-3xl border border-zinc-800 bg-black p-6">
+      <p className="text-sm uppercase tracking-[0.25em] text-zinc-500">
+        {label}
+      </p>
+
+      <p className="mt-4 text-xl font-semibold leading-8 text-white">
+        {value}
+      </p>
+    </div>
+  )
+}
+
 export default function CGIBriefPage() {
   const pilotPackage =
     buildCGIInstitutionalPilotPackage('CONTROLLED_PILOT')
+
+  const briefing = buildCGIExecutiveBriefing({
+    pressurePosture: 'ELEVATED',
+    trajectoryPosture: 'WATCHED',
+    predictivePosture: 'ELEVATED',
+    recoveryPosture: 'WATCHED',
+    reliabilityPosture: 'ELEVATED',
+    evidenceVerified: false,
+    accountabilityActive: true,
+    structuralMemoryVisible: true,
+  })
+
+  const postureFormat = formatCGIExecutivePosture(
+    briefing.synthesis.synthesisPosture
+  )
+
+  const evidenceLanguage = formatCGIEvidenceLanguage(
+    false,
+    briefing.synthesis.synthesisPosture
+  )
+
+  const survivabilityLanguage = formatCGISurvivabilityLanguage(
+    briefing.synthesis.synthesisPosture
+  )
+
+  const governanceSafeLanguage = formatCGIGovernanceSafeLanguage()
 
   return (
     <main className="min-h-screen bg-black px-6 py-10 text-white">
@@ -87,8 +142,8 @@ export default function CGIBriefPage() {
 
           <p className="mt-6 max-w-4xl text-xl leading-9 text-zinc-300">
             CGI compresses pressure, trajectory, predictive warning,
-            recovery credibility, and trustworthiness into one executive
-            continuity reading.
+            recovery credibility, and continuity trustworthiness into one
+            synchronized executive reading.
           </p>
 
           <div className="mt-8 rounded-3xl border border-zinc-800 bg-black p-6">
@@ -97,10 +152,50 @@ export default function CGIBriefPage() {
             </p>
 
             <p className="mt-3 text-3xl font-semibold leading-tight">
-              Can continuity still be trusted under operational pressure?
+              {briefing.coreQuestion}
             </p>
           </div>
         </header>
+
+        <section className="rounded-3xl border border-cyan-900 bg-cyan-950/30 p-8">
+          <p className="text-sm uppercase tracking-[0.3em] text-cyan-300">
+            Live Synthesis Reading
+          </p>
+
+          <h2 className="mt-3 text-4xl font-bold tracking-tight text-cyan-100">
+            {postureFormat.label}
+          </h2>
+
+          <p className="mt-5 max-w-4xl text-2xl font-semibold leading-9 text-white">
+            {postureFormat.headline}
+          </p>
+
+          <p className="mt-4 max-w-5xl text-lg leading-8 text-cyan-100">
+            {briefing.executiveSummary}
+          </p>
+
+          <div className="mt-6 grid gap-5 md:grid-cols-2">
+            <BriefingCard
+              label="Dominant Concern"
+              value={briefing.dominantConcern}
+            />
+
+            <BriefingCard
+              label="Synthesis Posture"
+              value={briefing.synthesis.synthesisPosture}
+            />
+
+            <BriefingCard
+              label="Required Executive Action"
+              value={briefing.requiredExecutiveAction}
+            />
+
+            <BriefingCard
+              label="Required Evidence"
+              value={briefing.requiredEvidence}
+            />
+          </div>
+        </section>
 
         <Section
           eyebrow="Executive Problem"
@@ -167,12 +262,25 @@ export default function CGIBriefPage() {
         </Section>
 
         <Section
+          eyebrow="Standardized Executive Language"
+          title="CGI now uses shared synthesis, posture, evidence, and survivability language."
+        >
+          <BulletList
+            items={[
+              postureFormat.description,
+              postureFormat.actionLanguage,
+              evidenceLanguage,
+              survivabilityLanguage,
+              governanceSafeLanguage,
+            ]}
+          />
+        </Section>
+
+        <Section
           eyebrow="Core Doctrine"
           title="Visible recovery is not the same as durable stabilization."
         >
-          <p>
-            CGI does not govern events alone.
-          </p>
+          <p>CGI does not govern events alone.</p>
 
           <p>
             CGI governs continuity credibility after instability becomes
@@ -211,9 +319,7 @@ export default function CGIBriefPage() {
           eyebrow="Structural Memory"
           title="CGI remembers what ordinary dashboards often forget."
         >
-          <p>
-            Most systems move on when an item appears closed.
-          </p>
+          <p>Most systems move on when an item appears closed.</p>
 
           <p>
             CGI preserves recurrence, reburn, fragile recovery, unresolved
@@ -231,6 +337,15 @@ export default function CGIBriefPage() {
               difficulty.
             </p>
           </div>
+        </Section>
+
+        <Section
+          eyebrow="Generated Executive Brief"
+          title="Standardized copy-ready continuity briefing"
+        >
+          <pre className="whitespace-pre-wrap rounded-3xl border border-zinc-800 bg-black p-6 text-base leading-8 text-zinc-300">
+            {briefing.copyReadyBrief}
+          </pre>
         </Section>
 
         <Section
@@ -286,6 +401,22 @@ export default function CGIBriefPage() {
           title="What successful continuity interpretation looks like"
         >
           <BulletList items={pilotPackage.successEvidence} />
+        </Section>
+
+        <Section
+          eyebrow="Expansion Readiness"
+          title="The synthesis layer now supports institutional expansion."
+        >
+          <BulletList
+            items={[
+              'Executive command centers',
+              'Cross-site continuity coordination',
+              'Institutional survivability monitoring',
+              'Executive briefing automation',
+              'Continuity trustworthiness boards',
+              'Governance intelligence layers',
+            ]}
+          />
         </Section>
 
         <Section
