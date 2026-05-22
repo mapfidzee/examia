@@ -28,11 +28,7 @@ function Section({
   )
 }
 
-function BulletList({
-  items,
-}: {
-  items: string[]
-}) {
+function BulletList({ items }: { items: string[] }) {
   return (
     <ul className="space-y-3">
       {items.map((item) => (
@@ -44,6 +40,32 @@ function BulletList({
         </li>
       ))}
     </ul>
+  )
+}
+
+function IntelligenceCard({
+  title,
+  question,
+  meaning,
+}: {
+  title: string
+  question: string
+  meaning: string
+}) {
+  return (
+    <div className="rounded-3xl border border-zinc-800 bg-black p-6">
+      <p className="text-sm uppercase tracking-[0.25em] text-zinc-500">
+        {title}
+      </p>
+
+      <h3 className="mt-4 text-2xl font-semibold leading-tight">
+        {question}
+      </h3>
+
+      <p className="mt-4 text-base leading-7 text-zinc-400">
+        {meaning}
+      </p>
+    </div>
   )
 }
 
@@ -60,93 +82,108 @@ export default function CGIBriefPage() {
           </p>
 
           <h1 className="mt-5 max-w-5xl text-5xl font-bold tracking-tight">
-            Continuity Governance Intelligence
+            Executive Continuity Intelligence Brief
           </h1>
 
           <p className="mt-6 max-w-4xl text-xl leading-9 text-zinc-300">
-            CGI governs visible instability until stabilization credibility
-            exists.
+            CGI compresses pressure, trajectory, predictive warning,
+            recovery credibility, and trustworthiness into one executive
+            continuity reading.
           </p>
 
           <div className="mt-8 rounded-3xl border border-zinc-800 bg-black p-6">
             <p className="text-sm uppercase tracking-[0.25em] text-zinc-500">
-              Core Doctrine
+              Core Executive Question
             </p>
 
             <p className="mt-3 text-3xl font-semibold leading-tight">
-              Visible recovery is not the same as durable stabilization.
+              Can continuity still be trusted under operational pressure?
             </p>
           </div>
         </header>
 
         <Section
           eyebrow="Executive Problem"
-          title="Most institutions can see incidents. Few can see continuity credibility."
+          title="Most institutions can see activity. Few can interpret continuity credibility."
         >
           <p>
-            Most operational systems show events, tickets, staffing,
-            dashboards, alerts, and workflows.
+            Events, tickets, dashboards, alerts, and workflows can show that
+            something happened.
           </p>
 
           <p>
-            But leadership still struggles to answer one critical question:
+            They do not always show whether the institution is still capable of
+            stabilizing itself reliably under pressure.
           </p>
 
           <div className="rounded-3xl border border-zinc-800 bg-black p-6 text-2xl font-semibold leading-relaxed text-white">
-            Can the institution still stabilize itself reliably under pressure?
+            CGI exists to interpret whether visible recovery is becoming
+            durable continuity — or whether instability is returning beneath
+            apparent resolution.
           </div>
-
-          <p>
-            CGI was built to answer that question.
-          </p>
         </Section>
 
         <Section
-          eyebrow="What CGI Does"
-          title="CGI converts instability into governed executive meaning."
+          eyebrow="Synthesis Layer"
+          title="CGI turns separate intelligence surfaces into one executive continuity posture."
         >
-          <p>
-            CGI does not simply display operational activity.
-          </p>
+          <div className="grid gap-5 md:grid-cols-2">
+            <IntelligenceCard
+              title="Pressure"
+              question="Is operational pressure weakening survivability?"
+              meaning="Pressure intelligence shows whether accumulated strain is beginning to threaten continuity protection."
+            />
 
-          <p>
-            It derives continuity condition, recovery credibility,
-            survivability pressure, recurrence severity, accountability,
-            executive posture, and stabilization confidence.
-          </p>
+            <IntelligenceCard
+              title="Trajectory"
+              question="Is continuity stabilizing, holding, or degrading?"
+              meaning="Trajectory intelligence shows the direction of continuity movement across persisted memory."
+            />
 
-          <p>
-            The system is designed to help executives understand whether
-            visible recovery is truly holding — or whether instability is
-            quietly returning underneath apparent resolution.
-          </p>
+            <IntelligenceCard
+              title="Predictive Warning"
+              question="What pressure may become visible next?"
+              meaning="Early-warning intelligence identifies continuity risk before disruption becomes fully visible."
+            />
+
+            <IntelligenceCard
+              title="Recovery"
+              question="Is recovery credible or only temporarily contained?"
+              meaning="Recovery governance checks whether visible improvement is becoming durable stabilization."
+            />
+
+            <IntelligenceCard
+              title="Reliability"
+              question="Can stabilization still be trusted?"
+              meaning="Trustworthiness intelligence evaluates whether continuity credibility can hold under sustained pressure."
+            />
+
+            <IntelligenceCard
+              title="Executive Action"
+              question="What must leadership protect now?"
+              meaning="Command intelligence compresses the condition into executive posture, required action, and evidence need."
+            />
+          </div>
         </Section>
 
         <Section
-          eyebrow="Why CGI Is Different"
-          title="CGI remembers structurally."
+          eyebrow="Core Doctrine"
+          title="Visible recovery is not the same as durable stabilization."
         >
           <p>
-            Most systems forget instability once a ticket is closed or a
-            workflow appears resolved.
+            CGI does not govern events alone.
           </p>
 
           <p>
-            CGI tracks recurrence, reburn, fragile recovery, escalation
-            accumulation, unresolved pressure, and continuity degradation
-            across time.
+            CGI governs continuity credibility after instability becomes
+            visible.
           </p>
 
-          <div className="rounded-3xl border border-zinc-800 bg-black p-6">
-            <p className="text-sm uppercase tracking-[0.25em] text-zinc-500">
-              CGI Principle
-            </p>
-
-            <p className="mt-3 text-2xl font-semibold leading-relaxed">
-              Repeated instability is often structural weakness —
-              not temporary difficulty.
-            </p>
-          </div>
+          <p>
+            The system tracks whether recovery is holding, whether pressure is
+            accumulating, whether recurrence is returning, and whether
+            leadership has enough evidence to trust stabilization.
+          </p>
         </Section>
 
         <Section
@@ -156,16 +193,44 @@ export default function CGIBriefPage() {
           <BulletList
             items={[
               'Continuity condition',
+              'Pressure posture',
+              'Trajectory direction',
+              'Predictive early-warning posture',
               'Recovery credibility',
+              'Continuity trustworthiness',
               'Survivability pressure',
-              'Executive posture',
-              'Required action',
-              'Required evidence',
               'Structural memory signals',
               'Accountability status',
-              'Stabilization confidence',
+              'Required executive action',
+              'Required stabilization evidence',
             ]}
           />
+        </Section>
+
+        <Section
+          eyebrow="Structural Memory"
+          title="CGI remembers what ordinary dashboards often forget."
+        >
+          <p>
+            Most systems move on when an item appears closed.
+          </p>
+
+          <p>
+            CGI preserves recurrence, reburn, fragile recovery, unresolved
+            pressure, repeated escalation, and survivability strain across
+            time.
+          </p>
+
+          <div className="rounded-3xl border border-zinc-800 bg-black p-6">
+            <p className="text-sm uppercase tracking-[0.25em] text-zinc-500">
+              CGI Principle
+            </p>
+
+            <p className="mt-3 text-2xl font-semibold leading-relaxed">
+              Repeated instability is often structural weakness — not temporary
+              difficulty.
+            </p>
+          </div>
         </Section>
 
         <Section
@@ -195,10 +260,10 @@ export default function CGIBriefPage() {
           </div>
 
           <p>
-            The pilot is designed to evaluate how CGI interprets visible
-            instability, recovery credibility, recurrence, accountability,
-            and executive stabilization pressure inside a continuity-sensitive
-            environment.
+            The pilot evaluates how CGI interprets visible instability,
+            recovery credibility, recurrence, pressure, accountability,
+            trajectory, and executive stabilization risk inside a
+            continuity-sensitive environment.
           </p>
         </Section>
 
@@ -225,7 +290,7 @@ export default function CGIBriefPage() {
 
         <Section
           eyebrow="Closing Position"
-          title="CGI is continuity intelligence infrastructure."
+          title="CGI is executive continuity intelligence infrastructure."
         >
           <p>
             CGI does not compete with ordinary operational dashboards.
@@ -247,8 +312,8 @@ export default function CGIBriefPage() {
             </p>
 
             <p className="mt-3 text-2xl font-semibold leading-relaxed">
-              TSINAXA CGI is becoming a continuity governance intelligence
-              infrastructure for institutions operating under pressure.
+              TSINAXA CGI is an Executive Continuity Intelligence
+              Infrastructure for institutions operating under pressure.
             </p>
           </div>
         </Section>
