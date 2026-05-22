@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
+import InfrastructureNav from '@/components/InfrastructureNav'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import {
   buildCGIContinuitySnapshot,
@@ -67,6 +68,8 @@ function ContinuityHistoryContent() {
   return (
     <main style={styles.page}>
       <div style={styles.container}>
+        <InfrastructureNav />
+
         <section style={styles.header}>
           <p style={styles.kicker}>TSINAXA CGI • CONTINUITY HISTORY</p>
 
@@ -92,6 +95,7 @@ function ContinuityHistoryContent() {
 
           <div style={styles.statusBox}>
             <p style={styles.statusLabel}>Current Posture</p>
+
             <p style={styles.statusValue}>{historyReview.currentPosture}</p>
           </div>
         </section>
@@ -190,16 +194,25 @@ function SignalCard({
   return (
     <article style={styles.signalCard}>
       <p style={styles.panelKicker}>{title}</p>
+
       <h3 style={styles.signalValue}>{value}</h3>
+
       <p style={styles.panelBody}>{body}</p>
     </article>
   )
 }
 
-function Panel({ title, children }: { title: string; children: ReactNode }) {
+function Panel({
+  title,
+  children,
+}: {
+  title: string
+  children: ReactNode
+}) {
   return (
     <section style={styles.panel}>
       <p style={styles.panelKicker}>{title}</p>
+
       <div style={styles.panelBody}>{children}</div>
     </section>
   )
