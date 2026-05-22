@@ -56,7 +56,7 @@ function ReliabilityContent() {
   }, [])
 
   async function loadReliabilityMetrics() {
-    setMessage('Loading reliability intelligence...')
+    setMessage('Loading continuity trustworthiness memory...')
 
     const { data, error } = await supabase
       .from('cgi_operational_metrics')
@@ -66,12 +66,14 @@ function ReliabilityContent() {
 
     if (error) {
       console.error(error)
-      setMessage('Reliability intelligence could not be loaded.')
+      setMessage(
+        'Continuity trustworthiness memory could not be loaded.'
+      )
       return
     }
 
     setMetrics(data || [])
-    setMessage('Reliability intelligence loaded.')
+    setMessage('Continuity trustworthiness memory loaded.')
   }
 
   const intelligence = useMemo(() => {
@@ -152,10 +154,15 @@ function ReliabilityContent() {
     })
 
     const survivabilityMeaning = interpretSurvivability(survivability)
+
     const continuityMeaning = interpretContinuity(continuity)
+
     const driftMeaning = interpretDrift(drift)
+
     const unresolvedMeaning = interpretUnresolved(unresolved)
+
     const volatilityMeaning = interpretVolatility(volatility)
+
     const historyDepth = interpretHistory(ordered.length)
 
     const dominantWeakness = strongestDriver({
@@ -168,6 +175,15 @@ function ReliabilityContent() {
       'Unresolved instability': unresolved,
     })
 
+    const executiveSummary = `${reliabilityInterpretation.summary} The dominant trustworthiness threat is ${dominantWeakness}. ${continuityMeaning.meaning} ${survivabilityMeaning.meaning}`
+
+    const actionCue = compactAction([
+      reliabilityInterpretation.executiveAction,
+      driftMeaning.action,
+      unresolvedMeaning.action,
+      survivabilityMeaning.action,
+    ])
+
     return {
       latest,
       reliabilityInterpretation,
@@ -178,11 +194,13 @@ function ReliabilityContent() {
       volatilityMeaning,
       historyDepth,
       dominantWeakness,
+      executiveSummary,
+      actionCue,
     }
   }, [metrics])
 
   const brief = `
-TSINAXA CGI RELIABILITY INTELLIGENCE BRIEF
+TSINAXA CGI CONTINUITY TRUSTWORTHINESS BRIEF
 
 Reliability Posture:
 ${intelligence.reliabilityInterpretation.posture}
@@ -202,17 +220,17 @@ ${intelligence.unresolvedMeaning.posture}
 Reliability Volatility:
 ${intelligence.volatilityMeaning.posture}
 
-Dominant Reliability Threat:
+Dominant Trustworthiness Threat:
 ${intelligence.dominantWeakness}
 
 Executive Interpretation:
-${intelligence.reliabilityInterpretation.summary}
+${intelligence.executiveSummary}
 
-Recommended Action:
-${intelligence.reliabilityInterpretation.executiveAction}
+Executive Action:
+${intelligence.actionCue}
 
 Governance-Safe Meaning:
-This reliability view interprets persisted continuity memory. It does not judge people. It evaluates whether stabilization is becoming dependable across time.
+This trustworthiness view does not judge people or assign blame. It evaluates whether stabilization credibility can still be trusted under sustained operational pressure across persisted continuity memory.
   `.trim()
 
   return (
@@ -220,17 +238,17 @@ This reliability view interprets persisted continuity memory. It does not judge 
       <div style={styles.container}>
         <section style={styles.header}>
           <p style={styles.kicker}>
-            TSINAXA CGI • RELIABILITY INTELLIGENCE
+            TSINAXA CGI • TRUSTWORTHINESS INTELLIGENCE
           </p>
 
           <h1 style={styles.title}>
-            Continuity Reliability Intelligence
+            Continuity Trustworthiness Intelligence
           </h1>
 
           <p style={styles.subtitle}>
-            Executive interpretation of whether continuity stabilization is
-            becoming dependable, unstable, fragile, or deteriorating across
-            persisted memory.
+            Executive interpretation of whether stabilization credibility
+            remains dependable under sustained operational pressure and
+            persisted continuity memory.
           </p>
         </section>
 
@@ -238,72 +256,176 @@ This reliability view interprets persisted continuity memory. It does not judge 
 
         <section style={styles.heroCard}>
           <div>
-            <p style={styles.sectionKicker}>Reliability Posture</p>
+            <p style={styles.sectionKicker}>
+              Continuity Trustworthiness
+            </p>
 
             <h2 style={styles.heroPosture}>
               {intelligence.reliabilityInterpretation.posture}
             </h2>
 
             <p style={styles.heroMeaning}>
-              {intelligence.reliabilityInterpretation.summary}
+              {intelligence.executiveSummary}
             </p>
           </div>
 
           <div style={styles.actionBox}>
-            <p style={styles.actionLabel}>Recommended Action</p>
+            <p style={styles.actionLabel}>Executive Action</p>
 
             <p style={styles.actionText}>
-              {intelligence.reliabilityInterpretation.executiveAction}
+              {intelligence.actionCue}
             </p>
           </div>
         </section>
 
         <section style={styles.postureGrid}>
-          <PostureCard title="Survivability" interpretation={intelligence.survivabilityMeaning} />
-          <PostureCard title="Continuity Integrity" interpretation={intelligence.continuityMeaning} />
-          <PostureCard title="Continuity Drift" interpretation={intelligence.driftMeaning} />
-          <PostureCard title="Unresolved Stability Pressure" interpretation={intelligence.unresolvedMeaning} />
-          <PostureCard title="Reliability Volatility" interpretation={intelligence.volatilityMeaning} />
-          <PostureCard title="Memory Depth" interpretation={intelligence.historyDepth} />
+          <PostureCard
+            title="Survivability"
+            interpretation={intelligence.survivabilityMeaning}
+          />
+
+          <PostureCard
+            title="Continuity Integrity"
+            interpretation={intelligence.continuityMeaning}
+          />
+
+          <PostureCard
+            title="Continuity Drift"
+            interpretation={intelligence.driftMeaning}
+          />
+
+          <PostureCard
+            title="Unresolved Stability Pressure"
+            interpretation={intelligence.unresolvedMeaning}
+          />
+
+          <PostureCard
+            title="Reliability Volatility"
+            interpretation={intelligence.volatilityMeaning}
+          />
+
+          <PostureCard
+            title="Memory Depth"
+            interpretation={intelligence.historyDepth}
+          />
         </section>
 
         <section style={styles.compactGrid}>
-          <CompactCard title="Dominant Reliability Threat" value={intelligence.dominantWeakness} />
-          <CompactCard title="Current Reliability" value={intelligence.reliabilityInterpretation.posture} />
-          <CompactCard title="Current Drift" value={intelligence.driftMeaning.posture} />
-          <CompactCard title="Current Survivability" value={intelligence.survivabilityMeaning.posture} />
+          <CompactCard
+            title="Dominant Threat"
+            value={intelligence.dominantWeakness}
+          />
+
+          <CompactCard
+            title="Trustworthiness"
+            value={intelligence.reliabilityInterpretation.posture}
+          />
+
+          <CompactCard
+            title="Current Drift"
+            value={intelligence.driftMeaning.posture}
+          />
+
+          <CompactCard
+            title="Current Survivability"
+            value={intelligence.survivabilityMeaning.posture}
+          />
         </section>
 
         <section style={styles.twoColumn}>
-          <Panel title="Latest Reliability Context">
-            <Info label="Continuity State" value={intelligence.latest?.continuity_state || 'Not recorded'} />
-            <Info label="Pressure State" value={intelligence.latest?.pressure_propagation_state || 'Not recorded'} />
-            <Info label="Trajectory Direction" value={intelligence.latest?.trajectory_direction || 'Not recorded'} />
-            <Info label="Structural Memory" value={intelligence.latest?.structural_memory_state || 'Not recorded'} />
-            <Info label="Dominant Pressure" value={intelligence.latest?.dominant_pressure_source || 'Not recorded'} />
+          <Panel title="Latest Continuity Context">
+            <Info
+              label="Continuity State"
+              value={
+                intelligence.latest?.continuity_state ||
+                'Not recorded'
+              }
+            />
+
+            <Info
+              label="Pressure State"
+              value={
+                intelligence.latest?.pressure_propagation_state ||
+                'Not recorded'
+              }
+            />
+
+            <Info
+              label="Trajectory Direction"
+              value={
+                intelligence.latest?.trajectory_direction ||
+                'Not recorded'
+              }
+            />
+
+            <Info
+              label="Structural Memory"
+              value={
+                intelligence.latest?.structural_memory_state ||
+                'Not recorded'
+              }
+            />
+
+            <Info
+              label="Dominant Pressure"
+              value={
+                intelligence.latest?.dominant_pressure_source ||
+                'Not recorded'
+              }
+            />
           </Panel>
 
-          <Panel title="Dependability Reading">
-            <Info label="Reliability" value={intelligence.reliabilityInterpretation.posture} />
-            <Info label="Survivability" value={intelligence.survivabilityMeaning.posture} />
-            <Info label="Volatility" value={intelligence.volatilityMeaning.posture} />
-            <Info label="Dominant Threat" value={intelligence.dominantWeakness} />
-            <Info label="Drift" value={intelligence.driftMeaning.posture} />
+          <Panel title="Trustworthiness Reading">
+            <Info
+              label="Trustworthiness"
+              value={
+                intelligence.reliabilityInterpretation.posture
+              }
+            />
+
+            <Info
+              label="Survivability"
+              value={
+                intelligence.survivabilityMeaning.posture
+              }
+            />
+
+            <Info
+              label="Volatility"
+              value={
+                intelligence.volatilityMeaning.posture
+              }
+            />
+
+            <Info
+              label="Dominant Threat"
+              value={intelligence.dominantWeakness}
+            />
+
+            <Info
+              label="Continuity Drift"
+              value={intelligence.driftMeaning.posture}
+            />
           </Panel>
         </section>
 
         <section style={styles.card}>
           <div style={styles.cardHeader}>
             <div>
-              <h2 style={styles.cardTitle}>Recent Reliability Memory</h2>
+              <h2 style={styles.cardTitle}>
+                Recent Trustworthiness Memory
+              </h2>
 
               <p style={styles.cardNote}>
-                Recent snapshots are displayed as reliability posture memory,
-                not raw scoring.
+                Recent snapshots are displayed as continuity
+                trustworthiness posture, not raw reliability scoring.
               </p>
             </div>
 
-            <button onClick={loadReliabilityMetrics} style={styles.primaryButton}>
+            <button
+              onClick={loadReliabilityMetrics}
+              style={styles.primaryButton}
+            >
               Refresh
             </button>
           </div>
@@ -314,7 +436,7 @@ This reliability view interprets persisted continuity memory. It does not judge 
                 <tr>
                   <th style={styles.th}>Created</th>
                   <th style={styles.th}>Continuity</th>
-                  <th style={styles.th}>Reliability</th>
+                  <th style={styles.th}>Trustworthiness</th>
                   <th style={styles.th}>Survivability</th>
                   <th style={styles.th}>Pressure</th>
                   <th style={styles.th}>Drift</th>
@@ -325,7 +447,7 @@ This reliability view interprets persisted continuity memory. It does not judge 
                 {metrics.length === 0 && (
                   <tr>
                     <td style={styles.td} colSpan={6}>
-                      No persisted reliability memory found yet.
+                      No persisted trustworthiness memory found yet.
                     </td>
                   </tr>
                 )}
@@ -334,10 +456,15 @@ This reliability view interprets persisted continuity memory. It does not judge 
                   const rowReliability = interpretReliability({
                     unresolvedCases:
                       item.unresolved_momentum >= 50 ? 1 : 0,
+
                     overdueCases:
                       item.continuity_drift >= 50 ? 1 : 0,
+
                     failedRecoveries:
-                      item.recovery_reliability_score < 45 ? 1 : 0,
+                      item.recovery_reliability_score < 45
+                        ? 1
+                        : 0,
+
                     recurrenceRate:
                       item.escalation_pressure_index >= 60 ||
                       item.structural_memory_risk >= 60
@@ -368,7 +495,11 @@ This reliability view interprets persisted continuity memory. It does not judge 
                       </td>
 
                       <td style={styles.td}>
-                        {rowReliability.posture}
+                        {
+                          interpretUnresolved(
+                            item.unresolved_momentum
+                          ).posture
+                        }
                       </td>
 
                       <td style={styles.td}>
@@ -387,7 +518,10 @@ This reliability view interprets persisted continuity memory. It does not judge 
         </section>
 
         <section style={styles.card}>
-          <h2 style={styles.cardTitle}>Generated Reliability Brief</h2>
+          <h2 style={styles.cardTitle}>
+            Generated Trustworthiness Brief
+          </h2>
+
           <pre style={styles.summaryBox}>{brief}</pre>
         </section>
       </div>
@@ -424,47 +558,56 @@ function calculateVolatility(values: number[]) {
 function strongestDriver(scores: Record<string, number>) {
   return (
     Object.entries(scores).sort((a, b) => b[1] - a[1])[0]?.[0] ||
-    'No dominant reliability threat detected'
+    'No dominant trustworthiness threat detected'
   )
 }
 
-function interpretSurvivability(value: number): Interpretation {
+function interpretSurvivability(
+  value: number
+): Interpretation {
   if (value >= 75) {
     return {
-      posture: 'SURVIVABILITY IMPROVING',
-      meaning: 'The continuity pathway is showing stronger durability.',
-      action: 'Maintain survivability monitoring.',
+      posture: 'SURVIVABILITY HOLDING',
+      meaning:
+        'Continuity survivability is becoming more dependable.',
+      action: 'Maintain survivability confirmation monitoring.',
     }
   }
 
   if (value >= 55) {
     return {
       posture: 'SURVIVABILITY MONITORED',
-      meaning: 'Survivability exists but remains under review.',
-      action: 'Do not assume closure.',
+      meaning:
+        'Survivability exists but still requires governance review.',
+      action: 'Do not assume stabilization closure.',
     }
   }
 
   if (value >= 40) {
     return {
       posture: 'SURVIVABILITY FRAGILE',
-      meaning: 'Survivability may weaken under continued pressure.',
-      action: 'Continue governed review.',
+      meaning:
+        'Survivability may weaken under sustained operational pressure.',
+      action: 'Continue governed survivability review.',
     }
   }
 
   return {
     posture: 'SURVIVABILITY DETERIORATING',
-    meaning: 'Survivability is not credible enough for closure.',
-    action: 'Escalate survivability review.',
-    }
+    meaning:
+      'Survivability credibility is no longer dependable.',
+    action: 'Escalate survivability protection review.',
+  }
 }
 
-function interpretContinuity(value: number): Interpretation {
+function interpretContinuity(
+  value: number
+): Interpretation {
   if (value >= 75) {
     return {
       posture: 'CONTINUITY HOLDING',
-      meaning: 'Continuity integrity is holding strongly.',
+      meaning:
+        'Continuity integrity remains dependable across reviewed memory.',
       action: 'Maintain confirmation monitoring.',
     }
   }
@@ -472,23 +615,26 @@ function interpretContinuity(value: number): Interpretation {
   if (value >= 55) {
     return {
       posture: 'CONTINUITY MONITORED',
-      meaning: 'Continuity is present but still requires review.',
-      action: 'Continue monitoring.',
+      meaning:
+        'Continuity integrity exists but still requires review.',
+      action: 'Continue governance monitoring.',
     }
   }
 
   if (value >= 40) {
     return {
       posture: 'CONTINUITY FRAGILE',
-      meaning: 'Continuity may weaken if unresolved pressure persists.',
-      action: 'Review drift and pressure.',
+      meaning:
+        'Continuity integrity may weaken if unresolved pressure persists.',
+      action: 'Review drift and escalation pressure.',
     }
   }
 
   return {
     posture: 'CONTINUITY DETERIORATING',
-    meaning: 'Continuity integrity is weakening.',
-    action: 'Escalate continuity review.',
+    meaning:
+      'Continuity integrity is weakening beyond safe confidence.',
+    action: 'Escalate continuity protection review.',
   }
 }
 
@@ -496,7 +642,8 @@ function interpretDrift(value: number): Interpretation {
   if (value >= 60) {
     return {
       posture: 'SEVERE CONTINUITY DRIFT',
-      meaning: 'Continuity drift is strong enough to threaten reliability.',
+      meaning:
+        'Continuity drift is strong enough to weaken trustworthiness.',
       action: 'Escalate drift review.',
     }
   }
@@ -504,7 +651,8 @@ function interpretDrift(value: number): Interpretation {
   if (value >= 40) {
     return {
       posture: 'DRIFT UNDER WATCH',
-      meaning: 'Continuity drift is visible and must remain under review.',
+      meaning:
+        'Continuity drift remains visible and requires governance review.',
       action: 'Keep drift visible.',
     }
   }
@@ -516,59 +664,72 @@ function interpretDrift(value: number): Interpretation {
   }
 }
 
-function interpretUnresolved(value: number): Interpretation {
+function interpretUnresolved(
+  value: number
+): Interpretation {
   if (value >= 65) {
     return {
-      posture: 'HEAVY UNRESOLVED STABILITY PRESSURE',
-      meaning: 'Unresolved pressure may undermine dependability.',
+      posture: 'UNRESOLVED PRESSURE HIGH',
+      meaning:
+        'Unresolved instability pressure may undermine stabilization credibility.',
       action: 'Escalate unresolved pressure review.',
     }
   }
 
   if (value >= 45) {
     return {
-      posture: 'UNRESOLVED STABILITY PRESSURE VISIBLE',
-      meaning: 'Unresolved stability pressure remains visible.',
+      posture: 'UNRESOLVED PRESSURE VISIBLE',
+      meaning:
+        'Unresolved instability pressure remains visible.',
       action: 'Keep ownership and follow-up active.',
     }
   }
 
   return {
     posture: 'UNRESOLVED PRESSURE CONTAINED',
-    meaning: 'Unresolved stability pressure appears contained.',
+    meaning:
+      'Unresolved instability pressure appears contained.',
     action: 'Continue monitoring.',
   }
 }
 
-function interpretVolatility(value: number): Interpretation {
+function interpretVolatility(
+  value: number
+): Interpretation {
   if (value >= 30) {
     return {
-      posture: 'RELIABILITY VOLATILE',
-      meaning: 'Reliability movement is fluctuating too much for confidence.',
-      action: 'Extend monitoring.',
+      posture: 'TRUSTWORTHINESS VOLATILE',
+      meaning:
+        'Trustworthiness movement is fluctuating too heavily for confidence.',
+      action: 'Extend continuity confirmation monitoring.',
     }
   }
 
   if (value >= 18) {
     return {
       posture: 'VARIATION CONTAINED',
-      meaning: 'Variation exists but is not showing collapse.',
-      action: 'Watch for repeated instability.',
+      meaning:
+        'Variation exists but is not showing visible reliability collapse.',
+      action: 'Watch for repeated instability patterns.',
     }
   }
 
   return {
-    posture: 'RELIABILITY MOVEMENT STABLE',
-    meaning: 'Reliability movement appears steady.',
+    posture: 'TRUSTWORTHINESS MOVEMENT STABLE',
+    meaning:
+      'Trustworthiness movement appears steady across reviewed memory.',
     action: 'Maintain confirmation monitoring.',
   }
 }
 
-function interpretHistory(count: number): Interpretation {
+function interpretHistory(
+  count: number
+): Interpretation {
   if (count < 3) {
     return {
       posture: 'INSUFFICIENT MEMORY',
-      meaning: 'Too few snapshots exist for reliability interpretation.',
+      meaning:
+        'Too few snapshots exist for reliable trustworthiness interpretation.',
       action: 'Continue saving operational snapshots.',
     }
   }
@@ -576,16 +737,23 @@ function interpretHistory(count: number): Interpretation {
   if (count < 10) {
     return {
       posture: 'EARLY MEMORY',
-      meaning: 'Reliability memory has started but remains young.',
+      meaning:
+        'Continuity trustworthiness memory has started but remains early.',
       action: 'Continue building continuity memory.',
     }
   }
 
   return {
-    posture: 'MEMORY ESTABLISHED',
-    meaning: 'Persisted memory supports reliability interpretation.',
-    action: 'Use posture to guide review.',
+    posture: 'TRUSTWORTHINESS MEMORY ESTABLISHED',
+    meaning:
+      'Persisted memory now supports continuity trustworthiness interpretation.',
+    action:
+      'Use trustworthiness posture to guide executive review.',
   }
+}
+
+function compactAction(actions: string[]) {
+  return Array.from(new Set(actions)).join(' ')
 }
 
 function formatDate(value: string) {
@@ -707,8 +875,8 @@ const styles: Record<string, CSSProperties> = {
   },
 
   message: {
-    background: '#064e3b',
-    color: '#bbf7d0',
+    background: '#083344',
+    color: '#cffafe',
     padding: '12px 14px',
     borderRadius: '14px',
     fontWeight: 800,
@@ -722,7 +890,7 @@ const styles: Record<string, CSSProperties> = {
       'minmax(0, 1.4fr) minmax(260px, 0.6fr)',
     gap: '16px',
     background: '#020617',
-    border: '1px solid #22c55e',
+    border: '1px solid #67e8f9',
     borderRadius: '24px',
     padding: '22px',
     marginBottom: '16px',
@@ -741,28 +909,28 @@ const styles: Record<string, CSSProperties> = {
   heroPosture: {
     fontSize: 'clamp(34px, 6vw, 56px)',
     margin: '8px 0 12px',
-    color: '#86efac',
+    color: '#a5f3fc',
     letterSpacing: '-0.05em',
     lineHeight: 1,
   },
 
   heroMeaning: {
-    color: '#dbeafe',
+    color: '#e0f2fe',
     lineHeight: 1.6,
     margin: 0,
     maxWidth: '720px',
   },
 
   actionBox: {
-    background: '#052e16',
-    border: '1px solid #22c55e',
+    background: '#082f49',
+    border: '1px solid #67e8f9',
     borderRadius: '18px',
     padding: '16px',
     alignSelf: 'stretch',
   },
 
   actionLabel: {
-    color: '#86efac',
+    color: '#a5f3fc',
     fontWeight: 900,
     margin: '0 0 8px',
     fontSize: '12px',
@@ -771,7 +939,7 @@ const styles: Record<string, CSSProperties> = {
   },
 
   actionText: {
-    color: '#dcfce7',
+    color: '#e0f2fe',
     lineHeight: 1.55,
     margin: 0,
     fontSize: '14px',
