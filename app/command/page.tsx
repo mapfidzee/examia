@@ -5,8 +5,19 @@ import type { CSSProperties, ReactNode } from 'react'
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import CGICommandContinuityPanel from '@/components/cgi-command/CGICommandContinuityPanel'
+import {
+  formatCGIExecutivePosture,
+  formatCGIEvidenceLanguage,
+  formatCGISurvivabilityLanguage,
+  formatCGIGovernanceSafeLanguage,
+} from '@/lib/cgiExecutivePostureFormatter'
 
 export default function CommandPage() {
+  const commandPosture = formatCGIExecutivePosture('ELEVATED')
+  const evidenceLanguage = formatCGIEvidenceLanguage(false, 'ELEVATED')
+  const survivabilityLanguage = formatCGISurvivabilityLanguage('ELEVATED')
+  const governanceSafeLanguage = formatCGIGovernanceSafeLanguage()
+
   return (
     <GovernanceRouteGuard
       allowedRoles={[
@@ -26,8 +37,47 @@ export default function CommandPage() {
               <p style={styles.subtitle}>
                 Executive command visibility for continuity condition,
                 recovery credibility, structural memory, accountability,
-                required evidence, and stabilization discipline.
+                required evidence, survivability protection, and stabilization
+                discipline.
               </p>
+            </section>
+
+            <section style={styles.commandPostureCard}>
+              <p style={styles.sectionKicker}>Executive Command Posture</p>
+
+              <h2 style={styles.commandPostureTitle}>
+                {commandPosture.label}
+              </h2>
+
+              <p style={styles.commandHeadline}>
+                {commandPosture.headline}
+              </p>
+
+              <p style={styles.bodyText}>
+                {commandPosture.description}
+              </p>
+
+              <div style={styles.commandGrid}>
+                <CommandSignal
+                  title="Command Action"
+                  body={commandPosture.actionLanguage}
+                />
+
+                <CommandSignal
+                  title="Evidence Requirement"
+                  body={evidenceLanguage}
+                />
+
+                <CommandSignal
+                  title="Survivability Protection"
+                  body={survivabilityLanguage}
+                />
+
+                <CommandSignal
+                  title="Governance-Safe Meaning"
+                  body={governanceSafeLanguage}
+                />
+              </div>
             </section>
 
             <CGICommandContinuityPanel />
@@ -75,6 +125,22 @@ export default function CommandPage() {
   )
 }
 
+function CommandSignal({
+  title,
+  body,
+}: {
+  title: string
+  body: string
+}) {
+  return (
+    <article style={styles.commandSignal}>
+      <p style={styles.principleKicker}>{title}</p>
+
+      <p style={styles.commandSignalBody}>{body}</p>
+    </article>
+  )
+}
+
 function CommandPrinciple({
   title,
   body,
@@ -85,7 +151,9 @@ function CommandPrinciple({
   return (
     <article style={styles.principleCard}>
       <p style={styles.principleKicker}>CGI Principle</p>
+
       <h3 style={styles.principleTitle}>{title}</h3>
+
       <p style={styles.principleBody}>{body}</p>
     </article>
   )
@@ -126,6 +194,49 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.65,
     fontSize: '16px',
     margin: 0,
+  },
+  commandPostureCard: {
+    background: '#082f49',
+    border: '1px solid #67e8f9',
+    borderRadius: '24px',
+    padding: '22px',
+    marginBottom: '16px',
+    boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
+    boxSizing: 'border-box',
+    overflow: 'hidden',
+  },
+  commandPostureTitle: {
+    color: '#a5f3fc',
+    fontSize: 'clamp(30px, 5vw, 46px)',
+    lineHeight: 1.05,
+    margin: '10px 0',
+    letterSpacing: '-0.04em',
+  },
+  commandHeadline: {
+    color: '#f8fafc',
+    fontSize: '22px',
+    lineHeight: 1.45,
+    margin: '0 0 12px',
+    fontWeight: 900,
+  },
+  commandGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: '14px',
+    marginTop: '18px',
+  },
+  commandSignal: {
+    background: '#020617',
+    border: '1px solid #164e63',
+    borderRadius: '18px',
+    padding: '16px',
+    minHeight: '130px',
+  },
+  commandSignalBody: {
+    color: '#e0f2fe',
+    lineHeight: 1.55,
+    margin: '10px 0 0',
+    fontWeight: 800,
   },
   card: {
     background: '#020617',
