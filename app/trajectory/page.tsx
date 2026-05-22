@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { interpretTrajectory } from '@/lib/cgi/interpreters/interpretTrajectory'
@@ -11,17 +11,14 @@ type CgiOperationalMetric = {
   id: string
   created_at: string
   scope: string
-
   continuity_state: string
   pressure_propagation_state: string
   trajectory_direction: string
   structural_memory_state: string
-
   continuity_integrity_score: number
   stabilization_confidence_score: number
   recovery_reliability_score: number
   operational_survivability_score: number
-
   trajectory_risk: number
   continuity_drift: number
   escalation_momentum: number
@@ -30,7 +27,6 @@ type CgiOperationalMetric = {
   unresolved_momentum: number
   propagation_risk: number
   structural_memory_risk: number
-
   dominant_pressure_source: string | null
   dominant_trajectory_signal: string | null
   dominant_memory_pattern: string | null
@@ -61,7 +57,7 @@ function TrajectoryContent() {
   }, [])
 
   async function loadTrajectoryMetrics() {
-    setMessage('Loading trajectory intelligence...')
+    setMessage('Loading continuity trajectory memory...')
 
     const { data, error } = await supabase
       .from('cgi_operational_metrics')
@@ -71,12 +67,12 @@ function TrajectoryContent() {
 
     if (error) {
       console.error(error)
-      setMessage('Trajectory intelligence could not be loaded.')
+      setMessage('Continuity trajectory memory could not be loaded.')
       return
     }
 
     setMetrics(data || [])
-    setMessage('Trajectory intelligence loaded.')
+    setMessage('Continuity trajectory memory loaded.')
   }
 
   const trajectory = useMemo(() => {
@@ -91,50 +87,33 @@ function TrajectoryContent() {
     const earlyWindow = ordered.slice(0, 5)
     const recentWindow = ordered.slice(-5)
 
-    const trajectoryRisk = average(
-      ordered.map((item) => item.trajectory_risk)
-    )
-
-    const drift = average(
-      ordered.map((item) => item.continuity_drift)
-    )
-
+    const trajectoryRisk = average(ordered.map((item) => item.trajectory_risk))
+    const drift = average(ordered.map((item) => item.continuity_drift))
     const escalationMomentum = average(
       ordered.map((item) => item.escalation_momentum)
     )
-
     const recoveryDirection = average(
       ordered.map((item) => item.recovery_direction)
     )
-
     const stabilizationTrend = average(
       ordered.map((item) => item.stabilization_trend)
     )
-
     const unresolvedMomentum = average(
       ordered.map((item) => item.unresolved_momentum)
     )
-
     const continuityIntegrity = average(
       ordered.map((item) => item.continuity_integrity_score)
     )
-
     const stabilizationConfidence = average(
       ordered.map((item) => item.stabilization_confidence_score)
     )
-
     const reliability = average(
       ordered.map((item) => item.recovery_reliability_score)
     )
-
     const survivability = average(
       ordered.map((item) => item.operational_survivability_score)
     )
-
-    const propagation = average(
-      ordered.map((item) => item.propagation_risk)
-    )
-
+    const propagation = average(ordered.map((item) => item.propagation_risk))
     const memoryRisk = average(
       ordered.map((item) => item.structural_memory_risk)
     )
@@ -276,7 +255,7 @@ function TrajectoryContent() {
     )
     const historyDepth = interpretHistory(ordered.length)
 
-    const executiveSummary = `${trajectoryPosture.meaning} Dominant trajectory driver: ${dominantDriver}. ${driftPosture.meaning} ${stabilizationPosture.meaning}`
+    const executiveSummary = `${trajectoryPosture.meaning} The dominant continuity direction driver is ${dominantDriver}. ${driftPosture.meaning} ${stabilizationPosture.meaning}`
 
     const actionCue = compactAction([
       trajectoryPosture.action,
@@ -307,10 +286,10 @@ function TrajectoryContent() {
   const brief = `
 TSINAXA CGI TRAJECTORY INTELLIGENCE BRIEF
 
-Trajectory Posture:
+Continuity Direction:
 ${trajectory.trajectoryPosture.posture}
 
-Direction Posture:
+Direction Strength:
 ${trajectory.directionPosture.posture}
 
 Continuity Drift:
@@ -334,7 +313,7 @@ ${trajectory.unresolvedPosture.posture}
 Trajectory Volatility:
 ${trajectory.volatilityPosture.posture}
 
-Dominant Trajectory Driver:
+Dominant Continuity Driver:
 ${trajectory.dominantDriver}
 
 Executive Interpretation:
@@ -344,7 +323,7 @@ Recommended Action:
 ${trajectory.actionCue}
 
 Governance-Safe Meaning:
-This trajectory view interprets persisted continuity memory. It does not judge people. It asks whether continuity direction is recovering, holding, drifting, or deteriorating across time.
+This view does not judge people or assign blame. It reads persisted continuity memory to determine whether the institution is stabilizing, holding, drifting, or deteriorating across time.
   `.trim()
 
   return (
@@ -353,11 +332,11 @@ This trajectory view interprets persisted continuity memory. It does not judge p
         <section style={styles.header}>
           <p style={styles.kicker}>TSINAXA CGI • TRAJECTORY INTELLIGENCE</p>
 
-          <h1 style={styles.title}>Continuity Trajectory Intelligence</h1>
+          <h1 style={styles.title}>Continuity Direction Intelligence</h1>
 
           <p style={styles.subtitle}>
-            Executive interpretation of whether continuity direction is recovering,
-            holding, drifting, or deteriorating across persisted operational memory.
+            Executive visibility into whether continuity is stabilizing, holding,
+            drifting, or deteriorating across persisted operational memory.
           </p>
         </section>
 
@@ -365,7 +344,7 @@ This trajectory view interprets persisted continuity memory. It does not judge p
 
         <section style={styles.heroCard}>
           <div>
-            <p style={styles.sectionKicker}>Trajectory Posture</p>
+            <p style={styles.sectionKicker}>Continuity Direction</p>
 
             <h2 style={styles.heroPosture}>
               {trajectory.trajectoryPosture.posture}
@@ -375,51 +354,52 @@ This trajectory view interprets persisted continuity memory. It does not judge p
           </div>
 
           <div style={styles.actionBox}>
-            <p style={styles.actionLabel}>Recommended Action</p>
+            <p style={styles.actionLabel}>Executive Action</p>
             <p style={styles.actionText}>{trajectory.actionCue}</p>
           </div>
         </section>
 
         <section style={styles.postureGrid}>
-          <PostureCard title="Direction Posture" interpretation={trajectory.directionPosture} />
+          <PostureCard title="Direction Strength" interpretation={trajectory.directionPosture} />
           <PostureCard title="Continuity Drift" interpretation={trajectory.driftPosture} />
           <PostureCard title="Deterioration Signal" interpretation={trajectory.deteriorationSignal} />
           <PostureCard title="Recovery Direction" interpretation={trajectory.recoveryPosture} />
           <PostureCard title="Stabilization Movement" interpretation={trajectory.stabilizationPosture} />
-          <PostureCard title="Momentum State" interpretation={trajectory.momentumPosture} />
+          <PostureCard title="Escalation Momentum" interpretation={trajectory.momentumPosture} />
         </section>
 
         <section style={styles.compactGrid}>
-          <CompactCard title="History Depth" value={trajectory.historyDepth.posture} />
+          <CompactCard title="Memory Depth" value={trajectory.historyDepth.posture} />
           <CompactCard title="Dominant Driver" value={trajectory.dominantDriver} />
           <CompactCard title="Trajectory Volatility" value={trajectory.volatilityPosture.posture} />
           <CompactCard title="Unresolved Momentum" value={trajectory.unresolvedPosture.posture} />
         </section>
 
         <section style={styles.twoColumn}>
-          <Panel title="Latest Trajectory Context">
+          <Panel title="Latest Continuity Context">
             <Info label="Continuity State" value={trajectory.latest?.continuity_state || 'Not recorded'} />
             <Info label="Trajectory Direction" value={trajectory.latest?.trajectory_direction || 'Not recorded'} />
             <Info label="Pressure State" value={trajectory.latest?.pressure_propagation_state || 'Not recorded'} />
             <Info label="Structural Memory" value={trajectory.latest?.structural_memory_state || 'Not recorded'} />
-            <Info label="Dominant Trajectory" value={trajectory.latest?.dominant_trajectory_signal || 'Not recorded'} />
+            <Info label="Dominant Signal" value={trajectory.latest?.dominant_trajectory_signal || 'Not recorded'} />
           </Panel>
 
           <Panel title="Trajectory Reading">
-            <Info label="Trajectory Posture" value={trajectory.trajectoryPosture.posture} />
+            <Info label="Continuity Direction" value={trajectory.trajectoryPosture.posture} />
             <Info label="Continuity Drift" value={trajectory.driftPosture.posture} />
             <Info label="Deterioration Signal" value={trajectory.deteriorationSignal.posture} />
             <Info label="Dominant Driver" value={trajectory.dominantDriver} />
-            <Info label="Current Reading" value={trajectory.directionPosture.posture} />
+            <Info label="Current Direction" value={trajectory.directionPosture.posture} />
           </Panel>
         </section>
 
         <section style={styles.card}>
           <div style={styles.cardHeader}>
             <div>
-              <h2 style={styles.cardTitle}>Recent Trajectory Memory Trail</h2>
+              <h2 style={styles.cardTitle}>Recent Continuity Memory Trail</h2>
               <p style={styles.cardNote}>
-                Recent snapshots are displayed as trajectory postures, not raw scores.
+                Recent snapshots are shown as continuity direction readings, not
+                personal performance judgments.
               </p>
             </div>
 
@@ -433,7 +413,7 @@ This trajectory view interprets persisted continuity memory. It does not judge p
               <thead>
                 <tr>
                   <th style={styles.th}>Created</th>
-                  <th style={styles.th}>Trajectory</th>
+                  <th style={styles.th}>Direction</th>
                   <th style={styles.th}>Risk</th>
                   <th style={styles.th}>Drift</th>
                   <th style={styles.th}>Momentum</th>
@@ -445,7 +425,7 @@ This trajectory view interprets persisted continuity memory. It does not judge p
                 {metrics.length === 0 && (
                   <tr>
                     <td style={styles.td} colSpan={6}>
-                      No persisted trajectory memory found yet.
+                      No persisted continuity trajectory memory found yet.
                     </td>
                   </tr>
                 )}
@@ -512,7 +492,7 @@ function calculateVolatility(values: number[]) {
 function strongestDriver(scores: Record<string, number>) {
   return (
     Object.entries(scores).sort((a, b) => b[1] - a[1])[0]?.[0] ||
-    'No dominant trajectory driver detected'
+    'No dominant continuity driver detected'
   )
 }
 
@@ -600,7 +580,7 @@ function interpretRecoveryDirection(value: number): Interpretation {
   if (value >= 50) {
     return {
       posture: 'RECOVERY HOLDING',
-      meaning: 'Recovery movement is visible but not yet final proof.',
+      meaning: 'Recovery movement is visible but not yet durable.',
       action: 'Continue recovery monitoring.',
     }
   }
@@ -735,8 +715,8 @@ function interpretMovement(value: number): Interpretation {
 function interpretHistory(count: number): Interpretation {
   if (count < 3) {
     return {
-      posture: 'INSUFFICIENT HISTORY',
-      meaning: 'Too few snapshots exist for trajectory interpretation.',
+      posture: 'INSUFFICIENT MEMORY',
+      meaning: 'Too few snapshots exist for reliable trajectory interpretation.',
       action: 'Continue saving operational snapshots.',
     }
   }
@@ -751,8 +731,8 @@ function interpretHistory(count: number): Interpretation {
 
   return {
     posture: 'TRAJECTORY MEMORY ESTABLISHED',
-    meaning: 'Persisted memory supports trajectory interpretation.',
-    action: 'Use posture to guide review.',
+    meaning: 'Persisted memory supports continuity direction interpretation.',
+    action: 'Use trajectory posture to guide executive review.',
   }
 }
 
@@ -790,13 +770,7 @@ function CompactCard({ title, value }: { title: string; value: string }) {
   )
 }
 
-function Panel({
-  title,
-  children,
-}: {
-  title: string
-  children: React.ReactNode
-}) {
+function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section style={styles.card}>
       <h2 style={styles.cardTitle}>{title}</h2>
