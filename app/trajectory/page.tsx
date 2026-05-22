@@ -5,6 +5,13 @@ import type { CSSProperties, ReactNode } from 'react'
 
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { interpretTrajectory } from '@/lib/cgi/interpreters/interpretTrajectory'
+import { buildCGIExecutiveBriefing } from '@/lib/cgiExecutiveBriefingGenerator'
+import {
+  formatCGIExecutivePosture,
+  formatCGIEvidenceLanguage,
+  formatCGISurvivabilityLanguage,
+  formatCGIGovernanceSafeLanguage,
+} from '@/lib/cgiExecutivePostureFormatter'
 import { supabase } from '../../lib/supabase'
 
 type CgiOperationalMetric = {
@@ -87,33 +94,50 @@ function TrajectoryContent() {
     const earlyWindow = ordered.slice(0, 5)
     const recentWindow = ordered.slice(-5)
 
-    const trajectoryRisk = average(ordered.map((item) => item.trajectory_risk))
-    const drift = average(ordered.map((item) => item.continuity_drift))
+    const trajectoryRisk = average(
+      ordered.map((item) => item.trajectory_risk)
+    )
+
+    const drift = average(
+      ordered.map((item) => item.continuity_drift)
+    )
+
     const escalationMomentum = average(
       ordered.map((item) => item.escalation_momentum)
     )
+
     const recoveryDirection = average(
       ordered.map((item) => item.recovery_direction)
     )
+
     const stabilizationTrend = average(
       ordered.map((item) => item.stabilization_trend)
     )
+
     const unresolvedMomentum = average(
       ordered.map((item) => item.unresolved_momentum)
     )
+
     const continuityIntegrity = average(
       ordered.map((item) => item.continuity_integrity_score)
     )
+
     const stabilizationConfidence = average(
       ordered.map((item) => item.stabilization_confidence_score)
     )
+
     const reliability = average(
       ordered.map((item) => item.recovery_reliability_score)
     )
+
     const survivability = average(
       ordered.map((item) => item.operational_survivability_score)
     )
-    const propagation = average(ordered.map((item) => item.propagation_risk))
+
+    const propagation = average(
+      ordered.map((item) => item.propagation_risk)
+    )
+
     const memoryRisk = average(
       ordered.map((item) => item.structural_memory_risk)
     )
@@ -283,11 +307,69 @@ function TrajectoryContent() {
     }
   }, [metrics])
 
+  const synchronizedBriefing = buildCGIExecutiveBriefing({
+    pressurePosture: trajectory.unresolvedPosture.posture.includes('HIGH')
+      ? 'CRITICAL'
+      : trajectory.unresolvedPosture.posture.includes('VISIBLE')
+        ? 'ELEVATED'
+        : 'WATCHED',
+
+    trajectoryPosture:
+      trajectory.trajectoryPosture.posture.includes('DETERIORATING') ||
+      trajectory.driftPosture.posture.includes('RISING')
+        ? 'CRITICAL'
+        : trajectory.driftPosture.posture.includes('WATCH')
+          ? 'ELEVATED'
+          : 'WATCHED',
+
+    predictivePosture: trajectory.volatilityPosture.posture.includes(
+      'VOLATILE'
+    )
+      ? 'CRITICAL'
+      : trajectory.volatilityPosture.posture.includes('VARIATION')
+        ? 'ELEVATED'
+        : 'WATCHED',
+
+    recoveryPosture: trajectory.stabilizationPosture.posture.includes('WEAK')
+      ? 'CRITICAL'
+      : trajectory.stabilizationPosture.posture.includes('FRAGILE')
+        ? 'ELEVATED'
+        : 'WATCHED',
+
+    reliabilityPosture: trajectory.directionPosture.posture.includes('WEAK')
+      ? 'CRITICAL'
+      : trajectory.directionPosture.posture.includes('HOLDING')
+        ? 'ELEVATED'
+        : 'WATCHED',
+
+    evidenceVerified: false,
+    accountabilityActive: true,
+    structuralMemoryVisible: true,
+  })
+
+  const synchronizedPosture = formatCGIExecutivePosture(
+    synchronizedBriefing.synthesis.synthesisPosture
+  )
+
+  const synchronizedEvidence = formatCGIEvidenceLanguage(
+    false,
+    synchronizedBriefing.synthesis.synthesisPosture
+  )
+
+  const synchronizedSurvivability = formatCGISurvivabilityLanguage(
+    synchronizedBriefing.synthesis.synthesisPosture
+  )
+
+  const synchronizedGovernance = formatCGIGovernanceSafeLanguage()
+
   const brief = `
 TSINAXA CGI TRAJECTORY INTELLIGENCE BRIEF
 
 Continuity Direction:
 ${trajectory.trajectoryPosture.posture}
+
+Synchronized Executive Posture:
+${synchronizedPosture.label}
 
 Direction Strength:
 ${trajectory.directionPosture.posture}
@@ -317,13 +399,19 @@ Dominant Continuity Driver:
 ${trajectory.dominantDriver}
 
 Executive Interpretation:
-${trajectory.executiveSummary}
+${synchronizedBriefing.executiveSummary}
 
-Recommended Action:
-${trajectory.actionCue}
+Executive Action:
+${synchronizedPosture.actionLanguage}
+
+Evidence Requirement:
+${synchronizedEvidence}
+
+Survivability Language:
+${synchronizedSurvivability}
 
 Governance-Safe Meaning:
-This view does not judge people or assign blame. It reads persisted continuity memory to determine whether the institution is stabilizing, holding, drifting, or deteriorating across time.
+${synchronizedGovernance}
   `.trim()
 
   return (
@@ -335,8 +423,9 @@ This view does not judge people or assign blame. It reads persisted continuity m
           <h1 style={styles.title}>Continuity Direction Intelligence</h1>
 
           <p style={styles.subtitle}>
-            Executive visibility into whether continuity is stabilizing, holding,
-            drifting, or deteriorating across persisted operational memory.
+            Executive visibility into whether continuity is stabilizing,
+            holding, drifting, or deteriorating across persisted operational
+            memory.
           </p>
         </section>
 
@@ -350,46 +439,130 @@ This view does not judge people or assign blame. It reads persisted continuity m
               {trajectory.trajectoryPosture.posture}
             </h2>
 
-            <p style={styles.heroMeaning}>{trajectory.executiveSummary}</p>
+            <p style={styles.heroMeaning}>
+              {synchronizedBriefing.executiveSummary}
+            </p>
           </div>
 
           <div style={styles.actionBox}>
             <p style={styles.actionLabel}>Executive Action</p>
-            <p style={styles.actionText}>{trajectory.actionCue}</p>
+            <p style={styles.actionText}>
+              {synchronizedPosture.actionLanguage}
+            </p>
+          </div>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Synchronized Continuity Reading</p>
+
+          <h2 style={styles.cardTitle}>{synchronizedPosture.label}</h2>
+
+          <p style={styles.bodyText}>{synchronizedPosture.description}</p>
+
+          <div style={styles.infoList}>
+            <Info label="Evidence" value={synchronizedEvidence} />
+            <Info label="Survivability" value={synchronizedSurvivability} />
+            <Info label="Governance" value={synchronizedGovernance} />
           </div>
         </section>
 
         <section style={styles.postureGrid}>
-          <PostureCard title="Direction Strength" interpretation={trajectory.directionPosture} />
-          <PostureCard title="Continuity Drift" interpretation={trajectory.driftPosture} />
-          <PostureCard title="Deterioration Signal" interpretation={trajectory.deteriorationSignal} />
-          <PostureCard title="Recovery Direction" interpretation={trajectory.recoveryPosture} />
-          <PostureCard title="Stabilization Movement" interpretation={trajectory.stabilizationPosture} />
-          <PostureCard title="Escalation Momentum" interpretation={trajectory.momentumPosture} />
+          <PostureCard
+            title="Direction Strength"
+            interpretation={trajectory.directionPosture}
+          />
+          <PostureCard
+            title="Continuity Drift"
+            interpretation={trajectory.driftPosture}
+          />
+          <PostureCard
+            title="Deterioration Signal"
+            interpretation={trajectory.deteriorationSignal}
+          />
+          <PostureCard
+            title="Recovery Direction"
+            interpretation={trajectory.recoveryPosture}
+          />
+          <PostureCard
+            title="Stabilization Movement"
+            interpretation={trajectory.stabilizationPosture}
+          />
+          <PostureCard
+            title="Escalation Momentum"
+            interpretation={trajectory.momentumPosture}
+          />
         </section>
 
         <section style={styles.compactGrid}>
-          <CompactCard title="Memory Depth" value={trajectory.historyDepth.posture} />
-          <CompactCard title="Dominant Driver" value={trajectory.dominantDriver} />
-          <CompactCard title="Trajectory Volatility" value={trajectory.volatilityPosture.posture} />
-          <CompactCard title="Unresolved Momentum" value={trajectory.unresolvedPosture.posture} />
+          <CompactCard
+            title="Memory Depth"
+            value={trajectory.historyDepth.posture}
+          />
+          <CompactCard
+            title="Dominant Driver"
+            value={trajectory.dominantDriver}
+          />
+          <CompactCard
+            title="Synchronized Posture"
+            value={synchronizedBriefing.synthesis.synthesisPosture}
+          />
+          <CompactCard
+            title="Trajectory Volatility"
+            value={trajectory.volatilityPosture.posture}
+          />
         </section>
 
         <section style={styles.twoColumn}>
           <Panel title="Latest Continuity Context">
-            <Info label="Continuity State" value={trajectory.latest?.continuity_state || 'Not recorded'} />
-            <Info label="Trajectory Direction" value={trajectory.latest?.trajectory_direction || 'Not recorded'} />
-            <Info label="Pressure State" value={trajectory.latest?.pressure_propagation_state || 'Not recorded'} />
-            <Info label="Structural Memory" value={trajectory.latest?.structural_memory_state || 'Not recorded'} />
-            <Info label="Dominant Signal" value={trajectory.latest?.dominant_trajectory_signal || 'Not recorded'} />
+            <Info
+              label="Continuity State"
+              value={trajectory.latest?.continuity_state || 'Not recorded'}
+            />
+            <Info
+              label="Trajectory Direction"
+              value={trajectory.latest?.trajectory_direction || 'Not recorded'}
+            />
+            <Info
+              label="Pressure State"
+              value={
+                trajectory.latest?.pressure_propagation_state || 'Not recorded'
+              }
+            />
+            <Info
+              label="Structural Memory"
+              value={
+                trajectory.latest?.structural_memory_state || 'Not recorded'
+              }
+            />
+            <Info
+              label="Dominant Signal"
+              value={
+                trajectory.latest?.dominant_trajectory_signal || 'Not recorded'
+              }
+            />
           </Panel>
 
           <Panel title="Trajectory Reading">
-            <Info label="Continuity Direction" value={trajectory.trajectoryPosture.posture} />
-            <Info label="Continuity Drift" value={trajectory.driftPosture.posture} />
-            <Info label="Deterioration Signal" value={trajectory.deteriorationSignal.posture} />
-            <Info label="Dominant Driver" value={trajectory.dominantDriver} />
-            <Info label="Current Direction" value={trajectory.directionPosture.posture} />
+            <Info
+              label="Continuity Direction"
+              value={trajectory.trajectoryPosture.posture}
+            />
+            <Info
+              label="Continuity Drift"
+              value={trajectory.driftPosture.posture}
+            />
+            <Info
+              label="Deterioration Signal"
+              value={trajectory.deteriorationSignal.posture}
+            />
+            <Info
+              label="Dominant Driver"
+              value={trajectory.dominantDriver}
+            />
+            <Info
+              label="Current Direction"
+              value={trajectory.directionPosture.posture}
+            />
           </Panel>
         </section>
 
@@ -398,8 +571,8 @@ This view does not judge people or assign blame. It reads persisted continuity m
             <div>
               <h2 style={styles.cardTitle}>Recent Continuity Memory Trail</h2>
               <p style={styles.cardNote}>
-                Recent snapshots are shown as continuity direction readings, not
-                personal performance judgments.
+                Recent snapshots are shown as continuity direction readings,
+                not personal performance judgments.
               </p>
             </div>
 
@@ -435,7 +608,8 @@ This view does not judge people or assign blame. It reads persisted continuity m
                     trajectoryRisk: item.trajectory_risk,
                     continuityDrift: item.continuity_drift,
                     unresolvedMomentum: item.unresolved_momentum,
-                    survivabilityRisk: 100 - item.operational_survivability_score,
+                    survivabilityRisk:
+                      100 - item.operational_survivability_score,
                   })
 
                   return (
@@ -452,7 +626,10 @@ This view does not judge people or assign blame. It reads persisted continuity m
                         {interpretMomentum(item.escalation_momentum).posture}
                       </td>
                       <td style={styles.td}>
-                        {interpretStabilization(item.stabilization_trend).posture}
+                        {
+                          interpretStabilization(item.stabilization_trend)
+                            .posture
+                        }
                       </td>
                     </tr>
                   )
@@ -966,6 +1143,12 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '22px',
     margin: 0,
     lineHeight: 1.2,
+  },
+  bodyText: {
+    color: '#cbd5e1',
+    lineHeight: 1.7,
+    margin: '10px 0 0',
+    maxWidth: '880px',
   },
   cardNote: {
     color: '#94a3b8',
