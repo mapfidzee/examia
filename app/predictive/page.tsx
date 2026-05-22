@@ -5,6 +5,13 @@ import type { CSSProperties, ReactNode } from 'react'
 
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { interpretPredictive } from '@/lib/cgi/interpreters/interpretPredictive'
+import { buildCGIExecutiveBriefing } from '@/lib/cgiExecutiveBriefingGenerator'
+import {
+  formatCGIExecutivePosture,
+  formatCGIEvidenceLanguage,
+  formatCGISurvivabilityLanguage,
+  formatCGIGovernanceSafeLanguage,
+} from '@/lib/cgiExecutivePostureFormatter'
 import { supabase } from '../../lib/supabase'
 
 type CgiOperationalMetric = {
@@ -144,34 +151,52 @@ function PredictiveContent() {
       'STRUCTURAL MEMORY'
     )
 
-    const unresolvedMeaning = interpretMomentum(unresolvedMomentum)
-    const dragMeaning = interpretDrag(stabilizationDrag)
-    const driftMeaning = interpretDrift(continuityDrift)
+    const unresolvedMeaning =
+      interpretMomentum(unresolvedMomentum)
 
-    const survivabilityMeaning = interpretWeakness(
-      survivabilityWeakness,
-      'SURVIVABILITY'
-    )
+    const dragMeaning =
+      interpretDrag(stabilizationDrag)
 
-    const reliabilityMeaning = interpretWeakness(
-      reliabilityWeakness,
-      'RELIABILITY'
-    )
+    const driftMeaning =
+      interpretDrift(continuityDrift)
 
-    const pressureMeaning = interpretPressure(escalationPressure)
-    const historyMeaning = interpretHistory(ordered.length)
+    const survivabilityMeaning =
+      interpretWeakness(
+        survivabilityWeakness,
+        'SURVIVABILITY'
+      )
 
-    const dominantForecastDriver = strongestDriver({
-      'Propagation risk': propagationRisk,
-      'Trajectory risk': trajectoryRisk,
-      'Structural memory risk': structuralMemoryRisk,
-      'Unresolved momentum': unresolvedMomentum,
-      'Stabilization drag': stabilizationDrag,
-      'Continuity drift': continuityDrift,
-      'Escalation pressure': escalationPressure,
-      'Survivability weakness': survivabilityWeakness,
-      'Reliability weakness': reliabilityWeakness,
-    })
+    const reliabilityMeaning =
+      interpretWeakness(
+        reliabilityWeakness,
+        'RELIABILITY'
+      )
+
+    const pressureMeaning =
+      interpretPressure(escalationPressure)
+
+    const historyMeaning =
+      interpretHistory(ordered.length)
+
+    const dominantForecastDriver =
+      strongestDriver({
+        'Propagation risk': propagationRisk,
+        'Trajectory risk': trajectoryRisk,
+        'Structural memory risk':
+          structuralMemoryRisk,
+        'Unresolved momentum':
+          unresolvedMomentum,
+        'Stabilization drag':
+          stabilizationDrag,
+        'Continuity drift':
+          continuityDrift,
+        'Escalation pressure':
+          escalationPressure,
+        'Survivability weakness':
+          survivabilityWeakness,
+        'Reliability weakness':
+          reliabilityWeakness,
+      })
 
     const executiveSummary = `${predictiveInterpretation.summary} The dominant early-warning driver is ${dominantForecastDriver}. ${propagationMeaning.meaning} ${memoryMeaning.meaning}`
 
@@ -201,11 +226,98 @@ function PredictiveContent() {
     }
   }, [metrics])
 
+  const synchronizedBriefing =
+    buildCGIExecutiveBriefing({
+      pressurePosture:
+        predictive.pressureMeaning.posture.includes(
+          'HIGH'
+        )
+          ? 'CRITICAL'
+          : predictive.pressureMeaning.posture.includes(
+                'VISIBLE'
+              )
+            ? 'ELEVATED'
+            : 'WATCHED',
+
+      trajectoryPosture:
+        predictive.trajectoryMeaning.posture.includes(
+          'HIGH'
+        )
+          ? 'CRITICAL'
+          : predictive.trajectoryMeaning.posture.includes(
+                'VISIBLE'
+              )
+            ? 'ELEVATED'
+            : 'WATCHED',
+
+      predictivePosture:
+        predictive.predictiveInterpretation.posture.includes(
+          'HIGH'
+        )
+          ? 'CRITICAL'
+          : predictive.predictiveInterpretation.posture.includes(
+                'VISIBLE'
+              )
+            ? 'ELEVATED'
+            : 'WATCHED',
+
+      recoveryPosture:
+        predictive.dragMeaning.posture.includes(
+          'HIGH'
+        )
+          ? 'CRITICAL'
+          : predictive.dragMeaning.posture.includes(
+                'VISIBLE'
+              )
+            ? 'ELEVATED'
+            : 'WATCHED',
+
+      reliabilityPosture:
+        predictive.reliabilityMeaning.posture.includes(
+          'HIGH'
+        )
+          ? 'CRITICAL'
+          : predictive.reliabilityMeaning.posture.includes(
+                'VISIBLE'
+              )
+            ? 'ELEVATED'
+            : 'WATCHED',
+
+      evidenceVerified: false,
+      accountabilityActive: true,
+      structuralMemoryVisible: true,
+    })
+
+  const synchronizedPosture =
+    formatCGIExecutivePosture(
+      synchronizedBriefing.synthesis
+        .synthesisPosture
+    )
+
+  const synchronizedEvidence =
+    formatCGIEvidenceLanguage(
+      false,
+      synchronizedBriefing.synthesis
+        .synthesisPosture
+    )
+
+  const synchronizedSurvivability =
+    formatCGISurvivabilityLanguage(
+      synchronizedBriefing.synthesis
+        .synthesisPosture
+    )
+
+  const synchronizedGovernance =
+    formatCGIGovernanceSafeLanguage()
+
   const brief = `
 TSINAXA CGI CONTINUITY EARLY-WARNING BRIEF
 
 Early-Warning Posture:
 ${predictive.predictiveInterpretation.posture}
+
+Synchronized Executive Posture:
+${synchronizedPosture.label}
 
 Propagation Risk:
 ${predictive.propagationMeaning.posture}
@@ -235,99 +347,310 @@ Dominant Early-Warning Driver:
 ${predictive.dominantForecastDriver}
 
 Executive Interpretation:
-${predictive.executiveSummary}
+${synchronizedBriefing.executiveSummary}
 
 Executive Action:
-${predictive.actionCue}
+${synchronizedPosture.actionLanguage}
+
+Evidence Requirement:
+${synchronizedEvidence}
+
+Survivability Language:
+${synchronizedSurvivability}
 
 Governance-Safe Meaning:
-This view does not predict personal failure or assign blame. It reads continuity memory to identify pressure that may become visible disruption if leadership prevention does not hold.
+${synchronizedGovernance}
   `.trim()
 
   return (
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.header}>
-          <p style={styles.kicker}>TSINAXA CGI • EARLY-WARNING INTELLIGENCE</p>
+          <p style={styles.kicker}>
+            TSINAXA CGI • EARLY-WARNING INTELLIGENCE
+          </p>
 
-          <h1 style={styles.title}>Continuity Early-Warning Intelligence</h1>
+          <h1 style={styles.title}>
+            Continuity Early-Warning Intelligence
+          </h1>
 
           <p style={styles.subtitle}>
-            Executive prevention visibility into continuity pressure that may
-            become visible disruption if stabilization does not hold.
+            Executive prevention visibility into
+            continuity pressure that may become
+            visible disruption if stabilization
+            does not hold.
           </p>
         </section>
 
-        {message && <div style={styles.message}>{message}</div>}
+        {message && (
+          <div style={styles.message}>
+            {message}
+          </div>
+        )}
 
         <section style={styles.heroCard}>
           <div>
-            <p style={styles.sectionKicker}>Early-Warning Posture</p>
+            <p style={styles.sectionKicker}>
+              Early-Warning Posture
+            </p>
 
             <h2 style={styles.heroPosture}>
-              {predictive.predictiveInterpretation.posture}
+              {
+                predictive
+                  .predictiveInterpretation
+                  .posture
+              }
             </h2>
 
             <p style={styles.heroMeaning}>
-              {predictive.executiveSummary}
+              {
+                synchronizedBriefing.executiveSummary
+              }
             </p>
           </div>
 
           <div style={styles.actionBox}>
-            <p style={styles.actionLabel}>Executive Action</p>
+            <p style={styles.actionLabel}>
+              Executive Action
+            </p>
 
             <p style={styles.actionText}>
-              {predictive.actionCue}
+              {
+                synchronizedPosture.actionLanguage
+              }
             </p>
           </div>
         </section>
 
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>
+            Synchronized Continuity Reading
+          </p>
+
+          <h2 style={styles.cardTitle}>
+            {synchronizedPosture.label}
+          </h2>
+
+          <p style={styles.bodyText}>
+            {
+              synchronizedPosture.description
+            }
+          </p>
+
+          <div style={styles.infoList}>
+            <Info
+              label="Evidence"
+              value={synchronizedEvidence}
+            />
+
+            <Info
+              label="Survivability"
+              value={
+                synchronizedSurvivability
+              }
+            />
+
+            <Info
+              label="Governance"
+              value={
+                synchronizedGovernance
+              }
+            />
+          </div>
+        </section>
+
         <section style={styles.postureGrid}>
-          <PostureCard title="Propagation Risk" interpretation={predictive.propagationMeaning} />
-          <PostureCard title="Trajectory Risk" interpretation={predictive.trajectoryMeaning} />
-          <PostureCard title="Structural Memory Risk" interpretation={predictive.memoryMeaning} />
-          <PostureCard title="Unresolved Momentum" interpretation={predictive.unresolvedMeaning} />
-          <PostureCard title="Stabilization Drag" interpretation={predictive.dragMeaning} />
-          <PostureCard title="Continuity Drift" interpretation={predictive.driftMeaning} />
+          <PostureCard
+            title="Propagation Risk"
+            interpretation={
+              predictive.propagationMeaning
+            }
+          />
+
+          <PostureCard
+            title="Trajectory Risk"
+            interpretation={
+              predictive.trajectoryMeaning
+            }
+          />
+
+          <PostureCard
+            title="Structural Memory Risk"
+            interpretation={
+              predictive.memoryMeaning
+            }
+          />
+
+          <PostureCard
+            title="Unresolved Momentum"
+            interpretation={
+              predictive.unresolvedMeaning
+            }
+          />
+
+          <PostureCard
+            title="Stabilization Drag"
+            interpretation={
+              predictive.dragMeaning
+            }
+          />
+
+          <PostureCard
+            title="Continuity Drift"
+            interpretation={
+              predictive.driftMeaning
+            }
+          />
         </section>
 
         <section style={styles.compactGrid}>
-          <CompactCard title="Memory Depth" value={predictive.historyMeaning.posture} />
-          <CompactCard title="Dominant Driver" value={predictive.dominantForecastDriver} />
-          <CompactCard title="Survivability Weakness" value={predictive.survivabilityMeaning.posture} />
-          <CompactCard title="Reliability Weakness" value={predictive.reliabilityMeaning.posture} />
+          <CompactCard
+            title="Memory Depth"
+            value={
+              predictive.historyMeaning
+                .posture
+            }
+          />
+
+          <CompactCard
+            title="Dominant Driver"
+            value={
+              predictive.dominantForecastDriver
+            }
+          />
+
+          <CompactCard
+            title="Survivability Weakness"
+            value={
+              predictive
+                .survivabilityMeaning
+                .posture
+            }
+          />
+
+          <CompactCard
+            title="Reliability Weakness"
+            value={
+              predictive
+                .reliabilityMeaning
+                .posture
+            }
+          />
         </section>
 
         <section style={styles.twoColumn}>
           <Panel title="Latest Continuity Context">
-            <Info label="Continuity State" value={predictive.latest?.continuity_state || 'Not recorded'} />
-            <Info label="Pressure State" value={predictive.latest?.pressure_propagation_state || 'Not recorded'} />
-            <Info label="Trajectory Direction" value={predictive.latest?.trajectory_direction || 'Not recorded'} />
-            <Info label="Structural Memory" value={predictive.latest?.structural_memory_state || 'Not recorded'} />
-            <Info label="Dominant Memory Pattern" value={predictive.latest?.dominant_memory_pattern || 'Not recorded'} />
+            <Info
+              label="Continuity State"
+              value={
+                predictive.latest
+                  ?.continuity_state ||
+                'Not recorded'
+              }
+            />
+
+            <Info
+              label="Pressure State"
+              value={
+                predictive.latest
+                  ?.pressure_propagation_state ||
+                'Not recorded'
+              }
+            />
+
+            <Info
+              label="Trajectory Direction"
+              value={
+                predictive.latest
+                  ?.trajectory_direction ||
+                'Not recorded'
+              }
+            />
+
+            <Info
+              label="Structural Memory"
+              value={
+                predictive.latest
+                  ?.structural_memory_state ||
+                'Not recorded'
+              }
+            />
+
+            <Info
+              label="Dominant Memory Pattern"
+              value={
+                predictive.latest
+                  ?.dominant_memory_pattern ||
+                'Not recorded'
+              }
+            />
           </Panel>
 
           <Panel title="Early-Warning Reading">
-            <Info label="Early-Warning Posture" value={predictive.predictiveInterpretation.posture} />
-            <Info label="Pressure Reading" value={predictive.pressureMeaning.posture} />
-            <Info label="Dominant Driver" value={predictive.dominantForecastDriver} />
-            <Info label="Unresolved Momentum" value={predictive.unresolvedMeaning.posture} />
-            <Info label="Stabilization Drag" value={predictive.dragMeaning.posture} />
+            <Info
+              label="Early-Warning Posture"
+              value={
+                predictive
+                  .predictiveInterpretation
+                  .posture
+              }
+            />
+
+            <Info
+              label="Pressure Reading"
+              value={
+                predictive.pressureMeaning
+                  .posture
+              }
+            />
+
+            <Info
+              label="Dominant Driver"
+              value={
+                predictive.dominantForecastDriver
+              }
+            />
+
+            <Info
+              label="Unresolved Momentum"
+              value={
+                predictive.unresolvedMeaning
+                  .posture
+              }
+            />
+
+            <Info
+              label="Stabilization Drag"
+              value={
+                predictive.dragMeaning
+                  .posture
+              }
+            />
           </Panel>
         </section>
 
         <section style={styles.card}>
           <div style={styles.cardHeader}>
             <div>
-              <h2 style={styles.cardTitle}>Recent Early-Warning Memory Trail</h2>
+              <h2 style={styles.cardTitle}>
+                Recent Early-Warning Memory
+                Trail
+              </h2>
 
               <p style={styles.cardNote}>
-                Recent snapshots are shown as continuity prevention readings,
-                not personal performance judgments.
+                Recent snapshots are shown as
+                continuity prevention readings,
+                not personal performance
+                judgments.
               </p>
             </div>
 
-            <button onClick={loadPredictiveMetrics} style={styles.primaryButton}>
+            <button
+              onClick={
+                loadPredictiveMetrics
+              }
+              style={styles.primaryButton}
+            >
               Refresh
             </button>
           </div>
@@ -336,60 +659,131 @@ This view does not predict personal failure or assign blame. It reads continuity
             <table style={styles.table}>
               <thead>
                 <tr>
-                  <th style={styles.th}>Created</th>
-                  <th style={styles.th}>Warning</th>
-                  <th style={styles.th}>Propagation</th>
-                  <th style={styles.th}>Trajectory</th>
-                  <th style={styles.th}>Memory</th>
-                  <th style={styles.th}>Drag</th>
+                  <th style={styles.th}>
+                    Created
+                  </th>
+
+                  <th style={styles.th}>
+                    Warning
+                  </th>
+
+                  <th style={styles.th}>
+                    Propagation
+                  </th>
+
+                  <th style={styles.th}>
+                    Trajectory
+                  </th>
+
+                  <th style={styles.th}>
+                    Memory
+                  </th>
+
+                  <th style={styles.th}>
+                    Drag
+                  </th>
                 </tr>
               </thead>
 
               <tbody>
                 {metrics.length === 0 && (
                   <tr>
-                    <td style={styles.td} colSpan={6}>
-                      No persisted continuity early-warning memory found yet.
+                    <td
+                      style={styles.td}
+                      colSpan={6}
+                    >
+                      No persisted continuity
+                      early-warning memory found
+                      yet.
                     </td>
                   </tr>
                 )}
 
-                {metrics.slice(0, 8).map((item) => {
-                  const rowPredictive = interpretPredictive({
-                    propagationRisk: item.propagation_risk,
-                    trajectoryRisk: item.trajectory_risk,
-                    structuralMemoryRisk: item.structural_memory_risk,
-                    unresolvedMomentum: item.unresolved_momentum,
-                    stabilizationDrag: item.stabilization_drag,
-                  })
+                {metrics
+                  .slice(0, 8)
+                  .map((item) => {
+                    const rowPredictive =
+                      interpretPredictive({
+                        propagationRisk:
+                          item.propagation_risk,
 
-                  return (
-                    <tr key={item.id}>
-                      <td style={styles.td}>{formatDate(item.created_at)}</td>
-                      <td style={styles.td}>{rowPredictive.posture}</td>
-                      <td style={styles.td}>
-                        {interpretRisk(item.propagation_risk, 'PROPAGATION').posture}
-                      </td>
-                      <td style={styles.td}>
-                        {interpretRisk(item.trajectory_risk, 'TRAJECTORY').posture}
-                      </td>
-                      <td style={styles.td}>
-                        {interpretRisk(item.structural_memory_risk, 'STRUCTURAL MEMORY').posture}
-                      </td>
-                      <td style={styles.td}>
-                        {interpretDrag(item.stabilization_drag).posture}
-                      </td>
-                    </tr>
-                  )
-                })}
+                        trajectoryRisk:
+                          item.trajectory_risk,
+
+                        structuralMemoryRisk:
+                          item.structural_memory_risk,
+
+                        unresolvedMomentum:
+                          item.unresolved_momentum,
+
+                        stabilizationDrag:
+                          item.stabilization_drag,
+                      })
+
+                    return (
+                      <tr key={item.id}>
+                        <td style={styles.td}>
+                          {formatDate(
+                            item.created_at
+                          )}
+                        </td>
+
+                        <td style={styles.td}>
+                          {
+                            rowPredictive.posture
+                          }
+                        </td>
+
+                        <td style={styles.td}>
+                          {
+                            interpretRisk(
+                              item.propagation_risk,
+                              'PROPAGATION'
+                            ).posture
+                          }
+                        </td>
+
+                        <td style={styles.td}>
+                          {
+                            interpretRisk(
+                              item.trajectory_risk,
+                              'TRAJECTORY'
+                            ).posture
+                          }
+                        </td>
+
+                        <td style={styles.td}>
+                          {
+                            interpretRisk(
+                              item.structural_memory_risk,
+                              'STRUCTURAL MEMORY'
+                            ).posture
+                          }
+                        </td>
+
+                        <td style={styles.td}>
+                          {
+                            interpretDrag(
+                              item.stabilization_drag
+                            ).posture
+                          }
+                        </td>
+                      </tr>
+                    )
+                  })}
               </tbody>
             </table>
           </div>
         </section>
 
         <section style={styles.card}>
-          <h2 style={styles.cardTitle}>Generated Early-Warning Brief</h2>
-          <pre style={styles.summaryBox}>{brief}</pre>
+          <h2 style={styles.cardTitle}>
+            Generated Early-Warning Brief
+          </h2>
+
+          <pre style={styles.summaryBox}>
+            {brief}
+          </pre>
         </section>
       </div>
     </main>
@@ -397,24 +791,37 @@ This view does not predict personal failure or assign blame. It reads continuity
 }
 
 function average(values: number[]) {
-  const valid = values.filter((value) => Number.isFinite(value))
+  const valid = values.filter((value) =>
+    Number.isFinite(value)
+  )
 
   if (valid.length === 0) return 0
 
   return Math.round(
-    valid.reduce((sum, value) => sum + value, 0) / valid.length
+    valid.reduce(
+      (sum, value) => sum + value,
+      0
+    ) / valid.length
   )
 }
 
-function strongestDriver(scores: Record<string, number>) {
+function strongestDriver(
+  scores: Record<string, number>
+) {
   return (
-    Object.entries(scores).sort((a, b) => b[1] - a[1])[0]?.[0] ||
+    Object.entries(scores).sort(
+      (a, b) => b[1] - a[1]
+    )[0]?.[0] ||
     'No dominant early-warning driver detected'
   )
 }
 
-function interpretRisk(value: number, label: string): Interpretation {
-  const normalizedLabel = label.toLowerCase()
+function interpretRisk(
+  value: number,
+  label: string
+): Interpretation {
+  const normalizedLabel =
+    label.toLowerCase()
 
   if (value >= 70) {
     return {
@@ -439,80 +846,109 @@ function interpretRisk(value: number, label: string): Interpretation {
   }
 }
 
-function interpretMomentum(value: number): Interpretation {
+function interpretMomentum(
+  value: number
+): Interpretation {
   if (value >= 65) {
     return {
       posture: 'UNRESOLVED MOMENTUM HIGH',
-      meaning: 'Unresolved momentum may convert early warning into visible disruption.',
-      action: 'Escalate unresolved momentum review.',
+      meaning:
+        'Unresolved momentum may convert early warning into visible disruption.',
+      action:
+        'Escalate unresolved momentum review.',
     }
   }
 
   if (value >= 40) {
     return {
-      posture: 'UNRESOLVED MOMENTUM VISIBLE',
-      meaning: 'Unresolved momentum remains visible in continuity memory.',
+      posture:
+        'UNRESOLVED MOMENTUM VISIBLE',
+      meaning:
+        'Unresolved momentum remains visible in continuity memory.',
       action: 'Keep follow-up active.',
     }
   }
 
   return {
-    posture: 'UNRESOLVED MOMENTUM CONTAINED',
-    meaning: 'Unresolved momentum appears contained.',
+    posture:
+      'UNRESOLVED MOMENTUM CONTAINED',
+    meaning:
+      'Unresolved momentum appears contained.',
     action: 'Maintain monitoring.',
   }
 }
 
-function interpretDrag(value: number): Interpretation {
+function interpretDrag(
+  value: number
+): Interpretation {
   if (value >= 65) {
     return {
       posture: 'STABILIZATION DRAG HIGH',
-      meaning: 'Stabilization drag may delay prevention and weaken recovery credibility.',
-      action: 'Escalate stabilization drag review.',
+      meaning:
+        'Stabilization drag may delay prevention and weaken recovery credibility.',
+      action:
+        'Escalate stabilization drag review.',
     }
   }
 
   if (value >= 40) {
     return {
-      posture: 'STABILIZATION DRAG VISIBLE',
-      meaning: 'Stabilization drag remains visible and should stay under review.',
-      action: 'Keep drag visible until recovery holds.',
+      posture:
+        'STABILIZATION DRAG VISIBLE',
+      meaning:
+        'Stabilization drag remains visible and should stay under review.',
+      action:
+        'Keep drag visible until recovery holds.',
     }
   }
 
   return {
-    posture: 'STABILIZATION DRAG CONTAINED',
-    meaning: 'Stabilization drag appears contained.',
+    posture:
+      'STABILIZATION DRAG CONTAINED',
+    meaning:
+      'Stabilization drag appears contained.',
     action: 'Maintain monitoring.',
   }
 }
 
-function interpretDrift(value: number): Interpretation {
+function interpretDrift(
+  value: number
+): Interpretation {
   if (value >= 60) {
     return {
       posture: 'CONTINUITY DRIFT HIGH',
-      meaning: 'Continuity drift may undermine prevention credibility.',
-      action: 'Escalate continuity drift review.',
+      meaning:
+        'Continuity drift may undermine prevention credibility.',
+      action:
+        'Escalate continuity drift review.',
     }
   }
 
   if (value >= 35) {
     return {
-      posture: 'CONTINUITY DRIFT VISIBLE',
-      meaning: 'Continuity drift remains visible and must stay under governance review.',
+      posture:
+        'CONTINUITY DRIFT VISIBLE',
+      meaning:
+        'Continuity drift remains visible and must stay under governance review.',
       action: 'Keep drift visible.',
     }
   }
 
   return {
-    posture: 'CONTINUITY DRIFT CONTAINED',
-    meaning: 'Continuity drift is currently contained.',
+    posture:
+      'CONTINUITY DRIFT CONTAINED',
+    meaning:
+      'Continuity drift is currently contained.',
     action: 'Maintain monitoring.',
   }
 }
 
-function interpretWeakness(value: number, label: string): Interpretation {
-  const normalizedLabel = label.toLowerCase()
+function interpretWeakness(
+  value: number,
+  label: string
+): Interpretation {
+  const normalizedLabel =
+    label.toLowerCase()
 
   if (value >= 60) {
     return {
@@ -537,11 +973,14 @@ function interpretWeakness(value: number, label: string): Interpretation {
   }
 }
 
-function interpretPressure(value: number): Interpretation {
+function interpretPressure(
+  value: number
+): Interpretation {
   if (value >= 70) {
     return {
       posture: 'PRESSURE HIGH',
-      meaning: 'Escalation pressure may accelerate continuity disruption.',
+      meaning:
+        'Escalation pressure may accelerate continuity disruption.',
       action: 'Escalate pressure review.',
     }
   }
@@ -549,44 +988,57 @@ function interpretPressure(value: number): Interpretation {
   if (value >= 45) {
     return {
       posture: 'PRESSURE VISIBLE',
-      meaning: 'Escalation pressure is visible and should remain under review.',
+      meaning:
+        'Escalation pressure is visible and should remain under review.',
       action: 'Keep pressure visible.',
     }
   }
 
   return {
     posture: 'PRESSURE CONTAINED',
-    meaning: 'Escalation pressure appears contained.',
+    meaning:
+      'Escalation pressure appears contained.',
     action: 'Maintain monitoring.',
   }
 }
 
-function interpretHistory(count: number): Interpretation {
+function interpretHistory(
+  count: number
+): Interpretation {
   if (count < 3) {
     return {
       posture: 'INSUFFICIENT MEMORY',
-      meaning: 'Too few snapshots exist for reliable early-warning interpretation.',
-      action: 'Continue saving operational snapshots.',
+      meaning:
+        'Too few snapshots exist for reliable early-warning interpretation.',
+      action:
+        'Continue saving operational snapshots.',
     }
   }
 
   if (count < 10) {
     return {
       posture: 'EARLY WARNING MEMORY',
-      meaning: 'Continuity early-warning memory has started but remains early.',
-      action: 'Continue building continuity memory.',
+      meaning:
+        'Continuity early-warning memory has started but remains early.',
+      action:
+        'Continue building continuity memory.',
     }
   }
 
   return {
-    posture: 'EARLY WARNING MEMORY ESTABLISHED',
-    meaning: 'Persisted memory supports continuity prevention interpretation.',
-    action: 'Use early-warning posture to guide executive prevention review.',
+    posture:
+      'EARLY WARNING MEMORY ESTABLISHED',
+    meaning:
+      'Persisted memory supports continuity prevention interpretation.',
+    action:
+      'Use early-warning posture to guide executive prevention review.',
   }
 }
 
 function compactAction(actions: string[]) {
-  return Array.from(new Set(actions)).join(' ')
+  return Array.from(new Set(actions)).join(
+    ' '
+  )
 }
 
 function formatDate(value: string) {
@@ -604,46 +1056,91 @@ function PostureCard({
 }) {
   return (
     <article style={styles.postureCard}>
-      <p style={styles.cardKicker}>{title}</p>
-      <h3 style={styles.postureTitle}>{interpretation.posture}</h3>
-      <p style={styles.postureMeaning}>{interpretation.meaning}</p>
+      <p style={styles.cardKicker}>
+        {title}
+      </p>
+
+      <h3 style={styles.postureTitle}>
+        {interpretation.posture}
+      </h3>
+
+      <p style={styles.postureMeaning}>
+        {interpretation.meaning}
+      </p>
     </article>
   )
 }
 
-function CompactCard({ title, value }: { title: string; value: string }) {
+function CompactCard({
+  title,
+  value,
+}: {
+  title: string
+  value: string
+}) {
   return (
     <article style={styles.compactCard}>
-      <p style={styles.cardKicker}>{title}</p>
-      <h3 style={styles.compactValue}>{value}</h3>
+      <p style={styles.cardKicker}>
+        {title}
+      </p>
+
+      <h3 style={styles.compactValue}>
+        {value}
+      </h3>
     </article>
   )
 }
 
-function Panel({ title, children }: { title: string; children: ReactNode }) {
+function Panel({
+  title,
+  children,
+}: {
+  title: string
+  children: ReactNode
+}) {
   return (
     <section style={styles.card}>
-      <h2 style={styles.cardTitle}>{title}</h2>
-      <div style={styles.infoList}>{children}</div>
+      <h2 style={styles.cardTitle}>
+        {title}
+      </h2>
+
+      <div style={styles.infoList}>
+        {children}
+      </div>
     </section>
   )
 }
 
-function Info({ label, value }: { label: string; value: string }) {
+function Info({
+  label,
+  value,
+}: {
+  label: string
+  value: string
+}) {
   return (
     <div style={styles.infoRow}>
-      <span style={styles.infoLabel}>{label}</span>
-      <strong style={styles.infoValue}>{value}</strong>
+      <span style={styles.infoLabel}>
+        {label}
+      </span>
+
+      <strong style={styles.infoValue}>
+        {value}
+      </strong>
     </div>
   )
 }
 
-const styles: Record<string, CSSProperties> = {
+const styles: Record<
+  string,
+  CSSProperties
+> = {
   page: {
     minHeight: '100vh',
     color: 'white',
     overflowX: 'hidden',
   },
+
   container: {
     width: '100%',
     maxWidth: '1120px',
@@ -651,10 +1148,12 @@ const styles: Record<string, CSSProperties> = {
     padding: '0 20px 48px',
     boxSizing: 'border-box',
   },
+
   header: {
     marginBottom: '20px',
     paddingTop: '4px',
   },
+
   kicker: {
     color: '#f472b6',
     fontSize: '12px',
@@ -662,11 +1161,13 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: '2px',
     margin: 0,
   },
+
   title: {
     fontSize: 'clamp(32px, 5vw, 48px)',
     lineHeight: 1.05,
     margin: '10px 0',
   },
+
   subtitle: {
     color: '#cbd5e1',
     maxWidth: '760px',
@@ -674,6 +1175,7 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '16px',
     margin: 0,
   },
+
   message: {
     background: '#500724',
     color: '#fce7f3',
@@ -683,17 +1185,21 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: '16px',
     fontSize: '14px',
   },
+
   heroCard: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.4fr) minmax(260px, 0.6fr)',
+    gridTemplateColumns:
+      'minmax(0, 1.4fr) minmax(260px, 0.6fr)',
     gap: '16px',
     background: '#020617',
     border: '1px solid #f472b6',
     borderRadius: '24px',
     padding: '22px',
     marginBottom: '16px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
+    boxShadow:
+      '0 20px 50px rgba(0,0,0,0.28)',
   },
+
   sectionKicker: {
     color: '#94a3b8',
     fontWeight: 900,
@@ -702,6 +1208,7 @@ const styles: Record<string, CSSProperties> = {
     margin: 0,
     fontSize: '12px',
   },
+
   heroPosture: {
     fontSize: 'clamp(34px, 6vw, 56px)',
     margin: '8px 0 12px',
@@ -709,12 +1216,14 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: '-0.05em',
     lineHeight: 1,
   },
+
   heroMeaning: {
     color: '#fce7f3',
     lineHeight: 1.6,
     margin: 0,
     maxWidth: '720px',
   },
+
   actionBox: {
     background: '#500724',
     border: '1px solid #f472b6',
@@ -722,6 +1231,7 @@ const styles: Record<string, CSSProperties> = {
     padding: '16px',
     alignSelf: 'stretch',
   },
+
   actionLabel: {
     color: '#f9a8d4',
     fontWeight: 900,
@@ -730,18 +1240,22 @@ const styles: Record<string, CSSProperties> = {
     textTransform: 'uppercase',
     letterSpacing: '0.12em',
   },
+
   actionText: {
     color: '#fce7f3',
     lineHeight: 1.55,
     margin: 0,
     fontSize: '14px',
   },
+
   postureGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gridTemplateColumns:
+      'repeat(3, minmax(0, 1fr))',
     gap: '14px',
     marginBottom: '16px',
   },
+
   postureCard: {
     background: '#0f172a',
     border: '1px solid #1e293b',
@@ -750,30 +1264,36 @@ const styles: Record<string, CSSProperties> = {
     minHeight: '150px',
     boxSizing: 'border-box',
   },
+
   cardKicker: {
     color: '#94a3b8',
     fontWeight: 800,
     margin: 0,
     fontSize: '12px',
   },
+
   postureTitle: {
     color: '#f8fafc',
     fontSize: '19px',
     margin: '10px 0 8px',
     lineHeight: 1.15,
   },
+
   postureMeaning: {
     color: '#cbd5e1',
     lineHeight: 1.5,
     fontSize: '14px',
     margin: 0,
   },
+
   compactGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gridTemplateColumns:
+      'repeat(4, minmax(0, 1fr))',
     gap: '14px',
     marginBottom: '16px',
   },
+
   compactCard: {
     background: '#0f172a',
     border: '1px solid #1e293b',
@@ -782,6 +1302,7 @@ const styles: Record<string, CSSProperties> = {
     minHeight: '104px',
     boxSizing: 'border-box',
   },
+
   compactValue: {
     fontSize: '18px',
     lineHeight: 1.2,
@@ -789,22 +1310,27 @@ const styles: Record<string, CSSProperties> = {
     color: '#f8fafc',
     overflowWrap: 'anywhere',
   },
+
   twoColumn: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gridTemplateColumns:
+      'repeat(2, minmax(0, 1fr))',
     gap: '16px',
     marginBottom: '16px',
   },
+
   card: {
     background: '#020617',
     border: '1px solid #1e293b',
     borderRadius: '22px',
     padding: '20px',
     marginBottom: '16px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.24)',
+    boxShadow:
+      '0 20px 50px rgba(0,0,0,0.24)',
     boxSizing: 'border-box',
     overflow: 'hidden',
   },
+
   cardHeader: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -812,25 +1338,37 @@ const styles: Record<string, CSSProperties> = {
     alignItems: 'flex-start',
     marginBottom: '14px',
   },
+
   cardTitle: {
     fontSize: '22px',
     margin: 0,
     lineHeight: 1.2,
   },
+
+  bodyText: {
+    color: '#cbd5e1',
+    lineHeight: 1.7,
+    margin: '10px 0 0',
+    maxWidth: '880px',
+  },
+
   cardNote: {
     color: '#94a3b8',
     lineHeight: 1.5,
     margin: '6px 0 0',
     fontSize: '14px',
   },
+
   infoList: {
     display: 'grid',
     gap: '10px',
     marginTop: '14px',
   },
+
   infoRow: {
     display: 'grid',
-    gridTemplateColumns: '160px minmax(0, 1fr)',
+    gridTemplateColumns:
+      '160px minmax(0, 1fr)',
     gap: '12px',
     background: '#0f172a',
     border: '1px solid #334155',
@@ -838,25 +1376,30 @@ const styles: Record<string, CSSProperties> = {
     padding: '12px',
     alignItems: 'start',
   },
+
   infoLabel: {
     color: '#94a3b8',
     fontWeight: 800,
     fontSize: '12px',
   },
+
   infoValue: {
     color: '#f8fafc',
     lineHeight: 1.45,
     overflowWrap: 'anywhere',
   },
+
   tableWrap: {
     width: '100%',
     overflowX: 'auto',
   },
+
   table: {
     width: '100%',
     borderCollapse: 'collapse',
     minWidth: '760px',
   },
+
   th: {
     textAlign: 'left',
     color: '#94a3b8',
@@ -865,6 +1408,7 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '11px',
     textTransform: 'uppercase',
   },
+
   td: {
     borderBottom: '1px solid #1e293b',
     padding: '10px',
@@ -873,6 +1417,7 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 700,
     fontSize: '13px',
   },
+
   primaryButton: {
     padding: '10px 14px',
     borderRadius: '12px',
@@ -884,6 +1429,7 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '14px',
     whiteSpace: 'nowrap',
   },
+
   summaryBox: {
     whiteSpace: 'pre-wrap',
     background: '#0f172a',
