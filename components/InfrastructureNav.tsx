@@ -2,55 +2,110 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import type { CSSProperties } from 'react'
 
-const navigation = [
+type NavigationItem = {
+  label: string
+  href: string
+  group: 'Command' | 'Continuity' | 'Coordination' | 'Infrastructure'
+}
+
+const navigation: NavigationItem[] = [
   {
-    label: 'System',
-    href: '/system',
+    label: 'Command',
+    href: '/command',
+    group: 'Command',
   },
   {
-    label: 'Infrastructure',
-    href: '/infrastructure',
+    label: 'Situation Room',
+    href: '/situation-room',
+    group: 'Command',
   },
   {
-    label: 'Operations',
-    href: '/operations',
+    label: 'Executive Center',
+    href: '/executive-center',
+    group: 'Command',
+  },
+  {
+    label: 'Executive Report',
+    href: '/executive-report',
+    group: 'Command',
+  },
+  {
+    label: 'Continuity History',
+    href: '/continuity-history',
+    group: 'Continuity',
   },
   {
     label: 'Reliability',
     href: '/reliability',
-  },
-  {
-    label: 'Predictive',
-    href: '/predictive',
+    group: 'Continuity',
   },
   {
     label: 'Pressure',
     href: '/pressure',
+    group: 'Continuity',
   },
   {
     label: 'Trajectory',
     href: '/trajectory',
+    group: 'Continuity',
   },
   {
     label: 'Recovery',
     href: '/recovery',
+    group: 'Continuity',
   },
   {
-    label: 'Command',
-    href: '/command',
+    label: 'Predictive',
+    href: '/predictive',
+    group: 'Continuity',
+  },
+  {
+    label: 'Coordination Center',
+    href: '/coordination-center',
+    group: 'Coordination',
+  },
+  {
+    label: 'Cross-Site',
+    href: '/cross-site',
+    group: 'Coordination',
+  },
+  {
+    label: 'Operations',
+    href: '/operations',
+    group: 'Infrastructure',
+  },
+  {
+    label: 'System',
+    href: '/system',
+    group: 'Infrastructure',
+  },
+  {
+    label: 'Infrastructure',
+    href: '/infrastructure',
+    group: 'Infrastructure',
   },
   {
     label: 'Audit',
     href: '/audit',
+    group: 'Infrastructure',
   },
   {
     label: 'Governance',
     href: '/governance',
+    group: 'Infrastructure',
   },
 ]
 
-export default function InfrastructureNav() {
+const groups: NavigationItem['group'][] = [
+  'Command',
+  'Continuity',
+  'Coordination',
+  'Infrastructure',
+]
+
+export default function InfrastructureQuickNav() {
   const pathname = usePathname()
 
   return (
@@ -63,25 +118,44 @@ export default function InfrastructureNav() {
         </h2>
 
         <p style={styles.subtitle}>
-          Executive Continuity Intelligence Infrastructure
+          Executive continuity intelligence for pressure, recovery,
+          reliability, coordination, and institutional survivability.
+        </p>
+
+        <p style={styles.doctrine}>
+          Visible recovery is not the same as durable stabilization.
         </p>
       </div>
 
-      <div style={styles.navigationGrid}>
-        {navigation.map((item) => {
-          const active = pathname === item.href
+      <div style={styles.groupGrid}>
+        {groups.map((group) => {
+          const groupItems = navigation.filter((item) => item.group === group)
 
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              style={{
-                ...styles.link,
-                ...(active ? styles.activeLink : {}),
-              }}
-            >
-              {item.label}
-            </Link>
+            <section key={group} style={styles.groupPanel}>
+              <p style={styles.groupLabel}>{group}</p>
+
+              <div style={styles.navigationGrid}>
+                {groupItems.map((item) => {
+                  const active =
+                    pathname === item.href ||
+                    pathname.startsWith(`${item.href}/`)
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      style={{
+                        ...styles.link,
+                        ...(active ? styles.activeLink : {}),
+                      }}
+                    >
+                      {item.label}
+                    </Link>
+                  )
+                })}
+              </div>
+            </section>
           )
         })}
       </div>
@@ -89,7 +163,7 @@ export default function InfrastructureNav() {
   )
 }
 
-const styles: Record<string, React.CSSProperties> = {
+const styles: Record<string, CSSProperties> = {
   wrapper: {
     marginBottom: '28px',
     borderRadius: '28px',
@@ -100,7 +174,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   identityBlock: {
-    marginBottom: '22px',
+    marginBottom: '24px',
   },
 
   kicker: {
@@ -121,29 +195,64 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   subtitle: {
+    maxWidth: '920px',
     margin: 0,
     color: '#a7f3d0',
     fontSize: '15px',
     fontWeight: 700,
+    lineHeight: 1.6,
+  },
+
+  doctrine: {
+    margin: '14px 0 0',
+    color: '#fef3c7',
+    fontSize: '13px',
+    fontWeight: 800,
+    letterSpacing: '0.02em',
+  },
+
+  groupGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+    gap: '14px',
+  },
+
+  groupPanel: {
+    borderRadius: '20px',
+    border: '1px solid #1e293b',
+    background: '#0f172a',
+    padding: '14px',
+  },
+
+  groupLabel: {
+    margin: '0 0 12px',
+    color: '#94a3b8',
+    fontSize: '11px',
+    fontWeight: 900,
+    letterSpacing: '0.18em',
+    textTransform: 'uppercase',
   },
 
   navigationGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-    gap: '12px',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+    gap: '10px',
   },
 
   link: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: '52px',
-    borderRadius: '16px',
+    minHeight: '48px',
+    borderRadius: '15px',
     border: '1px solid #334155',
-    background: '#0f172a',
+    background: '#020617',
     color: '#cbd5e1',
+    textAlign: 'center',
     textDecoration: 'none',
-    fontWeight: 800,
+    fontSize: '13px',
+    fontWeight: 850,
+    lineHeight: 1.25,
     transition: 'all 0.2s ease',
   },
 
