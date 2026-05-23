@@ -1,3 +1,6 @@
+'use client'
+
+import { useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
@@ -6,6 +9,7 @@ import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { buildCGIContinuitySnapshot } from '@/lib/cgiContinuitySnapshotEngine'
 import { reviewCGIExecutiveHistory } from '@/lib/cgiExecutiveHistoryEngine'
 import { buildCGIExecutiveReportPackage } from '@/lib/cgiExecutiveReportingEngine'
+import { saveCGIExecutiveReport } from '@/lib/cgiPersistenceEngine'
 
 export default function ExecutiveReportPage() {
   return (
@@ -24,6 +28,9 @@ export default function ExecutiveReportPage() {
 }
 
 function ExecutiveReportContent() {
+  const [saveMessage, setSaveMessage] = useState('')
+  const [saving, setSaving] = useState(false)
+
   const snapshots = [
     buildCGIContinuitySnapshot({
       pressurePosture: 'WATCHED',
@@ -66,6 +73,41 @@ function ExecutiveReportContent() {
     historyReview,
   })
 
+  async function handleSaveReport() {
+    try {
+      setSaving(true)
+      setSaveMessage('Saving executive continuity report...')
+
+      await saveCGIExecutiveReport({
+        reportClassification: report.classification,
+        reportTitle: 'Executive Continuity Report',
+        currentContinuityPosture: report.currentContinuityPosture,
+        historyDirection: report.historyDirection,
+        continuityDriftDetected: report.continuityDriftDetected,
+        survivabilityConcernPersisting:
+          report.survivabilityConcernPersisting,
+        dominantConcern: report.dominantConcern,
+        requiredExecutiveAction: report.requiredExecutiveAction,
+        requiredEvidence: report.requiredEvidence,
+        executiveSummary: report.executiveSummary,
+        copyReadyReport: report.copyReadyReport,
+        rawPayload: {
+          report,
+          latestSnapshot,
+          historyReview,
+          savedFrom: '/executive-report',
+        },
+      })
+
+      setSaveMessage('Executive continuity report saved.')
+    } catch (error) {
+      console.error(error)
+      setSaveMessage('Executive continuity report could not be saved.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <main style={styles.page}>
       <div style={styles.container}>
@@ -99,6 +141,38 @@ function ExecutiveReportContent() {
               {report.currentContinuityPosture}
             </p>
           </div>
+        </section>
+
+        <section style={styles.actionPanel}>
+          <div>
+            <p style={styles.sectionKicker}>Persistence Action</p>
+
+            <h2 style={styles.actionTitle}>
+              Preserve this executive report as continuity memory.
+            </h2>
+
+            <p style={styles.actionText}>
+              Saving the report creates an institutional record that can later
+              support history review, board summaries, continuity audits, and
+              stabilization evidence.
+            </p>
+
+            {saveMessage && (
+              <p style={styles.saveMessage}>{saveMessage}</p>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSaveReport}
+            disabled={saving}
+            style={{
+              ...styles.primaryButton,
+              ...(saving ? styles.disabledButton : {}),
+            }}
+          >
+            {saving ? 'Saving...' : 'Save Report'}
+          </button>
         </section>
 
         <section style={styles.gridThree}>
@@ -266,6 +340,51 @@ const styles: Record<string, CSSProperties> = {
     padding: '24px',
     marginBottom: '16px',
     boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
+  },
+  actionPanel: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1fr) auto',
+    gap: '16px',
+    alignItems: 'center',
+    background: '#082f49',
+    border: '1px solid #0ea5e9',
+    borderRadius: '22px',
+    padding: '18px',
+    marginBottom: '16px',
+    boxSizing: 'border-box',
+  },
+  actionTitle: {
+    color: '#f8fafc',
+    fontSize: '22px',
+    lineHeight: 1.2,
+    margin: '8px 0',
+  },
+  actionText: {
+    color: '#cbd5e1',
+    lineHeight: 1.55,
+    margin: 0,
+    maxWidth: '760px',
+  },
+  saveMessage: {
+    color: '#cffafe',
+    fontWeight: 900,
+    margin: '12px 0 0',
+  },
+  primaryButton: {
+    border: 'none',
+    borderRadius: '14px',
+    background: '#67e8f9',
+    color: '#082f49',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 900,
+    minHeight: '48px',
+    padding: '0 18px',
+    whiteSpace: 'nowrap',
+  },
+  disabledButton: {
+    cursor: 'not-allowed',
+    opacity: 0.65,
   },
   sectionKicker: {
     color: '#94a3b8',
