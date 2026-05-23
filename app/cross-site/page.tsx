@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
+import InfrastructureNav from '@/components/InfrastructureNav'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { buildCGIExecutiveBriefing } from '@/lib/cgiExecutiveBriefingGenerator'
 import {
@@ -137,6 +138,8 @@ function CrossSiteContent() {
   return (
     <main style={styles.page}>
       <div style={styles.container}>
+        <InfrastructureNav />
+
         <section style={styles.header}>
           <p style={styles.kicker}>TSINAXA CGI • CROSS-SITE</p>
 
@@ -162,6 +165,7 @@ function CrossSiteContent() {
 
           <div style={styles.statusBox}>
             <p style={styles.statusLabel}>Dominant Site</p>
+
             <p style={styles.statusValue}>{dominantSite.siteName}</p>
           </div>
         </section>
@@ -195,8 +199,16 @@ function CrossSiteContent() {
 
           <div style={styles.priorityGrid}>
             <PriorityItem title="Evidence" body={evidenceLanguage} />
-            <PriorityItem title="Survivability" body={survivabilityLanguage} />
-            <PriorityItem title="Governance Meaning" body={governanceLanguage} />
+
+            <PriorityItem
+              title="Survivability"
+              body={survivabilityLanguage}
+            />
+
+            <PriorityItem
+              title="Governance Meaning"
+              body={governanceLanguage}
+            />
           </div>
         </section>
 
@@ -222,6 +234,7 @@ function CrossSiteContent() {
 
                 <div style={styles.siteStatus}>
                   <p style={styles.statusLabel}>Posture</p>
+
                   <p style={styles.sitePosture}>
                     {briefing.synthesis.synthesisPosture}
                   </p>
@@ -261,25 +274,41 @@ function SignalCard({
   return (
     <article style={styles.signalCard}>
       <p style={styles.panelKicker}>{title}</p>
+
       <h3 style={styles.signalValue}>{value}</h3>
+
       <p style={styles.panelBody}>{body}</p>
     </article>
   )
 }
 
-function PriorityItem({ title, body }: { title: string; body: string }) {
+function PriorityItem({
+  title,
+  body,
+}: {
+  title: string
+  body: string
+}) {
   return (
     <article style={styles.priorityItem}>
       <p style={styles.panelKicker}>{title}</p>
+
       <p style={styles.priorityBody}>{body}</p>
     </article>
   )
 }
 
-function Panel({ title, children }: { title: string; children: ReactNode }) {
+function Panel({
+  title,
+  children,
+}: {
+  title: string
+  children: ReactNode
+}) {
   return (
     <section style={styles.panel}>
       <p style={styles.panelKicker}>{title}</p>
+
       <div style={styles.panelBody}>{children}</div>
     </section>
   )
