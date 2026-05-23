@@ -33,6 +33,21 @@ export type CGIExecutiveReportRecord = {
   rawPayload?: Record<string, unknown>
 }
 
+export type CGISituationReviewRecord = {
+  situationTitle: string
+  situationPosture: string
+  commandQuestion?: string
+  executiveSummary?: string
+  dominantConcern?: string
+  historyDirection?: string
+  continuityDriftDetected?: boolean
+  reportClassification?: string
+  requiredExecutiveAction?: string
+  requiredEvidence?: string
+  copyReadySituationReport?: string
+  rawPayload?: Record<string, unknown>
+}
+
 export async function saveCGIContinuitySnapshot(
   record: CGIContinuitySnapshotRecord
 ) {
@@ -95,6 +110,35 @@ export async function saveCGIExecutiveReport(
   return data
 }
 
+export async function saveCGISituationReview(
+  record: CGISituationReviewRecord
+) {
+  const { data, error } = await supabase
+    .from('cgi_situation_reviews')
+    .insert({
+      situation_title: record.situationTitle,
+      situation_posture: record.situationPosture,
+      command_question: record.commandQuestion ?? null,
+      executive_summary: record.executiveSummary ?? null,
+      dominant_concern: record.dominantConcern ?? null,
+      history_direction: record.historyDirection ?? null,
+      continuity_drift_detected: record.continuityDriftDetected ?? false,
+      report_classification: record.reportClassification ?? null,
+      required_executive_action: record.requiredExecutiveAction ?? null,
+      required_evidence: record.requiredEvidence ?? null,
+      copy_ready_situation_report: record.copyReadySituationReport ?? null,
+      raw_payload: record.rawPayload ?? {},
+    })
+    .select()
+    .single()
+
+  if (error) {
+    throw new Error(`Failed to save CGI situation review: ${error.message}`)
+  }
+
+  return data
+}
+
 export async function loadCGIContinuitySnapshots(limit = 20) {
   const { data, error } = await supabase
     .from('cgi_continuity_snapshots')
@@ -118,6 +162,20 @@ export async function loadCGIExecutiveReports(limit = 20) {
 
   if (error) {
     throw new Error(`Failed to load CGI executive reports: ${error.message}`)
+  }
+
+  return data ?? []
+}
+
+export async function loadCGISituationReviews(limit = 20) {
+  const { data, error } = await supabase
+    .from('cgi_situation_reviews')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    throw new Error(`Failed to load CGI situation reviews: ${error.message}`)
   }
 
   return data ?? []
