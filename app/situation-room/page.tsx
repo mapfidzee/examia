@@ -1,3 +1,6 @@
+'use client'
+
+import { useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
@@ -7,6 +10,7 @@ import { buildCGIExecutiveBriefing } from '@/lib/cgiExecutiveBriefingGenerator'
 import { buildCGIContinuitySnapshot } from '@/lib/cgiContinuitySnapshotEngine'
 import { reviewCGIExecutiveHistory } from '@/lib/cgiExecutiveHistoryEngine'
 import { buildCGIExecutiveReportPackage } from '@/lib/cgiExecutiveReportingEngine'
+import { saveCGISituationReview } from '@/lib/cgiPersistenceEngine'
 import {
   formatCGIExecutivePosture,
   formatCGIEvidenceLanguage,
@@ -31,6 +35,9 @@ export default function SituationRoomPage() {
 }
 
 function SituationRoomContent() {
+  const [saveMessage, setSaveMessage] = useState('')
+  const [saving, setSaving] = useState(false)
+
   const briefing = buildCGIExecutiveBriefing({
     pressurePosture: 'ELEVATED',
     trajectoryPosture: 'ELEVATED',
@@ -76,7 +83,6 @@ function SituationRoomContent() {
   ]
 
   const latestSnapshot = snapshots[snapshots.length - 1]
-
   const historyReview = reviewCGIExecutiveHistory(snapshots)
 
   const report = buildCGIExecutiveReportPackage({
@@ -99,6 +105,41 @@ function SituationRoomContent() {
   )
 
   const governanceLanguage = formatCGIGovernanceSafeLanguage()
+
+  async function handleSaveSituationReview() {
+    try {
+      setSaving(true)
+      setSaveMessage('Saving executive situation review...')
+
+      await saveCGISituationReview({
+        situationTitle: 'Executive Continuity Situation Room',
+        situationPosture: briefing.synthesis.synthesisPosture,
+        commandQuestion: briefing.coreQuestion,
+        executiveSummary: briefing.executiveSummary,
+        dominantConcern: briefing.dominantConcern,
+        historyDirection: historyReview.direction,
+        continuityDriftDetected: historyReview.continuityDriftDetected,
+        reportClassification: report.classification,
+        requiredExecutiveAction: report.requiredExecutiveAction,
+        requiredEvidence: report.requiredEvidence,
+        copyReadySituationReport: report.copyReadyReport,
+        rawPayload: {
+          briefing,
+          latestSnapshot,
+          historyReview,
+          report,
+          savedFrom: '/situation-room',
+        },
+      })
+
+      setSaveMessage('Executive situation review saved.')
+    } catch (error) {
+      console.error(error)
+      setSaveMessage('Executive situation review could not be saved.')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <main style={styles.page}>
@@ -139,6 +180,36 @@ function SituationRoomContent() {
           </div>
         </section>
 
+        <section style={styles.actionPanel}>
+          <div>
+            <p style={styles.sectionKicker}>Persistence Action</p>
+
+            <h2 style={styles.actionTitle}>
+              Preserve this situation review as executive continuity memory.
+            </h2>
+
+            <p style={styles.actionText}>
+              Saving the situation review creates a durable institutional
+              record of the executive operating picture, command question,
+              continuity drift, required evidence, and survivability posture.
+            </p>
+
+            {saveMessage && <p style={styles.saveMessage}>{saveMessage}</p>}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSaveSituationReview}
+            disabled={saving}
+            style={{
+              ...styles.primaryButton,
+              ...(saving ? styles.disabledButton : {}),
+            }}
+          >
+            {saving ? 'Saving...' : 'Save Situation Review'}
+          </button>
+        </section>
+
         <section style={styles.gridFour}>
           <SignalCard
             title="Continuity Posture"
@@ -154,11 +225,7 @@ function SituationRoomContent() {
 
           <SignalCard
             title="Continuity Drift"
-            value={
-              historyReview.continuityDriftDetected
-                ? 'YES'
-                : 'NO'
-            }
+            value={historyReview.continuityDriftDetected ? 'YES' : 'NO'}
             body="Indicates whether continuity degradation or exposure persistence requires leadership review."
           />
 
@@ -172,42 +239,28 @@ function SituationRoomContent() {
         <section style={styles.card}>
           <p style={styles.sectionKicker}>Executive Action</p>
 
-          <h2 style={styles.cardTitle}>
-            {executivePosture.headline}
-          </h2>
+          <h2 style={styles.cardTitle}>{executivePosture.headline}</h2>
 
           <p style={styles.bodyText}>
             {executivePosture.actionLanguage}
           </p>
 
           <div style={styles.priorityGrid}>
-            <PriorityItem
-              title="Evidence"
-              body={evidenceLanguage}
-            />
-
-            <PriorityItem
-              title="Survivability"
-              body={survivabilityLanguage}
-            />
-
-            <PriorityItem
-              title="Governance Meaning"
-              body={governanceLanguage}
-            />
+            <PriorityItem title="Evidence" body={evidenceLanguage} />
+            <PriorityItem title="Survivability" body={survivabilityLanguage} />
+            <PriorityItem title="Governance Meaning" body={governanceLanguage} />
           </div>
         </section>
 
         <section style={styles.gridThree}>
           <Panel title="Command Center">
             Leadership should coordinate stabilization, require evidence,
-            and keep continuity protection visible until credibility
-            improves.
+            and keep continuity protection visible until credibility improves.
           </Panel>
 
           <Panel title="Coordination Center">
-            Sites with elevated exposure should remain synchronized
-            through ownership, action, evidence, and executive review.
+            Sites with elevated exposure should remain synchronized through
+            ownership, action, evidence, and executive review.
           </Panel>
 
           <Panel title="Continuity History">
@@ -256,9 +309,7 @@ function SituationRoomContent() {
             Executive continuity situation package.
           </h2>
 
-          <pre style={styles.summaryBox}>
-            {report.copyReadyReport}
-          </pre>
+          <pre style={styles.summaryBox}>{report.copyReadyReport}</pre>
         </section>
       </div>
     </main>
@@ -386,6 +437,57 @@ const styles: Record<string, CSSProperties> = {
     padding: '24px',
     marginBottom: '16px',
     boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
+  },
+
+  actionPanel: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1fr) auto',
+    gap: '16px',
+    alignItems: 'center',
+    background: '#082f49',
+    border: '1px solid #0ea5e9',
+    borderRadius: '22px',
+    padding: '18px',
+    marginBottom: '16px',
+    boxSizing: 'border-box',
+  },
+
+  actionTitle: {
+    color: '#f8fafc',
+    fontSize: '22px',
+    lineHeight: 1.2,
+    margin: '8px 0',
+  },
+
+  actionText: {
+    color: '#cbd5e1',
+    lineHeight: 1.55,
+    margin: 0,
+    maxWidth: '760px',
+  },
+
+  saveMessage: {
+    color: '#cffafe',
+    fontWeight: 900,
+    margin: '12px 0 0',
+  },
+
+  primaryButton: {
+    border: 'none',
+    borderRadius: '14px',
+    background: '#67e8f9',
+    color: '#082f49',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 900,
+    minHeight: '48px',
+    padding: '0 18px',
+    whiteSpace: 'nowrap',
+  },
+
+  disabledButton: {
+    cursor: 'not-allowed',
+    opacity: 0.65,
   },
 
   sectionKicker: {
