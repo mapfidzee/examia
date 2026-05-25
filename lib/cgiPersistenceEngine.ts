@@ -180,3 +180,15 @@ export async function loadCGISituationReviews(limit = 20) {
 
   return data ?? []
 }
+
+export async function fetchCGIExecutiveReports() {
+  return loadCGIExecutiveReports(100)
+}
+
+export async function fetchCGISituationReviews() {
+  return loadCGISituationReviews(100)
+}
+
+export async function fetchCGIContinuitySnapshots() {
+  return loadCGIContinuitySnapshots(100)
+}
