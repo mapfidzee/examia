@@ -1,3 +1,6 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
@@ -10,6 +13,10 @@ import {
   formatCGISurvivabilityLanguage,
   formatCGIGovernanceSafeLanguage,
 } from '@/lib/cgiExecutivePostureFormatter'
+import {
+  loadCGICoordinationReviews,
+  saveCGICoordinationReview,
+} from '@/lib/cgiPersistenceEngine'
 import type { CGIRouteSynthesisPosture } from '@/lib/cgiCrossRouteContinuitySynthesisEngine'
 
 type CoordinationSite = {
@@ -25,6 +32,8 @@ type CoordinationSite = {
   accountabilityActive: boolean
   structuralMemoryVisible: boolean
 }
+
+type PersistedCoordinationReview = Record<string, any>
 
 const coordinationSites: CoordinationSite[] = [
   {
@@ -104,6 +113,12 @@ export default function CoordinationCenterPage() {
 }
 
 function CoordinationCenterContent() {
+  const [saveMessage, setSaveMessage] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [reviews, setReviews] = useState<PersistedCoordinationReview[]>([])
+  const [loadingReviews, setLoadingReviews] = useState(false)
+  const [reviewMessage, setReviewMessage] = useState('')
+
   const siteBriefings = coordinationSites.map((site) => ({
     site,
     briefing: buildCGIExecutiveBriefing(site),
@@ -138,6 +153,73 @@ function CoordinationCenterContent() {
   const structuralMemoryCount = coordinationSites.filter(
     (site) => site.structuralMemoryVisible
   ).length
+
+  const escalationRequired = executiveCoordinationCount > 0
+  const continuityDriftDetected = siteBriefings.some(
+    ({ briefing }) =>
+      briefing.synthesis.synthesisPosture === 'ELEVATED' ||
+      briefing.synthesis.synthesisPosture === 'CRITICAL'
+  )
+
+  const coordinationScope = `${coordinationSites.length} sites reviewed • ${executiveCoordinationCount} executive • ${activeCoordinationCount} active`
+
+  async function loadCoordinationReviews() {
+    try {
+      setLoadingReviews(true)
+      setReviewMessage('Loading persisted coordination reviews...')
+
+      const loadedReviews = await loadCGICoordinationReviews()
+
+      setReviews(Array.isArray(loadedReviews) ? loadedReviews : [])
+      setReviewMessage('Coordination review archive loaded.')
+    } catch (error) {
+      console.error(error)
+      setReviewMessage('Coordination review archive could not be loaded.')
+    } finally {
+      setLoadingReviews(false)
+    }
+  }
+
+  useEffect(() => {
+    loadCoordinationReviews()
+  }, [])
+
+  async function handleSaveCoordinationReview() {
+    try {
+      setSaving(true)
+      setSaveMessage('Saving coordination review...')
+
+      await saveCGICoordinationReview({
+        coordinationTitle: 'Executive Continuity Coordination Center',
+        coordinationPosture: dominantBriefing.synthesis.synthesisPosture,
+        coordinationScope,
+        coordinationSummary: dominantBriefing.executiveSummary,
+        dominantCoordinationConcern: dominantBriefing.dominantConcern,
+        crossSiteRisk: executivePosture.headline,
+        requiredCoordinationAction: executivePosture.actionLanguage,
+        requiredEvidence: evidenceLanguage,
+        escalationRequired,
+        continuityDriftDetected,
+        rawPayload: {
+          dominantSite,
+          dominantBriefing,
+          siteBriefings,
+          executiveCoordinationCount,
+          activeCoordinationCount,
+          structuralMemoryCount,
+          savedFrom: '/coordination-center',
+        },
+      })
+
+      setSaveMessage('Coordination review saved.')
+      await loadCoordinationReviews()
+    } catch (error) {
+      console.error(error)
+      setSaveMessage('Coordination review could not be saved.')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <main style={styles.page}>
@@ -180,6 +262,68 @@ function CoordinationCenterContent() {
           </div>
         </section>
 
+        <section style={styles.actionPanel}>
+          <div>
+            <p style={styles.sectionKicker}>Persistence Action</p>
+
+            <h2 style={styles.actionTitle}>
+              Preserve this coordination review as continuity memory.
+            </h2>
+
+            <p style={styles.actionText}>
+              Saving the coordination review creates a durable record of
+              synchronization need, escalation pressure, evidence requirements,
+              and cross-site continuity exposure.
+            </p>
+
+            {saveMessage && <p style={styles.saveMessage}>{saveMessage}</p>}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSaveCoordinationReview}
+            disabled={saving}
+            style={{
+              ...styles.primaryButton,
+              ...(saving ? styles.disabledButton : {}),
+            }}
+          >
+            {saving ? 'Saving...' : 'Save Coordination Review'}
+          </button>
+        </section>
+
+        <section style={styles.actionPanel}>
+          <div>
+            <p style={styles.sectionKicker}>Coordination Memory Retrieval</p>
+
+            <h2 style={styles.actionTitle}>
+              Retrieve persisted coordination reviews.
+            </h2>
+
+            <p style={styles.actionText}>
+              CGI can now reconstruct cross-site synchronization posture,
+              escalation need, required evidence, and coordination exposure
+              across time.
+            </p>
+
+            {reviewMessage && (
+              <p style={styles.saveMessage}>{reviewMessage}</p>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={loadCoordinationReviews}
+            disabled={loadingReviews}
+            style={{
+              ...styles.secondaryButton,
+              ...(loadingReviews ? styles.disabledButton : {}),
+            }}
+          >
+            {loadingReviews ? 'Refreshing...' : 'Refresh Reviews'}
+          </button>
+        </section>
+
         <section style={styles.gridThree}>
           <SignalCard
             title="Executive Coordination"
@@ -219,6 +363,82 @@ function CoordinationCenterContent() {
               title="Governance Meaning"
               body={governanceLanguage}
             />
+          </div>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Persisted Coordination Archive</p>
+
+          <h2 style={styles.cardTitle}>
+            Coordination reviews retrieved from Supabase.
+          </h2>
+
+          <p style={styles.bodyText}>
+            Review Count: {reviews.length}
+          </p>
+
+          <div style={styles.archiveList}>
+            {reviews.length === 0 ? (
+              <p style={styles.emptyText}>
+                No persisted coordination reviews are currently available.
+              </p>
+            ) : (
+              reviews.map((item, index) => (
+                <article
+                  key={item.id ?? `${getReviewValue(item, 'createdAt')}-${index}`}
+                  style={styles.archiveItem}
+                >
+                  <div style={styles.archiveHeader}>
+                    <div>
+                      <p style={styles.panelKicker}>
+                        {getReviewValue(item, 'coordinationPosture') ??
+                          'COORDINATION_REVIEW'}
+                      </p>
+
+                      <h3 style={styles.archiveTitle}>
+                        {getReviewValue(item, 'coordinationTitle') ??
+                          'Executive Continuity Coordination Center'}
+                      </h3>
+                    </div>
+
+                    <p style={styles.archiveDate}>
+                      {formatDate(getReviewValue(item, 'createdAt'))}
+                    </p>
+                  </div>
+
+                  <div style={styles.archiveGrid}>
+                    <PriorityItem
+                      title="Scope"
+                      body={
+                        getReviewValue(item, 'coordinationScope') ??
+                        'Not recorded'
+                      }
+                    />
+
+                    <PriorityItem
+                      title="Escalation"
+                      body={
+                        getReviewValue(item, 'escalationRequired') ??
+                        'Not recorded'
+                      }
+                    />
+
+                    <PriorityItem
+                      title="Cross-Site Risk"
+                      body={
+                        getReviewValue(item, 'crossSiteRisk') ??
+                        'Not recorded'
+                      }
+                    />
+                  </div>
+
+                  <p style={styles.archiveSummary}>
+                    {getReviewValue(item, 'coordinationSummary') ??
+                      'No coordination summary was recorded for this review.'}
+                  </p>
+                </article>
+              ))
+            )}
           </div>
         </section>
 
@@ -275,6 +495,40 @@ function CoordinationCenterContent() {
       </div>
     </main>
   )
+}
+
+function getReviewValue(
+  review: PersistedCoordinationReview,
+  key: string,
+): string | null {
+  const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
+
+  const value =
+    review[key] ??
+    review[snakeKey] ??
+    review.rawPayload?.[key] ??
+    review.raw_payload?.[key] ??
+    null
+
+  if (value === null || value === undefined) {
+    return null
+  }
+
+  return String(value)
+}
+
+function formatDate(value: string | null) {
+  if (!value) {
+    return 'Date not recorded'
+  }
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return date.toLocaleString()
 }
 
 function SignalCard({
@@ -375,6 +629,63 @@ const styles: Record<string, CSSProperties> = {
     padding: '24px',
     marginBottom: '16px',
     boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
+  },
+  actionPanel: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1fr) auto',
+    gap: '16px',
+    alignItems: 'center',
+    background: '#082f49',
+    border: '1px solid #0ea5e9',
+    borderRadius: '22px',
+    padding: '18px',
+    marginBottom: '16px',
+    boxSizing: 'border-box',
+  },
+  actionTitle: {
+    color: '#f8fafc',
+    fontSize: '22px',
+    lineHeight: 1.2,
+    margin: '8px 0',
+  },
+  actionText: {
+    color: '#cbd5e1',
+    lineHeight: 1.55,
+    margin: 0,
+    maxWidth: '760px',
+  },
+  saveMessage: {
+    color: '#cffafe',
+    fontWeight: 900,
+    margin: '12px 0 0',
+  },
+  primaryButton: {
+    border: 'none',
+    borderRadius: '14px',
+    background: '#67e8f9',
+    color: '#082f49',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 900,
+    minHeight: '48px',
+    padding: '0 18px',
+    whiteSpace: 'nowrap',
+  },
+  secondaryButton: {
+    border: '1px solid #67e8f9',
+    borderRadius: '14px',
+    background: '#0f172a',
+    color: '#cffafe',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 900,
+    minHeight: '48px',
+    padding: '0 18px',
+    whiteSpace: 'nowrap',
+  },
+  disabledButton: {
+    cursor: 'not-allowed',
+    opacity: 0.65,
   },
   sectionKicker: {
     color: '#94a3b8',
@@ -557,5 +868,53 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '14px',
     lineHeight: 1.6,
     marginTop: '10px',
+  },
+  archiveList: {
+    display: 'grid',
+    gap: '14px',
+    marginTop: '16px',
+  },
+  archiveItem: {
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '18px',
+    padding: '16px',
+  },
+  archiveHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: '14px',
+    alignItems: 'flex-start',
+    marginBottom: '14px',
+  },
+  archiveTitle: {
+    color: '#f8fafc',
+    fontSize: '20px',
+    lineHeight: 1.2,
+    margin: '8px 0 0',
+  },
+  archiveDate: {
+    color: '#a5f3fc',
+    fontWeight: 800,
+    fontSize: '13px',
+    lineHeight: 1.4,
+    margin: 0,
+    textAlign: 'right',
+    minWidth: '180px',
+  },
+  archiveGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: '12px',
+  },
+  archiveSummary: {
+    color: '#cbd5e1',
+    lineHeight: 1.65,
+    margin: '14px 0 0',
+  },
+  emptyText: {
+    color: '#cbd5e1',
+    lineHeight: 1.6,
+    margin: 0,
   },
 }
