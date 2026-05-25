@@ -1,16 +1,32 @@
+'use client'
+
+import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import InfrastructureNav from '@/components/InfrastructureNav'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
-import {
-  buildCGIContinuitySnapshot,
-  summarizeCGIContinuitySnapshot,
-} from '@/lib/cgiContinuitySnapshotEngine'
-import {
-  reviewCGIExecutiveHistory,
-  summarizeCGIExecutiveHistory,
-} from '@/lib/cgiExecutiveHistoryEngine'
+import { loadCGIContinuitySnapshots } from '@/lib/cgiPersistenceEngine'
+
+type PersistedContinuitySnapshot = {
+  id: string
+  created_at: string
+  snapshot_label: string | null
+  source_route: string
+  continuity_posture: string
+  continuity_confidence: string | null
+  survivability_pressure: string | null
+  recovery_credibility: string | null
+  recurrence_severity: string | null
+  dominant_concern: string | null
+  executive_reading: string | null
+  required_action: string | null
+  required_evidence: string | null
+  evidence_verified: boolean
+  accountability_active: boolean
+  structural_memory_visible: boolean
+  raw_payload: Record<string, unknown>
+}
 
 export default function ContinuityHistoryPage() {
   return (
@@ -29,41 +45,100 @@ export default function ContinuityHistoryPage() {
 }
 
 function ContinuityHistoryContent() {
-  const snapshots = [
-    buildCGIContinuitySnapshot({
-      pressurePosture: 'WATCHED',
-      trajectoryPosture: 'WATCHED',
-      predictivePosture: 'WATCHED',
-      recoveryPosture: 'WATCHED',
-      reliabilityPosture: 'WATCHED',
-      evidenceVerified: true,
-      accountabilityActive: true,
-      structuralMemoryVisible: false,
-    }),
-    buildCGIContinuitySnapshot({
-      pressurePosture: 'ELEVATED',
-      trajectoryPosture: 'WATCHED',
-      predictivePosture: 'ELEVATED',
-      recoveryPosture: 'WATCHED',
-      reliabilityPosture: 'ELEVATED',
-      evidenceVerified: false,
-      accountabilityActive: true,
-      structuralMemoryVisible: true,
-    }),
-    buildCGIContinuitySnapshot({
-      pressurePosture: 'ELEVATED',
-      trajectoryPosture: 'ELEVATED',
-      predictivePosture: 'ELEVATED',
-      recoveryPosture: 'WATCHED',
-      reliabilityPosture: 'ELEVATED',
-      evidenceVerified: false,
-      accountabilityActive: true,
-      structuralMemoryVisible: true,
-    }),
-  ]
+  const [snapshots, setSnapshots] = useState<PersistedContinuitySnapshot[]>([])
+  const [message, setMessage] = useState('Loading continuity memory...')
+  const [loading, setLoading] = useState(false)
 
-  const historyReview = reviewCGIExecutiveHistory(snapshots)
-  const latestSnapshot = snapshots[snapshots.length - 1]
+  useEffect(() => {
+    loadHistory()
+  }, [])
+
+  async function loadHistory() {
+    try {
+      setLoading(true)
+      setMessage('Loading continuity memory...')
+
+      const records = await loadCGIContinuitySnapshots(25)
+
+      setSnapshots(records as PersistedContinuitySnapshot[])
+      setMessage(
+        records.length === 0
+          ? 'No persisted continuity snapshots found yet.'
+          : 'Continuity memory loaded.'
+      )
+    } catch (error) {
+      console.error(error)
+      setMessage('Continuity memory could not be loaded.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const intelligence = useMemo(() => {
+    const latest = snapshots[0] || null
+    const elevatedCount = snapshots.filter((snapshot) =>
+      ['ELEVATED', 'CRITICAL'].includes(snapshot.continuity_posture)
+    ).length
+
+    const criticalCount = snapshots.filter(
+      (snapshot) => snapshot.continuity_posture === 'CRITICAL'
+    ).length
+
+    const structuralMemoryCount = snapshots.filter(
+      (snapshot) => snapshot.structural_memory_visible
+    ).length
+
+    const evidenceVerifiedCount = snapshots.filter(
+      (snapshot) => snapshot.evidence_verified
+    ).length
+
+    const continuityDriftDetected = elevatedCount > 0 || criticalCount > 0
+    const survivabilityConcernPersisting = snapshots.some((snapshot) =>
+      String(snapshot.survivability_pressure || '')
+        .toUpperCase()
+        .includes('REVIEW')
+    )
+
+    const direction =
+      snapshots.length === 0
+        ? 'NO MEMORY'
+        : criticalCount > 0
+          ? 'CRITICAL EXPOSURE PRESENT'
+          : elevatedCount > 0
+            ? 'HOLDING UNDER PRESSURE'
+            : 'MEMORY STABLE'
+
+    const currentPosture = latest?.continuity_posture || 'NOT RECORDED'
+
+    const executiveMeaning =
+      snapshots.length === 0
+        ? 'CGI has not yet accumulated persisted continuity snapshots for historical review.'
+        : continuityDriftDetected
+          ? 'Persisted continuity memory shows visible exposure that requires continued executive review.'
+          : 'Persisted continuity memory is available and currently shows no elevated continuity drift.'
+
+    const requiredHistoryAction =
+      snapshots.length === 0
+        ? 'Begin preserving continuity snapshots.'
+        : continuityDriftDetected
+          ? 'Keep continuity history visible until stabilization credibility is evidenced.'
+          : 'Maintain continuity memory review.'
+
+    return {
+      latest,
+      snapshotCount: snapshots.length,
+      elevatedCount,
+      criticalCount,
+      structuralMemoryCount,
+      evidenceVerifiedCount,
+      continuityDriftDetected,
+      survivabilityConcernPersisting,
+      direction,
+      currentPosture,
+      executiveMeaning,
+      requiredHistoryAction,
+    }
+  }, [snapshots])
 
   return (
     <main style={styles.page}>
@@ -76,49 +151,100 @@ function ContinuityHistoryContent() {
           <h1 style={styles.title}>Executive Continuity History</h1>
 
           <p style={styles.subtitle}>
-            Institutional memory board for reviewing continuity posture,
-            survivability persistence, executive drift, and stabilization
-            movement across preserved continuity snapshots.
+            Live institutional memory board for reviewing persisted continuity
+            posture, survivability exposure, executive drift, and stabilization
+            movement across Supabase continuity snapshots.
           </p>
         </section>
+
+        {message && <div style={styles.message}>{message}</div>}
 
         <section style={styles.heroCard}>
           <div>
             <p style={styles.sectionKicker}>Continuity Direction</p>
 
-            <h2 style={styles.heroTitle}>{historyReview.direction}</h2>
+            <h2 style={styles.heroTitle}>{intelligence.direction}</h2>
 
             <p style={styles.heroMeaning}>
-              {historyReview.executiveMeaning}
+              {intelligence.executiveMeaning}
             </p>
           </div>
 
           <div style={styles.statusBox}>
             <p style={styles.statusLabel}>Current Posture</p>
 
-            <p style={styles.statusValue}>{historyReview.currentPosture}</p>
+            <p style={styles.statusValue}>
+              {intelligence.currentPosture}
+            </p>
           </div>
+        </section>
+
+        <section style={styles.actionPanel}>
+          <div>
+            <p style={styles.sectionKicker}>Live Retrieval</p>
+
+            <h2 style={styles.actionTitle}>
+              Reconstruct continuity memory from persisted records.
+            </h2>
+
+            <p style={styles.actionText}>
+              This page now reads from Supabase continuity snapshots instead of
+              relying only on static sample memory.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={loadHistory}
+            disabled={loading}
+            style={{
+              ...styles.primaryButton,
+              ...(loading ? styles.disabledButton : {}),
+            }}
+          >
+            {loading ? 'Refreshing...' : 'Refresh History'}
+          </button>
         </section>
 
         <section style={styles.gridThree}>
           <SignalCard
             title="Snapshot Count"
-            value={String(historyReview.snapshotCount)}
-            body="Number of preserved executive continuity readings used for this review."
+            value={String(intelligence.snapshotCount)}
+            body="Number of persisted continuity snapshots available for executive history review."
           />
 
           <SignalCard
             title="Continuity Drift"
-            value={historyReview.continuityDriftDetected ? 'YES' : 'NO'}
-            body="Indicates whether posture movement or persistence suggests continuity degradation."
+            value={intelligence.continuityDriftDetected ? 'YES' : 'NO'}
+            body="Indicates whether persisted memory shows elevated or critical continuity exposure."
           />
 
           <SignalCard
             title="Survivability Persistence"
             value={
-              historyReview.survivabilityConcernPersisting ? 'YES' : 'NO'
+              intelligence.survivabilityConcernPersisting ? 'YES' : 'NO'
             }
-            body="Indicates whether elevated or critical continuity exposure is persisting across snapshots."
+            body="Indicates whether survivability review language is persisting across memory."
+          />
+        </section>
+
+        <section style={styles.gridThree}>
+          <SignalCard
+            title="Elevated Records"
+            value={String(intelligence.elevatedCount)}
+            body="Persisted snapshots carrying elevated or critical continuity posture."
+          />
+
+          <SignalCard
+            title="Structural Memory"
+            value={String(intelligence.structuralMemoryCount)}
+            body="Snapshots where structural memory remained visible."
+          />
+
+          <SignalCard
+            title="Evidence Verified"
+            value={String(intelligence.evidenceVerifiedCount)}
+            body="Snapshots with verified continuity evidence marked true."
           />
         </section>
 
@@ -126,27 +252,84 @@ function ContinuityHistoryContent() {
           <p style={styles.sectionKicker}>Required History Action</p>
 
           <h2 style={styles.cardTitle}>
-            {historyReview.requiredHistoryAction}
+            {intelligence.requiredHistoryAction}
           </h2>
 
           <p style={styles.bodyText}>
             CGI does not treat executive continuity readings as isolated
             moments. It preserves them as institutional memory so leadership can
-            see whether continuity is improving, holding, or drifting.
+            review whether continuity is improving, holding, or drifting across
+            time.
           </p>
         </section>
 
         <section style={styles.gridTwo}>
-          <Panel title="Latest Snapshot">
-            <pre style={styles.compactPre}>
-              {summarizeCGIContinuitySnapshot(latestSnapshot)}
-            </pre>
+          <Panel title="Latest Persisted Snapshot">
+            {intelligence.latest ? (
+              <div style={styles.infoList}>
+                <Info
+                  label="Label"
+                  value={
+                    intelligence.latest.snapshot_label ||
+                    'Unlabeled snapshot'
+                  }
+                />
+
+                <Info
+                  label="Posture"
+                  value={intelligence.latest.continuity_posture}
+                />
+
+                <Info
+                  label="Source"
+                  value={intelligence.latest.source_route}
+                />
+
+                <Info
+                  label="Dominant Concern"
+                  value={
+                    intelligence.latest.dominant_concern ||
+                    'Not recorded'
+                  }
+                />
+
+                <Info
+                  label="Required Evidence"
+                  value={
+                    intelligence.latest.required_evidence ||
+                    'Not recorded'
+                  }
+                />
+              </div>
+            ) : (
+              <p style={styles.emptyText}>
+                No persisted continuity snapshot is available yet.
+              </p>
+            )}
           </Panel>
 
           <Panel title="Executive History Review">
-            <pre style={styles.compactPre}>
-              {summarizeCGIExecutiveHistory(historyReview)}
-            </pre>
+            <div style={styles.infoList}>
+              <Info label="Direction" value={intelligence.direction} />
+              <Info
+                label="Current Posture"
+                value={intelligence.currentPosture}
+              />
+              <Info
+                label="Snapshot Count"
+                value={String(intelligence.snapshotCount)}
+              />
+              <Info
+                label="Continuity Drift"
+                value={
+                  intelligence.continuityDriftDetected ? 'YES' : 'NO'
+                }
+              />
+              <Info
+                label="History Action"
+                value={intelligence.requiredHistoryAction}
+              />
+            </div>
           </Panel>
         </section>
 
@@ -154,24 +337,39 @@ function ContinuityHistoryContent() {
           <p style={styles.sectionKicker}>Continuity Timeline</p>
 
           <h2 style={styles.cardTitle}>
-            Continuity posture must be reviewed across time.
+            Persisted continuity posture must be reviewed across time.
           </h2>
 
           <div style={styles.timeline}>
+            {snapshots.length === 0 && (
+              <p style={styles.emptyText}>
+                No continuity timeline records are available yet.
+              </p>
+            )}
+
             {snapshots.map((snapshot) => (
-              <article key={snapshot.snapshotId} style={styles.timelineItem}>
-                <p style={styles.timelineDate}>{snapshot.createdAt}</p>
+              <article key={snapshot.id} style={styles.timelineItem}>
+                <p style={styles.timelineDate}>
+                  {formatDate(snapshot.created_at)}
+                </p>
 
                 <h3 style={styles.timelineTitle}>
-                  {snapshot.synthesisPosture}
+                  {snapshot.continuity_posture}
                 </h3>
 
                 <p style={styles.timelineBody}>
-                  {snapshot.executiveReading}
+                  {snapshot.executive_reading ||
+                    'No executive reading was recorded for this snapshot.'}
                 </p>
 
                 <p style={styles.timelineMeta}>
-                  Dominant concern: {snapshot.dominantConcern}
+                  Dominant concern:{' '}
+                  {snapshot.dominant_concern || 'Not recorded'}
+                </p>
+
+                <p style={styles.timelineMeta}>
+                  Required action:{' '}
+                  {snapshot.required_action || 'Not recorded'}
                 </p>
               </article>
             ))}
@@ -180,6 +378,12 @@ function ContinuityHistoryContent() {
       </div>
     </main>
   )
+}
+
+function formatDate(value: string) {
+  if (!value) return 'Not recorded'
+
+  return new Date(value).toLocaleString()
 }
 
 function SignalCard({
@@ -215,6 +419,16 @@ function Panel({
 
       <div style={styles.panelBody}>{children}</div>
     </section>
+  )
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={styles.infoRow}>
+      <span style={styles.infoLabel}>{label}</span>
+
+      <strong style={styles.infoValue}>{value}</strong>
+    </div>
   )
 }
 
@@ -254,6 +468,15 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '16px',
     margin: 0,
   },
+  message: {
+    background: '#083344',
+    color: '#cffafe',
+    padding: '12px 14px',
+    borderRadius: '14px',
+    fontWeight: 800,
+    marginBottom: '16px',
+    fontSize: '14px',
+  },
   heroCard: {
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1.35fr) minmax(240px, 0.65fr)',
@@ -264,6 +487,46 @@ const styles: Record<string, CSSProperties> = {
     padding: '24px',
     marginBottom: '16px',
     boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
+  },
+  actionPanel: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1fr) auto',
+    gap: '16px',
+    alignItems: 'center',
+    background: '#082f49',
+    border: '1px solid #0ea5e9',
+    borderRadius: '22px',
+    padding: '18px',
+    marginBottom: '16px',
+    boxSizing: 'border-box',
+  },
+  actionTitle: {
+    color: '#f8fafc',
+    fontSize: '22px',
+    lineHeight: 1.2,
+    margin: '8px 0',
+  },
+  actionText: {
+    color: '#cbd5e1',
+    lineHeight: 1.55,
+    margin: 0,
+    maxWidth: '760px',
+  },
+  primaryButton: {
+    border: 'none',
+    borderRadius: '14px',
+    background: '#67e8f9',
+    color: '#082f49',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 900,
+    minHeight: '48px',
+    padding: '0 18px',
+    whiteSpace: 'nowrap',
+  },
+  disabledButton: {
+    cursor: 'not-allowed',
+    opacity: 0.65,
   },
   sectionKicker: {
     color: '#94a3b8',
@@ -380,17 +643,30 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.6,
     marginTop: '10px',
   },
-  compactPre: {
-    whiteSpace: 'pre-wrap',
+  infoList: {
+    display: 'grid',
+    gap: '10px',
+    marginTop: '14px',
+  },
+  infoRow: {
+    display: 'grid',
+    gridTemplateColumns: '160px minmax(0, 1fr)',
+    gap: '12px',
     background: '#020617',
     border: '1px solid #1e293b',
     borderRadius: '14px',
-    padding: '14px',
-    color: '#e2e8f0',
-    lineHeight: 1.5,
-    fontSize: '13px',
-    overflowX: 'auto',
-    margin: 0,
+    padding: '12px',
+    alignItems: 'start',
+  },
+  infoLabel: {
+    color: '#94a3b8',
+    fontWeight: 800,
+    fontSize: '12px',
+  },
+  infoValue: {
+    color: '#f8fafc',
+    lineHeight: 1.45,
+    overflowWrap: 'anywhere',
   },
   timeline: {
     display: 'grid',
@@ -424,5 +700,11 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.5,
     fontWeight: 800,
     margin: '10px 0 0',
+  },
+  emptyText: {
+    color: '#94a3b8',
+    lineHeight: 1.6,
+    margin: 0,
+    fontWeight: 700,
   },
 }
