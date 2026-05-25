@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
@@ -9,7 +9,12 @@ import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { buildCGIContinuitySnapshot } from '@/lib/cgiContinuitySnapshotEngine'
 import { reviewCGIExecutiveHistory } from '@/lib/cgiExecutiveHistoryEngine'
 import { buildCGIExecutiveReportPackage } from '@/lib/cgiExecutiveReportingEngine'
-import { saveCGIExecutiveReport } from '@/lib/cgiPersistenceEngine'
+import {
+  loadCGIExecutiveReports,
+  saveCGIExecutiveReport,
+} from '@/lib/cgiPersistenceEngine'
+
+type PersistedExecutiveReport = Record<string, any>
 
 export default function ExecutiveReportPage() {
   return (
@@ -30,6 +35,9 @@ export default function ExecutiveReportPage() {
 function ExecutiveReportContent() {
   const [saveMessage, setSaveMessage] = useState('')
   const [saving, setSaving] = useState(false)
+  const [reports, setReports] = useState<PersistedExecutiveReport[]>([])
+  const [loadingReports, setLoadingReports] = useState(false)
+  const [reportMessage, setReportMessage] = useState('')
 
   const snapshots = [
     buildCGIContinuitySnapshot({
@@ -73,6 +81,27 @@ function ExecutiveReportContent() {
     historyReview,
   })
 
+  async function loadReports() {
+    try {
+      setLoadingReports(true)
+      setReportMessage('Loading persisted executive reports...')
+
+      const loadedReports = await loadCGIExecutiveReports()
+
+      setReports(Array.isArray(loadedReports) ? loadedReports : [])
+      setReportMessage('Executive report archive loaded.')
+    } catch (error) {
+      console.error(error)
+      setReportMessage('Executive report archive could not be loaded.')
+    } finally {
+      setLoadingReports(false)
+    }
+  }
+
+  useEffect(() => {
+    loadReports()
+  }, [])
+
   async function handleSaveReport() {
     try {
       setSaving(true)
@@ -100,6 +129,7 @@ function ExecutiveReportContent() {
       })
 
       setSaveMessage('Executive continuity report saved.')
+      await loadReports()
     } catch (error) {
       console.error(error)
       setSaveMessage('Executive continuity report could not be saved.')
@@ -175,6 +205,38 @@ function ExecutiveReportContent() {
           </button>
         </section>
 
+        <section style={styles.actionPanel}>
+          <div>
+            <p style={styles.sectionKicker}>Report Memory Retrieval</p>
+
+            <h2 style={styles.actionTitle}>
+              Retrieve persisted executive report history.
+            </h2>
+
+            <p style={styles.actionText}>
+              This completes the report memory loop by allowing CGI to generate,
+              save, retrieve, and display executive continuity records from
+              Supabase.
+            </p>
+
+            {reportMessage && (
+              <p style={styles.saveMessage}>{reportMessage}</p>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={loadReports}
+            disabled={loadingReports}
+            style={{
+              ...styles.secondaryButton,
+              ...(loadingReports ? styles.disabledButton : {}),
+            }}
+          >
+            {loadingReports ? 'Refreshing...' : 'Refresh Reports'}
+          </button>
+        </section>
+
         <section style={styles.gridThree}>
           <SignalCard
             title="History Direction"
@@ -220,6 +282,82 @@ function ExecutiveReportContent() {
           </div>
         </section>
 
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Persisted Report Archive</p>
+
+          <h2 style={styles.cardTitle}>
+            Executive continuity reports retrieved from Supabase.
+          </h2>
+
+          <p style={styles.bodyText}>
+            Report Count: {reports.length}
+          </p>
+
+          <div style={styles.archiveList}>
+            {reports.length === 0 ? (
+              <p style={styles.emptyText}>
+                No persisted executive reports are currently available.
+              </p>
+            ) : (
+              reports.map((item, index) => (
+                <article
+                  key={item.id ?? `${getReportValue(item, 'createdAt')}-${index}`}
+                  style={styles.archiveItem}
+                >
+                  <div style={styles.archiveHeader}>
+                    <div>
+                      <p style={styles.panelKicker}>
+                        {getReportValue(item, 'reportClassification') ??
+                          'EXECUTIVE_REPORT'}
+                      </p>
+
+                      <h3 style={styles.archiveTitle}>
+                        {getReportValue(item, 'reportTitle') ??
+                          'Executive Continuity Report'}
+                      </h3>
+                    </div>
+
+                    <p style={styles.archiveDate}>
+                      {formatDate(getReportValue(item, 'createdAt'))}
+                    </p>
+                  </div>
+
+                  <div style={styles.archiveGrid}>
+                    <PriorityItem
+                      title="Current Posture"
+                      body={
+                        getReportValue(item, 'currentContinuityPosture') ??
+                        'Not recorded'
+                      }
+                    />
+
+                    <PriorityItem
+                      title="History Direction"
+                      body={
+                        getReportValue(item, 'historyDirection') ??
+                        'Not recorded'
+                      }
+                    />
+
+                    <PriorityItem
+                      title="Required Action"
+                      body={
+                        getReportValue(item, 'requiredExecutiveAction') ??
+                        'Not recorded'
+                      }
+                    />
+                  </div>
+
+                  <p style={styles.archiveSummary}>
+                    {getReportValue(item, 'executiveSummary') ??
+                      'No executive summary was recorded for this report.'}
+                  </p>
+                </article>
+              ))
+            )}
+          </div>
+        </section>
+
         <section style={styles.gridTwo}>
           {report.reportSections.map((section) => (
             <Panel key={section.label} title={section.label}>
@@ -240,6 +378,40 @@ function ExecutiveReportContent() {
       </div>
     </main>
   )
+}
+
+function getReportValue(
+  report: PersistedExecutiveReport,
+  key: string,
+): string | null {
+  const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
+
+  const value =
+    report[key] ??
+    report[snakeKey] ??
+    report.rawPayload?.report?.[key] ??
+    report.raw_payload?.report?.[key] ??
+    null
+
+  if (value === null || value === undefined) {
+    return null
+  }
+
+  return String(value)
+}
+
+function formatDate(value: string | null) {
+  if (!value) {
+    return 'Date not recorded'
+  }
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return date.toLocaleString()
 }
 
 function SignalCard({
@@ -375,6 +547,18 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: '14px',
     background: '#67e8f9',
     color: '#082f49',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 900,
+    minHeight: '48px',
+    padding: '0 18px',
+    whiteSpace: 'nowrap',
+  },
+  secondaryButton: {
+    border: '1px solid #67e8f9',
+    borderRadius: '14px',
+    background: '#0f172a',
+    color: '#cffafe',
     cursor: 'pointer',
     fontSize: '14px',
     fontWeight: 900,
@@ -543,5 +727,53 @@ const styles: Record<string, CSSProperties> = {
     minHeight: '260px',
     fontSize: '14px',
     overflowX: 'auto',
+  },
+  archiveList: {
+    display: 'grid',
+    gap: '14px',
+    marginTop: '16px',
+  },
+  archiveItem: {
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '18px',
+    padding: '16px',
+  },
+  archiveHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: '14px',
+    alignItems: 'flex-start',
+    marginBottom: '14px',
+  },
+  archiveTitle: {
+    color: '#f8fafc',
+    fontSize: '20px',
+    lineHeight: 1.2,
+    margin: '8px 0 0',
+  },
+  archiveDate: {
+    color: '#a5f3fc',
+    fontWeight: 800,
+    fontSize: '13px',
+    lineHeight: 1.4,
+    margin: 0,
+    textAlign: 'right',
+    minWidth: '180px',
+  },
+  archiveGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: '12px',
+  },
+  archiveSummary: {
+    color: '#cbd5e1',
+    lineHeight: 1.65,
+    margin: '14px 0 0',
+  },
+  emptyText: {
+    color: '#cbd5e1',
+    lineHeight: 1.6,
+    margin: 0,
   },
 }
