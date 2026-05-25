@@ -1,10 +1,4 @@
-import type {
-  CGIContinuityPersistenceSeverity,
-  CGIHistoricalContinuityReview,
-  CGIInstitutionalMemoryPressure,
-  CGIRecoveryTrajectory,
-  CGIStabilizationCredibility,
-} from './cgiHistoricalContinuityEngine'
+import type { CGIHistoricalContinuityReview } from './cgiHistoricalContinuityEngine'
 
 export type CGIExecutiveMemoryPosture =
   | 'NO_MEMORY'
@@ -49,15 +43,6 @@ export type CGIExecutiveMemoryCompression = {
 export function compressCGIExecutiveMemory(
   historicalReview: CGIHistoricalContinuityReview
 ): CGIExecutiveMemoryCompression {
-  const memoryPosture = deriveMemoryPosture(historicalReview)
-  const urgency = deriveCompressionUrgency(historicalReview)
-  const confidence = deriveCompressionConfidence(historicalReview)
-
-  const executiveEscalationRequired =
-    historicalReview.executiveEscalationRequired ||
-    urgency === 'EXECUTIVE' ||
-    memoryPosture === 'CRITICAL_MEMORY'
-
   const survivabilityAttentionRequired =
     historicalReview.survivabilityConcernPersisting ||
     historicalReview.continuityPersistenceSeverity === 'CRITICAL' ||
@@ -73,13 +58,33 @@ export function compressCGIExecutiveMemory(
     historicalReview.stabilizationCredibility === 'EVIDENCE_DEFICIENT' ||
     historicalReview.stabilizationCredibility === 'NOT_YET_CREDIBLE'
 
+  const memoryPosture = deriveMemoryPosture({
+    historicalReview,
+    survivabilityAttentionRequired,
+    recurrenceAttentionRequired,
+  })
+
+  const urgency = deriveCompressionUrgency({
+    historicalReview,
+    memoryPosture,
+    survivabilityAttentionRequired,
+    recurrenceAttentionRequired,
+    evidenceAttentionRequired,
+  })
+
+  const confidence = deriveCompressionConfidence(historicalReview)
+
+  const executiveEscalationRequired =
+    urgency === 'EXECUTIVE' || memoryPosture === 'CRITICAL_MEMORY'
+
   const stabilizationCredible =
     historicalReview.stabilizationCredibility === 'CREDIBLE' &&
     !historicalReview.continuityDriftDetected &&
-    !historicalReview.executiveEscalationRequired
+    !executiveEscalationRequired
 
   const dominantMemoryConcern = deriveDominantMemoryConcern({
     historicalReview,
+    memoryPosture,
     executiveEscalationRequired,
     survivabilityAttentionRequired,
     recurrenceAttentionRequired,
@@ -145,31 +150,40 @@ export function compressCGIExecutiveMemory(
   }
 }
 
-function deriveMemoryPosture(
+function deriveMemoryPosture({
+  historicalReview,
+  survivabilityAttentionRequired,
+  recurrenceAttentionRequired,
+}: {
   historicalReview: CGIHistoricalContinuityReview
-): CGIExecutiveMemoryPosture {
+  survivabilityAttentionRequired: boolean
+  recurrenceAttentionRequired: boolean
+}): CGIExecutiveMemoryPosture {
   if (historicalReview.snapshotCount === 0) return 'NO_MEMORY'
 
-  if (
+  const criticalMemoryConfirmed =
     historicalReview.continuityPersistenceSeverity === 'CRITICAL' ||
     historicalReview.institutionalMemoryPressure === 'EXECUTIVE' ||
-    historicalReview.executiveEscalationRequired
-  ) {
-    return 'CRITICAL_MEMORY'
-  }
+    historicalReview.criticalCount > 1 ||
+    (historicalReview.criticalCount > 0 &&
+      (survivabilityAttentionRequired || recurrenceAttentionRequired))
 
-  if (
+  if (criticalMemoryConfirmed) return 'CRITICAL_MEMORY'
+
+  const elevatedMemoryConfirmed =
+    historicalReview.criticalCount > 0 ||
     historicalReview.continuityPersistenceSeverity === 'HIGH' ||
     historicalReview.institutionalMemoryPressure === 'HEAVY' ||
-    historicalReview.criticalCount > 0
-  ) {
-    return 'ELEVATED_MEMORY'
-  }
+    historicalReview.elevatedCount > 1 ||
+    (historicalReview.elevatedCount > 0 &&
+      (survivabilityAttentionRequired || recurrenceAttentionRequired))
+
+  if (elevatedMemoryConfirmed) return 'ELEVATED_MEMORY'
 
   if (
+    historicalReview.elevatedCount > 0 ||
     historicalReview.continuityPersistenceSeverity === 'MODERATE' ||
     historicalReview.institutionalMemoryPressure === 'MODERATE' ||
-    historicalReview.elevatedCount > 0 ||
     historicalReview.evidenceGap
   ) {
     return 'WATCHED_MEMORY'
@@ -178,13 +192,23 @@ function deriveMemoryPosture(
   return 'STABLE_MEMORY'
 }
 
-function deriveCompressionUrgency(
+function deriveCompressionUrgency({
+  historicalReview,
+  memoryPosture,
+  survivabilityAttentionRequired,
+  recurrenceAttentionRequired,
+  evidenceAttentionRequired,
+}: {
   historicalReview: CGIHistoricalContinuityReview
-): CGIMemoryCompressionUrgency {
+  memoryPosture: CGIExecutiveMemoryPosture
+  survivabilityAttentionRequired: boolean
+  recurrenceAttentionRequired: boolean
+  evidenceAttentionRequired: boolean
+}): CGIMemoryCompressionUrgency {
   if (historicalReview.snapshotCount === 0) return 'NONE'
 
   if (
-    historicalReview.executiveEscalationRequired ||
+    memoryPosture === 'CRITICAL_MEMORY' ||
     historicalReview.continuityPersistenceSeverity === 'CRITICAL' ||
     historicalReview.institutionalMemoryPressure === 'EXECUTIVE'
   ) {
@@ -192,6 +216,7 @@ function deriveCompressionUrgency(
   }
 
   if (
+    memoryPosture === 'ELEVATED_MEMORY' ||
     historicalReview.continuityPersistenceSeverity === 'HIGH' ||
     historicalReview.institutionalMemoryPressure === 'HEAVY'
   ) {
@@ -199,9 +224,12 @@ function deriveCompressionUrgency(
   }
 
   if (
+    memoryPosture === 'WATCHED_MEMORY' ||
     historicalReview.continuityPersistenceSeverity === 'MODERATE' ||
     historicalReview.institutionalMemoryPressure === 'MODERATE' ||
-    historicalReview.evidenceGap
+    survivabilityAttentionRequired ||
+    recurrenceAttentionRequired ||
+    evidenceAttentionRequired
   ) {
     return 'MODERATE'
   }
@@ -222,9 +250,7 @@ function deriveCompressionConfidence(
   if (historicalReview.snapshotCount === 0) return 'NOT_ESTABLISHED'
 
   const evidenceRatio =
-    historicalReview.snapshotCount === 0
-      ? 0
-      : historicalReview.evidenceVerifiedCount / historicalReview.snapshotCount
+    historicalReview.evidenceVerifiedCount / historicalReview.snapshotCount
 
   if (
     evidenceRatio >= 0.8 &&
@@ -245,12 +271,14 @@ function deriveCompressionConfidence(
 
 function deriveDominantMemoryConcern({
   historicalReview,
+  memoryPosture,
   executiveEscalationRequired,
   survivabilityAttentionRequired,
   recurrenceAttentionRequired,
   evidenceAttentionRequired,
 }: {
   historicalReview: CGIHistoricalContinuityReview
+  memoryPosture: CGIExecutiveMemoryPosture
   executiveEscalationRequired: boolean
   survivabilityAttentionRequired: boolean
   recurrenceAttentionRequired: boolean
@@ -261,7 +289,15 @@ function deriveDominantMemoryConcern({
   }
 
   if (executiveEscalationRequired) {
-    return 'Executive continuity exposure remains visible in institutional memory.'
+    return 'Confirmed executive continuity exposure remains visible in institutional memory.'
+  }
+
+  if (memoryPosture === 'ELEVATED_MEMORY') {
+    return 'Elevated continuity exposure remains visible and should stay under executive review.'
+  }
+
+  if (memoryPosture === 'WATCHED_MEMORY' && evidenceAttentionRequired) {
+    return 'Continuity exposure is visible, but current memory is not mature enough for critical classification.'
   }
 
   if (survivabilityAttentionRequired) {
@@ -308,6 +344,10 @@ function deriveRequiredExecutiveAction({
     return 'Maintain executive escalation until continuity exposure, evidence gaps, and survivability pressure are resolved.'
   }
 
+  if (urgency === 'HIGH') {
+    return 'Maintain executive review until elevated continuity exposure is supported by verified stabilization evidence.'
+  }
+
   if (survivabilityAttentionRequired) {
     return 'Keep survivability pressure visible until recovery credibility is supported by evidence.'
   }
@@ -317,7 +357,7 @@ function deriveRequiredExecutiveAction({
   }
 
   if (evidenceAttentionRequired) {
-    return 'Require evidence follow-up before accepting stabilization credibility.'
+    return 'Continue evidence follow-up before accepting stabilization credibility.'
   }
 
   if (stabilizationCredible) {
@@ -343,7 +383,7 @@ function deriveRequiredEvidence({
   }
 
   if (evidenceAttentionRequired) {
-    return 'Verified stabilization evidence is required for all unresolved continuity records.'
+    return 'Verified stabilization evidence is required before confidence can improve.'
   }
 
   if (survivabilityAttentionRequired) {
