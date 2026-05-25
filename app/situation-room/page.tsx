@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
@@ -10,13 +10,18 @@ import { buildCGIExecutiveBriefing } from '@/lib/cgiExecutiveBriefingGenerator'
 import { buildCGIContinuitySnapshot } from '@/lib/cgiContinuitySnapshotEngine'
 import { reviewCGIExecutiveHistory } from '@/lib/cgiExecutiveHistoryEngine'
 import { buildCGIExecutiveReportPackage } from '@/lib/cgiExecutiveReportingEngine'
-import { saveCGISituationReview } from '@/lib/cgiPersistenceEngine'
+import {
+  loadCGISituationReviews,
+  saveCGISituationReview,
+} from '@/lib/cgiPersistenceEngine'
 import {
   formatCGIExecutivePosture,
   formatCGIEvidenceLanguage,
   formatCGISurvivabilityLanguage,
   formatCGIGovernanceSafeLanguage,
 } from '@/lib/cgiExecutivePostureFormatter'
+
+type PersistedSituationReview = Record<string, any>
 
 export default function SituationRoomPage() {
   return (
@@ -37,6 +42,10 @@ export default function SituationRoomPage() {
 function SituationRoomContent() {
   const [saveMessage, setSaveMessage] = useState('')
   const [saving, setSaving] = useState(false)
+
+  const [reviews, setReviews] = useState<PersistedSituationReview[]>([])
+  const [loadingReviews, setLoadingReviews] = useState(false)
+  const [reviewMessage, setReviewMessage] = useState('')
 
   const briefing = buildCGIExecutiveBriefing({
     pressurePosture: 'ELEVATED',
@@ -106,6 +115,28 @@ function SituationRoomContent() {
 
   const governanceLanguage = formatCGIGovernanceSafeLanguage()
 
+  async function loadSituationReviews() {
+    try {
+      setLoadingReviews(true)
+      setReviewMessage('Loading persisted situation reviews...')
+
+      const loadedReviews = await loadCGISituationReviews()
+
+      setReviews(Array.isArray(loadedReviews) ? loadedReviews : [])
+
+      setReviewMessage('Situation review archive loaded.')
+    } catch (error) {
+      console.error(error)
+      setReviewMessage('Situation review archive could not be loaded.')
+    } finally {
+      setLoadingReviews(false)
+    }
+  }
+
+  useEffect(() => {
+    loadSituationReviews()
+  }, [])
+
   async function handleSaveSituationReview() {
     try {
       setSaving(true)
@@ -133,6 +164,8 @@ function SituationRoomContent() {
       })
 
       setSaveMessage('Executive situation review saved.')
+
+      await loadSituationReviews()
     } catch (error) {
       console.error(error)
       setSaveMessage('Executive situation review could not be saved.')
@@ -210,6 +243,38 @@ function SituationRoomContent() {
           </button>
         </section>
 
+        <section style={styles.actionPanel}>
+          <div>
+            <p style={styles.sectionKicker}>Situation Memory Retrieval</p>
+
+            <h2 style={styles.actionTitle}>
+              Retrieve persisted executive situation reviews.
+            </h2>
+
+            <p style={styles.actionText}>
+              CGI can now reconstruct historical executive operating pictures,
+              continuity drift signals, required actions, and survivability
+              interpretation across time.
+            </p>
+
+            {reviewMessage && (
+              <p style={styles.saveMessage}>{reviewMessage}</p>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={loadSituationReviews}
+            disabled={loadingReviews}
+            style={{
+              ...styles.secondaryButton,
+              ...(loadingReviews ? styles.disabledButton : {}),
+            }}
+          >
+            {loadingReviews ? 'Refreshing...' : 'Refresh Reviews'}
+          </button>
+        </section>
+
         <section style={styles.gridFour}>
           <SignalCard
             title="Continuity Posture"
@@ -249,6 +314,82 @@ function SituationRoomContent() {
             <PriorityItem title="Evidence" body={evidenceLanguage} />
             <PriorityItem title="Survivability" body={survivabilityLanguage} />
             <PriorityItem title="Governance Meaning" body={governanceLanguage} />
+          </div>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Persisted Situation Archive</p>
+
+          <h2 style={styles.cardTitle}>
+            Executive situation reviews retrieved from Supabase.
+          </h2>
+
+          <p style={styles.bodyText}>
+            Review Count: {reviews.length}
+          </p>
+
+          <div style={styles.archiveList}>
+            {reviews.length === 0 ? (
+              <p style={styles.emptyText}>
+                No persisted situation reviews are currently available.
+              </p>
+            ) : (
+              reviews.map((item, index) => (
+                <article
+                  key={item.id ?? `${getReviewValue(item, 'createdAt')}-${index}`}
+                  style={styles.archiveItem}
+                >
+                  <div style={styles.archiveHeader}>
+                    <div>
+                      <p style={styles.panelKicker}>
+                        {getReviewValue(item, 'reportClassification') ??
+                          'SITUATION_REVIEW'}
+                      </p>
+
+                      <h3 style={styles.archiveTitle}>
+                        {getReviewValue(item, 'situationTitle') ??
+                          'Executive Continuity Situation Room'}
+                      </h3>
+                    </div>
+
+                    <p style={styles.archiveDate}>
+                      {formatDate(getReviewValue(item, 'createdAt'))}
+                    </p>
+                  </div>
+
+                  <div style={styles.archiveGrid}>
+                    <PriorityItem
+                      title="Situation Posture"
+                      body={
+                        getReviewValue(item, 'situationPosture') ??
+                        'Not recorded'
+                      }
+                    />
+
+                    <PriorityItem
+                      title="History Direction"
+                      body={
+                        getReviewValue(item, 'historyDirection') ??
+                        'Not recorded'
+                      }
+                    />
+
+                    <PriorityItem
+                      title="Required Action"
+                      body={
+                        getReviewValue(item, 'requiredExecutiveAction') ??
+                        'Not recorded'
+                      }
+                    />
+                  </div>
+
+                  <p style={styles.archiveSummary}>
+                    {getReviewValue(item, 'executiveSummary') ??
+                      'No executive summary was recorded for this review.'}
+                  </p>
+                </article>
+              ))
+            )}
           </div>
         </section>
 
@@ -314,6 +455,40 @@ function SituationRoomContent() {
       </div>
     </main>
   )
+}
+
+function getReviewValue(
+  review: PersistedSituationReview,
+  key: string,
+): string | null {
+  const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
+
+  const value =
+    review[key] ??
+    review[snakeKey] ??
+    review.rawPayload?.report?.[key] ??
+    review.raw_payload?.report?.[key] ??
+    null
+
+  if (value === null || value === undefined) {
+    return null
+  }
+
+  return String(value)
+}
+
+function formatDate(value: string | null) {
+  if (!value) {
+    return 'Date not recorded'
+  }
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return date.toLocaleString()
 }
 
 function SignalCard({
@@ -477,6 +652,19 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: '14px',
     background: '#67e8f9',
     color: '#082f49',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 900,
+    minHeight: '48px',
+    padding: '0 18px',
+    whiteSpace: 'nowrap',
+  },
+
+  secondaryButton: {
+    border: '1px solid #67e8f9',
+    borderRadius: '14px',
+    background: '#0f172a',
+    color: '#cffafe',
     cursor: 'pointer',
     fontSize: '14px',
     fontWeight: 900,
@@ -673,5 +861,61 @@ const styles: Record<string, CSSProperties> = {
     minHeight: '260px',
     fontSize: '14px',
     overflowX: 'auto',
+  },
+
+  archiveList: {
+    display: 'grid',
+    gap: '14px',
+    marginTop: '16px',
+  },
+
+  archiveItem: {
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '18px',
+    padding: '16px',
+  },
+
+  archiveHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: '14px',
+    alignItems: 'flex-start',
+    marginBottom: '14px',
+  },
+
+  archiveTitle: {
+    color: '#f8fafc',
+    fontSize: '20px',
+    lineHeight: 1.2,
+    margin: '8px 0 0',
+  },
+
+  archiveDate: {
+    color: '#a5f3fc',
+    fontWeight: 800,
+    fontSize: '13px',
+    lineHeight: 1.4,
+    margin: 0,
+    textAlign: 'right',
+    minWidth: '180px',
+  },
+
+  archiveGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: '12px',
+  },
+
+  archiveSummary: {
+    color: '#cbd5e1',
+    lineHeight: 1.65,
+    margin: '14px 0 0',
+  },
+
+  emptyText: {
+    color: '#cbd5e1',
+    lineHeight: 1.6,
+    margin: 0,
   },
 }
