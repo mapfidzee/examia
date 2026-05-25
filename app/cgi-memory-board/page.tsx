@@ -1,8 +1,33 @@
+'use client'
+
+import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import InfrastructureNav from '@/components/InfrastructureNav'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
+import { buildCGIExecutiveMemoryBoard } from '@/lib/cgiExecutiveMemoryBoardEngine'
+import type { CGIHistoricalContinuitySnapshot } from '@/lib/cgiHistoricalContinuityEngine'
+import { loadCGIContinuitySnapshots } from '@/lib/cgiPersistenceEngine'
+
+type PersistedContinuitySnapshot = CGIHistoricalContinuitySnapshot & {
+  id: string
+  created_at: string
+  snapshot_label: string | null
+  source_route: string
+  continuity_confidence: string | null
+  survivability_pressure: string | null
+  recovery_credibility: string | null
+  recurrence_severity: string | null
+  dominant_concern: string | null
+  executive_reading: string | null
+  required_action: string | null
+  required_evidence: string | null
+  evidence_verified: boolean
+  accountability_active: boolean
+  structural_memory_visible: boolean
+  raw_payload: Record<string, unknown>
+}
 
 export default function CGIMemoryBoardPage() {
   return (
@@ -21,6 +46,40 @@ export default function CGIMemoryBoardPage() {
 }
 
 function CGIMemoryBoardContent() {
+  const [snapshots, setSnapshots] = useState<PersistedContinuitySnapshot[]>([])
+  const [message, setMessage] = useState('Loading executive memory board...')
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    loadMemoryBoard()
+  }, [])
+
+  async function loadMemoryBoard() {
+    try {
+      setLoading(true)
+      setMessage('Loading executive memory board...')
+
+      const records = await loadCGIContinuitySnapshots(50)
+
+      setSnapshots(records as PersistedContinuitySnapshot[])
+      setMessage(
+        records.length === 0
+          ? 'No continuity memory records found yet.'
+          : 'Executive memory board loaded.'
+      )
+    } catch (error) {
+      console.error(error)
+      setMessage('Executive memory board could not be loaded.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const board = useMemo(
+    () => buildCGIExecutiveMemoryBoard(snapshots),
+    [snapshots]
+  )
+
   return (
     <main style={styles.page}>
       <div style={styles.container}>
@@ -33,155 +92,285 @@ function CGIMemoryBoardContent() {
 
           <p style={styles.subtitle}>
             Governed executive memory surface for compressing persisted CGI
-            continuity meaning across reports, situation reviews, coordination
-            reviews, site continuity profiles, operational metrics, and audit
-            evidence.
+            continuity meaning into board-level posture, urgency, escalation,
+            evidence, recurrence, survivability, and stabilization credibility.
           </p>
         </section>
 
+        {message && <div style={styles.message}>{message}</div>}
+
         <section style={styles.heroCard}>
           <div>
-            <p style={styles.sectionKicker}>Locked Doctrine Boundary</p>
+            <p style={styles.sectionKicker}>Board-Level Memory Reading</p>
 
-            <h2 style={styles.heroTitle}>
-              Institutional continuity memory, not dashboard noise.
-            </h2>
+            <h2 style={styles.heroTitle}>{board.boardPostureLabel}</h2>
 
-            <p style={styles.heroMeaning}>
-              The CGI Memory Board is reserved for executive compression of
-              continuity history. It will summarize what persisted, what
-              worsened, what improved, what recurred, what lacked evidence, and
-              what remained survivability-relevant across governed continuity
-              records.
-            </p>
+            <p style={styles.heroMeaning}>{board.executiveSummary}</p>
           </div>
 
           <div style={styles.statusBox}>
-            <p style={styles.statusLabel}>Build State</p>
+            <p style={styles.statusLabel}>Board Urgency</p>
 
-            <p style={styles.statusValue}>LOCKED EARLY</p>
+            <p style={styles.statusValue}>{board.boardUrgencyLabel}</p>
           </div>
+        </section>
+
+        <section style={styles.actionPanel}>
+          <div>
+            <p style={styles.sectionKicker}>Live Memory Compression</p>
+
+            <h2 style={styles.actionTitle}>
+              Compress governed continuity memory into executive meaning.
+            </h2>
+
+            <p style={styles.actionText}>
+              This board uses the CGI executive memory board engine to unify
+              historical review, executive compression, survivability exposure,
+              recurrence visibility, and evidence credibility.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={loadMemoryBoard}
+            disabled={loading}
+            style={{
+              ...styles.primaryButton,
+              ...(loading ? styles.disabledButton : {}),
+            }}
+          >
+            {loading ? 'Refreshing...' : 'Refresh Memory'}
+          </button>
         </section>
 
         <section style={styles.gridThree}>
           <SignalCard
-            title="Current Boundary"
-            value="DOCTRINE"
-            body="This route locks the executive memory concept before full intelligence aggregation is built."
+            title="Board Posture"
+            value={board.boardPostureLabel}
+            body="Compressed executive memory posture derived from persisted continuity records."
           />
 
           <SignalCard
-            title="Current Mode"
-            value="NO DRIFT"
-            body="The Memory Board must not become a generic analytics dashboard or duplicate existing pages."
+            title="Board Urgency"
+            value={board.boardUrgencyLabel}
+            body="Executive urgency level derived from persistence severity, escalation, and memory pressure."
           />
 
           <SignalCard
-            title="Future Role"
-            value="COMPRESSION"
-            body="This surface will compress persisted continuity memory into executive-grade meaning."
+            title="Escalation Required"
+            value={board.escalationRequired ? 'YES' : 'NO'}
+            body="Indicates whether memory compression requires continued executive visibility."
+          />
+        </section>
+
+        <section style={styles.gridThree}>
+          <SignalCard
+            title="Memory Posture"
+            value={board.compression.memoryPostureLabel}
+            body="Executive memory posture from the compression engine."
+          />
+
+          <SignalCard
+            title="Compression Urgency"
+            value={board.compression.urgencyLabel}
+            body="Urgency level from executive memory compression."
+          />
+
+          <SignalCard
+            title="Compression Confidence"
+            value={board.compression.confidenceLabel}
+            body="Confidence based on available evidence and stabilization credibility."
+          />
+        </section>
+
+        <section style={styles.gridThree}>
+          <SignalCard
+            title="Survivability Exposure"
+            value={board.survivabilityExposureVisible ? 'VISIBLE' : 'NOT VISIBLE'}
+            body="Shows whether survivability pressure remains active in memory."
+          />
+
+          <SignalCard
+            title="Recurrence Pattern"
+            value={board.recurrencePatternVisible ? 'VISIBLE' : 'NOT VISIBLE'}
+            body="Shows whether recurrence or structural memory is visible."
+          />
+
+          <SignalCard
+            title="Evidence Gap"
+            value={board.evidenceGapVisible ? 'VISIBLE' : 'NOT VISIBLE'}
+            body="Shows whether evidence gaps limit stabilization credibility."
+          />
+        </section>
+
+        <section style={styles.gridThree}>
+          <SignalCard
+            title="Memory Pressure"
+            value={board.institutionalMemoryPressure}
+            body="Institutional pressure carried by persisted continuity memory."
+          />
+
+          <SignalCard
+            title="Persistence Severity"
+            value={board.continuityPersistenceSeverity}
+            body="Severity of continuity persistence across historical memory."
+          />
+
+          <SignalCard
+            title="Snapshot Count"
+            value={String(board.historicalReview.snapshotCount)}
+            body="Number of continuity snapshots compressed into the board reading."
           />
         </section>
 
         <section style={styles.card}>
-          <p style={styles.sectionKicker}>What This Board Will Eventually Answer</p>
+          <p style={styles.sectionKicker}>Dominant Board Concern</p>
 
-          <h2 style={styles.cardTitle}>
-            CGI memory must help leadership see continuity patterns across time.
-          </h2>
+          <h2 style={styles.cardTitle}>{board.dominantBoardConcern}</h2>
 
-          <div style={styles.memoryList}>
-            <MemoryItem
-              title="What worsened?"
-              body="Detect continuity posture that moved toward elevated or critical exposure."
-            />
-
-            <MemoryItem
-              title="What improved?"
-              body="Detect movement toward watched or stable posture after prior exposure."
-            />
-
-            <MemoryItem
-              title="What recurred?"
-              body="Identify repeated structural memory, repeated drift, or repeated site-level exposure."
-            />
-
-            <MemoryItem
-              title="What lacked evidence?"
-              body="Surface continuity records where stabilization claims were not supported by verified evidence."
-            />
-
-            <MemoryItem
-              title="What remained survivability-relevant?"
-              body="Preserve executive visibility where pressure, recovery credibility, or reliability concerns persist."
-            />
-
-            <MemoryItem
-              title="What requires executive action?"
-              body="Convert persisted continuity memory into disciplined, governance-safe leadership priorities."
-            />
-          </div>
+          <p style={styles.bodyText}>{board.boardReading}</p>
         </section>
 
         <section style={styles.gridTwo}>
-          <Panel title="Memory Sources">
-            <div style={styles.sourceList}>
-              <SourceItem label="Continuity Snapshots" />
-              <SourceItem label="Executive Reports" />
-              <SourceItem label="Situation Reviews" />
-              <SourceItem label="Coordination Reviews" />
-              <SourceItem label="Site Continuity Profiles" />
-              <SourceItem label="Operational Metrics" />
-              <SourceItem label="Snapshot Audit Log" />
-            </div>
+          <Panel title="Required Board Action">
+            <p style={styles.panelText}>{board.requiredBoardAction}</p>
           </Panel>
 
-          <Panel title="Strict Boundary">
+          <Panel title="Required Board Evidence">
+            <p style={styles.panelText}>{board.requiredBoardEvidence}</p>
+          </Panel>
+        </section>
+
+        <section style={styles.gridTwo}>
+          <Panel title="Continuity Memory Statement">
             <p style={styles.panelText}>
-              This page is intentionally not a full analytics board yet. Its
-              purpose is to reserve the executive memory layer, protect the
-              doctrine, and prevent future drift. Full aggregation should only
-              be added after the historical continuity engine is centralized.
+              {board.compression.continuityMemoryStatement}
             </p>
+          </Panel>
+
+          <Panel title="Board-Level Reading">
+            <p style={styles.panelText}>{board.compression.boardLevelReading}</p>
           </Panel>
         </section>
 
         <section style={styles.card}>
-          <p style={styles.sectionKicker}>Implementation Sequence</p>
+          <p style={styles.sectionKicker}>Executive Compression Summary</p>
 
           <h2 style={styles.cardTitle}>
-            Build the engine first, then populate this board.
+            CGI memory compresses continuity history into leadership meaning.
           </h2>
 
-          <div style={styles.sequenceGrid}>
-            <SequenceItem
-              step="01"
-              title="Historical Continuity Engine"
-              body="Move continuity-history interpretation logic into a reusable engine."
-            />
+          <p style={styles.bodyText}>
+            {board.compression.executiveCompressionSummary}
+          </p>
+        </section>
 
-            <SequenceItem
-              step="02"
-              title="Memory Compression Engine"
-              body="Create disciplined executive compression across persisted CGI records."
-            />
+        <section style={styles.gridTwo}>
+          <Panel title="Historical Review">
+            <div style={styles.infoList}>
+              <Info
+                label="Direction"
+                value={board.historicalReview.directionLabel}
+              />
+              <Info
+                label="Trend"
+                value={board.historicalReview.historicalTrendLabel}
+              />
+              <Info
+                label="Recovery"
+                value={board.historicalReview.recoveryTrajectoryLabel}
+              />
+              <Info
+                label="Stabilization"
+                value={board.historicalReview.stabilizationCredibilityLabel}
+              />
+              <Info
+                label="Current Posture"
+                value={board.historicalReview.currentPosture}
+              />
+            </div>
+          </Panel>
 
-            <SequenceItem
-              step="03"
-              title="Memory Board Wiring"
-              body="Connect this route to real compressed continuity intelligence."
-            />
+          <Panel title="Memory Visibility">
+            <div style={styles.infoList}>
+              <Info
+                label="Stabilization Visible"
+                value={board.stabilizationCredibilityVisible ? 'YES' : 'NO'}
+              />
+              <Info
+                label="Survivability Visible"
+                value={board.survivabilityExposureVisible ? 'YES' : 'NO'}
+              />
+              <Info
+                label="Recurrence Visible"
+                value={board.recurrencePatternVisible ? 'YES' : 'NO'}
+              />
+              <Info
+                label="Evidence Gap Visible"
+                value={board.evidenceGapVisible ? 'YES' : 'NO'}
+              />
+              <Info
+                label="Stabilization Credible"
+                value={board.compression.stabilizationCredible ? 'YES' : 'NO'}
+              />
+            </div>
+          </Panel>
+        </section>
 
-            <SequenceItem
-              step="04"
-              title="Executive Readiness Review"
-              body="Validate that the board remains governance-safe, concise, and non-punitive."
-            />
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Memory Doctrine Statement</p>
+
+          <h2 style={styles.cardTitle}>
+            Institutional continuity memory, not dashboard noise.
+          </h2>
+
+          <p style={styles.bodyText}>{board.memoryDoctrineStatement}</p>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Compressed Memory Timeline</p>
+
+          <h2 style={styles.cardTitle}>
+            Board memory remains grounded in persisted continuity records.
+          </h2>
+
+          <div style={styles.memoryList}>
+            {snapshots.length === 0 ? (
+              <p style={styles.emptyText}>
+                No persisted continuity records are available for compression.
+              </p>
+            ) : (
+              snapshots.slice(0, 10).map((snapshot) => (
+                <MemoryItem
+                  key={snapshot.id}
+                  title={`${snapshot.continuity_posture} • ${formatDate(
+                    snapshot.created_at
+                  )}`}
+                  body={
+                    snapshot.executive_reading ||
+                    snapshot.dominant_concern ||
+                    'No executive reading was recorded for this memory record.'
+                  }
+                />
+              ))
+            )}
           </div>
         </section>
       </div>
     </main>
   )
+}
+
+function formatDate(value: string) {
+  if (!value) return 'Not recorded'
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return date.toLocaleString()
 }
 
 function SignalCard({
@@ -220,36 +409,6 @@ function MemoryItem({
   )
 }
 
-function SourceItem({ label }: { label: string }) {
-  return (
-    <div style={styles.sourceItem}>
-      <span style={styles.sourceDot} />
-
-      <span>{label}</span>
-    </div>
-  )
-}
-
-function SequenceItem({
-  step,
-  title,
-  body,
-}: {
-  step: string
-  title: string
-  body: string
-}) {
-  return (
-    <article style={styles.sequenceItem}>
-      <p style={styles.sequenceStep}>{step}</p>
-
-      <h3 style={styles.sequenceTitle}>{title}</h3>
-
-      <p style={styles.sequenceBody}>{body}</p>
-    </article>
-  )
-}
-
 function Panel({
   title,
   children,
@@ -263,6 +422,16 @@ function Panel({
 
       <div style={styles.panelBody}>{children}</div>
     </section>
+  )
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={styles.infoRow}>
+      <span style={styles.infoLabel}>{label}</span>
+
+      <strong style={styles.infoValue}>{value}</strong>
+    </div>
   )
 }
 
@@ -302,6 +471,15 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '16px',
     margin: 0,
   },
+  message: {
+    background: '#083344',
+    color: '#cffafe',
+    padding: '12px 14px',
+    borderRadius: '14px',
+    fontWeight: 800,
+    marginBottom: '16px',
+    fontSize: '14px',
+  },
   heroCard: {
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1.35fr) minmax(240px, 0.65fr)',
@@ -312,6 +490,46 @@ const styles: Record<string, CSSProperties> = {
     padding: '24px',
     marginBottom: '16px',
     boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
+  },
+  actionPanel: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1fr) auto',
+    gap: '16px',
+    alignItems: 'center',
+    background: '#082f49',
+    border: '1px solid #0ea5e9',
+    borderRadius: '22px',
+    padding: '18px',
+    marginBottom: '16px',
+    boxSizing: 'border-box',
+  },
+  actionTitle: {
+    color: '#f8fafc',
+    fontSize: '22px',
+    lineHeight: 1.2,
+    margin: '8px 0',
+  },
+  actionText: {
+    color: '#cbd5e1',
+    lineHeight: 1.55,
+    margin: 0,
+    maxWidth: '760px',
+  },
+  primaryButton: {
+    border: 'none',
+    borderRadius: '14px',
+    background: '#67e8f9',
+    color: '#082f49',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 900,
+    minHeight: '48px',
+    padding: '0 18px',
+    whiteSpace: 'nowrap',
+  },
+  disabledButton: {
+    cursor: 'not-allowed',
+    opacity: 0.65,
   },
   sectionKicker: {
     color: '#94a3b8',
@@ -352,10 +570,11 @@ const styles: Record<string, CSSProperties> = {
   },
   statusValue: {
     color: '#cffafe',
-    fontSize: '30px',
+    fontSize: '28px',
     lineHeight: 1.1,
     margin: 0,
     fontWeight: 900,
+    overflowWrap: 'anywhere',
   },
   gridThree: {
     display: 'grid',
@@ -379,9 +598,10 @@ const styles: Record<string, CSSProperties> = {
   },
   signalValue: {
     color: '#f8fafc',
-    fontSize: '28px',
+    fontSize: '22px',
     lineHeight: 1.15,
     margin: '10px 0',
+    overflowWrap: 'anywhere',
   },
   card: {
     background: '#020617',
@@ -398,6 +618,12 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '26px',
     lineHeight: 1.15,
     margin: '10px 0 10px',
+  },
+  bodyText: {
+    color: '#cbd5e1',
+    lineHeight: 1.7,
+    margin: 0,
+    maxWidth: '880px',
   },
   memoryList: {
     display: 'grid',
@@ -447,53 +673,35 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.7,
     margin: 0,
   },
-  sourceList: {
+  infoList: {
     display: 'grid',
     gap: '10px',
-    marginTop: '10px',
+    marginTop: '14px',
   },
-  sourceItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    color: '#e2e8f0',
-    fontWeight: 800,
-  },
-  sourceDot: {
-    width: '9px',
-    height: '9px',
-    borderRadius: '999px',
-    background: '#67e8f9',
-    flexShrink: 0,
-  },
-  sequenceGrid: {
+  infoRow: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gridTemplateColumns: '160px minmax(0, 1fr)',
     gap: '12px',
-    marginTop: '16px',
+    background: '#020617',
+    border: '1px solid #1e293b',
+    borderRadius: '14px',
+    padding: '12px',
+    alignItems: 'start',
   },
-  sequenceItem: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '16px',
-  },
-  sequenceStep: {
-    color: '#67e8f9',
+  infoLabel: {
+    color: '#94a3b8',
+    fontWeight: 800,
     fontSize: '12px',
-    fontWeight: 900,
-    letterSpacing: '0.12em',
-    margin: 0,
   },
-  sequenceTitle: {
+  infoValue: {
     color: '#f8fafc',
-    fontSize: '18px',
-    lineHeight: 1.2,
-    margin: '10px 0',
+    lineHeight: 1.45,
+    overflowWrap: 'anywhere',
   },
-  sequenceBody: {
-    color: '#cbd5e1',
-    lineHeight: 1.55,
+  emptyText: {
+    color: '#94a3b8',
+    lineHeight: 1.6,
     margin: 0,
+    fontWeight: 700,
   },
 }
