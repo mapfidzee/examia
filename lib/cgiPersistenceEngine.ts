@@ -49,33 +49,34 @@ export type CGISituationReviewRecord = {
 }
 
 export type CGICoordinationReviewRecord = {
-  coordinationTitle: string
+  reviewTitle: string
+  coordinationScope: string
+  dominantSiteName?: string
   coordinationPosture: string
-  coordinationScope?: string
-  coordinationSummary?: string
-  dominantCoordinationConcern?: string
-  crossSiteRisk?: string
-  requiredCoordinationAction?: string
+  executiveCoordinationCount?: number
+  activeCoordinationCount?: number
+  structuralMemoryCount?: number
+  coordinationReading?: string
+  requiredAction?: string
   requiredEvidence?: string
-  escalationRequired?: boolean
-  continuityDriftDetected?: boolean
   rawPayload?: Record<string, unknown>
 }
 
 export type CGISiteContinuityProfileRecord = {
   siteName: string
-  siteRegion?: string
+  region?: string
   siteType?: string
   continuityPosture: string
-  continuityTrend?: string
-  survivabilityPressure?: string
-  recoveryCredibility?: string
-  recurrenceSeverity?: string
-  dominantConcern?: string
-  requiredAction?: string
-  requiredEvidence?: string
-  escalationRequired?: boolean
+  coordinationNeed?: string
+  pressurePosture?: string
+  trajectoryPosture?: string
+  predictivePosture?: string
+  recoveryPosture?: string
+  reliabilityPosture?: string
+  evidenceVerified?: boolean
+  accountabilityActive?: boolean
   structuralMemoryVisible?: boolean
+  executiveSummary?: string
   rawPayload?: Record<string, unknown>
 }
 
@@ -176,18 +177,16 @@ export async function saveCGICoordinationReview(
   const { data, error } = await supabase
     .from('cgi_coordination_reviews')
     .insert({
-      coordination_title: record.coordinationTitle,
+      review_title: record.reviewTitle,
+      coordination_scope: record.coordinationScope,
+      dominant_site_name: record.dominantSiteName ?? null,
       coordination_posture: record.coordinationPosture,
-      coordination_scope: record.coordinationScope ?? null,
-      coordination_summary: record.coordinationSummary ?? null,
-      dominant_coordination_concern:
-        record.dominantCoordinationConcern ?? null,
-      cross_site_risk: record.crossSiteRisk ?? null,
-      required_coordination_action:
-        record.requiredCoordinationAction ?? null,
+      executive_coordination_count: record.executiveCoordinationCount ?? 0,
+      active_coordination_count: record.activeCoordinationCount ?? 0,
+      structural_memory_count: record.structuralMemoryCount ?? 0,
+      coordination_reading: record.coordinationReading ?? null,
+      required_action: record.requiredAction ?? null,
       required_evidence: record.requiredEvidence ?? null,
-      escalation_required: record.escalationRequired ?? false,
-      continuity_drift_detected: record.continuityDriftDetected ?? false,
       raw_payload: record.rawPayload ?? {},
     })
     .select()
@@ -207,18 +206,19 @@ export async function saveCGISiteContinuityProfile(
     .from('cgi_site_continuity_profiles')
     .insert({
       site_name: record.siteName,
-      site_region: record.siteRegion ?? null,
+      region: record.region ?? null,
       site_type: record.siteType ?? null,
       continuity_posture: record.continuityPosture,
-      continuity_trend: record.continuityTrend ?? null,
-      survivability_pressure: record.survivabilityPressure ?? null,
-      recovery_credibility: record.recoveryCredibility ?? null,
-      recurrence_severity: record.recurrenceSeverity ?? null,
-      dominant_concern: record.dominantConcern ?? null,
-      required_action: record.requiredAction ?? null,
-      required_evidence: record.requiredEvidence ?? null,
-      escalation_required: record.escalationRequired ?? false,
+      coordination_need: record.coordinationNeed ?? 'ROUTINE',
+      pressure_posture: record.pressurePosture ?? null,
+      trajectory_posture: record.trajectoryPosture ?? null,
+      predictive_posture: record.predictivePosture ?? null,
+      recovery_posture: record.recoveryPosture ?? null,
+      reliability_posture: record.reliabilityPosture ?? null,
+      evidence_verified: record.evidenceVerified ?? false,
+      accountability_active: record.accountabilityActive ?? false,
       structural_memory_visible: record.structuralMemoryVisible ?? false,
+      executive_summary: record.executiveSummary ?? null,
       raw_payload: record.rawPayload ?? {},
     })
     .select()

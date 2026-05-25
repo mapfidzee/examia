@@ -154,13 +154,6 @@ function CoordinationCenterContent() {
     (site) => site.structuralMemoryVisible
   ).length
 
-  const escalationRequired = executiveCoordinationCount > 0
-  const continuityDriftDetected = siteBriefings.some(
-    ({ briefing }) =>
-      briefing.synthesis.synthesisPosture === 'ELEVATED' ||
-      briefing.synthesis.synthesisPosture === 'CRITICAL'
-  )
-
   const coordinationScope = `${coordinationSites.length} sites reviewed • ${executiveCoordinationCount} executive • ${activeCoordinationCount} active`
 
   async function loadCoordinationReviews() {
@@ -190,16 +183,16 @@ function CoordinationCenterContent() {
       setSaveMessage('Saving coordination review...')
 
       await saveCGICoordinationReview({
-        coordinationTitle: 'Executive Continuity Coordination Center',
-        coordinationPosture: dominantBriefing.synthesis.synthesisPosture,
+        reviewTitle: 'Executive Continuity Coordination Center',
         coordinationScope,
-        coordinationSummary: dominantBriefing.executiveSummary,
-        dominantCoordinationConcern: dominantBriefing.dominantConcern,
-        crossSiteRisk: executivePosture.headline,
-        requiredCoordinationAction: executivePosture.actionLanguage,
+        dominantSiteName: dominantSite.name,
+        coordinationPosture: dominantBriefing.synthesis.synthesisPosture,
+        executiveCoordinationCount,
+        activeCoordinationCount,
+        structuralMemoryCount,
+        coordinationReading: dominantBriefing.executiveSummary,
+        requiredAction: executivePosture.actionLanguage,
         requiredEvidence: evidenceLanguage,
-        escalationRequired,
-        continuityDriftDetected,
         rawPayload: {
           dominantSite,
           dominantBriefing,
@@ -272,8 +265,8 @@ function CoordinationCenterContent() {
 
             <p style={styles.actionText}>
               Saving the coordination review creates a durable record of
-              synchronization need, escalation pressure, evidence requirements,
-              and cross-site continuity exposure.
+              synchronization need, executive coordination pressure, evidence
+              requirements, and cross-site continuity exposure.
             </p>
 
             {saveMessage && <p style={styles.saveMessage}>{saveMessage}</p>}
@@ -302,8 +295,8 @@ function CoordinationCenterContent() {
 
             <p style={styles.actionText}>
               CGI can now reconstruct cross-site synchronization posture,
-              escalation need, required evidence, and coordination exposure
-              across time.
+              executive coordination need, required evidence, and coordination
+              exposure across time.
             </p>
 
             {reviewMessage && (
@@ -396,7 +389,7 @@ function CoordinationCenterContent() {
                       </p>
 
                       <h3 style={styles.archiveTitle}>
-                        {getReviewValue(item, 'coordinationTitle') ??
+                        {getReviewValue(item, 'reviewTitle') ??
                           'Executive Continuity Coordination Center'}
                       </h3>
                     </div>
@@ -416,25 +409,27 @@ function CoordinationCenterContent() {
                     />
 
                     <PriorityItem
-                      title="Escalation"
+                      title="Executive Coordination"
                       body={
-                        getReviewValue(item, 'escalationRequired') ??
-                        'Not recorded'
+                        getReviewValue(
+                          item,
+                          'executiveCoordinationCount'
+                        ) ?? '0'
                       }
                     />
 
                     <PriorityItem
-                      title="Cross-Site Risk"
+                      title="Structural Memory"
                       body={
-                        getReviewValue(item, 'crossSiteRisk') ??
-                        'Not recorded'
+                        getReviewValue(item, 'structuralMemoryCount') ??
+                        '0'
                       }
                     />
                   </div>
 
                   <p style={styles.archiveSummary}>
-                    {getReviewValue(item, 'coordinationSummary') ??
-                      'No coordination summary was recorded for this review.'}
+                    {getReviewValue(item, 'coordinationReading') ??
+                      'No coordination reading was recorded for this review.'}
                   </p>
                 </article>
               ))

@@ -179,36 +179,28 @@ function CrossSiteContent() {
       await Promise.all(
         siteBriefings.map(({ site, briefing }) => {
           const sitePosture = briefing.synthesis.synthesisPosture
-          const siteAction = formatCGIExecutivePosture(sitePosture)
+          const coordinationNeed =
+            sitePosture === 'CRITICAL'
+              ? 'EXECUTIVE'
+              : sitePosture === 'ELEVATED'
+                ? 'ACTIVE'
+                : 'ROUTINE'
 
           return saveCGISiteContinuityProfile({
             siteName: site.siteName,
-            siteRegion: site.region,
+            region: site.region,
             siteType: 'Operational Site',
             continuityPosture: sitePosture,
-            continuityTrend:
-              sitePosture === 'CRITICAL'
-                ? 'EXECUTIVE_ESCALATION'
-                : sitePosture === 'ELEVATED'
-                  ? 'ACTIVE_REVIEW'
-                  : 'WATCHED_STABILITY',
-            survivabilityPressure:
-              formatCGISurvivabilityLanguage(sitePosture),
-            recoveryCredibility:
-              site.evidenceVerified
-                ? 'Evidence verified; recovery credibility is stronger.'
-                : 'Evidence is not yet verified; recovery credibility remains under review.',
-            recurrenceSeverity: site.structuralMemoryVisible
-              ? 'Structural memory remains visible.'
-              : 'No active structural memory concentration is visible.',
-            dominantConcern: briefing.dominantConcern,
-            requiredAction: siteAction.actionLanguage,
-            requiredEvidence: formatCGIEvidenceLanguage(
-              site.evidenceVerified,
-              sitePosture
-            ),
-            escalationRequired: sitePosture === 'CRITICAL',
+            coordinationNeed,
+            pressurePosture: site.pressurePosture,
+            trajectoryPosture: site.trajectoryPosture,
+            predictivePosture: site.predictivePosture,
+            recoveryPosture: site.recoveryPosture,
+            reliabilityPosture: site.reliabilityPosture,
+            evidenceVerified: site.evidenceVerified,
+            accountabilityActive: site.accountabilityActive,
             structuralMemoryVisible: site.structuralMemoryVisible,
+            executiveSummary: briefing.executiveSummary,
             rawPayload: {
               site,
               briefing,
@@ -273,8 +265,8 @@ function CrossSiteContent() {
 
             <p style={styles.actionText}>
               Saving the profile set creates durable cross-site continuity
-              identity records for posture, survivability pressure, recovery
-              credibility, required evidence, and structural memory.
+              identity records for posture, coordination need, evidence status,
+              accountability, and structural memory.
             </p>
 
             {saveMessage && <p style={styles.saveMessage}>{saveMessage}</p>}
@@ -408,31 +400,31 @@ function CrossSiteContent() {
                     <PriorityItem
                       title="Region"
                       body={
-                        getProfileValue(item, 'siteRegion') ??
+                        getProfileValue(item, 'region') ??
                         'Not recorded'
                       }
                     />
 
                     <PriorityItem
-                      title="Trend"
+                      title="Coordination Need"
                       body={
-                        getProfileValue(item, 'continuityTrend') ??
+                        getProfileValue(item, 'coordinationNeed') ??
                         'Not recorded'
                       }
                     />
 
                     <PriorityItem
-                      title="Escalation"
+                      title="Evidence Verified"
                       body={
-                        getProfileValue(item, 'escalationRequired') ??
+                        getProfileValue(item, 'evidenceVerified') ??
                         'Not recorded'
                       }
                     />
                   </div>
 
                   <p style={styles.archiveSummary}>
-                    {getProfileValue(item, 'dominantConcern') ??
-                      'No dominant concern was recorded for this site profile.'}
+                    {getProfileValue(item, 'executiveSummary') ??
+                      'No executive summary was recorded for this site profile.'}
                   </p>
                 </article>
               ))
