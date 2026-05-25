@@ -62,6 +62,23 @@ export type CGICoordinationReviewRecord = {
   rawPayload?: Record<string, unknown>
 }
 
+export type CGISiteContinuityProfileRecord = {
+  siteName: string
+  siteRegion?: string
+  siteType?: string
+  continuityPosture: string
+  continuityTrend?: string
+  survivabilityPressure?: string
+  recoveryCredibility?: string
+  recurrenceSeverity?: string
+  dominantConcern?: string
+  requiredAction?: string
+  requiredEvidence?: string
+  escalationRequired?: boolean
+  structuralMemoryVisible?: boolean
+  rawPayload?: Record<string, unknown>
+}
+
 export async function saveCGIContinuitySnapshot(
   record: CGIContinuitySnapshotRecord
 ) {
@@ -183,6 +200,39 @@ export async function saveCGICoordinationReview(
   return data
 }
 
+export async function saveCGISiteContinuityProfile(
+  record: CGISiteContinuityProfileRecord
+) {
+  const { data, error } = await supabase
+    .from('cgi_site_continuity_profiles')
+    .insert({
+      site_name: record.siteName,
+      site_region: record.siteRegion ?? null,
+      site_type: record.siteType ?? null,
+      continuity_posture: record.continuityPosture,
+      continuity_trend: record.continuityTrend ?? null,
+      survivability_pressure: record.survivabilityPressure ?? null,
+      recovery_credibility: record.recoveryCredibility ?? null,
+      recurrence_severity: record.recurrenceSeverity ?? null,
+      dominant_concern: record.dominantConcern ?? null,
+      required_action: record.requiredAction ?? null,
+      required_evidence: record.requiredEvidence ?? null,
+      escalation_required: record.escalationRequired ?? false,
+      structural_memory_visible: record.structuralMemoryVisible ?? false,
+      raw_payload: record.rawPayload ?? {},
+    })
+    .select()
+    .single()
+
+  if (error) {
+    throw new Error(
+      `Failed to save CGI site continuity profile: ${error.message}`
+    )
+  }
+
+  return data
+}
+
 export async function loadCGIContinuitySnapshots(limit = 20) {
   const { data, error } = await supabase
     .from('cgi_continuity_snapshots')
@@ -239,6 +289,22 @@ export async function loadCGICoordinationReviews(limit = 20) {
   return data ?? []
 }
 
+export async function loadCGISiteContinuityProfiles(limit = 20) {
+  const { data, error } = await supabase
+    .from('cgi_site_continuity_profiles')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    throw new Error(
+      `Failed to load CGI site continuity profiles: ${error.message}`
+    )
+  }
+
+  return data ?? []
+}
+
 export async function fetchCGIExecutiveReports() {
   return loadCGIExecutiveReports(100)
 }
@@ -253,4 +319,8 @@ export async function fetchCGIContinuitySnapshots() {
 
 export async function fetchCGICoordinationReviews() {
   return loadCGICoordinationReviews(100)
+}
+
+export async function fetchCGISiteContinuityProfiles() {
+  return loadCGISiteContinuityProfiles(100)
 }
