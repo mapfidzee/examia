@@ -6,14 +6,17 @@ import type { CSSProperties, ReactNode } from 'react'
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import InfrastructureNav from '@/components/InfrastructureNav'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
+import {
+  reviewCGIHistoricalContinuity,
+  type CGIHistoricalContinuitySnapshot,
+} from '@/lib/cgiHistoricalContinuityEngine'
 import { loadCGIContinuitySnapshots } from '@/lib/cgiPersistenceEngine'
 
-type PersistedContinuitySnapshot = {
+type PersistedContinuitySnapshot = CGIHistoricalContinuitySnapshot & {
   id: string
   created_at: string
   snapshot_label: string | null
   source_route: string
-  continuity_posture: string
   continuity_confidence: string | null
   survivability_pressure: string | null
   recovery_credibility: string | null
@@ -26,13 +29,6 @@ type PersistedContinuitySnapshot = {
   accountability_active: boolean
   structural_memory_visible: boolean
   raw_payload: Record<string, unknown>
-}
-
-const postureWeight: Record<string, number> = {
-  STABLE: 1,
-  WATCHED: 2,
-  ELEVATED: 3,
-  CRITICAL: 4,
 }
 
 export default function ContinuityHistoryPage() {
@@ -81,139 +77,10 @@ function ContinuityHistoryContent() {
     }
   }
 
-  const intelligence = useMemo(() => {
-    const latest = snapshots[0] || null
-    const oldest = snapshots[snapshots.length - 1] || null
-
-    const elevatedCount = snapshots.filter((snapshot) =>
-      ['ELEVATED', 'CRITICAL'].includes(snapshot.continuity_posture)
-    ).length
-
-    const criticalCount = snapshots.filter(
-      (snapshot) => snapshot.continuity_posture === 'CRITICAL'
-    ).length
-
-    const stableOrWatchedCount = snapshots.filter((snapshot) =>
-      ['STABLE', 'WATCHED'].includes(snapshot.continuity_posture)
-    ).length
-
-    const structuralMemoryCount = snapshots.filter(
-      (snapshot) => snapshot.structural_memory_visible
-    ).length
-
-    const evidenceVerifiedCount = snapshots.filter(
-      (snapshot) => snapshot.evidence_verified
-    ).length
-
-    const accountabilityActiveCount = snapshots.filter(
-      (snapshot) => snapshot.accountability_active
-    ).length
-
-    const latestWeight = latest
-      ? postureWeight[latest.continuity_posture] ?? 0
-      : 0
-
-    const oldestWeight = oldest
-      ? postureWeight[oldest.continuity_posture] ?? 0
-      : 0
-
-    const continuityDriftDetected =
-      snapshots.length > 1
-        ? latestWeight > oldestWeight
-        : elevatedCount > 0 || criticalCount > 0
-
-    const continuityImproving =
-      snapshots.length > 1 && latestWeight < oldestWeight
-
-    const survivabilityConcernPersisting =
-      criticalCount > 1 ||
-      snapshots.filter((snapshot) =>
-        String(snapshot.survivability_pressure || '')
-          .toUpperCase()
-          .includes('REVIEW')
-      ).length > 1
-
-    const recurrenceVisible =
-      structuralMemoryCount > 1 ||
-      snapshots.filter((snapshot) =>
-        String(snapshot.recurrence_severity || '')
-          .toUpperCase()
-          .includes('RECUR')
-      ).length > 1
-
-    const evidenceGap =
-      snapshots.length > 0 && evidenceVerifiedCount < snapshots.length
-
-    const direction =
-      snapshots.length === 0
-        ? 'NO MEMORY'
-        : criticalCount > 0 && continuityDriftDetected
-          ? 'DRIFTING TOWARD CRITICAL EXPOSURE'
-          : criticalCount > 0
-            ? 'CRITICAL EXPOSURE PRESENT'
-            : continuityImproving
-              ? 'IMPROVING WITH MEMORY'
-              : elevatedCount > 0
-                ? 'HOLDING UNDER PRESSURE'
-                : 'MEMORY STABLE'
-
-    const currentPosture = latest?.continuity_posture || 'NOT RECORDED'
-
-    const executiveMeaning =
-      snapshots.length === 0
-        ? 'CGI has not yet accumulated persisted continuity snapshots for historical review.'
-        : continuityDriftDetected
-          ? 'Persisted continuity memory shows worsening or persistent exposure that requires continued executive review.'
-          : continuityImproving
-            ? 'Persisted continuity memory shows movement toward improved continuity posture, but evidence must remain visible until stabilization is credible.'
-            : elevatedCount > 0 || criticalCount > 0
-              ? 'Persisted continuity memory shows active exposure that should remain visible until stabilization evidence is verified.'
-              : 'Persisted continuity memory is available and currently shows no elevated continuity drift.'
-
-    const recurrenceMeaning =
-      recurrenceVisible
-        ? 'Structural memory or recurrence signals are appearing repeatedly. CGI should treat this as a pattern, not an isolated event.'
-        : 'No repeated recurrence pattern is yet strong enough to dominate the continuity history.'
-
-    const survivabilityMeaning =
-      survivabilityConcernPersisting
-        ? 'Survivability concern appears more than once in persisted memory and should remain under executive review.'
-        : 'Survivability concern is not yet persisting strongly across the available continuity memory.'
-
-    const requiredHistoryAction =
-      snapshots.length === 0
-        ? 'Begin preserving continuity snapshots.'
-        : continuityDriftDetected
-          ? 'Escalate continuity history review and require current stabilization evidence.'
-          : survivabilityConcernPersisting
-            ? 'Keep survivability exposure visible until evidence confirms recovery credibility.'
-            : evidenceGap
-              ? 'Continue evidence follow-up until continuity memory becomes fully verifiable.'
-              : 'Maintain continuity memory review.'
-
-    return {
-      latest,
-      oldest,
-      snapshotCount: snapshots.length,
-      elevatedCount,
-      criticalCount,
-      stableOrWatchedCount,
-      structuralMemoryCount,
-      evidenceVerifiedCount,
-      accountabilityActiveCount,
-      continuityDriftDetected,
-      continuityImproving,
-      survivabilityConcernPersisting,
-      recurrenceVisible,
-      evidenceGap,
-      direction,
-      currentPosture,
-      executiveMeaning,
-      recurrenceMeaning,
-      survivabilityMeaning,
-      requiredHistoryAction,
-    }
-  }, [snapshots])
+  const intelligence = useMemo(
+    () => reviewCGIHistoricalContinuity(snapshots),
+    [snapshots]
+  )
 
   return (
     <main style={styles.page}>
@@ -239,7 +106,7 @@ function ContinuityHistoryContent() {
           <div>
             <p style={styles.sectionKicker}>Continuity Direction</p>
 
-            <h2 style={styles.heroTitle}>{intelligence.direction}</h2>
+            <h2 style={styles.heroTitle}>{intelligence.directionLabel}</h2>
 
             <p style={styles.heroMeaning}>
               {intelligence.executiveMeaning}
@@ -264,8 +131,9 @@ function ContinuityHistoryContent() {
             </h2>
 
             <p style={styles.actionText}>
-              This page interprets Supabase continuity snapshots as historical
-              executive memory, not isolated operational entries.
+              This page now uses the centralized CGI historical continuity
+              engine so executive interpretation remains consistent across the
+              infrastructure.
             </p>
           </div>
 
@@ -360,7 +228,10 @@ function ContinuityHistoryContent() {
         <section style={styles.gridTwo}>
           <Panel title="Historical Interpretation">
             <div style={styles.infoList}>
-              <Info label="Direction" value={intelligence.direction} />
+              <Info
+                label="Direction"
+                value={intelligence.directionLabel}
+              />
               <Info
                 label="Current Posture"
                 value={intelligence.currentPosture}
@@ -393,11 +264,27 @@ function ContinuityHistoryContent() {
                 value={intelligence.survivabilityMeaning}
               />
               <Info
+                label="Evidence"
+                value={intelligence.evidenceMeaning}
+              />
+              <Info
                 label="History Action"
                 value={intelligence.requiredHistoryAction}
               />
             </div>
           </Panel>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Memory Compression Summary</p>
+
+          <h2 style={styles.cardTitle}>
+            Executive continuity memory must compress into action meaning.
+          </h2>
+
+          <p style={styles.bodyText}>
+            {intelligence.memoryCompressionSummary}
+          </p>
         </section>
 
         <section style={styles.gridTwo}>
@@ -419,7 +306,7 @@ function ContinuityHistoryContent() {
 
                 <Info
                   label="Source"
-                  value={intelligence.latest.source_route}
+                  value={intelligence.latest.source_route || 'Not recorded'}
                 />
 
                 <Info
@@ -463,12 +350,12 @@ function ContinuityHistoryContent() {
 
                 <Info
                   label="Source"
-                  value={intelligence.oldest.source_route}
+                  value={intelligence.oldest.source_route || 'Not recorded'}
                 />
 
                 <Info
                   label="Recorded"
-                  value={formatDate(intelligence.oldest.created_at)}
+                  value={formatDate(intelligence.oldest.created_at || '')}
                 />
               </div>
             ) : (
