@@ -48,6 +48,20 @@ export type CGISituationReviewRecord = {
   rawPayload?: Record<string, unknown>
 }
 
+export type CGICoordinationReviewRecord = {
+  coordinationTitle: string
+  coordinationPosture: string
+  coordinationScope?: string
+  coordinationSummary?: string
+  dominantCoordinationConcern?: string
+  crossSiteRisk?: string
+  requiredCoordinationAction?: string
+  requiredEvidence?: string
+  escalationRequired?: boolean
+  continuityDriftDetected?: boolean
+  rawPayload?: Record<string, unknown>
+}
+
 export async function saveCGIContinuitySnapshot(
   record: CGIContinuitySnapshotRecord
 ) {
@@ -139,6 +153,36 @@ export async function saveCGISituationReview(
   return data
 }
 
+export async function saveCGICoordinationReview(
+  record: CGICoordinationReviewRecord
+) {
+  const { data, error } = await supabase
+    .from('cgi_coordination_reviews')
+    .insert({
+      coordination_title: record.coordinationTitle,
+      coordination_posture: record.coordinationPosture,
+      coordination_scope: record.coordinationScope ?? null,
+      coordination_summary: record.coordinationSummary ?? null,
+      dominant_coordination_concern:
+        record.dominantCoordinationConcern ?? null,
+      cross_site_risk: record.crossSiteRisk ?? null,
+      required_coordination_action:
+        record.requiredCoordinationAction ?? null,
+      required_evidence: record.requiredEvidence ?? null,
+      escalation_required: record.escalationRequired ?? false,
+      continuity_drift_detected: record.continuityDriftDetected ?? false,
+      raw_payload: record.rawPayload ?? {},
+    })
+    .select()
+    .single()
+
+  if (error) {
+    throw new Error(`Failed to save CGI coordination review: ${error.message}`)
+  }
+
+  return data
+}
+
 export async function loadCGIContinuitySnapshots(limit = 20) {
   const { data, error } = await supabase
     .from('cgi_continuity_snapshots')
@@ -181,6 +225,20 @@ export async function loadCGISituationReviews(limit = 20) {
   return data ?? []
 }
 
+export async function loadCGICoordinationReviews(limit = 20) {
+  const { data, error } = await supabase
+    .from('cgi_coordination_reviews')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    throw new Error(`Failed to load CGI coordination reviews: ${error.message}`)
+  }
+
+  return data ?? []
+}
+
 export async function fetchCGIExecutiveReports() {
   return loadCGIExecutiveReports(100)
 }
@@ -191,4 +249,8 @@ export async function fetchCGISituationReviews() {
 
 export async function fetchCGIContinuitySnapshots() {
   return loadCGIContinuitySnapshots(100)
+}
+
+export async function fetchCGICoordinationReviews() {
+  return loadCGICoordinationReviews(100)
 }
