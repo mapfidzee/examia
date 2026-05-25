@@ -28,6 +28,13 @@ type PersistedContinuitySnapshot = {
   raw_payload: Record<string, unknown>
 }
 
+const postureWeight: Record<string, number> = {
+  STABLE: 1,
+  WATCHED: 2,
+  ELEVATED: 3,
+  CRITICAL: 4,
+}
+
 export default function ContinuityHistoryPage() {
   return (
     <GovernanceRouteGuard
@@ -58,7 +65,7 @@ function ContinuityHistoryContent() {
       setLoading(true)
       setMessage('Loading continuity memory...')
 
-      const records = await loadCGIContinuitySnapshots(25)
+      const records = await loadCGIContinuitySnapshots(50)
 
       setSnapshots(records as PersistedContinuitySnapshot[])
       setMessage(
@@ -76,12 +83,18 @@ function ContinuityHistoryContent() {
 
   const intelligence = useMemo(() => {
     const latest = snapshots[0] || null
+    const oldest = snapshots[snapshots.length - 1] || null
+
     const elevatedCount = snapshots.filter((snapshot) =>
       ['ELEVATED', 'CRITICAL'].includes(snapshot.continuity_posture)
     ).length
 
     const criticalCount = snapshots.filter(
       (snapshot) => snapshot.continuity_posture === 'CRITICAL'
+    ).length
+
+    const stableOrWatchedCount = snapshots.filter((snapshot) =>
+      ['STABLE', 'WATCHED'].includes(snapshot.continuity_posture)
     ).length
 
     const structuralMemoryCount = snapshots.filter(
@@ -92,21 +105,57 @@ function ContinuityHistoryContent() {
       (snapshot) => snapshot.evidence_verified
     ).length
 
-    const continuityDriftDetected = elevatedCount > 0 || criticalCount > 0
-    const survivabilityConcernPersisting = snapshots.some((snapshot) =>
-      String(snapshot.survivability_pressure || '')
-        .toUpperCase()
-        .includes('REVIEW')
-    )
+    const accountabilityActiveCount = snapshots.filter(
+      (snapshot) => snapshot.accountability_active
+    ).length
+
+    const latestWeight = latest
+      ? postureWeight[latest.continuity_posture] ?? 0
+      : 0
+
+    const oldestWeight = oldest
+      ? postureWeight[oldest.continuity_posture] ?? 0
+      : 0
+
+    const continuityDriftDetected =
+      snapshots.length > 1
+        ? latestWeight > oldestWeight
+        : elevatedCount > 0 || criticalCount > 0
+
+    const continuityImproving =
+      snapshots.length > 1 && latestWeight < oldestWeight
+
+    const survivabilityConcernPersisting =
+      criticalCount > 1 ||
+      snapshots.filter((snapshot) =>
+        String(snapshot.survivability_pressure || '')
+          .toUpperCase()
+          .includes('REVIEW')
+      ).length > 1
+
+    const recurrenceVisible =
+      structuralMemoryCount > 1 ||
+      snapshots.filter((snapshot) =>
+        String(snapshot.recurrence_severity || '')
+          .toUpperCase()
+          .includes('RECUR')
+      ).length > 1
+
+    const evidenceGap =
+      snapshots.length > 0 && evidenceVerifiedCount < snapshots.length
 
     const direction =
       snapshots.length === 0
         ? 'NO MEMORY'
-        : criticalCount > 0
-          ? 'CRITICAL EXPOSURE PRESENT'
-          : elevatedCount > 0
-            ? 'HOLDING UNDER PRESSURE'
-            : 'MEMORY STABLE'
+        : criticalCount > 0 && continuityDriftDetected
+          ? 'DRIFTING TOWARD CRITICAL EXPOSURE'
+          : criticalCount > 0
+            ? 'CRITICAL EXPOSURE PRESENT'
+            : continuityImproving
+              ? 'IMPROVING WITH MEMORY'
+              : elevatedCount > 0
+                ? 'HOLDING UNDER PRESSURE'
+                : 'MEMORY STABLE'
 
     const currentPosture = latest?.continuity_posture || 'NOT RECORDED'
 
@@ -114,28 +163,54 @@ function ContinuityHistoryContent() {
       snapshots.length === 0
         ? 'CGI has not yet accumulated persisted continuity snapshots for historical review.'
         : continuityDriftDetected
-          ? 'Persisted continuity memory shows visible exposure that requires continued executive review.'
-          : 'Persisted continuity memory is available and currently shows no elevated continuity drift.'
+          ? 'Persisted continuity memory shows worsening or persistent exposure that requires continued executive review.'
+          : continuityImproving
+            ? 'Persisted continuity memory shows movement toward improved continuity posture, but evidence must remain visible until stabilization is credible.'
+            : elevatedCount > 0 || criticalCount > 0
+              ? 'Persisted continuity memory shows active exposure that should remain visible until stabilization evidence is verified.'
+              : 'Persisted continuity memory is available and currently shows no elevated continuity drift.'
+
+    const recurrenceMeaning =
+      recurrenceVisible
+        ? 'Structural memory or recurrence signals are appearing repeatedly. CGI should treat this as a pattern, not an isolated event.'
+        : 'No repeated recurrence pattern is yet strong enough to dominate the continuity history.'
+
+    const survivabilityMeaning =
+      survivabilityConcernPersisting
+        ? 'Survivability concern appears more than once in persisted memory and should remain under executive review.'
+        : 'Survivability concern is not yet persisting strongly across the available continuity memory.'
 
     const requiredHistoryAction =
       snapshots.length === 0
         ? 'Begin preserving continuity snapshots.'
         : continuityDriftDetected
-          ? 'Keep continuity history visible until stabilization credibility is evidenced.'
-          : 'Maintain continuity memory review.'
+          ? 'Escalate continuity history review and require current stabilization evidence.'
+          : survivabilityConcernPersisting
+            ? 'Keep survivability exposure visible until evidence confirms recovery credibility.'
+            : evidenceGap
+              ? 'Continue evidence follow-up until continuity memory becomes fully verifiable.'
+              : 'Maintain continuity memory review.'
 
     return {
       latest,
+      oldest,
       snapshotCount: snapshots.length,
       elevatedCount,
       criticalCount,
+      stableOrWatchedCount,
       structuralMemoryCount,
       evidenceVerifiedCount,
+      accountabilityActiveCount,
       continuityDriftDetected,
+      continuityImproving,
       survivabilityConcernPersisting,
+      recurrenceVisible,
+      evidenceGap,
       direction,
       currentPosture,
       executiveMeaning,
+      recurrenceMeaning,
+      survivabilityMeaning,
       requiredHistoryAction,
     }
   }, [snapshots])
@@ -152,8 +227,9 @@ function ContinuityHistoryContent() {
 
           <p style={styles.subtitle}>
             Live institutional memory board for reviewing persisted continuity
-            posture, survivability exposure, executive drift, and stabilization
-            movement across Supabase continuity snapshots.
+            posture, survivability exposure, executive drift, recurrence
+            signals, and stabilization movement across Supabase continuity
+            snapshots.
           </p>
         </section>
 
@@ -188,8 +264,8 @@ function ContinuityHistoryContent() {
             </h2>
 
             <p style={styles.actionText}>
-              This page now reads from Supabase continuity snapshots instead of
-              relying only on static sample memory.
+              This page interprets Supabase continuity snapshots as historical
+              executive memory, not isolated operational entries.
             </p>
           </div>
 
@@ -216,25 +292,37 @@ function ContinuityHistoryContent() {
           <SignalCard
             title="Continuity Drift"
             value={intelligence.continuityDriftDetected ? 'YES' : 'NO'}
-            body="Indicates whether persisted memory shows elevated or critical continuity exposure."
+            body="Indicates whether persisted memory shows worsening or persistent continuity exposure."
           />
 
           <SignalCard
-            title="Survivability Persistence"
-            value={
-              intelligence.survivabilityConcernPersisting ? 'YES' : 'NO'
-            }
-            body="Indicates whether survivability review language is persisting across memory."
+            title="Improving Movement"
+            value={intelligence.continuityImproving ? 'YES' : 'NO'}
+            body="Indicates whether the latest continuity posture is lighter than the oldest available posture."
           />
         </section>
 
         <section style={styles.gridThree}>
+          <SignalCard
+            title="Critical Records"
+            value={String(intelligence.criticalCount)}
+            body="Persisted snapshots carrying critical continuity posture."
+          />
+
           <SignalCard
             title="Elevated Records"
             value={String(intelligence.elevatedCount)}
             body="Persisted snapshots carrying elevated or critical continuity posture."
           />
 
+          <SignalCard
+            title="Stable/Watched Records"
+            value={String(intelligence.stableOrWatchedCount)}
+            body="Persisted snapshots carrying stable or watched continuity posture."
+          />
+        </section>
+
+        <section style={styles.gridThree}>
           <SignalCard
             title="Structural Memory"
             value={String(intelligence.structuralMemoryCount)}
@@ -245,6 +333,12 @@ function ContinuityHistoryContent() {
             title="Evidence Verified"
             value={String(intelligence.evidenceVerifiedCount)}
             body="Snapshots with verified continuity evidence marked true."
+          />
+
+          <SignalCard
+            title="Accountability Active"
+            value={String(intelligence.accountabilityActiveCount)}
+            body="Snapshots where accountability remained active."
           />
         </section>
 
@@ -258,9 +352,52 @@ function ContinuityHistoryContent() {
           <p style={styles.bodyText}>
             CGI does not treat executive continuity readings as isolated
             moments. It preserves them as institutional memory so leadership can
-            review whether continuity is improving, holding, or drifting across
-            time.
+            review whether continuity is improving, holding, recurring, or
+            drifting across time.
           </p>
+        </section>
+
+        <section style={styles.gridTwo}>
+          <Panel title="Historical Interpretation">
+            <div style={styles.infoList}>
+              <Info label="Direction" value={intelligence.direction} />
+              <Info
+                label="Current Posture"
+                value={intelligence.currentPosture}
+              />
+              <Info
+                label="Continuity Drift"
+                value={
+                  intelligence.continuityDriftDetected ? 'YES' : 'NO'
+                }
+              />
+              <Info
+                label="Recurrence Visible"
+                value={intelligence.recurrenceVisible ? 'YES' : 'NO'}
+              />
+              <Info
+                label="Evidence Gap"
+                value={intelligence.evidenceGap ? 'YES' : 'NO'}
+              />
+            </div>
+          </Panel>
+
+          <Panel title="Executive Meaning">
+            <div style={styles.infoList}>
+              <Info
+                label="Recurrence"
+                value={intelligence.recurrenceMeaning}
+              />
+              <Info
+                label="Survivability"
+                value={intelligence.survivabilityMeaning}
+              />
+              <Info
+                label="History Action"
+                value={intelligence.requiredHistoryAction}
+              />
+            </div>
+          </Panel>
         </section>
 
         <section style={styles.gridTwo}>
@@ -308,28 +445,37 @@ function ContinuityHistoryContent() {
             )}
           </Panel>
 
-          <Panel title="Executive History Review">
-            <div style={styles.infoList}>
-              <Info label="Direction" value={intelligence.direction} />
-              <Info
-                label="Current Posture"
-                value={intelligence.currentPosture}
-              />
-              <Info
-                label="Snapshot Count"
-                value={String(intelligence.snapshotCount)}
-              />
-              <Info
-                label="Continuity Drift"
-                value={
-                  intelligence.continuityDriftDetected ? 'YES' : 'NO'
-                }
-              />
-              <Info
-                label="History Action"
-                value={intelligence.requiredHistoryAction}
-              />
-            </div>
+          <Panel title="Oldest Compared Snapshot">
+            {intelligence.oldest ? (
+              <div style={styles.infoList}>
+                <Info
+                  label="Label"
+                  value={
+                    intelligence.oldest.snapshot_label ||
+                    'Unlabeled snapshot'
+                  }
+                />
+
+                <Info
+                  label="Posture"
+                  value={intelligence.oldest.continuity_posture}
+                />
+
+                <Info
+                  label="Source"
+                  value={intelligence.oldest.source_route}
+                />
+
+                <Info
+                  label="Recorded"
+                  value={formatDate(intelligence.oldest.created_at)}
+                />
+              </div>
+            ) : (
+              <p style={styles.emptyText}>
+                No comparison snapshot is available yet.
+              </p>
+            )}
           </Panel>
         </section>
 
@@ -371,6 +517,11 @@ function ContinuityHistoryContent() {
                   Required action:{' '}
                   {snapshot.required_action || 'Not recorded'}
                 </p>
+
+                <p style={styles.timelineMeta}>
+                  Evidence verified:{' '}
+                  {snapshot.evidence_verified ? 'YES' : 'NO'}
+                </p>
               </article>
             ))}
           </div>
@@ -383,7 +534,13 @@ function ContinuityHistoryContent() {
 function formatDate(value: string) {
   if (!value) return 'Not recorded'
 
-  return new Date(value).toLocaleString()
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return date.toLocaleString()
 }
 
 function SignalCard({
