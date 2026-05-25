@@ -131,8 +131,8 @@ function ContinuityHistoryContent() {
             </h2>
 
             <p style={styles.actionText}>
-              This page now uses the centralized CGI historical continuity
-              engine so executive interpretation remains consistent across the
+              This page uses the centralized CGI historical continuity engine so
+              executive interpretation remains consistent across the
               infrastructure.
             </p>
           </div>
@@ -148,6 +148,46 @@ function ContinuityHistoryContent() {
           >
             {loading ? 'Refreshing...' : 'Refresh History'}
           </button>
+        </section>
+
+        <section style={styles.gridThree}>
+          <SignalCard
+            title="Historical Trend"
+            value={intelligence.historicalTrendLabel}
+            body="Longitudinal trend derived from persisted continuity posture movement."
+          />
+
+          <SignalCard
+            title="Recovery Trajectory"
+            value={intelligence.recoveryTrajectoryLabel}
+            body="Shows whether recovery appears credible, weak, under review, or not established."
+          />
+
+          <SignalCard
+            title="Executive Escalation"
+            value={intelligence.executiveEscalationRequired ? 'YES' : 'NO'}
+            body="Indicates whether persisted memory requires continued executive visibility."
+          />
+        </section>
+
+        <section style={styles.gridThree}>
+          <SignalCard
+            title="Stabilization Credibility"
+            value={intelligence.stabilizationCredibilityLabel}
+            body="Interprets whether stabilization is credible, partial, deficient, or not yet credible."
+          />
+
+          <SignalCard
+            title="Memory Pressure"
+            value={intelligence.institutionalMemoryPressureLabel}
+            body="Shows institutional pressure carried by repeated continuity memory."
+          />
+
+          <SignalCard
+            title="Persistence Severity"
+            value={intelligence.continuityPersistenceSeverityLabel}
+            body="Rates continuity persistence from none to critical based on memory evidence."
+          />
         </section>
 
         <section style={styles.gridThree}>
@@ -225,12 +265,26 @@ function ContinuityHistoryContent() {
           </p>
         </section>
 
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Trajectory Meaning</p>
+
+          <h2 style={styles.cardTitle}>
+            Continuity history must explain movement, not only display records.
+          </h2>
+
+          <p style={styles.bodyText}>{intelligence.trajectoryMeaning}</p>
+        </section>
+
         <section style={styles.gridTwo}>
           <Panel title="Historical Interpretation">
             <div style={styles.infoList}>
               <Info
                 label="Direction"
                 value={intelligence.directionLabel}
+              />
+              <Info
+                label="Historical Trend"
+                value={intelligence.historicalTrendLabel}
               />
               <Info
                 label="Current Posture"
@@ -243,8 +297,31 @@ function ContinuityHistoryContent() {
                 }
               />
               <Info
-                label="Recurrence Visible"
-                value={intelligence.recurrenceVisible ? 'YES' : 'NO'}
+                label="Executive Escalation"
+                value={
+                  intelligence.executiveEscalationRequired ? 'YES' : 'NO'
+                }
+              />
+            </div>
+          </Panel>
+
+          <Panel title="Trajectory Intelligence">
+            <div style={styles.infoList}>
+              <Info
+                label="Recovery"
+                value={intelligence.recoveryTrajectoryLabel}
+              />
+              <Info
+                label="Stabilization"
+                value={intelligence.stabilizationCredibilityLabel}
+              />
+              <Info
+                label="Memory Pressure"
+                value={intelligence.institutionalMemoryPressureLabel}
+              />
+              <Info
+                label="Persistence Severity"
+                value={intelligence.continuityPersistenceSeverityLabel}
               />
               <Info
                 label="Evidence Gap"
@@ -252,7 +329,9 @@ function ContinuityHistoryContent() {
               />
             </div>
           </Panel>
+        </section>
 
+        <section style={styles.gridTwo}>
           <Panel title="Executive Meaning">
             <div style={styles.infoList}>
               <Info
@@ -273,18 +352,12 @@ function ContinuityHistoryContent() {
               />
             </div>
           </Panel>
-        </section>
 
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Memory Compression Summary</p>
-
-          <h2 style={styles.cardTitle}>
-            Executive continuity memory must compress into action meaning.
-          </h2>
-
-          <p style={styles.bodyText}>
-            {intelligence.memoryCompressionSummary}
-          </p>
+          <Panel title="Memory Compression">
+            <p style={styles.panelText}>
+              {intelligence.memoryCompressionSummary}
+            </p>
+          </Panel>
         </section>
 
         <section style={styles.gridTwo}>
@@ -638,9 +711,10 @@ const styles: Record<string, CSSProperties> = {
   },
   signalValue: {
     color: '#f8fafc',
-    fontSize: '28px',
+    fontSize: '22px',
     lineHeight: 1.15,
     margin: '10px 0',
+    overflowWrap: 'anywhere',
   },
   card: {
     background: '#020617',
@@ -686,6 +760,11 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '14px',
     lineHeight: 1.6,
     marginTop: '10px',
+  },
+  panelText: {
+    color: '#cbd5e1',
+    lineHeight: 1.7,
+    margin: 0,
   },
   infoList: {
     display: 'grid',
