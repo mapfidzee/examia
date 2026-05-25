@@ -1,3 +1,6 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
@@ -10,6 +13,10 @@ import {
   formatCGISurvivabilityLanguage,
   formatCGIGovernanceSafeLanguage,
 } from '@/lib/cgiExecutivePostureFormatter'
+import {
+  loadCGISiteContinuityProfiles,
+  saveCGISiteContinuityProfile,
+} from '@/lib/cgiPersistenceEngine'
 import type { CGIRouteSynthesisPosture } from '@/lib/cgiCrossRouteContinuitySynthesisEngine'
 
 type SiteContinuityProfile = {
@@ -24,6 +31,8 @@ type SiteContinuityProfile = {
   accountabilityActive: boolean
   structuralMemoryVisible: boolean
 }
+
+type PersistedSiteContinuityProfile = Record<string, any>
 
 const sites: SiteContinuityProfile[] = [
   {
@@ -100,6 +109,12 @@ export default function CrossSitePage() {
 }
 
 function CrossSiteContent() {
+  const [saveMessage, setSaveMessage] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [profiles, setProfiles] = useState<PersistedSiteContinuityProfile[]>([])
+  const [loadingProfiles, setLoadingProfiles] = useState(false)
+  const [profileMessage, setProfileMessage] = useState('')
+
   const siteBriefings = sites.map((site) => ({
     site,
     briefing: buildCGIExecutiveBriefing(site),
@@ -135,6 +150,84 @@ function CrossSiteContent() {
     (site) => site.structuralMemoryVisible
   ).length
 
+  async function loadSiteProfiles() {
+    try {
+      setLoadingProfiles(true)
+      setProfileMessage('Loading persisted site continuity profiles...')
+
+      const loadedProfiles = await loadCGISiteContinuityProfiles()
+
+      setProfiles(Array.isArray(loadedProfiles) ? loadedProfiles : [])
+      setProfileMessage('Site continuity profile archive loaded.')
+    } catch (error) {
+      console.error(error)
+      setProfileMessage('Site continuity profile archive could not be loaded.')
+    } finally {
+      setLoadingProfiles(false)
+    }
+  }
+
+  useEffect(() => {
+    loadSiteProfiles()
+  }, [])
+
+  async function handleSaveSiteProfiles() {
+    try {
+      setSaving(true)
+      setSaveMessage('Saving cross-site continuity profiles...')
+
+      await Promise.all(
+        siteBriefings.map(({ site, briefing }) => {
+          const sitePosture = briefing.synthesis.synthesisPosture
+          const siteAction = formatCGIExecutivePosture(sitePosture)
+
+          return saveCGISiteContinuityProfile({
+            siteName: site.siteName,
+            siteRegion: site.region,
+            siteType: 'Operational Site',
+            continuityPosture: sitePosture,
+            continuityTrend:
+              sitePosture === 'CRITICAL'
+                ? 'EXECUTIVE_ESCALATION'
+                : sitePosture === 'ELEVATED'
+                  ? 'ACTIVE_REVIEW'
+                  : 'WATCHED_STABILITY',
+            survivabilityPressure:
+              formatCGISurvivabilityLanguage(sitePosture),
+            recoveryCredibility:
+              site.evidenceVerified
+                ? 'Evidence verified; recovery credibility is stronger.'
+                : 'Evidence is not yet verified; recovery credibility remains under review.',
+            recurrenceSeverity: site.structuralMemoryVisible
+              ? 'Structural memory remains visible.'
+              : 'No active structural memory concentration is visible.',
+            dominantConcern: briefing.dominantConcern,
+            requiredAction: siteAction.actionLanguage,
+            requiredEvidence: formatCGIEvidenceLanguage(
+              site.evidenceVerified,
+              sitePosture
+            ),
+            escalationRequired: sitePosture === 'CRITICAL',
+            structuralMemoryVisible: site.structuralMemoryVisible,
+            rawPayload: {
+              site,
+              briefing,
+              savedFrom: '/cross-site',
+            },
+          })
+        })
+      )
+
+      setSaveMessage('Cross-site continuity profiles saved.')
+      await loadSiteProfiles()
+    } catch (error) {
+      console.error(error)
+      setSaveMessage('Cross-site continuity profiles could not be saved.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <main style={styles.page}>
       <div style={styles.container}>
@@ -168,6 +261,67 @@ function CrossSiteContent() {
 
             <p style={styles.statusValue}>{dominantSite.siteName}</p>
           </div>
+        </section>
+
+        <section style={styles.actionPanel}>
+          <div>
+            <p style={styles.sectionKicker}>Persistence Action</p>
+
+            <h2 style={styles.actionTitle}>
+              Preserve site continuity profiles as institutional memory.
+            </h2>
+
+            <p style={styles.actionText}>
+              Saving the profile set creates durable cross-site continuity
+              identity records for posture, survivability pressure, recovery
+              credibility, required evidence, and structural memory.
+            </p>
+
+            {saveMessage && <p style={styles.saveMessage}>{saveMessage}</p>}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSaveSiteProfiles}
+            disabled={saving}
+            style={{
+              ...styles.primaryButton,
+              ...(saving ? styles.disabledButton : {}),
+            }}
+          >
+            {saving ? 'Saving...' : 'Save Site Profiles'}
+          </button>
+        </section>
+
+        <section style={styles.actionPanel}>
+          <div>
+            <p style={styles.sectionKicker}>Cross-Site Memory Retrieval</p>
+
+            <h2 style={styles.actionTitle}>
+              Retrieve persisted site continuity profiles.
+            </h2>
+
+            <p style={styles.actionText}>
+              CGI can now reconstruct which sites repeatedly stabilize,
+              deteriorate, escalate, or carry structural memory across time.
+            </p>
+
+            {profileMessage && (
+              <p style={styles.saveMessage}>{profileMessage}</p>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={loadSiteProfiles}
+            disabled={loadingProfiles}
+            style={{
+              ...styles.secondaryButton,
+              ...(loadingProfiles ? styles.disabledButton : {}),
+            }}
+          >
+            {loadingProfiles ? 'Refreshing...' : 'Refresh Profiles'}
+          </button>
         </section>
 
         <section style={styles.gridThree}>
@@ -209,6 +363,80 @@ function CrossSiteContent() {
               title="Governance Meaning"
               body={governanceLanguage}
             />
+          </div>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Persisted Site Profile Archive</p>
+
+          <h2 style={styles.cardTitle}>
+            Site continuity profiles retrieved from Supabase.
+          </h2>
+
+          <p style={styles.bodyText}>Profile Count: {profiles.length}</p>
+
+          <div style={styles.archiveList}>
+            {profiles.length === 0 ? (
+              <p style={styles.emptyText}>
+                No persisted site continuity profiles are currently available.
+              </p>
+            ) : (
+              profiles.map((item, index) => (
+                <article
+                  key={item.id ?? `${getProfileValue(item, 'createdAt')}-${index}`}
+                  style={styles.archiveItem}
+                >
+                  <div style={styles.archiveHeader}>
+                    <div>
+                      <p style={styles.panelKicker}>
+                        {getProfileValue(item, 'continuityPosture') ??
+                          'SITE_PROFILE'}
+                      </p>
+
+                      <h3 style={styles.archiveTitle}>
+                        {getProfileValue(item, 'siteName') ??
+                          'Unnamed Site'}
+                      </h3>
+                    </div>
+
+                    <p style={styles.archiveDate}>
+                      {formatDate(getProfileValue(item, 'createdAt'))}
+                    </p>
+                  </div>
+
+                  <div style={styles.archiveGrid}>
+                    <PriorityItem
+                      title="Region"
+                      body={
+                        getProfileValue(item, 'siteRegion') ??
+                        'Not recorded'
+                      }
+                    />
+
+                    <PriorityItem
+                      title="Trend"
+                      body={
+                        getProfileValue(item, 'continuityTrend') ??
+                        'Not recorded'
+                      }
+                    />
+
+                    <PriorityItem
+                      title="Escalation"
+                      body={
+                        getProfileValue(item, 'escalationRequired') ??
+                        'Not recorded'
+                      }
+                    />
+                  </div>
+
+                  <p style={styles.archiveSummary}>
+                    {getProfileValue(item, 'dominantConcern') ??
+                      'No dominant concern was recorded for this site profile.'}
+                  </p>
+                </article>
+              ))
+            )}
           </div>
         </section>
 
@@ -260,6 +488,40 @@ function CrossSiteContent() {
       </div>
     </main>
   )
+}
+
+function getProfileValue(
+  profile: PersistedSiteContinuityProfile,
+  key: string,
+): string | null {
+  const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
+
+  const value =
+    profile[key] ??
+    profile[snakeKey] ??
+    profile.rawPayload?.[key] ??
+    profile.raw_payload?.[key] ??
+    null
+
+  if (value === null || value === undefined) {
+    return null
+  }
+
+  return String(value)
+}
+
+function formatDate(value: string | null) {
+  if (!value) {
+    return 'Date not recorded'
+  }
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return date.toLocaleString()
 }
 
 function SignalCard({
@@ -360,6 +622,63 @@ const styles: Record<string, CSSProperties> = {
     padding: '24px',
     marginBottom: '16px',
     boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
+  },
+  actionPanel: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1fr) auto',
+    gap: '16px',
+    alignItems: 'center',
+    background: '#082f49',
+    border: '1px solid #0ea5e9',
+    borderRadius: '22px',
+    padding: '18px',
+    marginBottom: '16px',
+    boxSizing: 'border-box',
+  },
+  actionTitle: {
+    color: '#f8fafc',
+    fontSize: '22px',
+    lineHeight: 1.2,
+    margin: '8px 0',
+  },
+  actionText: {
+    color: '#cbd5e1',
+    lineHeight: 1.55,
+    margin: 0,
+    maxWidth: '760px',
+  },
+  saveMessage: {
+    color: '#cffafe',
+    fontWeight: 900,
+    margin: '12px 0 0',
+  },
+  primaryButton: {
+    border: 'none',
+    borderRadius: '14px',
+    background: '#67e8f9',
+    color: '#082f49',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 900,
+    minHeight: '48px',
+    padding: '0 18px',
+    whiteSpace: 'nowrap',
+  },
+  secondaryButton: {
+    border: '1px solid #67e8f9',
+    borderRadius: '14px',
+    background: '#0f172a',
+    color: '#cffafe',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 900,
+    minHeight: '48px',
+    padding: '0 18px',
+    whiteSpace: 'nowrap',
+  },
+  disabledButton: {
+    cursor: 'not-allowed',
+    opacity: 0.65,
   },
   sectionKicker: {
     color: '#94a3b8',
@@ -536,5 +855,53 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '14px',
     lineHeight: 1.6,
     marginTop: '10px',
+  },
+  archiveList: {
+    display: 'grid',
+    gap: '14px',
+    marginTop: '16px',
+  },
+  archiveItem: {
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '18px',
+    padding: '16px',
+  },
+  archiveHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: '14px',
+    alignItems: 'flex-start',
+    marginBottom: '14px',
+  },
+  archiveTitle: {
+    color: '#f8fafc',
+    fontSize: '20px',
+    lineHeight: 1.2,
+    margin: '8px 0 0',
+  },
+  archiveDate: {
+    color: '#a5f3fc',
+    fontWeight: 800,
+    fontSize: '13px',
+    lineHeight: 1.4,
+    margin: 0,
+    textAlign: 'right',
+    minWidth: '180px',
+  },
+  archiveGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: '12px',
+  },
+  archiveSummary: {
+    color: '#cbd5e1',
+    lineHeight: 1.65,
+    margin: '14px 0 0',
+  },
+  emptyText: {
+    color: '#cbd5e1',
+    lineHeight: 1.6,
+    margin: 0,
   },
 }
