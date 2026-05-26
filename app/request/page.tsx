@@ -386,7 +386,7 @@ export default function RequestPage() {
               >
                 {instabilityClassOptions.map((item) => (
                   <option key={item.value} value={item.value}>
-                    {item.label} — {item.description}
+                    {item.label}
                   </option>
                 ))}
               </select>
