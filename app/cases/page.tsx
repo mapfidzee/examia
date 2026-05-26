@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { supabase } from '../../lib/supabase'
@@ -90,25 +90,41 @@ const VISIBLE_SIGNALS = [
   'OTHER_VISIBLE_SIGNAL',
 ]
 
+const OWNERSHIP_STATES = [
+  'CLEAR',
+  'UNCLEAR',
+  'MISSING',
+  'TRANSFERRED',
+  'CONTESTED',
+]
+
+const REVIEW_URGENCY = [
+  'NEXT_SHIFT',
+  'TODAY',
+  'WITHIN_24_HOURS',
+  'WITHIN_48_HOURS',
+  'ROUTINE_REVIEW',
+]
+
 const STABILIZATION_ACTIONS = [
-  'Ownership review started',
-  'Routing review started',
-  'Backlog review started',
-  'Handoff review started',
-  'Evidence check requested',
-  'Recovery watch started',
-  'Cross-team coordination requested',
-  'Command review recommended',
+  'OWNERSHIP_REVIEW_STARTED',
+  'ROUTING_REVIEW_STARTED',
+  'BACKLOG_REVIEW_STARTED',
+  'HANDOFF_REVIEW_STARTED',
+  'EVIDENCE_CHECK_REQUESTED',
+  'RECOVERY_WATCH_STARTED',
+  'CROSS_TEAM_COORDINATION_REQUESTED',
+  'COMMAND_REVIEW_RECOMMENDED',
 ]
 
 const OUTCOME_OPTIONS = [
-  'Situation stabilized',
-  'Improvement holding',
-  'Partial improvement only',
-  'Further action required',
-  'Escalation required',
-  'Issue returned after improvement',
-  'Ready for archive',
+  'STABILIZED',
+  'IMPROVEMENT_HOLDING',
+  'PARTIAL_IMPROVEMENT_ONLY',
+  'FURTHER_ACTION_REQUIRED',
+  'ESCALATION_REQUIRED',
+  'ISSUE_RETURNED_AFTER_IMPROVEMENT',
+  'READY_FOR_ARCHIVE',
 ]
 
 export default function CasesPage() {
@@ -121,14 +137,17 @@ export default function CasesPage() {
 
 function CasesContent() {
   const [cases, setCases] = useState<InstabilityCase[]>([])
-  const [caseTitle, setCaseTitle] = useState('')
   const [location, setLocation] = useState('SITE_A')
   const [pressureType, setPressureType] = useState('FLOW')
   const [affectedArea, setAffectedArea] = useState('ROUTING')
+  const [visibleSignal, setVisibleSignal] = useState('ROUTING_DELAY')
   const [difficultyLevel, setDifficultyLevel] = useState('MODERATE')
   const [sourceArea, setSourceArea] = useState('OPERATIONS_DESK')
-  const [currentOwner, setCurrentOwner] = useState('UNCLEAR')
-  const [selectedSignals, setSelectedSignals] = useState<string[]>([])
+  const [currentOwnership, setCurrentOwnership] = useState('UNCLEAR')
+  const [reviewUrgency, setReviewUrgency] = useState('WITHIN_24_HOURS')
+  const [selectedSignals, setSelectedSignals] = useState<string[]>([
+    'ROUTING_DELAY',
+  ])
   const [commandVisibility, setCommandVisibility] = useState(false)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
@@ -136,6 +155,16 @@ function CasesContent() {
   useEffect(() => {
     loadCases()
   }, [])
+
+  const generatedCaseIdentity = useMemo(() => {
+    return [
+      pressureType,
+      visibleSignal,
+      location,
+      affectedArea,
+      difficultyLevel,
+    ].join(' • ')
+  }, [pressureType, visibleSignal, location, affectedArea, difficultyLevel])
 
   async function loadCases() {
     const { data, error } = await supabase
@@ -152,24 +181,23 @@ function CasesContent() {
   }
 
   async function createCase() {
-    if (!caseTitle.trim()) {
-      alert('Enter a short case title.')
-      return
-    }
-
     setLoading(true)
     setMessage('')
+
+    const signals = selectedSignals.includes(visibleSignal)
+      ? selectedSignals
+      : [visibleSignal, ...selectedSignals]
 
     const { data, error } = await supabase
       .from('beneficiary_cases')
       .insert({
-        beneficiary_name: caseTitle.trim(),
+        beneficiary_name: generatedCaseIdentity,
         beneficiary_level: location,
         support_domain: pressureType,
         severity_level: difficultyLevel,
-        instability_signals: selectedSignals,
+        instability_signals: signals,
         region: sourceArea,
-        institution_name: currentOwner,
+        institution_name: currentOwnership,
         safeguarding_flag: commandVisibility,
         case_status: 'UNDER_REVIEW',
       })
@@ -185,17 +213,18 @@ function CasesContent() {
     await supabase.from('case_timeline').insert({
       case_id: data.id,
       event_type: 'CASE_CREATED',
-      event_summary: 'Visible instability accepted into case review',
+      event_summary: `Visible instability accepted into case review: ${generatedCaseIdentity}`,
     })
 
-    setCaseTitle('')
     setLocation('SITE_A')
     setPressureType('FLOW')
     setAffectedArea('ROUTING')
+    setVisibleSignal('ROUTING_DELAY')
     setDifficultyLevel('MODERATE')
     setSourceArea('OPERATIONS_DESK')
-    setCurrentOwner('UNCLEAR')
-    setSelectedSignals([])
+    setCurrentOwnership('UNCLEAR')
+    setReviewUrgency('WITHIN_24_HOURS')
+    setSelectedSignals(['ROUTING_DELAY'])
     setCommandVisibility(false)
     setMessage('Instability case created for review.')
     setLoading(false)
@@ -287,9 +316,12 @@ function CasesContent() {
 
   const totalCases = cases.length
   const highOrCriticalCases = cases.filter(
-    (item) => item.severity_level === 'HIGH' || item.severity_level === 'CRITICAL'
+    (item) =>
+      item.severity_level === 'HIGH' || item.severity_level === 'CRITICAL'
   ).length
-  const escalatedCases = cases.filter((item) => item.case_status === 'ESCALATED').length
+  const escalatedCases = cases.filter(
+    (item) => item.case_status === 'ESCALATED'
+  ).length
   const stableCases = cases.filter(
     (item) => item.case_status === 'STABLE' || item.case_status === 'ARCHIVED'
   ).length
@@ -304,8 +336,8 @@ function CasesContent() {
 
           <p style={styles.subtitle}>
             Use this page to govern visible instability that has moved beyond
-            simple intake and now requires review, ownership, routing, action,
-            evidence, or recovery follow-up.
+            intake and now requires review, routing, action, evidence, or
+            recovery follow-up.
           </p>
         </section>
 
@@ -324,19 +356,17 @@ function CasesContent() {
           <h2 style={styles.sectionTitle}>Accept instability into review</h2>
 
           <p style={styles.panelNote}>
-            A case is visible instability under active review. It should remain
-            open until the situation is routed, action is visible, evidence is
-            checked, and stability is no longer uncertain.
+            A case is visible instability under active review. CGI now generates
+            the case identity from governed dropdowns so cases remain
+            searchable, comparable, and easier to group later.
           </p>
 
-          <div style={styles.grid}>
-            <Input
-              label="Case Title"
-              value={caseTitle}
-              setValue={setCaseTitle}
-              placeholder="Example: Repeated routing delay on Site A"
-            />
+          <div style={styles.generatedBox}>
+            <p style={styles.generatedLabel}>Generated Case Identity</p>
+            <p style={styles.generatedValue}>{generatedCaseIdentity}</p>
+          </div>
 
+          <div style={styles.grid}>
             <Select
               label="Location"
               value={location}
@@ -359,6 +389,13 @@ function CasesContent() {
             />
 
             <Select
+              label="Visible Signal"
+              value={visibleSignal}
+              setValue={setVisibleSignal}
+              options={VISIBLE_SIGNALS}
+            />
+
+            <Select
               label="Difficulty Level"
               value={difficultyLevel}
               setValue={setDifficultyLevel}
@@ -374,18 +411,25 @@ function CasesContent() {
 
             <Select
               label="Current Ownership"
-              value={currentOwner}
-              setValue={setCurrentOwner}
-              options={['CLEAR', 'UNCLEAR', 'MISSING', 'TRANSFERRED', 'CONTESTED']}
+              value={currentOwnership}
+              setValue={setCurrentOwnership}
+              options={OWNERSHIP_STATES}
+            />
+
+            <Select
+              label="Review Urgency"
+              value={reviewUrgency}
+              setValue={setReviewUrgency}
+              options={REVIEW_URGENCY}
             />
           </div>
 
           <div style={{ marginTop: '24px' }}>
-            <label style={styles.label}>Visible Signals</label>
+            <label style={styles.label}>Additional Visible Signals</label>
 
             <p style={styles.panelNote}>
-              Select the governed signals that explain why this instability
-              requires review.
+              Select any related signals. The main visible signal is always
+              included automatically.
             </p>
 
             <div style={styles.signalGrid}>
@@ -517,13 +561,15 @@ function CasesContent() {
 
                 {caseItem.intervention_summary && (
                   <div style={styles.summaryBox}>
-                    <strong>Action:</strong> {caseItem.intervention_summary}
+                    <strong>Action:</strong>{' '}
+                    {formatLegacySummary(caseItem.intervention_summary)}
                   </div>
                 )}
 
                 {caseItem.outcome_summary && (
                   <div style={styles.summaryBox}>
-                    <strong>Outcome:</strong> {caseItem.outcome_summary}
+                    <strong>Outcome:</strong>{' '}
+                    {formatLegacySummary(caseItem.outcome_summary)}
                   </div>
                 )}
               </article>
@@ -535,36 +581,17 @@ function CasesContent() {
   )
 }
 
+function formatLegacySummary(value: string) {
+  if (value.length <= 180) return value
+  return `${value.slice(0, 180)}...`
+}
+
 function Metric({ label, value }: { label: string; value: number }) {
   return (
     <div style={styles.metricCard}>
       <p style={styles.metricLabel}>{label}</p>
       <h2 style={styles.metricValue}>{value}</h2>
     </div>
-  )
-}
-
-function Input({
-  label,
-  value,
-  setValue,
-  placeholder = '',
-}: {
-  label: string
-  value: string
-  setValue: (value: string) => void
-  placeholder?: string
-}) {
-  return (
-    <label style={styles.label}>
-      {label}
-      <input
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        placeholder={placeholder}
-        style={styles.input}
-      />
-    </label>
   )
 }
 
@@ -718,6 +745,28 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.6,
     marginBottom: '18px',
   },
+  generatedBox: {
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '18px',
+    padding: '16px',
+    marginBottom: '22px',
+  },
+  generatedLabel: {
+    color: '#94a3b8',
+    fontSize: '12px',
+    fontWeight: 900,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    margin: 0,
+  },
+  generatedValue: {
+    color: '#a7f3d0',
+    fontSize: '22px',
+    fontWeight: 900,
+    lineHeight: 1.25,
+    margin: '8px 0 0',
+  },
   grid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
@@ -727,15 +776,6 @@ const styles: Record<string, CSSProperties> = {
     display: 'block',
     fontWeight: 800,
     marginBottom: '10px',
-  },
-  input: {
-    width: '100%',
-    marginTop: '8px',
-    padding: '14px',
-    borderRadius: '12px',
-    border: '1px solid #334155',
-    background: '#111827',
-    color: 'white',
   },
   select: {
     width: '100%',
