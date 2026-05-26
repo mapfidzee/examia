@@ -100,9 +100,7 @@ export default function RoutingContent() {
   const [cases, setCases] = useState<StabilityCase[]>([])
   const [owners, setOwners] = useState<StabilizationOwner[]>([])
   const [routingActions, setRoutingActions] = useState<RoutingAction[]>([])
-  const [selectedOwners, setSelectedOwners] = useState<Record<string, string>>(
-    {}
-  )
+  const [selectedOwners, setSelectedOwners] = useState<Record<string, string>>({})
   const [selectedDecisions, setSelectedDecisions] = useState<
     Record<string, RoutingDecision | ''>
   >({})
@@ -135,6 +133,14 @@ export default function RoutingContent() {
     setRoutingActions(routingResult.data || [])
   }
 
+  const activeCaseIds = useMemo(() => {
+    return new Set(cases.map((caseItem) => caseItem.id))
+  }, [cases])
+
+  const activeRoutingActions = useMemo(() => {
+    return routingActions.filter((item) => activeCaseIds.has(item.case_id))
+  }, [routingActions, activeCaseIds])
+
   async function governRouting(caseItem: StabilityCase) {
     const decisionValue = selectedDecisions[caseItem.id]
     const ownerId = selectedOwners[caseItem.id] || null
@@ -150,10 +156,7 @@ export default function RoutingContent() {
 
     if (!decision) return
 
-    if (
-      decision.value === 'ROUTE_TO_STABILIZATION_OWNER' &&
-      !ownerId
-    ) {
+    if (decision.value === 'ROUTE_TO_STABILIZATION_OWNER' && !ownerId) {
       setMessage(
         'Select a stabilization owner before routing this instability forward.'
       )
@@ -162,7 +165,7 @@ export default function RoutingContent() {
 
     const owner = owners.find((item) => item.id === ownerId)
 
-    const priorRouting = routingActions.filter(
+    const priorRouting = activeRoutingActions.filter(
       (item) => item.case_id === caseItem.id
     )
 
@@ -175,7 +178,7 @@ export default function RoutingContent() {
 
     const routingReason =
       recurrenceCount > 0
-        ? `${decision.reason} Previous routing activity exists. Recurrence count: ${
+        ? `${decision.reason} Previous routing activity exists for this active CGI case. Recurrence count: ${
             recurrenceCount + 1
           }.`
         : decision.reason
@@ -198,9 +201,7 @@ export default function RoutingContent() {
 
     const { error: updateError } = await supabase
       .from('beneficiary_cases')
-      .update({
-        case_status: routingStatus,
-      })
+      .update({ case_status: routingStatus })
       .eq('id', caseItem.id)
 
     if (updateError) {
@@ -237,7 +238,7 @@ export default function RoutingContent() {
 
     setMessage(
       recurrenceCount > 0
-        ? 'Routing recurrence preserved. CGI kept the instability visible instead of hiding repeated movement.'
+        ? 'Routing recurrence preserved for this active CGI case.'
         : 'Governed stabilization routing preserved as continuity evidence.'
     )
 
@@ -245,31 +246,31 @@ export default function RoutingContent() {
   }
 
   const metrics = useMemo(() => {
-    const stalled = routingActions.filter((item) =>
+    const stalled = activeRoutingActions.filter((item) =>
       item.routing_status.includes('STALLED')
     ).length
 
-    const evidenceRequired = routingActions.filter((item) =>
+    const evidenceRequired = activeRoutingActions.filter((item) =>
       item.routing_status.includes('EVIDENCE_REQUIRED')
     ).length
 
-    const ownershipRequired = routingActions.filter((item) =>
+    const ownershipRequired = activeRoutingActions.filter((item) =>
       item.routing_status.includes('OWNERSHIP_CLARITY')
     ).length
 
-    const recurrence = routingActions.filter((item) =>
+    const recurrence = activeRoutingActions.filter((item) =>
       item.routing_status.includes('RECURRENCE')
     ).length
 
     return {
       activeCases: cases.length,
-      routingActions: routingActions.length,
+      routingActions: activeRoutingActions.length,
       stalled,
       evidenceRequired,
       ownershipRequired,
       recurrence,
     }
-  }, [cases, routingActions])
+  }, [cases, activeRoutingActions])
 
   return (
     <main style={styles.page}>
@@ -316,7 +317,7 @@ export default function RoutingContent() {
 
           <div style={styles.caseList}>
             {cases.map((caseItem) => {
-              const routingHistory = routingActions.filter(
+              const routingHistory = activeRoutingActions.filter(
                 (item) => item.case_id === caseItem.id
               )
 
@@ -390,8 +391,7 @@ export default function RoutingContent() {
                         onChange={(event) =>
                           setSelectedDecisions((current) => ({
                             ...current,
-                            [caseItem.id]: event.target
-                              .value as RoutingDecision,
+                            [caseItem.id]: event.target.value as RoutingDecision,
                           }))
                         }
                       >
@@ -406,9 +406,7 @@ export default function RoutingContent() {
                     </div>
 
                     <div>
-                      <label style={styles.label}>
-                        Stabilization Owner
-                      </label>
+                      <label style={styles.label}>Stabilization Owner</label>
 
                       <select
                         value={selectedOwners[caseItem.id] || ''}
@@ -432,9 +430,7 @@ export default function RoutingContent() {
                   </div>
 
                   <div style={styles.meaningBox}>
-                    <p style={styles.meaningTitle}>
-                      Routing interpretation
-                    </p>
+                    <p style={styles.meaningTitle}>Routing interpretation</p>
 
                     <p style={styles.meaningText}>
                       {buildRoutingInterpretation(caseItem, routingHistory)}
@@ -482,8 +478,7 @@ async function preserveRoutingEvidence(input: {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const institution =
-    input.caseItem.institution_name || GOVERNANCE_INSTITUTION
+  const institution = input.caseItem.institution_name || GOVERNANCE_INSTITUTION
 
   const visibilityLevel =
     input.caseItem.safeguarding_flag ||
@@ -534,10 +529,9 @@ async function preserveRoutingEvidence(input: {
           ? 'Repeated routing movement indicates instability may not yet be stabilizing.'
           : 'Routing movement has been preserved as governed stabilization direction.',
 
-      survivability_meaning:
-        input.routingStatus.includes('STALLED')
-          ? 'A stalled routing pathway may weaken stabilization credibility if unresolved.'
-          : 'Routing has identified the next governed movement required for stabilization.',
+      survivability_meaning: input.routingStatus.includes('STALLED')
+        ? 'A stalled routing pathway may weaken stabilization credibility if unresolved.'
+        : 'Routing has identified the next governed movement required for stabilization.',
 
       governance_boundary: 'NON_PUNITIVE_CONTINUITY_GOVERNANCE',
       actor_email: user?.email ?? null,
