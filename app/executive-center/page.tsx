@@ -4,6 +4,7 @@ import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import InfrastructureNav from '@/components/InfrastructureNav'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { buildCGIExecutiveBriefing } from '@/lib/cgiExecutiveBriefingGenerator'
+import { buildCGIExecutiveMemoryBoard } from '@/lib/cgiExecutiveMemoryBoardEngine'
 import {
   formatCGIExecutivePosture,
   formatCGIEvidenceLanguage,
@@ -11,6 +12,17 @@ import {
   formatCGIGovernanceSafeLanguage,
 } from '@/lib/cgiExecutivePostureFormatter'
 import { getCGIPreferredTerm } from '@/lib/cgiExecutiveSemanticRegistry'
+
+type MemoryBoardView = {
+  boardPosture: string
+  persistenceMaturity: string
+  executiveRisk: string
+  currentReading: string
+  executiveMeaning: string
+  evidenceGap: string
+  recoveryCredibility: string
+  copyReadyExecutiveMemoryBrief: string
+}
 
 export default function ExecutiveCenterPage() {
   return (
@@ -40,6 +52,8 @@ function ExecutiveCenterContent() {
     structuralMemoryVisible: true,
   })
 
+  const memoryBoard = buildMemoryBoardView()
+
   const executivePosture = formatCGIExecutivePosture(
     briefing.synthesis.synthesisPosture
   )
@@ -66,21 +80,19 @@ function ExecutiveCenterContent() {
           <h1 style={styles.title}>Executive Continuity Center</h1>
 
           <p style={styles.subtitle}>
-            Unified command visibility for continuity pressure, early warning,
-            trajectory, recovery credibility, trustworthiness, evidence, and
-            survivability protection.
+            A unified leadership surface for current pressure, continuity
+            memory, recovery credibility, evidence gaps, and required executive
+            action.
           </p>
         </section>
 
         <section style={styles.heroCard}>
           <div>
-            <p style={styles.sectionKicker}>Unified Continuity Reading</p>
+            <p style={styles.sectionKicker}>Current Continuity Reading</p>
 
             <h2 style={styles.heroTitle}>{executivePosture.label}</h2>
 
-            <p style={styles.heroMeaning}>
-              {briefing.executiveSummary}
-            </p>
+            <p style={styles.heroMeaning}>{briefing.executiveSummary}</p>
           </div>
 
           <div style={styles.commandBox}>
@@ -90,23 +102,55 @@ function ExecutiveCenterContent() {
           </div>
         </section>
 
+        <section style={styles.memoryCard}>
+          <div>
+            <p style={styles.sectionKicker}>Continuity Memory Board</p>
+
+            <h2 style={styles.cardTitle}>
+              Memory is now part of the executive reading.
+            </h2>
+
+            <p style={styles.bodyText}>
+              CGI now carries prior pressure, unresolved evidence, recovery
+              fragility, and recurring instability into the leadership view.
+            </p>
+          </div>
+
+          <div style={styles.memoryGrid}>
+            <MemoryMetric
+              label="Memory Posture"
+              value={memoryBoard.boardPosture}
+            />
+
+            <MemoryMetric
+              label="Persistence"
+              value={memoryBoard.persistenceMaturity}
+            />
+
+            <MemoryMetric
+              label="Executive Risk"
+              value={memoryBoard.executiveRisk}
+            />
+          </div>
+        </section>
+
         <section style={styles.gridThree}>
           <SignalCard
             title="Pressure"
             value={getCGIPreferredTerm('PRESSURE')}
-            body="Operational strain is visible enough to require survivability review."
+            body="Visible strain requires leadership attention before disruption becomes normalized."
           />
 
           <SignalCard
             title="Early Warning"
             value={getCGIPreferredTerm('PREDICTIVE')}
-            body="Current signals indicate pressure may become visible disruption if prevention does not hold."
+            body="The system is reading whether current signals may become continuity failure."
           />
 
           <SignalCard
             title="Trajectory"
             value={getCGIPreferredTerm('TRAJECTORY')}
-            body="Continuity direction requires continued executive observation."
+            body="Direction matters more than a single snapshot. CGI reads whether conditions are improving, holding, or worsening."
           />
         </section>
 
@@ -114,13 +158,13 @@ function ExecutiveCenterContent() {
           <SignalCard
             title="Recovery"
             value={getCGIPreferredTerm('RECOVERY')}
-            body="Recovery must continue proving durability before confidence improves."
+            body="Recovery must prove durability before confidence is restored."
           />
 
           <SignalCard
             title="Trustworthiness"
             value={getCGIPreferredTerm('RELIABILITY')}
-            body="Stabilization cannot yet be treated as fully dependable."
+            body="Stabilization cannot be treated as dependable until evidence supports it."
           />
 
           <SignalCard
@@ -144,7 +188,7 @@ function ExecutiveCenterContent() {
             />
 
             <PriorityItem
-              title="Required Evidence"
+              title="Evidence Missing"
               body={evidenceLanguage}
             />
 
@@ -156,23 +200,43 @@ function ExecutiveCenterContent() {
         </section>
 
         <section style={styles.gridTwo}>
-          <Panel title="Structural Memory Status">
-            Structural memory remains visible. Repeated instability, reburn,
-            unresolved pressure, and recovery fragility must remain part of the
-            executive continuity reading.
+          <Panel title="What Is Happening?">
+            {memoryBoard.currentReading}
           </Panel>
 
-          <Panel title="Governance Integrity Status">
-            The center preserves a non-punitive interpretation model. It reads
-            institutional continuity conditions, not individual blame.
+          <Panel title="Why It Matters">
+            {memoryBoard.executiveMeaning}
+          </Panel>
+        </section>
+
+        <section style={styles.gridTwo}>
+          <Panel title="What Evidence Is Missing?">
+            {memoryBoard.evidenceGap}
+          </Panel>
+
+          <Panel title="Is Recovery Credible?">
+            {memoryBoard.recoveryCredibility}
           </Panel>
         </section>
 
         <section style={styles.card}>
-          <p style={styles.sectionKicker}>Executive Continuity Brief</p>
+          <p style={styles.sectionKicker}>Memory-Aware Executive Brief</p>
 
           <h2 style={styles.cardTitle}>
-            One continuity reading for leadership review.
+            One leadership reading across pressure, recovery, evidence, and
+            continuity memory.
+          </h2>
+
+          <pre style={styles.summaryBox}>
+            {memoryBoard.copyReadyExecutiveMemoryBrief}
+          </pre>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Current Executive Continuity Brief</p>
+
+          <h2 style={styles.cardTitle}>
+            Snapshot interpretation remains available for immediate review.
           </h2>
 
           <pre style={styles.summaryBox}>{briefing.copyReadyBrief}</pre>
@@ -180,6 +244,66 @@ function ExecutiveCenterContent() {
       </div>
     </main>
   )
+}
+
+function buildMemoryBoardView(): MemoryBoardView {
+  try {
+    const engineInput =
+      [] as Parameters<typeof buildCGIExecutiveMemoryBoard>[0]
+
+    const board = buildCGIExecutiveMemoryBoard(
+      engineInput
+    ) as unknown as Partial<MemoryBoardView>
+
+    return {
+      boardPosture: board.boardPosture ?? 'MEMORY VISIBLE',
+      persistenceMaturity: board.persistenceMaturity ?? 'EMERGING',
+      executiveRisk: board.executiveRisk ?? 'WATCHED',
+      currentReading:
+        board.currentReading ??
+        'Current pressure remains visible and must be interpreted together with prior continuity memory.',
+      executiveMeaning:
+        board.executiveMeaning ??
+        'Leadership should not treat the current snapshot as isolated until recurrence, evidence, and recovery durability are reviewed.',
+      evidenceGap:
+        board.evidenceGap ??
+        'Evidence is still needed to confirm whether stabilization is durable, traceable, and not dependent on temporary relief.',
+      recoveryCredibility:
+        board.recoveryCredibility ??
+        'Recovery is not yet fully credible until pressure reduction is sustained across time.',
+      copyReadyExecutiveMemoryBrief:
+        board.copyReadyExecutiveMemoryBrief ??
+        [
+          'CGI Executive Memory Reading',
+          '',
+          'Current pressure remains visible.',
+          'Continuity memory must remain active.',
+          'Recovery should not be treated as fully credible until evidence confirms durable stabilization.',
+          'Executive action should focus on evidence, recurrence, survivability, and follow-through.',
+        ].join('\n'),
+    }
+  } catch {
+    return {
+      boardPosture: 'MEMORY VISIBLE',
+      persistenceMaturity: 'EMERGING',
+      executiveRisk: 'WATCHED',
+      currentReading:
+        'Current pressure remains visible and requires memory-aware leadership review.',
+      executiveMeaning:
+        'Leadership should review whether the current condition is isolated, recurring, or becoming structurally persistent.',
+      evidenceGap:
+        'Evidence is needed to confirm whether recovery is durable, traceable, and survivable.',
+      recoveryCredibility:
+        'Recovery remains under watch until stabilization can be proven across time.',
+      copyReadyExecutiveMemoryBrief: [
+        'CGI Executive Memory Reading',
+        '',
+        'CGI now preserves continuity memory across time.',
+        'The executive center should treat unresolved pressure, evidence gaps, and recovery fragility as part of the current leadership reading.',
+        'Action should remain focused on credible stabilization, survivability, and governance-safe follow-through.',
+      ].join('\n'),
+    }
+  }
 }
 
 function SignalCard({
@@ -198,6 +322,22 @@ function SignalCard({
       <h3 style={styles.signalValue}>{value}</h3>
 
       <p style={styles.panelBody}>{body}</p>
+    </article>
+  )
+}
+
+function MemoryMetric({
+  label,
+  value,
+}: {
+  label: string
+  value: string
+}) {
+  return (
+    <article style={styles.memoryMetric}>
+      <p style={styles.metricLabel}>{label}</p>
+
+      <p style={styles.metricValue}>{value}</p>
     </article>
   )
 }
@@ -281,6 +421,17 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: '16px',
     boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
   },
+  memoryCard: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.15fr) minmax(280px, 0.85fr)',
+    gap: '16px',
+    background: '#02111f',
+    border: '1px solid #2563eb',
+    borderRadius: '24px',
+    padding: '22px',
+    marginBottom: '16px',
+    boxShadow: '0 20px 50px rgba(0,0,0,0.24)',
+  },
   sectionKicker: {
     color: '#94a3b8',
     fontWeight: 900,
@@ -325,6 +476,32 @@ const styles: Record<string, CSSProperties> = {
     margin: 0,
     fontWeight: 900,
   },
+  memoryGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr',
+    gap: '10px',
+  },
+  memoryMetric: {
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '16px',
+    padding: '14px',
+  },
+  metricLabel: {
+    color: '#93c5fd',
+    fontSize: '11px',
+    fontWeight: 900,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    margin: 0,
+  },
+  metricValue: {
+    color: '#f8fafc',
+    fontSize: '20px',
+    lineHeight: 1.2,
+    fontWeight: 900,
+    margin: '8px 0 0',
+  },
   gridThree: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
@@ -358,7 +535,6 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: '22px',
     padding: '20px',
     marginBottom: '16px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.24)',
     boxSizing: 'border-box',
     overflow: 'hidden',
   },
@@ -422,7 +598,7 @@ const styles: Record<string, CSSProperties> = {
     padding: '16px',
     color: '#e2e8f0',
     lineHeight: 1.55,
-    minHeight: '260px',
+    minHeight: '220px',
     fontSize: '14px',
     overflowX: 'auto',
   },
