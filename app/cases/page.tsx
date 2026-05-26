@@ -21,21 +21,29 @@ type InstabilityCase = {
   created_at?: string
 }
 
-const CASE_STATUSES = [
-  'UNDER_REVIEW',
-  'WATCH_ONLY',
-  'ACCEPTED_AS_CASE',
-  'ROUTED',
+const ACTIVE_CASE_STATUSES = [
+  'ACCEPTED_FOR_GOVERNANCE',
+  'STABILIZATION_OWNER_ROUTED',
+  'GOVERNANCE_REVIEW_REQUIRED',
+  'EVIDENCE_REQUIRED_BEFORE_ROUTING',
+  'OWNERSHIP_CLARITY_REQUIRED',
+  'ROUTING_STALLED',
   'ACTION_ACTIVE',
   'IMPROVING',
-  'HOLDING',
-  'STABLE',
+  'RECOVERY_MONITORING',
   'ESCALATED',
   'REOPENED',
-  'ARCHIVED',
 ]
 
-const DIFFICULTY_LEVELS = ['LOW', 'MODERATE', 'HIGH', 'CRITICAL']
+const CASE_TRANSITIONS = [
+  'ACTION_ACTIVE',
+  'IMPROVING',
+  'RECOVERY_MONITORING',
+  'ESCALATED',
+  'REOPENED',
+  'STABILIZED',
+  'ARCHIVED',
+]
 
 const PRESSURE_TYPES = [
   'FLOW',
@@ -45,65 +53,6 @@ const PRESSURE_TYPES = [
   'EVIDENCE',
   'RECOVERY',
   'RELIABILITY',
-]
-
-const LOCATION_OPTIONS = [
-  'SITE_A',
-  'SITE_B',
-  'SITE_C',
-  'REGION_NORTH',
-  'REGION_SOUTH',
-  'UNIT_1',
-  'UNIT_2',
-  'OPERATIONS_DESK',
-  'CROSS_SITE',
-  'OTHER_LOCATION',
-]
-
-const AFFECTED_AREAS = [
-  'ROUTING',
-  'STAFFING',
-  'HANDOFF',
-  'BACKLOG',
-  'RECOVERY',
-  'COORDINATION',
-  'EVIDENCE',
-  'OWNERSHIP',
-  'COMMAND_REVIEW',
-  'SITE_OPERATIONS',
-  'CROSS_SITE_OPERATIONS',
-  'OTHER_AREA',
-]
-
-const VISIBLE_SIGNALS = [
-  'ROUTING_DELAY',
-  'BACKLOG_GROWING',
-  'HANDOFF_DELAY',
-  'OWNERSHIP_UNCLEAR',
-  'ACTION_STALLED',
-  'RECOVERY_NOT_HOLDING',
-  'ISSUE_REPEATED',
-  'EVIDENCE_MISSING',
-  'ESCALATION_DELAYED',
-  'CROSS_TEAM_CONFUSION',
-  'RESOURCE_GAP',
-  'OTHER_VISIBLE_SIGNAL',
-]
-
-const OWNERSHIP_STATES = [
-  'CLEAR',
-  'UNCLEAR',
-  'MISSING',
-  'TRANSFERRED',
-  'CONTESTED',
-]
-
-const REVIEW_URGENCY = [
-  'NEXT_SHIFT',
-  'TODAY',
-  'WITHIN_24_HOURS',
-  'WITHIN_48_HOURS',
-  'ROUTINE_REVIEW',
 ]
 
 const STABILIZATION_ACTIONS = [
@@ -137,49 +86,18 @@ export default function CasesPage() {
 
 function CasesContent() {
   const [cases, setCases] = useState<InstabilityCase[]>([])
-
-  const [location, setLocation] = useState('SITE_A')
-  const [pressureType, setPressureType] = useState('FLOW')
-  const [affectedArea, setAffectedArea] = useState('ROUTING')
-  const [visibleSignal, setVisibleSignal] = useState('ROUTING_DELAY')
-  const [difficultyLevel, setDifficultyLevel] = useState('MODERATE')
-  const [sourceArea, setSourceArea] = useState('OPERATIONS_DESK')
-  const [currentOwnership, setCurrentOwnership] = useState('UNCLEAR')
-  const [reviewUrgency, setReviewUrgency] = useState('WITHIN_24_HOURS')
-
-  const [selectedSignals, setSelectedSignals] = useState<string[]>([
-    'ROUTING_DELAY',
-  ])
-
-  const [commandVisibility, setCommandVisibility] = useState(false)
-
-  const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
   useEffect(() => {
     loadCases()
   }, [])
 
-  const generatedCaseIdentity = useMemo(() => {
-    return [
-      pressureType,
-      visibleSignal,
-      location,
-      affectedArea,
-      difficultyLevel,
-    ].join(' • ')
-  }, [
-    pressureType,
-    visibleSignal,
-    location,
-    affectedArea,
-    difficultyLevel,
-  ])
-
   async function loadCases() {
     const { data, error } = await supabase
       .from('beneficiary_cases')
       .select('*')
+      .in('support_domain', PRESSURE_TYPES)
+      .in('case_status', ACTIVE_CASE_STATUSES)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -188,59 +106,6 @@ function CasesContent() {
     }
 
     setCases(data || [])
-  }
-
-  async function createCase() {
-    setLoading(true)
-    setMessage('')
-
-    const signals = selectedSignals.includes(visibleSignal)
-      ? selectedSignals
-      : [visibleSignal, ...selectedSignals]
-
-    const { data, error } = await supabase
-      .from('beneficiary_cases')
-      .insert({
-        beneficiary_name: generatedCaseIdentity,
-        beneficiary_level: location,
-        support_domain: pressureType,
-        severity_level: difficultyLevel,
-        instability_signals: signals,
-        region: sourceArea,
-        institution_name: currentOwnership,
-        safeguarding_flag: commandVisibility,
-        case_status: 'UNDER_REVIEW',
-      })
-      .select()
-      .single()
-
-    if (error) {
-      alert(error.message)
-      setLoading(false)
-      return
-    }
-
-    await supabase.from('case_timeline').insert({
-      case_id: data.id,
-      event_type: 'CASE_CREATED',
-      event_summary: `Visible instability accepted into review: ${generatedCaseIdentity}`,
-    })
-
-    setLocation('SITE_A')
-    setPressureType('FLOW')
-    setAffectedArea('ROUTING')
-    setVisibleSignal('ROUTING_DELAY')
-    setDifficultyLevel('MODERATE')
-    setSourceArea('OPERATIONS_DESK')
-    setCurrentOwnership('UNCLEAR')
-    setReviewUrgency('WITHIN_24_HOURS')
-    setSelectedSignals(['ROUTING_DELAY'])
-    setCommandVisibility(false)
-
-    setMessage('Instability case created.')
-    setLoading(false)
-
-    await loadCases()
   }
 
   async function changeCaseStatus(
@@ -263,8 +128,10 @@ function CasesContent() {
     await supabase.from('case_timeline').insert({
       case_id: caseItem.id,
       event_type: `STATUS_${nextStatus}`,
-      event_summary: `Case moved to ${nextStatus}`,
+      event_summary: `Governed instability moved to ${nextStatus}`,
     })
+
+    setMessage('Governed case movement preserved.')
 
     await loadCases()
   }
@@ -293,6 +160,8 @@ function CasesContent() {
       intervention_summary: summary,
     })
 
+    setMessage('Stabilization action preserved.')
+
     await loadCases()
   }
 
@@ -320,40 +189,34 @@ function CasesContent() {
       outcome_summary: outcome,
     })
 
+    setMessage('Outcome review preserved.')
+
     await loadCases()
   }
 
-  function toggleSignal(signal: string) {
-    if (selectedSignals.includes(signal)) {
-      setSelectedSignals(
-        selectedSignals.filter((item) => item !== signal)
-      )
-    } else {
-      setSelectedSignals([...selectedSignals, signal])
+  const metrics = useMemo(() => {
+    return {
+      activeGovernance: cases.length,
+
+      escalated: cases.filter((item) =>
+        item.case_status.includes('ESCALATED')
+      ).length,
+
+      recoveryMonitoring: cases.filter(
+        (item) => item.case_status === 'RECOVERY_MONITORING'
+      ).length,
+
+      routingStalled: cases.filter((item) =>
+        item.case_status.includes('STALLED')
+      ).length,
+
+      highPressure: cases.filter(
+        (item) =>
+          item.severity_level === 'HIGH' ||
+          item.severity_level === 'CRITICAL'
+      ).length,
     }
-  }
-
-  const visibleCases = cases.filter((item) =>
-    PRESSURE_TYPES.includes(item.support_domain)
-  )
-
-  const totalCases = visibleCases.length
-
-  const highOrCriticalCases = visibleCases.filter(
-    (item) =>
-      item.severity_level === 'HIGH' ||
-      item.severity_level === 'CRITICAL'
-  ).length
-
-  const escalatedCases = visibleCases.filter(
-    (item) => item.case_status === 'ESCALATED'
-  ).length
-
-  const stableCases = visibleCases.filter(
-    (item) =>
-      item.case_status === 'STABLE' ||
-      item.case_status === 'ARCHIVED'
-  ).length
+  }, [cases])
 
   return (
     <main style={styles.page}>
@@ -364,30 +227,40 @@ function CasesContent() {
           </p>
 
           <h1 style={styles.title}>
-            Active Instability Cases
+            Accepted Instability Governance
           </h1>
 
           <p style={styles.subtitle}>
-            Use this page to govern visible instability
-            that has moved beyond intake and now requires
-            review, routing, action, evidence, or recovery
-            follow-up.
+            This surface governs instability already accepted after triage.
+            Cases exist because visible instability has crossed the threshold
+            into active continuity governance.
           </p>
         </section>
 
         <section style={styles.metricsGrid}>
-          <Metric label="Total Cases" value={totalCases} />
           <Metric
-            label="High / Critical"
-            value={highOrCriticalCases}
+            label="Active Governance"
+            value={metrics.activeGovernance}
           />
+
+          <Metric
+            label="High Pressure"
+            value={metrics.highPressure}
+          />
+
+          <Metric
+            label="Routing Stalled"
+            value={metrics.routingStalled}
+          />
+
+          <Metric
+            label="Recovery Monitoring"
+            value={metrics.recoveryMonitoring}
+          />
+
           <Metric
             label="Escalated"
-            value={escalatedCases}
-          />
-          <Metric
-            label="Stable / Archived"
-            value={stableCases}
+            value={metrics.escalated}
           />
         </section>
 
@@ -395,171 +268,38 @@ function CasesContent() {
           <div style={styles.message}>{message}</div>
         )}
 
-        <section style={styles.formCard}>
+        <section style={styles.caseSection}>
           <p style={styles.sectionKicker}>
-            Create case
+            Active governance
           </p>
 
           <h2 style={styles.sectionTitle}>
-            Accept instability into review
+            Governed instability cases
           </h2>
 
           <p style={styles.panelNote}>
-            CGI generates the case identity from governed
-            operational selections so cases remain
-            comparable, searchable, and structurally
-            consistent.
+            Triage decides whether instability deserves governance. This page
+            manages instability already accepted into the CGI continuity chain.
           </p>
-
-          <div style={styles.generatedBox}>
-            <p style={styles.generatedLabel}>
-              Generated Case Identity
-            </p>
-
-            <p style={styles.generatedValue}>
-              {generatedCaseIdentity}
-            </p>
-          </div>
-
-          <div style={styles.grid}>
-            <Select
-              label="Location"
-              value={location}
-              setValue={setLocation}
-              options={LOCATION_OPTIONS}
-            />
-
-            <Select
-              label="Operational Pressure"
-              value={pressureType}
-              setValue={setPressureType}
-              options={PRESSURE_TYPES}
-            />
-
-            <Select
-              label="Affected Area"
-              value={affectedArea}
-              setValue={setAffectedArea}
-              options={AFFECTED_AREAS}
-            />
-
-            <Select
-              label="Visible Signal"
-              value={visibleSignal}
-              setValue={setVisibleSignal}
-              options={VISIBLE_SIGNALS}
-            />
-
-            <Select
-              label="Difficulty Level"
-              value={difficultyLevel}
-              setValue={setDifficultyLevel}
-              options={DIFFICULTY_LEVELS}
-            />
-
-            <Select
-              label="Source Area"
-              value={sourceArea}
-              setValue={setSourceArea}
-              options={LOCATION_OPTIONS}
-            />
-
-            <Select
-              label="Current Ownership"
-              value={currentOwnership}
-              setValue={setCurrentOwnership}
-              options={OWNERSHIP_STATES}
-            />
-
-            <Select
-              label="Review Urgency"
-              value={reviewUrgency}
-              setValue={setReviewUrgency}
-              options={REVIEW_URGENCY}
-            />
-          </div>
-
-          <div style={{ marginTop: '24px' }}>
-            <label style={styles.label}>
-              Additional Visible Signals
-            </label>
-
-            <p style={styles.panelNote}>
-              Select any related operational signals.
-            </p>
-
-            <div style={styles.signalGrid}>
-              {VISIBLE_SIGNALS.map((signal) => (
-                <button
-                  key={signal}
-                  type="button"
-                  onClick={() => toggleSignal(signal)}
-                  style={{
-                    ...styles.signalButton,
-                    background:
-                      selectedSignals.includes(signal)
-                        ? '#a7f3d0'
-                        : '#111827',
-                    color:
-                      selectedSignals.includes(signal)
-                        ? '#022c22'
-                        : 'white',
-                  }}
-                >
-                  {signal}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div style={styles.checkboxRow}>
-            <input
-              type="checkbox"
-              checked={commandVisibility}
-              onChange={(event) =>
-                setCommandVisibility(event.target.checked)
-              }
-            />
-
-            <span>
-              Command visibility may be needed
-            </span>
-          </div>
-
-          <button
-            onClick={createCase}
-            disabled={loading}
-            style={styles.primaryButton}
-          >
-            {loading
-              ? 'Creating Case...'
-              : 'Create Instability Case'}
-          </button>
-        </section>
-
-        <section style={styles.caseSection}>
-          <p style={styles.sectionKicker}>
-            Active review
-          </p>
-
-          <h2 style={styles.sectionTitle}>
-            Instability under governance
-          </h2>
 
           <div style={styles.caseList}>
-            {visibleCases.map((caseItem) => (
+            {cases.map((caseItem) => (
               <article
                 key={caseItem.id}
                 style={styles.caseCard}
               >
                 <div style={styles.caseHeader}>
                   <div>
+                    <p style={styles.caseKicker}>
+                      Accepted CGI Case
+                    </p>
+
                     <h3 style={styles.caseName}>
                       {caseItem.beneficiary_name}
                     </h3>
 
                     <p style={styles.caseDomain}>
-                      {caseItem.support_domain}
+                      Pressure type: {caseItem.support_domain}
                     </p>
                   </div>
 
@@ -574,7 +314,7 @@ function CasesContent() {
 
                 <div style={styles.infoGrid}>
                   <Info
-                    label="Status"
+                    label="Governance State"
                     value={caseItem.case_status}
                   />
 
@@ -594,7 +334,7 @@ function CasesContent() {
                   />
 
                   <Info
-                    label="Current Ownership"
+                    label="Ownership"
                     value={
                       caseItem.institution_name ||
                       'Not provided'
@@ -615,8 +355,18 @@ function CasesContent() {
                   )}
                 </div>
 
+                <div style={styles.interpretationBox}>
+                  <p style={styles.interpretationTitle}>
+                    Governance interpretation
+                  </p>
+
+                  <p style={styles.interpretationText}>
+                    {buildGovernanceInterpretation(caseItem)}
+                  </p>
+                </div>
+
                 <div style={styles.lifecycleGrid}>
-                  {CASE_STATUSES.map((status) => (
+                  {CASE_TRANSITIONS.map((status) => (
                     <button
                       key={status}
                       onClick={() =>
@@ -692,7 +442,7 @@ function CasesContent() {
                 {caseItem.intervention_summary && (
                   <div style={styles.summaryBox}>
                     <strong>Action:</strong>{' '}
-                    {truncateLegacyText(
+                    {truncateText(
                       caseItem.intervention_summary
                     )}
                   </div>
@@ -701,13 +451,20 @@ function CasesContent() {
                 {caseItem.outcome_summary && (
                   <div style={styles.summaryBox}>
                     <strong>Outcome:</strong>{' '}
-                    {truncateLegacyText(
+                    {truncateText(
                       caseItem.outcome_summary
                     )}
                   </div>
                 )}
               </article>
             ))}
+
+            {cases.length === 0 && (
+              <div style={styles.emptyState}>
+                No accepted instability is currently under active CGI
+                governance.
+              </div>
+            )}
           </div>
         </section>
       </div>
@@ -715,7 +472,38 @@ function CasesContent() {
   )
 }
 
-function truncateLegacyText(value: string) {
+function buildGovernanceInterpretation(
+  caseItem: InstabilityCase
+) {
+  if (
+    caseItem.case_status.includes('STALLED')
+  ) {
+    return 'Governed movement is stalled. CGI should preserve visibility until stabilization direction resumes.'
+  }
+
+  if (
+    caseItem.case_status.includes('ESCALATED')
+  ) {
+    return 'This instability exceeded ordinary governance visibility and now requires elevated executive attention.'
+  }
+
+  if (
+    caseItem.case_status ===
+    'RECOVERY_MONITORING'
+  ) {
+    return 'Initial stabilization may be occurring, but CGI is preserving observation until recovery credibility holds.'
+  }
+
+  if (
+    caseItem.case_status === 'IMPROVING'
+  ) {
+    return 'Governed action is showing positive movement, but stabilization should not yet be assumed permanent.'
+  }
+
+  return 'This instability remains under active continuity governance and requires operational oversight.'
+}
+
+function truncateText(value: string) {
   if (value.length <= 180) return value
 
   return `${value.slice(0, 180)}...`
@@ -734,38 +522,6 @@ function Metric({
 
       <h2 style={styles.metricValue}>{value}</h2>
     </div>
-  )
-}
-
-function Select({
-  label,
-  value,
-  setValue,
-  options,
-}: {
-  label: string
-  value: string
-  setValue: (value: string) => void
-  options: string[]
-}) {
-  return (
-    <label style={styles.label}>
-      {label}
-
-      <select
-        value={value}
-        onChange={(event) =>
-          setValue(event.target.value)
-        }
-        style={styles.select}
-      >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-    </label>
   )
 }
 
@@ -808,8 +564,18 @@ function difficultyBadge(
     }
   }
 
+  if (level === 'MODERATE') {
+    return {
+      background: '#713f12',
+      color: '#fde68a',
+      padding: '8px 12px',
+      borderRadius: '999px',
+      fontWeight: 800,
+    }
+  }
+
   return {
-    background: '#111827',
+    background: '#064e3b',
     color: '#a7f3d0',
     padding: '8px 12px',
     borderRadius: '999px',
@@ -887,12 +653,8 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: '20px',
   },
 
-  formCard: {
-    background: '#020617',
-    border: '1px solid #1e293b',
-    borderRadius: '24px',
-    padding: '24px',
-    marginBottom: '32px',
+  caseSection: {
+    marginBottom: '40px',
   },
 
   sectionKicker: {
@@ -912,94 +674,7 @@ const styles: Record<string, CSSProperties> = {
   panelNote: {
     color: '#cbd5e1',
     lineHeight: 1.6,
-    marginBottom: '18px',
-  },
-
-  generatedBox: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '16px',
-    marginBottom: '22px',
-  },
-
-  generatedLabel: {
-    color: '#94a3b8',
-    fontSize: '12px',
-    fontWeight: 900,
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
-    margin: 0,
-  },
-
-  generatedValue: {
-    color: '#a7f3d0',
-    fontSize: '22px',
-    fontWeight: 900,
-    lineHeight: 1.25,
-    margin: '8px 0 0',
-  },
-
-  grid: {
-    display: 'grid',
-    gridTemplateColumns:
-      'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: '16px',
-  },
-
-  label: {
-    display: 'block',
-    fontWeight: 800,
-    marginBottom: '10px',
-  },
-
-  select: {
-    width: '100%',
-    marginTop: '8px',
-    padding: '14px',
-    borderRadius: '12px',
-    background: '#111827',
-    color: 'white',
-    border: '1px solid #334155',
-  },
-
-  signalGrid: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '10px',
-    marginTop: '12px',
-  },
-
-  signalButton: {
-    border: '1px solid #334155',
-    borderRadius: '999px',
-    padding: '10px 14px',
-    cursor: 'pointer',
-    fontWeight: 700,
-  },
-
-  checkboxRow: {
-    display: 'flex',
-    gap: '10px',
-    marginTop: '20px',
     marginBottom: '24px',
-    alignItems: 'center',
-  },
-
-  primaryButton: {
-    background: '#e2e8f0',
-    color: '#020617',
-    border: 'none',
-    borderRadius: '14px',
-    padding: '16px 20px',
-    fontWeight: 900,
-    cursor: 'pointer',
-    width: '100%',
-    fontSize: '16px',
-  },
-
-  caseSection: {
-    marginBottom: '40px',
   },
 
   caseList: {
@@ -1019,6 +694,14 @@ const styles: Record<string, CSSProperties> = {
     justifyContent: 'space-between',
     gap: '16px',
     flexWrap: 'wrap',
+  },
+
+  caseKicker: {
+    color: '#14b8a6',
+    fontSize: '12px',
+    fontWeight: 900,
+    letterSpacing: '1.5px',
+    margin: '0 0 8px',
   },
 
   caseName: {
@@ -1074,6 +757,26 @@ const styles: Record<string, CSSProperties> = {
     border: '1px solid rgba(167,243,208,0.22)',
   },
 
+  interpretationBox: {
+    marginTop: '20px',
+    background: '#042f2e',
+    border: '1px solid #115e59',
+    borderRadius: '16px',
+    padding: '14px',
+  },
+
+  interpretationTitle: {
+    color: '#5eead4',
+    fontWeight: 900,
+    margin: 0,
+  },
+
+  interpretationText: {
+    color: '#ccfbf1',
+    lineHeight: 1.6,
+    margin: '8px 0 0',
+  },
+
   lifecycleGrid: {
     display: 'grid',
     gridTemplateColumns:
@@ -1096,6 +799,22 @@ const styles: Record<string, CSSProperties> = {
     marginTop: '20px',
   },
 
+  label: {
+    display: 'block',
+    fontWeight: 800,
+    marginBottom: '10px',
+  },
+
+  select: {
+    width: '100%',
+    marginTop: '8px',
+    padding: '14px',
+    borderRadius: '12px',
+    background: '#111827',
+    color: 'white',
+    border: '1px solid #334155',
+  },
+
   summaryBox: {
     marginTop: '18px',
     background: '#020617',
@@ -1103,5 +822,13 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: '14px',
     padding: '14px',
     lineHeight: 1.6,
+  },
+
+  emptyState: {
+    border: '1px dashed #334155',
+    borderRadius: '18px',
+    padding: '24px',
+    color: '#94a3b8',
+    textAlign: 'center',
   },
 }
