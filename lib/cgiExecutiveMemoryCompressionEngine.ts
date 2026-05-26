@@ -20,6 +20,14 @@ export type CGIMemoryCompressionConfidence =
   | 'MODERATE'
   | 'HIGH'
 
+export type CGIMemoryPersistenceMaturity =
+  | 'NO_MEMORY'
+  | 'ISOLATED'
+  | 'EMERGING'
+  | 'RECURRING'
+  | 'ENTRENCHED'
+  | 'SYSTEMIC'
+
 export type CGIExecutiveMemoryCompression = {
   memoryPosture: CGIExecutiveMemoryPosture
   memoryPostureLabel: string
@@ -27,6 +35,8 @@ export type CGIExecutiveMemoryCompression = {
   urgencyLabel: string
   confidence: CGIMemoryCompressionConfidence
   confidenceLabel: string
+  persistenceMaturity: CGIMemoryPersistenceMaturity
+  persistenceMaturityLabel: string
   executiveEscalationRequired: boolean
   survivabilityAttentionRequired: boolean
   recurrenceAttentionRequired: boolean
@@ -43,6 +53,8 @@ export type CGIExecutiveMemoryCompression = {
 export function compressCGIExecutiveMemory(
   historicalReview: CGIHistoricalContinuityReview
 ): CGIExecutiveMemoryCompression {
+  const persistenceMaturity = derivePersistenceMaturity(historicalReview)
+
   const survivabilityAttentionRequired =
     historicalReview.survivabilityConcernPersisting ||
     historicalReview.continuityPersistenceSeverity === 'CRITICAL' ||
@@ -60,6 +72,7 @@ export function compressCGIExecutiveMemory(
 
   const memoryPosture = deriveMemoryPosture({
     historicalReview,
+    persistenceMaturity,
     survivabilityAttentionRequired,
     recurrenceAttentionRequired,
   })
@@ -67,6 +80,7 @@ export function compressCGIExecutiveMemory(
   const urgency = deriveCompressionUrgency({
     historicalReview,
     memoryPosture,
+    persistenceMaturity,
     survivabilityAttentionRequired,
     recurrenceAttentionRequired,
     evidenceAttentionRequired,
@@ -85,6 +99,7 @@ export function compressCGIExecutiveMemory(
   const dominantMemoryConcern = deriveDominantMemoryConcern({
     historicalReview,
     memoryPosture,
+    persistenceMaturity,
     executiveEscalationRequired,
     survivabilityAttentionRequired,
     recurrenceAttentionRequired,
@@ -94,6 +109,7 @@ export function compressCGIExecutiveMemory(
   const requiredExecutiveAction = deriveRequiredExecutiveAction({
     memoryPosture,
     urgency,
+    persistenceMaturity,
     executiveEscalationRequired,
     survivabilityAttentionRequired,
     recurrenceAttentionRequired,
@@ -108,14 +124,18 @@ export function compressCGIExecutiveMemory(
     recurrenceAttentionRequired,
   })
 
-  const continuityMemoryStatement = buildContinuityMemoryStatement(
-    historicalReview
-  )
+  const continuityMemoryStatement = buildContinuityMemoryStatement({
+    historicalReview,
+    persistenceMaturity,
+  })
 
   const executiveCompressionSummary = [
     `Memory posture: ${formatCGIExecutiveMemoryPosture(memoryPosture)}.`,
     `Urgency: ${formatCGIMemoryCompressionUrgency(urgency)}.`,
     `Confidence: ${formatCGIMemoryCompressionConfidence(confidence)}.`,
+    `Persistence maturity: ${formatCGIMemoryPersistenceMaturity(
+      persistenceMaturity
+    )}.`,
     `Dominant concern: ${dominantMemoryConcern}`,
     `Required action: ${requiredExecutiveAction}`,
   ].join(' ')
@@ -125,6 +145,7 @@ export function compressCGIExecutiveMemory(
     memoryPosture,
     urgency,
     confidence,
+    persistenceMaturity,
     dominantMemoryConcern,
     requiredExecutiveAction,
   })
@@ -136,6 +157,9 @@ export function compressCGIExecutiveMemory(
     urgencyLabel: formatCGIMemoryCompressionUrgency(urgency),
     confidence,
     confidenceLabel: formatCGIMemoryCompressionConfidence(confidence),
+    persistenceMaturity,
+    persistenceMaturityLabel:
+      formatCGIMemoryPersistenceMaturity(persistenceMaturity),
     executiveEscalationRequired,
     survivabilityAttentionRequired,
     recurrenceAttentionRequired,
@@ -150,22 +174,72 @@ export function compressCGIExecutiveMemory(
   }
 }
 
+function derivePersistenceMaturity(
+  historicalReview: CGIHistoricalContinuityReview
+): CGIMemoryPersistenceMaturity {
+  if (historicalReview.snapshotCount === 0) return 'NO_MEMORY'
+
+  if (
+    historicalReview.snapshotCount >= 12 &&
+    (historicalReview.survivabilityConcernPersisting ||
+      historicalReview.institutionalMemoryPressure === 'EXECUTIVE')
+  ) {
+    return 'SYSTEMIC'
+  }
+
+  if (
+    historicalReview.snapshotCount >= 8 &&
+    (historicalReview.criticalCount > 1 ||
+      historicalReview.continuityPersistenceSeverity === 'CRITICAL' ||
+      historicalReview.institutionalMemoryPressure === 'HEAVY')
+  ) {
+    return 'ENTRENCHED'
+  }
+
+  if (
+    historicalReview.snapshotCount >= 4 &&
+    (historicalReview.recurrenceVisible ||
+      historicalReview.elevatedCount > 1 ||
+      historicalReview.structuralMemoryCount > 1)
+  ) {
+    return 'RECURRING'
+  }
+
+  if (
+    historicalReview.snapshotCount >= 2 ||
+    historicalReview.elevatedCount > 1 ||
+    historicalReview.structuralMemoryCount > 0
+  ) {
+    return 'EMERGING'
+  }
+
+  return 'ISOLATED'
+}
+
 function deriveMemoryPosture({
   historicalReview,
+  persistenceMaturity,
   survivabilityAttentionRequired,
   recurrenceAttentionRequired,
 }: {
   historicalReview: CGIHistoricalContinuityReview
+  persistenceMaturity: CGIMemoryPersistenceMaturity
   survivabilityAttentionRequired: boolean
   recurrenceAttentionRequired: boolean
 }): CGIExecutiveMemoryPosture {
   if (historicalReview.snapshotCount === 0) return 'NO_MEMORY'
+
+  const persistenceIsMature =
+    persistenceMaturity === 'RECURRING' ||
+    persistenceMaturity === 'ENTRENCHED' ||
+    persistenceMaturity === 'SYSTEMIC'
 
   const criticalMemoryConfirmed =
     historicalReview.continuityPersistenceSeverity === 'CRITICAL' ||
     historicalReview.institutionalMemoryPressure === 'EXECUTIVE' ||
     historicalReview.criticalCount > 1 ||
     (historicalReview.criticalCount > 0 &&
+      persistenceIsMature &&
       (survivabilityAttentionRequired || recurrenceAttentionRequired))
 
   if (criticalMemoryConfirmed) return 'CRITICAL_MEMORY'
@@ -176,6 +250,7 @@ function deriveMemoryPosture({
     historicalReview.institutionalMemoryPressure === 'HEAVY' ||
     historicalReview.elevatedCount > 1 ||
     (historicalReview.elevatedCount > 0 &&
+      persistenceIsMature &&
       (survivabilityAttentionRequired || recurrenceAttentionRequired))
 
   if (elevatedMemoryConfirmed) return 'ELEVATED_MEMORY'
@@ -195,12 +270,14 @@ function deriveMemoryPosture({
 function deriveCompressionUrgency({
   historicalReview,
   memoryPosture,
+  persistenceMaturity,
   survivabilityAttentionRequired,
   recurrenceAttentionRequired,
   evidenceAttentionRequired,
 }: {
   historicalReview: CGIHistoricalContinuityReview
   memoryPosture: CGIExecutiveMemoryPosture
+  persistenceMaturity: CGIMemoryPersistenceMaturity
   survivabilityAttentionRequired: boolean
   recurrenceAttentionRequired: boolean
   evidenceAttentionRequired: boolean
@@ -209,6 +286,7 @@ function deriveCompressionUrgency({
 
   if (
     memoryPosture === 'CRITICAL_MEMORY' ||
+    persistenceMaturity === 'SYSTEMIC' ||
     historicalReview.continuityPersistenceSeverity === 'CRITICAL' ||
     historicalReview.institutionalMemoryPressure === 'EXECUTIVE'
   ) {
@@ -217,6 +295,7 @@ function deriveCompressionUrgency({
 
   if (
     memoryPosture === 'ELEVATED_MEMORY' ||
+    persistenceMaturity === 'ENTRENCHED' ||
     historicalReview.continuityPersistenceSeverity === 'HIGH' ||
     historicalReview.institutionalMemoryPressure === 'HEAVY'
   ) {
@@ -225,6 +304,7 @@ function deriveCompressionUrgency({
 
   if (
     memoryPosture === 'WATCHED_MEMORY' ||
+    persistenceMaturity === 'RECURRING' ||
     historicalReview.continuityPersistenceSeverity === 'MODERATE' ||
     historicalReview.institutionalMemoryPressure === 'MODERATE' ||
     survivabilityAttentionRequired ||
@@ -235,6 +315,7 @@ function deriveCompressionUrgency({
   }
 
   if (
+    persistenceMaturity === 'EMERGING' ||
     historicalReview.continuityPersistenceSeverity === 'LOW' ||
     historicalReview.institutionalMemoryPressure === 'LIGHT'
   ) {
@@ -272,6 +353,7 @@ function deriveCompressionConfidence(
 function deriveDominantMemoryConcern({
   historicalReview,
   memoryPosture,
+  persistenceMaturity,
   executiveEscalationRequired,
   survivabilityAttentionRequired,
   recurrenceAttentionRequired,
@@ -279,6 +361,7 @@ function deriveDominantMemoryConcern({
 }: {
   historicalReview: CGIHistoricalContinuityReview
   memoryPosture: CGIExecutiveMemoryPosture
+  persistenceMaturity: CGIMemoryPersistenceMaturity
   executiveEscalationRequired: boolean
   survivabilityAttentionRequired: boolean
   recurrenceAttentionRequired: boolean
@@ -289,11 +372,11 @@ function deriveDominantMemoryConcern({
   }
 
   if (executiveEscalationRequired) {
-    return 'Confirmed executive continuity exposure remains visible in institutional memory.'
+    return 'Confirmed continuity persistence remains executive-relevant.'
   }
 
   if (memoryPosture === 'ELEVATED_MEMORY') {
-    return 'Elevated continuity exposure remains visible and should stay under executive review.'
+    return 'Elevated continuity persistence remains visible and should stay under executive review.'
   }
 
   if (memoryPosture === 'WATCHED_MEMORY' && evidenceAttentionRequired) {
@@ -312,6 +395,10 @@ function deriveDominantMemoryConcern({
     return 'Evidence gaps are limiting stabilization credibility.'
   }
 
+  if (persistenceMaturity === 'ISOLATED') {
+    return 'Continuity memory is currently isolated and should be watched before stronger conclusions are drawn.'
+  }
+
   if (historicalReview.continuityImproving) {
     return 'Continuity memory shows improvement, but credibility should remain evidence-based.'
   }
@@ -322,6 +409,7 @@ function deriveDominantMemoryConcern({
 function deriveRequiredExecutiveAction({
   memoryPosture,
   urgency,
+  persistenceMaturity,
   executiveEscalationRequired,
   survivabilityAttentionRequired,
   recurrenceAttentionRequired,
@@ -330,6 +418,7 @@ function deriveRequiredExecutiveAction({
 }: {
   memoryPosture: CGIExecutiveMemoryPosture
   urgency: CGIMemoryCompressionUrgency
+  persistenceMaturity: CGIMemoryPersistenceMaturity
   executiveEscalationRequired: boolean
   survivabilityAttentionRequired: boolean
   recurrenceAttentionRequired: boolean
@@ -341,11 +430,11 @@ function deriveRequiredExecutiveAction({
   }
 
   if (executiveEscalationRequired || urgency === 'EXECUTIVE') {
-    return 'Maintain executive escalation until continuity exposure, evidence gaps, and survivability pressure are resolved.'
+    return 'Maintain executive escalation until continuity persistence, evidence gaps, and survivability pressure are resolved.'
   }
 
   if (urgency === 'HIGH') {
-    return 'Maintain executive review until elevated continuity exposure is supported by verified stabilization evidence.'
+    return 'Maintain executive review until elevated continuity persistence is supported by verified stabilization evidence.'
   }
 
   if (survivabilityAttentionRequired) {
@@ -358,6 +447,10 @@ function deriveRequiredExecutiveAction({
 
   if (evidenceAttentionRequired) {
     return 'Continue evidence follow-up before accepting stabilization credibility.'
+  }
+
+  if (persistenceMaturity === 'ISOLATED') {
+    return 'Preserve additional continuity records before escalating memory conclusions.'
   }
 
   if (stabilizationCredible) {
@@ -397,15 +490,22 @@ function deriveRequiredEvidence({
   return 'Continue preserving evidence, accountability status, and continuity posture history.'
 }
 
-function buildContinuityMemoryStatement(
+function buildContinuityMemoryStatement({
+  historicalReview,
+  persistenceMaturity,
+}: {
   historicalReview: CGIHistoricalContinuityReview
-) {
+  persistenceMaturity: CGIMemoryPersistenceMaturity
+}) {
   if (historicalReview.snapshotCount === 0) {
     return 'CGI has no continuity memory available for executive compression.'
   }
 
   return [
     `CGI reviewed ${historicalReview.snapshotCount} persisted continuity records.`,
+    `Persistence maturity is ${formatCGIMemoryPersistenceMaturity(
+      persistenceMaturity
+    )}.`,
     `Current posture is ${historicalReview.currentPosture}.`,
     `Historical trend is ${historicalReview.historicalTrendLabel}.`,
     `Stabilization credibility is ${historicalReview.stabilizationCredibilityLabel}.`,
@@ -418,6 +518,7 @@ function buildBoardLevelReading({
   memoryPosture,
   urgency,
   confidence,
+  persistenceMaturity,
   dominantMemoryConcern,
   requiredExecutiveAction,
 }: {
@@ -425,6 +526,7 @@ function buildBoardLevelReading({
   memoryPosture: CGIExecutiveMemoryPosture
   urgency: CGIMemoryCompressionUrgency
   confidence: CGIMemoryCompressionConfidence
+  persistenceMaturity: CGIMemoryPersistenceMaturity
   dominantMemoryConcern: string
   requiredExecutiveAction: string
 }) {
@@ -438,6 +540,9 @@ function buildBoardLevelReading({
     )}.`,
     `Compression urgency is ${formatCGIMemoryCompressionUrgency(urgency)}.`,
     `Confidence is ${formatCGIMemoryCompressionConfidence(confidence)}.`,
+    `Persistence maturity is ${formatCGIMemoryPersistenceMaturity(
+      persistenceMaturity
+    )}.`,
     `Dominant concern: ${dominantMemoryConcern}`,
     `Required executive action: ${requiredExecutiveAction}`,
   ].join(' ')
@@ -482,4 +587,19 @@ export function formatCGIMemoryCompressionConfidence(
   }
 
   return labels[confidence]
+}
+
+export function formatCGIMemoryPersistenceMaturity(
+  maturity: CGIMemoryPersistenceMaturity
+) {
+  const labels: Record<CGIMemoryPersistenceMaturity, string> = {
+    NO_MEMORY: 'NO MEMORY',
+    ISOLATED: 'ISOLATED',
+    EMERGING: 'EMERGING',
+    RECURRING: 'RECURRING',
+    ENTRENCHED: 'ENTRENCHED',
+    SYSTEMIC: 'SYSTEMIC',
+  }
+
+  return labels[maturity]
 }
