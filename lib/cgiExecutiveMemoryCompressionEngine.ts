@@ -177,7 +177,19 @@ export function compressCGIExecutiveMemory(
 function derivePersistenceMaturity(
   historicalReview: CGIHistoricalContinuityReview
 ): CGIMemoryPersistenceMaturity {
-  if (historicalReview.snapshotCount === 0) return 'NO_MEMORY'
+  if (historicalReview.snapshotCount === 0) {
+    return 'NO_MEMORY'
+  }
+
+  /*
+    IMPORTANT:
+    One snapshot must remain ISOLATED.
+    Prevents artificial escalation inflation.
+  */
+
+  if (historicalReview.snapshotCount === 1) {
+    return 'ISOLATED'
+  }
 
   if (
     historicalReview.snapshotCount >= 12 &&
@@ -205,15 +217,7 @@ function derivePersistenceMaturity(
     return 'RECURRING'
   }
 
-  if (
-    historicalReview.snapshotCount >= 2 ||
-    historicalReview.elevatedCount > 1 ||
-    historicalReview.structuralMemoryCount > 0
-  ) {
-    return 'EMERGING'
-  }
-
-  return 'ISOLATED'
+  return 'EMERGING'
 }
 
 function deriveMemoryPosture({
@@ -227,7 +231,9 @@ function deriveMemoryPosture({
   survivabilityAttentionRequired: boolean
   recurrenceAttentionRequired: boolean
 }): CGIExecutiveMemoryPosture {
-  if (historicalReview.snapshotCount === 0) return 'NO_MEMORY'
+  if (historicalReview.snapshotCount === 0) {
+    return 'NO_MEMORY'
+  }
 
   const persistenceIsMature =
     persistenceMaturity === 'RECURRING' ||
@@ -242,7 +248,9 @@ function deriveMemoryPosture({
       persistenceIsMature &&
       (survivabilityAttentionRequired || recurrenceAttentionRequired))
 
-  if (criticalMemoryConfirmed) return 'CRITICAL_MEMORY'
+  if (criticalMemoryConfirmed) {
+    return 'CRITICAL_MEMORY'
+  }
 
   const elevatedMemoryConfirmed =
     historicalReview.criticalCount > 0 ||
@@ -253,7 +261,9 @@ function deriveMemoryPosture({
       persistenceIsMature &&
       (survivabilityAttentionRequired || recurrenceAttentionRequired))
 
-  if (elevatedMemoryConfirmed) return 'ELEVATED_MEMORY'
+  if (elevatedMemoryConfirmed) {
+    return 'ELEVATED_MEMORY'
+  }
 
   if (
     historicalReview.elevatedCount > 0 ||
@@ -282,7 +292,9 @@ function deriveCompressionUrgency({
   recurrenceAttentionRequired: boolean
   evidenceAttentionRequired: boolean
 }): CGIMemoryCompressionUrgency {
-  if (historicalReview.snapshotCount === 0) return 'NONE'
+  if (historicalReview.snapshotCount === 0) {
+    return 'NONE'
+  }
 
   if (
     memoryPosture === 'CRITICAL_MEMORY' ||
@@ -316,6 +328,7 @@ function deriveCompressionUrgency({
 
   if (
     persistenceMaturity === 'EMERGING' ||
+    persistenceMaturity === 'ISOLATED' ||
     historicalReview.continuityPersistenceSeverity === 'LOW' ||
     historicalReview.institutionalMemoryPressure === 'LIGHT'
   ) {
@@ -328,10 +341,13 @@ function deriveCompressionUrgency({
 function deriveCompressionConfidence(
   historicalReview: CGIHistoricalContinuityReview
 ): CGIMemoryCompressionConfidence {
-  if (historicalReview.snapshotCount === 0) return 'NOT_ESTABLISHED'
+  if (historicalReview.snapshotCount === 0) {
+    return 'NOT_ESTABLISHED'
+  }
 
   const evidenceRatio =
-    historicalReview.evidenceVerifiedCount / historicalReview.snapshotCount
+    historicalReview.evidenceVerifiedCount /
+    historicalReview.snapshotCount
 
   if (
     evidenceRatio >= 0.8 &&
@@ -379,7 +395,18 @@ function deriveDominantMemoryConcern({
     return 'Elevated continuity persistence remains visible and should stay under executive review.'
   }
 
-  if (memoryPosture === 'WATCHED_MEMORY' && evidenceAttentionRequired) {
+  if (
+    memoryPosture === 'WATCHED_MEMORY' &&
+    persistenceMaturity === 'ISOLATED' &&
+    evidenceAttentionRequired
+  ) {
+    return 'Continuity exposure is visible, but memory persistence remains isolated and evidence-deficient.'
+  }
+
+  if (
+    memoryPosture === 'WATCHED_MEMORY' &&
+    evidenceAttentionRequired
+  ) {
     return 'Continuity exposure is visible, but current memory is not mature enough for critical classification.'
   }
 
@@ -427,6 +454,13 @@ function deriveRequiredExecutiveAction({
 }) {
   if (memoryPosture === 'NO_MEMORY') {
     return 'Begin preserving governed continuity memory before executive conclusions are drawn.'
+  }
+
+  if (
+    persistenceMaturity === 'ISOLATED' &&
+    evidenceAttentionRequired
+  ) {
+    return 'Preserve additional continuity records and require evidence follow-up before escalation conclusions are made.'
   }
 
   if (executiveEscalationRequired || urgency === 'EXECUTIVE') {
