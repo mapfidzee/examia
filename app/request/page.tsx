@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { CSSProperties } from 'react'
 import { supabase } from '../../lib/supabase'
@@ -15,14 +15,42 @@ type CreatedRequest = {
   teacher_status: string | null
 }
 
-const instabilityClasses = [
-  'FLOW',
-  'COVERAGE',
-  'COORDINATION',
-  'OWNERSHIP',
-  'EVIDENCE',
-  'RECOVERY',
-  'RELIABILITY',
+const instabilityClassOptions = [
+  {
+    value: 'FLOW',
+    label: 'FLOW',
+    description: 'Work is delayed, stuck, backed up, or not moving clearly.',
+  },
+  {
+    value: 'COVERAGE',
+    label: 'COVERAGE',
+    description: 'Staffing, capacity, support, or resources are not enough.',
+  },
+  {
+    value: 'COORDINATION',
+    label: 'COORDINATION',
+    description: 'Teams, sites, or functions are not aligned clearly.',
+  },
+  {
+    value: 'OWNERSHIP',
+    label: 'OWNERSHIP',
+    description: 'Responsibility is unclear, missing, disputed, or changing.',
+  },
+  {
+    value: 'EVIDENCE',
+    label: 'EVIDENCE',
+    description: 'Completion or improvement cannot yet be confirmed.',
+  },
+  {
+    value: 'RECOVERY',
+    label: 'RECOVERY',
+    description: 'The situation improved but may not be holding yet.',
+  },
+  {
+    value: 'RELIABILITY',
+    label: 'RELIABILITY',
+    description: 'Operations are becoming unpredictable or inconsistent.',
+  },
 ]
 
 const entryRoutes = [
@@ -32,6 +60,73 @@ const entryRoutes = [
 ]
 
 const severityLevels = ['LOW', 'MODERATE', 'HIGH', 'CRITICAL']
+
+const locationOptions = [
+  'SITE_A',
+  'SITE_B',
+  'SITE_C',
+  'REGION_NORTH',
+  'REGION_SOUTH',
+  'UNIT_1',
+  'UNIT_2',
+  'OPERATIONS_DESK',
+  'CROSS_SITE',
+  'OTHER_LOCATION',
+]
+
+const affectedAreaOptions = [
+  'ROUTING',
+  'STAFFING',
+  'HANDOFF',
+  'BACKLOG',
+  'RECOVERY',
+  'COORDINATION',
+  'EVIDENCE',
+  'OWNERSHIP',
+  'COMMAND_REVIEW',
+  'SITE_OPERATIONS',
+  'CROSS_SITE_OPERATIONS',
+  'OTHER_AREA',
+]
+
+const visibleSignalOptions = [
+  'ROUTING_DELAY',
+  'BACKLOG_GROWING',
+  'HANDOFF_DELAY',
+  'OWNERSHIP_UNCLEAR',
+  'ACTION_STALLED',
+  'RECOVERY_NOT_HOLDING',
+  'ISSUE_REPEATED',
+  'EVIDENCE_MISSING',
+  'ESCALATION_DELAYED',
+  'CROSS_TEAM_CONFUSION',
+  'RESOURCE_GAP',
+  'OTHER_VISIBLE_SIGNAL',
+]
+
+const ownershipStates = [
+  'CLEAR',
+  'UNCLEAR',
+  'MISSING',
+  'TRANSFERRED',
+  'CONTESTED',
+]
+
+const evidenceLevels = [
+  'NONE',
+  'LIMITED',
+  'PARTIAL',
+  'SUFFICIENT',
+  'CONFIRMED',
+]
+
+const reviewUrgencyOptions = [
+  'NEXT_SHIFT',
+  'TODAY',
+  'WITHIN_24_HOURS',
+  'WITHIN_48_HOURS',
+  'ROUTINE_REVIEW',
+]
 
 const flowSteps = [
   {
@@ -74,57 +169,53 @@ export default function RequestPage() {
   const [entryRoute, setEntryRoute] = useState('HUMAN_SUBMITTED')
   const [instabilityClass, setInstabilityClass] = useState('FLOW')
   const [severity, setSeverity] = useState('MODERATE')
-  const [location, setLocation] = useState('')
-  const [affectedArea, setAffectedArea] = useState('')
-  const [visibleIssue, setVisibleIssue] = useState('')
-  const [currentOwner, setCurrentOwner] = useState('')
-  const [evidenceAvailable, setEvidenceAvailable] = useState('')
-  const [reviewTime, setReviewTime] = useState('')
+  const [location, setLocation] = useState('SITE_A')
+  const [affectedArea, setAffectedArea] = useState('ROUTING')
+  const [visibleSignal, setVisibleSignal] = useState('ROUTING_DELAY')
+  const [ownershipState, setOwnershipState] = useState('UNCLEAR')
+  const [evidenceLevel, setEvidenceLevel] = useState('LIMITED')
+  const [reviewUrgency, setReviewUrgency] = useState('WITHIN_24_HOURS')
+  const [briefNote, setBriefNote] = useState('')
   const [message, setMessage] = useState('')
   const [createdRequest, setCreatedRequest] =
     useState<CreatedRequest | null>(null)
   const [loading, setLoading] = useState(false)
 
+  const selectedClassDescription = useMemo(() => {
+    return (
+      instabilityClassOptions.find((item) => item.value === instabilityClass)
+        ?.description ?? ''
+    )
+  }, [instabilityClass])
+
   async function submitRequest(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-
-    if (!location.trim()) {
-      alert('Please state where the instability is happening.')
-      return
-    }
-
-    if (!affectedArea.trim()) {
-      alert('Please state what area, team, unit, site, or function is affected.')
-      return
-    }
-
-    if (!visibleIssue.trim()) {
-      alert('Please describe what has become visible.')
-      return
-    }
 
     setLoading(true)
     setMessage('Submitting visible instability for review...')
     setCreatedRequest(null)
 
     const problemSummary = [
-      `Visible issue: ${visibleIssue.trim()}`,
-      `Location: ${location.trim()}`,
-      `Affected area: ${affectedArea.trim()}`,
       `Entry route: ${entryRoute}`,
       `Operational pressure type: ${instabilityClass}`,
+      `Meaning: ${selectedClassDescription}`,
       `Difficulty level: ${severity}`,
-      `Current owner: ${currentOwner.trim() || 'Not clear yet'}`,
-      `Evidence available: ${evidenceAvailable.trim() || 'Not provided yet'}`,
+      `Location: ${location}`,
+      `Affected area: ${affectedArea}`,
+      `Visible signal: ${visibleSignal}`,
+      `Ownership state: ${ownershipState}`,
+      `Evidence level: ${evidenceLevel}`,
+      `Review urgency: ${reviewUrgency}`,
+      `Brief note: ${briefNote.trim() || 'No additional note provided'}`,
     ].join('\n')
 
     const { data, error } = await supabase
       .from('lesson_requests')
       .insert({
-        subject: `${instabilityClass} — ${affectedArea.trim()}`,
-        grade_level: location.trim(),
+        subject: `${instabilityClass} — ${visibleSignal}`,
+        grade_level: location,
         problem: problemSummary,
-        preferred_time: reviewTime.trim() || null,
+        preferred_time: reviewUrgency,
         status: 'UNDER_REVIEW',
         teacher_status: 'PENDING_TRIAGE',
       })
@@ -145,12 +236,13 @@ export default function RequestPage() {
     setEntryRoute('HUMAN_SUBMITTED')
     setInstabilityClass('FLOW')
     setSeverity('MODERATE')
-    setLocation('')
-    setAffectedArea('')
-    setVisibleIssue('')
-    setCurrentOwner('')
-    setEvidenceAvailable('')
-    setReviewTime('')
+    setLocation('SITE_A')
+    setAffectedArea('ROUTING')
+    setVisibleSignal('ROUTING_DELAY')
+    setOwnershipState('UNCLEAR')
+    setEvidenceLevel('LIMITED')
+    setReviewUrgency('WITHIN_24_HOURS')
+    setBriefNote('')
     setLoading(false)
   }
 
@@ -245,15 +337,30 @@ export default function RequestPage() {
           </div>
         </section>
 
+        <section style={styles.classCard}>
+          <p style={styles.eyebrow}>Operational pressure types</p>
+
+          <h2 style={styles.h2}>What do these categories mean?</h2>
+
+          <div style={styles.classGrid}>
+            {instabilityClassOptions.map((item) => (
+              <article key={item.value} style={styles.classItem}>
+                <h3 style={styles.classTitle}>{item.label}</h3>
+
+                <p style={styles.classText}>{item.description}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
         <section style={styles.card}>
           <p style={styles.eyebrow}>Instability intake</p>
 
           <h2 style={styles.h2}>What has become visible?</h2>
 
           <p style={styles.cardText}>
-            Keep the description simple and practical. CGI needs to understand
-            what is happening, where it is happening, what is affected, who owns
-            it now, and what evidence already exists.
+            Select the closest governed options first. Use the note only for
+            short context that cannot be captured by the dropdowns.
           </p>
 
           <form onSubmit={submitRequest} style={styles.form}>
@@ -277,10 +384,13 @@ export default function RequestPage() {
                 onChange={(event) => setInstabilityClass(event.target.value)}
                 style={styles.input}
               >
-                {instabilityClasses.map((item) => (
-                  <option key={item}>{item}</option>
+                {instabilityClassOptions.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label} — {item.description}
+                  </option>
                 ))}
               </select>
+              <span style={styles.helperText}>{selectedClassDescription}</span>
             </label>
 
             <label style={styles.label}>
@@ -298,62 +408,89 @@ export default function RequestPage() {
 
             <label style={styles.label}>
               Where is this happening?
-              <input
+              <select
                 value={location}
                 onChange={(event) => setLocation(event.target.value)}
-                placeholder="Example: Site A, Unit 2, Region North, Operations Desk"
                 style={styles.input}
-              />
+              >
+                {locationOptions.map((item) => (
+                  <option key={item}>{item}</option>
+                ))}
+              </select>
             </label>
 
             <label style={styles.label}>
               What area is affected?
-              <input
+              <select
                 value={affectedArea}
                 onChange={(event) => setAffectedArea(event.target.value)}
-                placeholder="Example: routing, staffing, handoff, backlog, recovery, coordination"
                 style={styles.input}
-              />
+              >
+                {affectedAreaOptions.map((item) => (
+                  <option key={item}>{item}</option>
+                ))}
+              </select>
             </label>
 
             <label style={styles.label}>
-              What became visible?
-              <textarea
-                value={visibleIssue}
-                onChange={(event) => setVisibleIssue(event.target.value)}
-                placeholder="Describe the visible issue in plain language. Example: The same handoff delay has happened three times this week and the next owner is unclear."
-                style={styles.textarea}
-              />
+              What visible signal is present?
+              <select
+                value={visibleSignal}
+                onChange={(event) => setVisibleSignal(event.target.value)}
+                style={styles.input}
+              >
+                {visibleSignalOptions.map((item) => (
+                  <option key={item}>{item}</option>
+                ))}
+              </select>
             </label>
 
             <label style={styles.label}>
               Who owns it right now?
-              <input
-                value={currentOwner}
-                onChange={(event) => setCurrentOwner(event.target.value)}
-                placeholder="Example: unit lead, site coordinator, governance reviewer, unclear"
+              <select
+                value={ownershipState}
+                onChange={(event) => setOwnershipState(event.target.value)}
                 style={styles.input}
-              />
+              >
+                {ownershipStates.map((item) => (
+                  <option key={item}>{item}</option>
+                ))}
+              </select>
             </label>
 
             <label style={styles.label}>
               What evidence is already available?
-              <textarea
-                value={evidenceAvailable}
-                onChange={(event) => setEvidenceAvailable(event.target.value)}
-                placeholder="Example: missed handoff note, delay record, backlog count, completion note, recovery update, or none yet"
-                style={styles.smallTextarea}
-              />
+              <select
+                value={evidenceLevel}
+                onChange={(event) => setEvidenceLevel(event.target.value)}
+                style={styles.input}
+              >
+                {evidenceLevels.map((item) => (
+                  <option key={item}>{item}</option>
+                ))}
+              </select>
             </label>
 
             <label style={styles.label}>
               Preferred review time
-              <input
-                value={reviewTime}
-                onChange={(event) => setReviewTime(event.target.value)}
-                type="text"
-                placeholder="Example: Today 3pm, next shift, within 24 hours"
+              <select
+                value={reviewUrgency}
+                onChange={(event) => setReviewUrgency(event.target.value)}
                 style={styles.input}
+              >
+                {reviewUrgencyOptions.map((item) => (
+                  <option key={item}>{item}</option>
+                ))}
+              </select>
+            </label>
+
+            <label style={styles.label}>
+              Brief operational note
+              <textarea
+                value={briefNote}
+                onChange={(event) => setBriefNote(event.target.value)}
+                placeholder="Optional: add one short sentence if the dropdowns do not fully capture the context."
+                style={styles.smallTextarea}
               />
             </label>
 
@@ -521,6 +658,15 @@ const styles: Record<string, CSSProperties> = {
     padding: '30px',
     marginBottom: '28px',
   },
+  classCard: {
+    background: '#111827',
+    color: '#ffffff',
+    border: '1px solid rgba(148,163,184,0.24)',
+    borderRadius: '26px',
+    boxShadow: '0 24px 70px rgba(0,0,0,0.3)',
+    padding: '30px',
+    marginBottom: '28px',
+  },
   card: {
     background: '#0f172a',
     color: '#ffffff',
@@ -609,6 +755,32 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.45,
     fontWeight: 800,
   },
+  classGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+    gap: '10px',
+    marginTop: '22px',
+  },
+  classItem: {
+    background: '#020617',
+    border: '1px solid rgba(148,163,184,0.24)',
+    borderRadius: '16px',
+    padding: '14px',
+    minHeight: '150px',
+  },
+  classTitle: {
+    color: '#a7f3d0',
+    fontSize: '14px',
+    fontWeight: 900,
+    letterSpacing: '0.08em',
+    margin: 0,
+  },
+  classText: {
+    color: '#cbd5e1',
+    fontSize: '13px',
+    lineHeight: 1.45,
+    margin: '10px 0 0',
+  },
   form: {
     display: 'grid',
     gap: '16px',
@@ -621,6 +793,12 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 900,
     fontSize: '14px',
   },
+  helperText: {
+    color: '#cbd5e1',
+    fontSize: '13px',
+    fontWeight: 700,
+    lineHeight: 1.45,
+  },
   input: {
     width: '100%',
     boxSizing: 'border-box',
@@ -631,19 +809,6 @@ const styles: Record<string, CSSProperties> = {
     color: '#0f172a',
     background: '#ffffff',
     outline: 'none',
-  },
-  textarea: {
-    width: '100%',
-    boxSizing: 'border-box',
-    border: 'none',
-    borderRadius: '18px',
-    padding: '18px',
-    fontSize: '16px',
-    color: '#0f172a',
-    background: '#ffffff',
-    outline: 'none',
-    minHeight: '170px',
-    resize: 'vertical',
   },
   smallTextarea: {
     width: '100%',
