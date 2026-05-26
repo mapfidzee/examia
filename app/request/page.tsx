@@ -47,9 +47,25 @@ const flowSteps = [
     body: 'The right owner, next action, urgency, and evidence need are identified.',
   },
   {
-    title: 'Stabilization check',
+    title: 'Stability check',
     body: 'CGI checks whether the situation improved and whether recovery is holding.',
   },
+]
+
+const exampleSignals = [
+  'Repeated routing delays between teams',
+  'Backlog continues growing after action was taken',
+  'The same handoff problem keeps returning',
+  'Ownership is unclear across a site, unit, or function',
+  'Recovery was reported, but improvement has not been confirmed',
+]
+
+const typicalUsers = [
+  'site leads',
+  'operations coordinators',
+  'supervisors',
+  'governance reviewers',
+  'command reviewers',
 ]
 
 export default function RequestPage() {
@@ -96,7 +112,8 @@ export default function RequestPage() {
       `Location: ${location.trim()}`,
       `Affected area: ${affectedArea.trim()}`,
       `Entry route: ${entryRoute}`,
-      `Severity: ${severity}`,
+      `Operational pressure type: ${instabilityClass}`,
+      `Difficulty level: ${severity}`,
       `Current owner: ${currentOwner.trim() || 'Not clear yet'}`,
       `Evidence available: ${evidenceAvailable.trim() || 'Not provided yet'}`,
     ].join('\n')
@@ -123,7 +140,7 @@ export default function RequestPage() {
 
     setCreatedRequest(data)
     setMessage(
-      'Visible instability submitted. CGI can now review, route, track, and confirm whether the situation stabilizes.'
+      'Visible instability submitted. CGI can now review, route, track, and confirm whether the situation is stabilizing.'
     )
     setEntryRoute('HUMAN_SUBMITTED')
     setInstabilityClass('FLOW')
@@ -163,6 +180,33 @@ export default function RequestPage() {
           </p>
         </header>
 
+        <section style={styles.guidanceGrid}>
+          <article style={styles.guidanceCard}>
+            <p style={styles.eyebrow}>When to use CGI</p>
+
+            <h2 style={styles.h2}>Use CGI when normal handling may not be enough.</h2>
+
+            <p style={styles.cardText}>
+              CGI is intended for issues that may continue affecting operations
+              unless they are reviewed, routed, tracked, or stabilized.
+            </p>
+          </article>
+
+          <article style={styles.guidanceCard}>
+            <p style={styles.eyebrow}>Typical users</p>
+
+            <h2 style={styles.h2}>Who usually submits?</h2>
+
+            <div style={styles.pillGrid}>
+              {typicalUsers.map((user) => (
+                <span key={user} style={styles.pill}>
+                  {user}
+                </span>
+              ))}
+            </div>
+          </article>
+        </section>
+
         <section style={styles.flowCard}>
           <p style={styles.eyebrow}>From visibility to stabilization</p>
 
@@ -187,6 +231,20 @@ export default function RequestPage() {
           </div>
         </section>
 
+        <section style={styles.examplesCard}>
+          <p style={styles.eyebrow}>Examples</p>
+
+          <h2 style={styles.h2}>What belongs here?</h2>
+
+          <div style={styles.exampleGrid}>
+            {exampleSignals.map((example) => (
+              <article key={example} style={styles.exampleItem}>
+                {example}
+              </article>
+            ))}
+          </div>
+        </section>
+
         <section style={styles.card}>
           <p style={styles.eyebrow}>Instability intake</p>
 
@@ -200,7 +258,7 @@ export default function RequestPage() {
 
           <form onSubmit={submitRequest} style={styles.form}>
             <label style={styles.label}>
-              Entry Route
+              How did this enter CGI?
               <select
                 value={entryRoute}
                 onChange={(event) => setEntryRoute(event.target.value)}
@@ -213,7 +271,7 @@ export default function RequestPage() {
             </label>
 
             <label style={styles.label}>
-              Instability Class
+              What kind of operational pressure is visible?
               <select
                 value={instabilityClass}
                 onChange={(event) => setInstabilityClass(event.target.value)}
@@ -226,7 +284,7 @@ export default function RequestPage() {
             </label>
 
             <label style={styles.label}>
-              Severity
+              How difficult is this becoming to manage?
               <select
                 value={severity}
                 onChange={(event) => setSeverity(event.target.value)}
@@ -269,7 +327,7 @@ export default function RequestPage() {
             </label>
 
             <label style={styles.label}>
-              Current Owner
+              Who owns it right now?
               <input
                 value={currentOwner}
                 onChange={(event) => setCurrentOwner(event.target.value)}
@@ -279,7 +337,7 @@ export default function RequestPage() {
             </label>
 
             <label style={styles.label}>
-              Evidence Available
+              What evidence is already available?
               <textarea
                 value={evidenceAvailable}
                 onChange={(event) => setEvidenceAvailable(event.target.value)}
@@ -289,7 +347,7 @@ export default function RequestPage() {
             </label>
 
             <label style={styles.label}>
-              Preferred Review Time
+              Preferred review time
               <input
                 value={reviewTime}
                 onChange={(event) => setReviewTime(event.target.value)}
@@ -299,7 +357,7 @@ export default function RequestPage() {
               />
             </label>
 
-            <button type="submit" disabled={loading} style={styles.whiteButton}>
+            <button type="submit" disabled={loading} style={styles.primaryButton}>
               {loading
                 ? 'Submitting Instability...'
                 : 'Submit Visible Instability'}
@@ -325,7 +383,7 @@ export default function RequestPage() {
 
             <div style={styles.createdGrid}>
               <CreatedDetail
-                label="Instability Class"
+                label="Operational Pressure"
                 value={createdRequest.subject}
               />
 
@@ -346,7 +404,7 @@ export default function RequestPage() {
               <button
                 type="button"
                 onClick={copyRequestId}
-                style={styles.whiteButton}
+                style={styles.primaryButton}
               >
                 Copy Request ID
               </button>
@@ -354,7 +412,7 @@ export default function RequestPage() {
               <button
                 type="button"
                 onClick={checkRequestStatus}
-                style={styles.greenButton}
+                style={styles.secondaryButton}
               >
                 Check Review Status
               </button>
@@ -386,7 +444,7 @@ const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
     background:
-      'linear-gradient(135deg, #062b6f 0%, #0b3b8f 50%, #031b45 100%)',
+      'linear-gradient(135deg, #111827 0%, #0f172a 48%, #020617 100%)',
     color: '#ffffff',
     padding: '56px 22px 140px',
     fontFamily:
@@ -394,7 +452,7 @@ const styles: Record<string, CSSProperties> = {
   },
   wrap: {
     width: '100%',
-    maxWidth: '980px',
+    maxWidth: '1060px',
     margin: '0 auto',
   },
   hero: {
@@ -402,7 +460,7 @@ const styles: Record<string, CSSProperties> = {
   },
   eyebrow: {
     margin: '0 0 10px',
-    color: '#dbeafe',
+    color: '#cbd5e1',
     fontSize: '12px',
     fontWeight: 900,
     letterSpacing: '0.14em',
@@ -411,38 +469,62 @@ const styles: Record<string, CSSProperties> = {
   h1: {
     margin: 0,
     color: '#ffffff',
-    fontSize: 'clamp(44px, 9vw, 76px)',
-    lineHeight: 0.92,
+    fontSize: 'clamp(42px, 8vw, 72px)',
+    lineHeight: 0.94,
     letterSpacing: '-0.07em',
     fontWeight: 900,
   },
   h2: {
     margin: 0,
     color: '#ffffff',
-    fontSize: '30px',
+    fontSize: '28px',
     letterSpacing: '-0.04em',
     fontWeight: 900,
+    lineHeight: 1.1,
   },
   heroText: {
-    maxWidth: '780px',
-    color: '#dbeafe',
+    maxWidth: '790px',
+    color: '#cbd5e1',
     fontSize: '18px',
     lineHeight: 1.68,
     marginTop: '18px',
   },
-  flowCard: {
-    background: 'rgba(15,23,42,0.86)',
+  guidanceGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: '16px',
+    marginBottom: '28px',
+  },
+  guidanceCard: {
+    background: 'rgba(15,23,42,0.9)',
     color: '#ffffff',
-    border: '1px solid rgba(125,211,252,0.28)',
+    border: '1px solid rgba(148,163,184,0.24)',
+    borderRadius: '24px',
+    boxShadow: '0 24px 70px rgba(0,0,0,0.28)',
+    padding: '24px',
+  },
+  flowCard: {
+    background: 'rgba(15,23,42,0.92)',
+    color: '#ffffff',
+    border: '1px solid rgba(148,163,184,0.24)',
     borderRadius: '26px',
     boxShadow: '0 24px 70px rgba(0,0,0,0.28)',
+    padding: '30px',
+    marginBottom: '28px',
+  },
+  examplesCard: {
+    background: '#020617',
+    color: '#ffffff',
+    border: '1px solid rgba(148,163,184,0.24)',
+    borderRadius: '26px',
+    boxShadow: '0 24px 70px rgba(0,0,0,0.3)',
     padding: '30px',
     marginBottom: '28px',
   },
   card: {
     background: '#0f172a',
     color: '#ffffff',
-    border: '1px solid rgba(255,255,255,0.16)',
+    border: '1px solid rgba(148,163,184,0.24)',
     borderRadius: '26px',
     boxShadow: '0 24px 70px rgba(0,0,0,0.36)',
     padding: '30px',
@@ -451,16 +533,32 @@ const styles: Record<string, CSSProperties> = {
   successCard: {
     background: '#0f172a',
     color: '#ffffff',
-    border: '1px solid rgba(34,197,94,0.35)',
+    border: '1px solid rgba(34,197,94,0.34)',
     borderRadius: '26px',
     boxShadow: '0 24px 70px rgba(0,0,0,0.36)',
     padding: '30px',
   },
   cardText: {
-    color: '#dbeafe',
+    color: '#cbd5e1',
     lineHeight: 1.65,
     margin: '12px 0 0',
     maxWidth: '760px',
+  },
+  pillGrid: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '10px',
+    marginTop: '18px',
+  },
+  pill: {
+    background: '#020617',
+    border: '1px solid rgba(148,163,184,0.28)',
+    borderRadius: '999px',
+    color: '#e2e8f0',
+    padding: '9px 12px',
+    fontSize: '13px',
+    fontWeight: 800,
+    textTransform: 'capitalize',
   },
   flowGrid: {
     display: 'grid',
@@ -470,14 +568,14 @@ const styles: Record<string, CSSProperties> = {
   },
   flowStep: {
     background: '#020617',
-    border: '1px solid rgba(96,165,250,0.24)',
+    border: '1px solid rgba(148,163,184,0.24)',
     borderRadius: '18px',
     padding: '16px',
     minHeight: '170px',
   },
   stepNumber: {
     margin: 0,
-    color: '#67e8f9',
+    color: '#a7f3d0',
     fontWeight: 900,
     fontSize: '13px',
     letterSpacing: '0.12em',
@@ -493,6 +591,23 @@ const styles: Record<string, CSSProperties> = {
     color: '#cbd5e1',
     lineHeight: 1.55,
     fontSize: '14px',
+  },
+  exampleGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+    gap: '12px',
+    marginTop: '22px',
+  },
+  exampleItem: {
+    background: '#111827',
+    border: '1px solid rgba(148,163,184,0.24)',
+    borderRadius: '16px',
+    color: '#e2e8f0',
+    padding: '14px',
+    minHeight: '100px',
+    fontSize: '14px',
+    lineHeight: 1.45,
+    fontWeight: 800,
   },
   form: {
     display: 'grid',
@@ -543,7 +658,7 @@ const styles: Record<string, CSSProperties> = {
     minHeight: '120px',
     resize: 'vertical',
   },
-  whiteButton: {
+  primaryButton: {
     width: '100%',
     border: 'none',
     borderRadius: '18px',
@@ -551,10 +666,10 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '15px',
     fontWeight: 900,
     cursor: 'pointer',
-    background: '#ffffff',
-    color: '#07327a',
+    background: '#e2e8f0',
+    color: '#020617',
   },
-  greenButton: {
+  secondaryButton: {
     width: '100%',
     border: 'none',
     borderRadius: '18px',
@@ -562,17 +677,17 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '15px',
     fontWeight: 900,
     cursor: 'pointer',
-    background: '#22c55e',
-    color: '#052e16',
+    background: '#a7f3d0',
+    color: '#022c22',
   },
   message: {
     marginTop: '18px',
-    background: 'rgba(96,165,250,0.16)',
-    color: '#dbeafe',
+    background: 'rgba(148,163,184,0.14)',
+    color: '#e2e8f0',
     padding: '16px 18px',
     borderRadius: '18px',
     fontWeight: 900,
-    border: '1px solid rgba(96,165,250,0.24)',
+    border: '1px solid rgba(148,163,184,0.24)',
   },
   requestIdBox: {
     marginTop: '18px',
@@ -585,7 +700,7 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.5,
   },
   smallText: {
-    color: '#dbeafe',
+    color: '#cbd5e1',
     lineHeight: 1.6,
     marginTop: '16px',
   },
@@ -603,7 +718,7 @@ const styles: Record<string, CSSProperties> = {
   },
   createdLabel: {
     margin: 0,
-    color: '#93c5fd',
+    color: '#a7f3d0',
     fontSize: '11px',
     fontWeight: 900,
     letterSpacing: '0.12em',
