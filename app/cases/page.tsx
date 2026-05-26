@@ -21,6 +21,14 @@ type InstabilityCase = {
   created_at?: string
 }
 
+type CaseIntelligence = {
+  phase: string
+  nextMovement: string
+  evidencePosture: string
+  stagnationRisk: string
+  commandMeaning: string
+}
+
 const ACTIVE_CASE_STATUSES = [
   'ACCEPTED_FOR_GOVERNANCE',
   'STABILIZATION_OWNER_ROUTED',
@@ -132,7 +140,6 @@ function CasesContent() {
     })
 
     setMessage('Governed case movement preserved.')
-
     await loadCases()
   }
 
@@ -161,7 +168,6 @@ function CasesContent() {
     })
 
     setMessage('Stabilization action preserved.')
-
     await loadCases()
   }
 
@@ -190,30 +196,28 @@ function CasesContent() {
     })
 
     setMessage('Outcome review preserved.')
-
     await loadCases()
   }
 
   const metrics = useMemo(() => {
     return {
       activeGovernance: cases.length,
-
-      escalated: cases.filter((item) =>
-        item.case_status.includes('ESCALATED')
-      ).length,
-
-      recoveryMonitoring: cases.filter(
-        (item) => item.case_status === 'RECOVERY_MONITORING'
-      ).length,
-
-      routingStalled: cases.filter((item) =>
-        item.case_status.includes('STALLED')
-      ).length,
-
       highPressure: cases.filter(
         (item) =>
           item.severity_level === 'HIGH' ||
           item.severity_level === 'CRITICAL'
+      ).length,
+      routingStalled: cases.filter((item) =>
+        item.case_status.includes('STALLED')
+      ).length,
+      recoveryMonitoring: cases.filter(
+        (item) => item.case_status === 'RECOVERY_MONITORING'
+      ).length,
+      escalated: cases.filter((item) =>
+        item.case_status.includes('ESCALATED')
+      ).length,
+      evidenceIncomplete: cases.filter(
+        (item) => !item.intervention_summary || !item.outcome_summary
       ).length,
     }
   }, [cases])
@@ -222,242 +226,194 @@ function CasesContent() {
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.hero}>
-          <p style={styles.kicker}>
-            TSINAXA CGI • CASE GOVERNANCE
-          </p>
+          <p style={styles.kicker}>TSINAXA CGI • CASE GOVERNANCE</p>
 
-          <h1 style={styles.title}>
-            Accepted Instability Governance
-          </h1>
+          <h1 style={styles.title}>Accepted Instability Governance</h1>
 
           <p style={styles.subtitle}>
-            This surface governs instability already accepted after triage.
-            Cases exist because visible instability has crossed the threshold
-            into active continuity governance.
+            Govern accepted instability after triage. This surface preserves
+            lifecycle phase, required next movement, evidence posture,
+            stagnation risk, and command meaning.
           </p>
         </section>
 
         <section style={styles.metricsGrid}>
-          <Metric
-            label="Active Governance"
-            value={metrics.activeGovernance}
-          />
-
-          <Metric
-            label="High Pressure"
-            value={metrics.highPressure}
-          />
-
-          <Metric
-            label="Routing Stalled"
-            value={metrics.routingStalled}
-          />
-
-          <Metric
-            label="Recovery Monitoring"
-            value={metrics.recoveryMonitoring}
-          />
-
-          <Metric
-            label="Escalated"
-            value={metrics.escalated}
-          />
+          <Metric label="Active Governance" value={metrics.activeGovernance} />
+          <Metric label="High Pressure" value={metrics.highPressure} />
+          <Metric label="Routing Stalled" value={metrics.routingStalled} />
+          <Metric label="Recovery Monitoring" value={metrics.recoveryMonitoring} />
+          <Metric label="Escalated" value={metrics.escalated} />
+          <Metric label="Evidence Incomplete" value={metrics.evidenceIncomplete} />
         </section>
 
-        {message && (
-          <div style={styles.message}>{message}</div>
-        )}
+        {message && <div style={styles.message}>{message}</div>}
 
         <section style={styles.caseSection}>
-          <p style={styles.sectionKicker}>
-            Active governance
-          </p>
+          <p style={styles.sectionKicker}>Active governance</p>
 
-          <h2 style={styles.sectionTitle}>
-            Governed instability cases
-          </h2>
+          <h2 style={styles.sectionTitle}>Governed instability cases</h2>
 
           <p style={styles.panelNote}>
-            Triage decides whether instability deserves governance. This page
-            manages instability already accepted into the CGI continuity chain.
+            Triage decides whether instability deserves governance. Cases
+            govern accepted instability until it is stabilized, archived, or
+            escalated.
           </p>
 
           <div style={styles.caseList}>
-            {cases.map((caseItem) => (
-              <article
-                key={caseItem.id}
-                style={styles.caseCard}
-              >
-                <div style={styles.caseHeader}>
-                  <div>
-                    <p style={styles.caseKicker}>
-                      Accepted CGI Case
-                    </p>
+            {cases.map((caseItem) => {
+              const intelligence = buildCaseIntelligence(caseItem)
 
-                    <h3 style={styles.caseName}>
-                      {caseItem.beneficiary_name}
-                    </h3>
+              return (
+                <article key={caseItem.id} style={styles.caseCard}>
+                  <div style={styles.caseHeader}>
+                    <div>
+                      <p style={styles.caseKicker}>Accepted CGI Case</p>
 
-                    <p style={styles.caseDomain}>
-                      Pressure type: {caseItem.support_domain}
-                    </p>
+                      <h3 style={styles.caseName}>
+                        {caseItem.beneficiary_name}
+                      </h3>
+
+                      <p style={styles.caseDomain}>
+                        Pressure type: {caseItem.support_domain}
+                      </p>
+                    </div>
+
+                    <span style={difficultyBadge(caseItem.severity_level)}>
+                      {caseItem.severity_level}
+                    </span>
                   </div>
 
-                  <span
-                    style={difficultyBadge(
-                      caseItem.severity_level
-                    )}
-                  >
-                    {caseItem.severity_level}
-                  </span>
-                </div>
+                  <div style={styles.infoGrid}>
+                    <Info label="Governance State" value={caseItem.case_status} />
 
-                <div style={styles.infoGrid}>
-                  <Info
-                    label="Governance State"
-                    value={caseItem.case_status}
-                  />
+                    <Info
+                      label="Location"
+                      value={caseItem.beneficiary_level || 'Not provided'}
+                    />
 
-                  <Info
-                    label="Location"
-                    value={
-                      caseItem.beneficiary_level ||
-                      'Not provided'
-                    }
-                  />
+                    <Info
+                      label="Source Area"
+                      value={caseItem.region || 'Not provided'}
+                    />
 
-                  <Info
-                    label="Source Area"
-                    value={
-                      caseItem.region || 'Not provided'
-                    }
-                  />
+                    <Info
+                      label="Ownership"
+                      value={caseItem.institution_name || 'Not provided'}
+                    />
+                  </div>
 
-                  <Info
-                    label="Ownership"
-                    value={
-                      caseItem.institution_name ||
-                      'Not provided'
-                    }
-                  />
-                </div>
-
-                <div style={styles.signalContainer}>
-                  {(caseItem.instability_signals || []).map(
-                    (signal, index) => (
-                      <span
-                        key={`${signal}-${index}`}
-                        style={styles.signalBadge}
-                      >
+                  <div style={styles.signalContainer}>
+                    {(caseItem.instability_signals || []).map((signal, index) => (
+                      <span key={`${signal}-${index}`} style={styles.signalBadge}>
                         {signal}
                       </span>
-                    )
-                  )}
-                </div>
+                    ))}
+                  </div>
 
-                <div style={styles.interpretationBox}>
-                  <p style={styles.interpretationTitle}>
-                    Governance interpretation
-                  </p>
+                  <section style={styles.intelligencePanel}>
+                    <p style={styles.intelligenceTitle}>
+                      Case Intelligence Panel
+                    </p>
 
-                  <p style={styles.interpretationText}>
-                    {buildGovernanceInterpretation(caseItem)}
-                  </p>
-                </div>
+                    <div style={styles.intelligenceGrid}>
+                      <Info label="Lifecycle Phase" value={intelligence.phase} />
+                      <Info
+                        label="Required Next Movement"
+                        value={intelligence.nextMovement}
+                      />
+                      <Info
+                        label="Evidence Posture"
+                        value={intelligence.evidencePosture}
+                      />
+                      <Info
+                        label="Stagnation Risk"
+                        value={intelligence.stagnationRisk}
+                      />
+                      <Info
+                        label="Command Meaning"
+                        value={intelligence.commandMeaning}
+                      />
+                    </div>
+                  </section>
 
-                <div style={styles.lifecycleGrid}>
-                  {CASE_TRANSITIONS.map((status) => (
-                    <button
-                      key={status}
-                      onClick={() =>
-                        changeCaseStatus(caseItem, status)
+                  <div style={styles.interpretationBox}>
+                    <p style={styles.interpretationTitle}>
+                      Governance interpretation
+                    </p>
+
+                    <p style={styles.interpretationText}>
+                      {buildGovernanceInterpretation(caseItem)}
+                    </p>
+                  </div>
+
+                  <div style={styles.lifecycleGrid}>
+                    {CASE_TRANSITIONS.map((status) => (
+                      <button
+                        key={status}
+                        onClick={() => changeCaseStatus(caseItem, status)}
+                        style={styles.lifecycleButton}
+                      >
+                        {status}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={styles.dropdownSection}>
+                    <label style={styles.label}>Stabilization Action</label>
+
+                    <select
+                      onChange={(event) =>
+                        applyStabilizationAction(caseItem, event.target.value)
                       }
-                      style={styles.lifecycleButton}
+                      style={styles.select}
+                      value=""
                     >
-                      {status}
-                    </button>
-                  ))}
-                </div>
+                      <option value="">Select stabilization action</option>
 
-                <div style={styles.dropdownSection}>
-                  <label style={styles.label}>
-                    Stabilization Action
-                  </label>
-
-                  <select
-                    onChange={(event) =>
-                      applyStabilizationAction(
-                        caseItem,
-                        event.target.value
-                      )
-                    }
-                    style={styles.select}
-                    value=""
-                  >
-                    <option value="">
-                      Select stabilization action
-                    </option>
-
-                    {STABILIZATION_ACTIONS.map((item) => (
-                      <option
-                        key={item}
-                        value={item}
-                      >
-                        {item}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div style={styles.dropdownSection}>
-                  <label style={styles.label}>
-                    Outcome Review
-                  </label>
-
-                  <select
-                    onChange={(event) =>
-                      applyOutcomeSummary(
-                        caseItem,
-                        event.target.value
-                      )
-                    }
-                    style={styles.select}
-                    value=""
-                  >
-                    <option value="">
-                      Select outcome review
-                    </option>
-
-                    {OUTCOME_OPTIONS.map((item) => (
-                      <option
-                        key={item}
-                        value={item}
-                      >
-                        {item}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {caseItem.intervention_summary && (
-                  <div style={styles.summaryBox}>
-                    <strong>Action:</strong>{' '}
-                    {truncateText(
-                      caseItem.intervention_summary
-                    )}
+                      {STABILIZATION_ACTIONS.map((item) => (
+                        <option key={item} value={item}>
+                          {item}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                )}
 
-                {caseItem.outcome_summary && (
-                  <div style={styles.summaryBox}>
-                    <strong>Outcome:</strong>{' '}
-                    {truncateText(
-                      caseItem.outcome_summary
-                    )}
+                  <div style={styles.dropdownSection}>
+                    <label style={styles.label}>Outcome Review</label>
+
+                    <select
+                      onChange={(event) =>
+                        applyOutcomeSummary(caseItem, event.target.value)
+                      }
+                      style={styles.select}
+                      value=""
+                    >
+                      <option value="">Select outcome review</option>
+
+                      {OUTCOME_OPTIONS.map((item) => (
+                        <option key={item} value={item}>
+                          {item}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                )}
-              </article>
-            ))}
+
+                  {caseItem.intervention_summary && (
+                    <div style={styles.summaryBox}>
+                      <strong>Action:</strong>{' '}
+                      {truncateText(caseItem.intervention_summary)}
+                    </div>
+                  )}
+
+                  {caseItem.outcome_summary && (
+                    <div style={styles.summaryBox}>
+                      <strong>Outcome:</strong>{' '}
+                      {truncateText(caseItem.outcome_summary)}
+                    </div>
+                  )}
+                </article>
+              )
+            })}
 
             {cases.length === 0 && (
               <div style={styles.emptyState}>
@@ -472,31 +428,170 @@ function CasesContent() {
   )
 }
 
-function buildGovernanceInterpretation(
-  caseItem: InstabilityCase
-) {
-  if (
-    caseItem.case_status.includes('STALLED')
-  ) {
+function buildCaseIntelligence(caseItem: InstabilityCase): CaseIntelligence {
+  const hasAction = Boolean(caseItem.intervention_summary)
+  const hasOutcome = Boolean(caseItem.outcome_summary)
+
+  const evidencePosture = [
+    `Routing evidence: ${hasRoutingEvidence(caseItem) ? 'present' : 'pending'}`,
+    `Action evidence: ${hasAction ? 'present' : 'missing'}`,
+    `Outcome evidence: ${hasOutcome ? 'present' : 'missing'}`,
+    `Recovery evidence: ${
+      caseItem.case_status === 'RECOVERY_MONITORING' ? 'active' : 'pending'
+    }`,
+  ].join(' • ')
+
+  if (caseItem.case_status === 'ACCEPTED_FOR_GOVERNANCE') {
+    return {
+      phase: 'Accepted into governance',
+      nextMovement: 'Route to stabilization ownership',
+      evidencePosture,
+      stagnationRisk: 'Moderate if routing does not occur',
+      commandMeaning: 'Visible instability has crossed into governance.',
+    }
+  }
+
+  if (caseItem.case_status === 'STABILIZATION_OWNER_ROUTED') {
+    return {
+      phase: 'Routed for stabilization',
+      nextMovement: hasAction
+        ? 'Review action effect'
+        : 'Begin governed stabilization action',
+      evidencePosture,
+      stagnationRisk: hasAction
+        ? 'Low if outcome review follows'
+        : 'High if no action is preserved',
+      commandMeaning:
+        'Ownership movement exists, but stabilization is not credible until action and outcome evidence appear.',
+    }
+  }
+
+  if (caseItem.case_status.includes('EVIDENCE_REQUIRED')) {
+    return {
+      phase: 'Evidence gate',
+      nextMovement: 'Preserve missing evidence before further movement',
+      evidencePosture,
+      stagnationRisk: 'High if evidence remains missing',
+      commandMeaning:
+        'The case cannot be treated as stabilizing until evidence quality improves.',
+    }
+  }
+
+  if (caseItem.case_status.includes('OWNERSHIP_CLARITY')) {
+    return {
+      phase: 'Ownership clarity gate',
+      nextMovement: 'Clarify responsible stabilization owner',
+      evidencePosture,
+      stagnationRisk: 'High if ownership remains unclear',
+      commandMeaning:
+        'Unclear ownership weakens continuity and may require executive awareness.',
+    }
+  }
+
+  if (caseItem.case_status.includes('STALLED')) {
+    return {
+      phase: 'Stalled movement',
+      nextMovement: 'Restore movement or escalate',
+      evidencePosture,
+      stagnationRisk: 'Critical until movement resumes',
+      commandMeaning:
+        'Stalled governance threatens stabilization credibility.',
+    }
+  }
+
+  if (caseItem.case_status === 'ACTION_ACTIVE') {
+    return {
+      phase: 'Stabilization action active',
+      nextMovement: hasOutcome
+        ? 'Move into improvement or recovery monitoring'
+        : 'Preserve outcome review',
+      evidencePosture,
+      stagnationRisk: hasOutcome
+        ? 'Moderate until recovery is confirmed'
+        : 'High if outcome remains missing',
+      commandMeaning:
+        'Action exists, but leadership still needs outcome visibility.',
+    }
+  }
+
+  if (caseItem.case_status === 'IMPROVING') {
+    return {
+      phase: 'Improvement visible',
+      nextMovement: 'Move into recovery monitoring',
+      evidencePosture,
+      stagnationRisk: 'Moderate until improvement holds',
+      commandMeaning:
+        'Improvement is visible, but stabilization is not yet proven.',
+    }
+  }
+
+  if (caseItem.case_status === 'RECOVERY_MONITORING') {
+    return {
+      phase: 'Recovery credibility watch',
+      nextMovement: 'Confirm holding pattern or archive',
+      evidencePosture,
+      stagnationRisk: 'Low if recovery evidence holds',
+      commandMeaning:
+        'CGI is confirming whether stabilization is durable.',
+    }
+  }
+
+  if (caseItem.case_status.includes('ESCALATED')) {
+    return {
+      phase: 'Executive escalation',
+      nextMovement: 'Resolve blocker or command-level decision',
+      evidencePosture,
+      stagnationRisk: 'High until escalation is resolved',
+      commandMeaning:
+        'This case has exceeded ordinary governance movement.',
+    }
+  }
+
+  if (caseItem.case_status === 'REOPENED') {
+    return {
+      phase: 'Reopened instability',
+      nextMovement: 'Review recurrence and restore stabilization path',
+      evidencePosture,
+      stagnationRisk: 'High because instability returned',
+      commandMeaning:
+        'Reopened instability may indicate weak recovery or unresolved root pressure.',
+    }
+  }
+
+  return {
+    phase: 'Active governance',
+    nextMovement: 'Continue governed case movement',
+    evidencePosture,
+    stagnationRisk: 'Watch for delayed movement',
+    commandMeaning:
+      'Case remains visible until stabilization credibility is achieved.',
+  }
+}
+
+function hasRoutingEvidence(caseItem: InstabilityCase) {
+  return (
+    caseItem.case_status.includes('ROUTED') ||
+    caseItem.case_status.includes('ROUTING') ||
+    caseItem.case_status === 'ACTION_ACTIVE' ||
+    caseItem.case_status === 'IMPROVING' ||
+    caseItem.case_status === 'RECOVERY_MONITORING'
+  )
+}
+
+function buildGovernanceInterpretation(caseItem: InstabilityCase) {
+  if (caseItem.case_status.includes('STALLED')) {
     return 'Governed movement is stalled. CGI should preserve visibility until stabilization direction resumes.'
   }
 
-  if (
-    caseItem.case_status.includes('ESCALATED')
-  ) {
+  if (caseItem.case_status.includes('ESCALATED')) {
     return 'This instability exceeded ordinary governance visibility and now requires elevated executive attention.'
   }
 
-  if (
-    caseItem.case_status ===
-    'RECOVERY_MONITORING'
-  ) {
+  if (caseItem.case_status === 'RECOVERY_MONITORING') {
     return 'Initial stabilization may be occurring, but CGI is preserving observation until recovery credibility holds.'
   }
 
-  if (
-    caseItem.case_status === 'IMPROVING'
-  ) {
+  if (caseItem.case_status === 'IMPROVING') {
     return 'Governed action is showing positive movement, but stabilization should not yet be assumed permanent.'
   }
 
@@ -509,41 +604,25 @@ function truncateText(value: string) {
   return `${value.slice(0, 180)}...`
 }
 
-function Metric({
-  label,
-  value,
-}: {
-  label: string
-  value: number
-}) {
+function Metric({ label, value }: { label: string; value: number }) {
   return (
     <div style={styles.metricCard}>
       <p style={styles.metricLabel}>{label}</p>
-
       <h2 style={styles.metricValue}>{value}</h2>
     </div>
   )
 }
 
-function Info({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
+function Info({ label, value }: { label: string; value: string }) {
   return (
     <div style={styles.infoBox}>
       <p style={styles.infoLabel}>{label}</p>
-
       <p style={styles.infoValue}>{value}</p>
     </div>
   )
 }
 
-function difficultyBadge(
-  level: string
-): CSSProperties {
+function difficultyBadge(level: string): CSSProperties {
   if (level === 'CRITICAL') {
     return {
       background: '#7f1d1d',
@@ -621,8 +700,7 @@ const styles: Record<string, CSSProperties> = {
 
   metricsGrid: {
     display: 'grid',
-    gridTemplateColumns:
-      'repeat(auto-fit, minmax(220px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
     gap: '16px',
     marginBottom: '24px',
   },
@@ -716,8 +794,7 @@ const styles: Record<string, CSSProperties> = {
 
   infoGrid: {
     display: 'grid',
-    gridTemplateColumns:
-      'repeat(auto-fit, minmax(180px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
     gap: '12px',
     marginTop: '18px',
   },
@@ -757,6 +834,26 @@ const styles: Record<string, CSSProperties> = {
     border: '1px solid rgba(167,243,208,0.22)',
   },
 
+  intelligencePanel: {
+    marginTop: '20px',
+    background: '#020617',
+    border: '1px solid #334155',
+    borderRadius: '18px',
+    padding: '16px',
+  },
+
+  intelligenceTitle: {
+    color: '#5eead4',
+    fontWeight: 900,
+    margin: '0 0 14px',
+  },
+
+  intelligenceGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gap: '12px',
+  },
+
   interpretationBox: {
     marginTop: '20px',
     background: '#042f2e',
@@ -779,8 +876,7 @@ const styles: Record<string, CSSProperties> = {
 
   lifecycleGrid: {
     display: 'grid',
-    gridTemplateColumns:
-      'repeat(auto-fit, minmax(180px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
     gap: '10px',
     marginTop: '22px',
   },
