@@ -61,6 +61,25 @@ const categoryOptions: Record<string, string[]> = {
   Other: ['Other'],
 }
 
+const flowSteps = [
+  {
+    title: 'Need captured',
+    body: 'The system records the support need and creates a traceable Request ID.',
+  },
+  {
+    title: 'Routing begins',
+    body: 'The need can move toward governance review, priority reading, and responder assignment.',
+  },
+  {
+    title: 'Action becomes visible',
+    body: 'Intervention activity, room readiness, and completion evidence can be tracked.',
+  },
+  {
+    title: 'Meaning reaches command',
+    body: 'Unresolved needs, delays, and completion evidence can inform continuity review.',
+  },
+]
+
 export default function RequestPage() {
   const router = useRouter()
 
@@ -71,7 +90,8 @@ export default function RequestPage() {
   const [needDescription, setNeedDescription] = useState('')
   const [preferredTime, setPreferredTime] = useState('')
   const [message, setMessage] = useState('')
-  const [createdRequest, setCreatedRequest] = useState<CreatedRequest | null>(null)
+  const [createdRequest, setCreatedRequest] =
+    useState<CreatedRequest | null>(null)
   const [loading, setLoading] = useState(false)
 
   const availableCategories = useMemo(() => {
@@ -130,7 +150,7 @@ export default function RequestPage() {
 
     setCreatedRequest(data)
     setMessage(
-      'Support request created. EXAMIA will route this need through the Command Center to an approved responder.'
+      'Support request created. EXAMIA can now route this need through governed review, responder assignment, intervention tracking, and completion evidence.'
     )
     setSupportArea('Education')
     setCategory('Mathematics')
@@ -156,28 +176,59 @@ export default function RequestPage() {
     <main style={styles.page}>
       <div style={styles.wrap}>
         <header style={styles.hero}>
-          <p style={styles.eyebrow}>EXAMIA NEED INTAKE ENGINE</p>
+          <p style={styles.eyebrow}>EXAMIA • NEED INTAKE</p>
 
           <h1 style={styles.h1}>Submit a Support Need</h1>
 
           <p style={styles.heroText}>
-            Submit a structured need. EXAMIA creates a Request ID immediately so
-            the beneficiary can track routing, responder assignment, room
-            readiness, and completion evidence.
+            Intake is the first point of continuity. A need enters the system,
+            receives a Request ID, and becomes traceable through routing,
+            response, evidence, and outcome review.
           </p>
         </header>
+
+        <section style={styles.flowCard}>
+          <p style={styles.eyebrow}>Intake to meaning</p>
+
+          <h2 style={styles.h2}>A request is not just a form.</h2>
+
+          <p style={styles.cardText}>
+            It is the beginning of a governed support pathway. EXAMIA helps make
+            the need visible, routeable, trackable, and reviewable.
+          </p>
+
+          <div style={styles.flowGrid}>
+            {flowSteps.map((step, index) => (
+              <article key={step.title} style={styles.flowStep}>
+                <p style={styles.stepNumber}>0{index + 1}</p>
+
+                <h3 style={styles.stepTitle}>{step.title}</h3>
+
+                <p style={styles.stepBody}>{step.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
 
         <section style={styles.card}>
           <p style={styles.eyebrow}>Need intake</p>
 
           <h2 style={styles.h2}>Tell us what support is needed</h2>
 
+          <p style={styles.cardText}>
+            Keep the description clear and practical. The stronger the intake,
+            the easier it is to route the need, assign support, and confirm
+            completion evidence.
+          </p>
+
           <form onSubmit={submitRequest} style={styles.form}>
             <label style={styles.label}>
               Support Area
               <select
                 value={supportArea}
-                onChange={(event) => handleSupportAreaChange(event.target.value)}
+                onChange={(event) =>
+                  handleSupportAreaChange(event.target.value)
+                }
                 style={styles.input}
               >
                 <option>Education</option>
@@ -284,17 +335,41 @@ export default function RequestPage() {
             <div style={styles.requestIdBox}>{createdRequest.id}</div>
 
             <p style={styles.smallText}>
-              This ID is used to check routing status, responder assignment,
-              responder readiness, controlled intervention room access, and
-              completion evidence.
+              This ID connects the need to routing status, responder assignment,
+              room readiness, intervention progress, completion evidence, and
+              outcome review.
             </p>
 
+            <div style={styles.createdGrid}>
+              <CreatedDetail label="Support Area" value={createdRequest.subject} />
+
+              <CreatedDetail
+                label="Beneficiary Level"
+                value={createdRequest.grade_level ?? 'Not recorded'}
+              />
+
+              <CreatedDetail label="Status" value={createdRequest.status} />
+
+              <CreatedDetail
+                label="Responder Status"
+                value={createdRequest.teacher_status ?? 'PENDING'}
+              />
+            </div>
+
             <div style={styles.buttonGrid}>
-              <button type="button" onClick={copyRequestId} style={styles.whiteButton}>
+              <button
+                type="button"
+                onClick={copyRequestId}
+                style={styles.whiteButton}
+              >
                 Copy Request ID
               </button>
 
-              <button type="button" onClick={checkRequestStatus} style={styles.greenButton}>
+              <button
+                type="button"
+                onClick={checkRequestStatus}
+                style={styles.greenButton}
+              >
                 Check Request Status
               </button>
             </div>
@@ -305,6 +380,22 @@ export default function RequestPage() {
   )
 }
 
+function CreatedDetail({
+  label,
+  value,
+}: {
+  label: string
+  value: string
+}) {
+  return (
+    <article style={styles.createdDetail}>
+      <p style={styles.createdLabel}>{label}</p>
+
+      <p style={styles.createdValue}>{value}</p>
+    </article>
+  )
+}
+
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
@@ -312,7 +403,8 @@ const styles: Record<string, CSSProperties> = {
       'linear-gradient(135deg, #062b6f 0%, #0b3b8f 50%, #031b45 100%)',
     color: '#ffffff',
     padding: '56px 22px 140px',
-    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
+    fontFamily:
+      'system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
   },
   wrap: {
     width: '100%',
@@ -320,7 +412,7 @@ const styles: Record<string, CSSProperties> = {
     margin: '0 auto',
   },
   hero: {
-    marginBottom: '34px',
+    marginBottom: '28px',
   },
   eyebrow: {
     margin: '0 0 10px',
@@ -346,11 +438,20 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 900,
   },
   heroText: {
-    maxWidth: '760px',
+    maxWidth: '780px',
     color: '#dbeafe',
     fontSize: '18px',
     lineHeight: 1.68,
     marginTop: '18px',
+  },
+  flowCard: {
+    background: 'rgba(15,23,42,0.86)',
+    color: '#ffffff',
+    border: '1px solid rgba(125,211,252,0.28)',
+    borderRadius: '26px',
+    boxShadow: '0 24px 70px rgba(0,0,0,0.28)',
+    padding: '30px',
+    marginBottom: '28px',
   },
   card: {
     background: '#0f172a',
@@ -368,6 +469,44 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: '26px',
     boxShadow: '0 24px 70px rgba(0,0,0,0.36)',
     padding: '30px',
+  },
+  cardText: {
+    color: '#dbeafe',
+    lineHeight: 1.65,
+    margin: '12px 0 0',
+    maxWidth: '760px',
+  },
+  flowGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: '12px',
+    marginTop: '22px',
+  },
+  flowStep: {
+    background: '#020617',
+    border: '1px solid rgba(96,165,250,0.24)',
+    borderRadius: '18px',
+    padding: '16px',
+    minHeight: '170px',
+  },
+  stepNumber: {
+    margin: 0,
+    color: '#67e8f9',
+    fontWeight: 900,
+    fontSize: '13px',
+    letterSpacing: '0.12em',
+  },
+  stepTitle: {
+    margin: '10px 0',
+    color: '#ffffff',
+    fontSize: '18px',
+    lineHeight: 1.15,
+  },
+  stepBody: {
+    margin: 0,
+    color: '#cbd5e1',
+    lineHeight: 1.55,
+    fontSize: '14px',
   },
   form: {
     display: 'grid',
@@ -450,6 +589,32 @@ const styles: Record<string, CSSProperties> = {
     color: '#dbeafe',
     lineHeight: 1.6,
     marginTop: '16px',
+  },
+  createdGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: '12px',
+    marginTop: '18px',
+  },
+  createdDetail: {
+    background: '#020617',
+    border: '1px solid rgba(148,163,184,0.26)',
+    borderRadius: '16px',
+    padding: '14px',
+  },
+  createdLabel: {
+    margin: 0,
+    color: '#93c5fd',
+    fontSize: '11px',
+    fontWeight: 900,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+  },
+  createdValue: {
+    margin: '8px 0 0',
+    color: '#f8fafc',
+    fontWeight: 900,
+    lineHeight: 1.35,
   },
   buttonGrid: {
     display: 'grid',
