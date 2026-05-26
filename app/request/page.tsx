@@ -297,7 +297,7 @@ export default function RequestPage() {
 
     setCreatedRequest(data)
     setMessage(
-      'Visible instability preserved for governance review. CGI triage can now determine whether this should be monitored, clarified, escalated, merged, or accepted into active continuity governance.'
+      'Visible instability preserved successfully. The signal is now waiting for CGI triage review to determine governance acceptance, clarification, escalation, monitoring, or closure direction.'
     )
 
     setEntryRoute('HUMAN_SUBMITTED')
@@ -332,9 +332,7 @@ export default function RequestPage() {
             TSINAXA CGI • GOVERNED INTAKE INTELLIGENCE
           </p>
 
-          <h1 style={styles.h1}>
-            Open Visible Instability
-          </h1>
+          <h1 style={styles.h1}>Open Visible Instability</h1>
 
           <p style={styles.heroText}>
             Use this surface when instability becomes visible and needs
@@ -409,96 +407,15 @@ export default function RequestPage() {
           </div>
         </section>
 
-        <section style={styles.guidanceGrid}>
-          <article style={styles.guidanceCard}>
-            <p style={styles.eyebrow}>Boundary lock</p>
-
-            <h2 style={styles.h2}>A request is not yet a case.</h2>
-
-            <p style={styles.cardText}>
-              This page opens governed visibility. Triage decides whether the
-              instability should be monitored, returned for clarity, escalated,
-              merged, closed, or accepted into active case governance.
-            </p>
-          </article>
-
-          <article style={styles.guidanceCard}>
-            <p style={styles.eyebrow}>Typical users</p>
-
-            <h2 style={styles.h2}>Who usually opens visibility?</h2>
-
-            <div style={styles.pillGrid}>
-              {typicalUsers.map((user) => (
-                <span key={user} style={styles.pill}>
-                  {user}
-                </span>
-              ))}
-            </div>
-          </article>
-        </section>
-
-        <section style={styles.flowCard}>
-          <p style={styles.eyebrow}>From visibility to survivability</p>
-
-          <h2 style={styles.h2}>CGI begins when instability becomes visible.</h2>
-
-          <p style={styles.cardText}>
-            Intake preserves the signal. Triage judges it. Cases govern it.
-            Routing directs it. Interventions act on it. Outcomes verify it.
-            Recovery determines whether stabilization is holding.
-          </p>
-
-          <div style={styles.flowGrid}>
-            {flowSteps.map((step, index) => (
-              <article key={step.title} style={styles.flowStep}>
-                <p style={styles.stepNumber}>0{index + 1}</p>
-
-                <h3 style={styles.stepTitle}>{step.title}</h3>
-
-                <p style={styles.stepBody}>{step.body}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section style={styles.examplesCard}>
-          <p style={styles.eyebrow}>Examples</p>
-
-          <h2 style={styles.h2}>What belongs in governed intake?</h2>
-
-          <div style={styles.exampleGrid}>
-            {exampleSignals.map((example) => (
-              <article key={example} style={styles.exampleItem}>
-                {example}
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section style={styles.classCard}>
-          <p style={styles.eyebrow}>Operational pressure types</p>
-
-          <h2 style={styles.h2}>What do these categories mean?</h2>
-
-          <div style={styles.classGrid}>
-            {instabilityClassOptions.map((item) => (
-              <article key={item.value} style={styles.classItem}>
-                <h3 style={styles.classTitle}>{item.label}</h3>
-
-                <p style={styles.classText}>{item.description}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
         <section style={styles.card}>
           <p style={styles.eyebrow}>Governed instability intake</p>
 
-          <h2 style={styles.h2}>What has become visible?</h2>
+          <h2 style={styles.h2}>Operational Intake Workspace</h2>
 
           <p style={styles.cardText}>
-            Select the closest governed options first. Use the note only for
-            short context that cannot be captured by the dropdowns.
+            Preserve visible instability using governed operational selections.
+            CGI intake exists to open continuity visibility before triage,
+            routing, intervention, or recovery confirmation begins.
           </p>
 
           <form onSubmit={submitRequest} style={styles.form}>
@@ -654,8 +571,10 @@ export default function RequestPage() {
             <div style={styles.requestIdBox}>{createdRequest.id}</div>
 
             <p style={styles.smallText}>
-              This request opens visibility only. It becomes a case only if CGI
-              triage accepts it into active continuity governance.
+              Intake visibility has been opened successfully. CGI triage now
+              decides whether this instability should be clarified, monitored,
+              escalated, merged, closed, or accepted into active continuity
+              governance.
             </p>
 
             <div style={styles.createdGrid}>
@@ -669,10 +588,7 @@ export default function RequestPage() {
                 value={createdRequest.grade_level ?? 'Not recorded'}
               />
 
-              <CreatedDetail
-                label="Triage State"
-                value={createdRequest.status}
-              />
+              <CreatedDetail label="Triage State" value={createdRequest.status} />
 
               <CreatedDetail
                 label="Governance Visibility"
@@ -697,8 +613,99 @@ export default function RequestPage() {
                 Check Review Status
               </button>
             </div>
+
+            <div style={styles.triageBridge}>
+              <p style={styles.bridgeTitle}>Next governance movement</p>
+
+              <p style={styles.bridgeText}>
+                This signal should now appear inside the CGI triage queue for
+                governance review and continuity classification.
+              </p>
+            </div>
           </section>
         )}
+
+        <section style={styles.guidanceGrid}>
+          <article style={styles.guidanceCard}>
+            <p style={styles.eyebrow}>Boundary lock</p>
+
+            <h2 style={styles.h2}>A request is not yet a case.</h2>
+
+            <p style={styles.cardText}>
+              This page opens governed visibility. Triage decides whether the
+              instability should be monitored, returned for clarity, escalated,
+              merged, closed, or accepted into active case governance.
+            </p>
+          </article>
+
+          <article style={styles.guidanceCard}>
+            <p style={styles.eyebrow}>Typical users</p>
+
+            <h2 style={styles.h2}>Who usually opens visibility?</h2>
+
+            <div style={styles.pillGrid}>
+              {typicalUsers.map((user) => (
+                <span key={user} style={styles.pill}>
+                  {user}
+                </span>
+              ))}
+            </div>
+          </article>
+        </section>
+
+        <section style={styles.flowCard}>
+          <p style={styles.eyebrow}>From visibility to survivability</p>
+
+          <h2 style={styles.h2}>CGI begins when instability becomes visible.</h2>
+
+          <p style={styles.cardText}>
+            Intake preserves the signal. Triage judges it. Cases govern it.
+            Routing directs it. Interventions act on it. Outcomes verify it.
+            Recovery determines whether stabilization is holding.
+          </p>
+
+          <div style={styles.flowGrid}>
+            {flowSteps.map((step, index) => (
+              <article key={step.title} style={styles.flowStep}>
+                <p style={styles.stepNumber}>0{index + 1}</p>
+
+                <h3 style={styles.stepTitle}>{step.title}</h3>
+
+                <p style={styles.stepBody}>{step.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section style={styles.examplesCard}>
+          <p style={styles.eyebrow}>Examples</p>
+
+          <h2 style={styles.h2}>What belongs in governed intake?</h2>
+
+          <div style={styles.exampleGrid}>
+            {exampleSignals.map((example) => (
+              <article key={example} style={styles.exampleItem}>
+                {example}
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section style={styles.classCard}>
+          <p style={styles.eyebrow}>Operational pressure types</p>
+
+          <h2 style={styles.h2}>What do these categories mean?</h2>
+
+          <div style={styles.classGrid}>
+            {instabilityClassOptions.map((item) => (
+              <article key={item.value} style={styles.classItem}>
+                <h3 style={styles.classTitle}>{item.label}</h3>
+
+                <p style={styles.classText}>{item.description}</p>
+              </article>
+            ))}
+          </div>
+        </section>
       </div>
     </main>
   )
@@ -1094,6 +1101,7 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: '26px',
     boxShadow: '0 24px 70px rgba(0,0,0,0.36)',
     padding: '30px',
+    marginBottom: '28px',
   },
 
   cardText: {
@@ -1340,5 +1348,28 @@ const styles: Record<string, CSSProperties> = {
     display: 'grid',
     gap: '12px',
     marginTop: '18px',
+  },
+
+  triageBridge: {
+    marginTop: '20px',
+    background: '#042f2e',
+    border: '1px solid #115e59',
+    borderRadius: '18px',
+    padding: '18px',
+  },
+
+  bridgeTitle: {
+    color: '#5eead4',
+    fontWeight: 900,
+    margin: 0,
+    fontSize: '13px',
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+  },
+
+  bridgeText: {
+    color: '#ccfbf1',
+    marginTop: '10px',
+    lineHeight: 1.6,
   },
 }
