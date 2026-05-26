@@ -5,7 +5,7 @@ import type { CSSProperties } from 'react'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { supabase } from '../../lib/supabase'
 
-type BeneficiaryCase = {
+type InstabilityCase = {
   id: string
   beneficiary_name: string
   beneficiary_level: string | null
@@ -22,100 +22,114 @@ type BeneficiaryCase = {
 }
 
 const CASE_STATUSES = [
-  'NEED_DETECTED',
-  'UNDER_ASSESSMENT',
+  'UNDER_REVIEW',
+  'WATCH_ONLY',
+  'ACCEPTED_AS_CASE',
   'ROUTED',
-  'RESPONDER_ASSIGNED',
-  'INTERVENTION_ACTIVE',
-  'STABILIZING',
-  'STABILIZED',
+  'ACTION_ACTIVE',
+  'IMPROVING',
+  'HOLDING',
+  'STABLE',
   'ESCALATED',
-  'CLOSED',
   'REOPENED',
+  'ARCHIVED',
 ]
 
-const SEVERITY_LEVELS = ['LOW', 'MODERATE', 'HIGH', 'CRITICAL']
+const DIFFICULTY_LEVELS = ['LOW', 'MODERATE', 'HIGH', 'CRITICAL']
 
-const BENEFICIARY_LEVELS = [
-  'Primary school beneficiary',
-  'Secondary school beneficiary',
-  'Exam-year beneficiary',
-  'Out-of-school beneficiary',
-  'Rural/low-access beneficiary',
-  'Community-supported beneficiary',
-  'Institution-referred beneficiary',
-  'Other',
+const PRESSURE_TYPES = [
+  'FLOW',
+  'COVERAGE',
+  'COORDINATION',
+  'OWNERSHIP',
+  'EVIDENCE',
+  'RECOVERY',
+  'RELIABILITY',
 ]
 
-const SUPPORT_DOMAINS = [
-  'Learning continuity stabilization',
-  'Access and low-bandwidth support',
-  'Responder coordination',
-  'Institutional coordination',
-  'Safeguarding visibility',
-  'District or regional escalation',
-  'Family/guardian support coordination',
-  'Progression or exam-readiness continuity',
-  'Other',
+const LOCATION_OPTIONS = [
+  'SITE_A',
+  'SITE_B',
+  'SITE_C',
+  'REGION_NORTH',
+  'REGION_SOUTH',
+  'UNIT_1',
+  'UNIT_2',
+  'OPERATIONS_DESK',
+  'CROSS_SITE',
+  'OTHER_LOCATION',
 ]
 
-const STABILIZATION_SIGNALS = [
-  'Support pathway disrupted',
-  'Access barrier detected',
-  'Low-bandwidth or connectivity barrier',
-  'No verified responder currently available',
-  'Institution coordination gap',
-  'Repeated support breakdown',
-  'Progression or continuity risk',
-  'Family or guardian support need',
-  'Language-sensitive support need',
-  'Rural or remote access pressure',
-  'Safeguarding visibility concern',
-  'District escalation may be needed',
+const AFFECTED_AREAS = [
+  'ROUTING',
+  'STAFFING',
+  'HANDOFF',
+  'BACKLOG',
+  'RECOVERY',
+  'COORDINATION',
+  'EVIDENCE',
+  'OWNERSHIP',
+  'COMMAND_REVIEW',
+  'SITE_OPERATIONS',
+  'CROSS_SITE_OPERATIONS',
+  'OTHER_AREA',
 ]
 
-const INTERVENTION_TEMPLATES = [
-  'Initial stabilization review completed',
-  'Responder coordination initiated',
-  'Institution coordination initiated',
-  'Low-data support pathway recommended',
-  'Safeguarding-aware handling recommended',
-  'District escalation recommended',
-  'Family or guardian coordination recommended',
-  'Continuity follow-up recommended',
+const VISIBLE_SIGNALS = [
+  'ROUTING_DELAY',
+  'BACKLOG_GROWING',
+  'HANDOFF_DELAY',
+  'OWNERSHIP_UNCLEAR',
+  'ACTION_STALLED',
+  'RECOVERY_NOT_HOLDING',
+  'ISSUE_REPEATED',
+  'EVIDENCE_MISSING',
+  'ESCALATION_DELAYED',
+  'CROSS_TEAM_CONFUSION',
+  'RESOURCE_GAP',
+  'OTHER_VISIBLE_SIGNAL',
 ]
 
-const OUTCOME_TEMPLATES = [
-  'Beneficiary pathway stabilized',
-  'Partial stabilization achieved',
-  'Further responder support required',
-  'Institution coordination still required',
+const STABILIZATION_ACTIONS = [
+  'Ownership review started',
+  'Routing review started',
+  'Backlog review started',
+  'Handoff review started',
+  'Evidence check requested',
+  'Recovery watch started',
+  'Cross-team coordination requested',
+  'Command review recommended',
+]
+
+const OUTCOME_OPTIONS = [
+  'Situation stabilized',
+  'Improvement holding',
+  'Partial improvement only',
+  'Further action required',
   'Escalation required',
-  'Case ready for closure',
+  'Issue returned after improvement',
+  'Ready for archive',
 ]
 
-export default function BeneficiaryCaseEnginePage() {
+export default function CasesPage() {
   return (
     <CGIGovernanceShell>
-      <BeneficiaryCaseEngineContent />
+      <CasesContent />
     </CGIGovernanceShell>
   )
 }
 
-function BeneficiaryCaseEngineContent() {
-  const [cases, setCases] = useState<BeneficiaryCase[]>([])
-
-  const [beneficiaryName, setBeneficiaryName] = useState('')
-  const [beneficiaryLevel, setBeneficiaryLevel] = useState('')
-  const [otherBeneficiaryLevel, setOtherBeneficiaryLevel] = useState('')
-  const [supportDomain, setSupportDomain] = useState('')
-  const [otherSupportDomain, setOtherSupportDomain] = useState('')
-  const [severityLevel, setSeverityLevel] = useState('MODERATE')
-  const [region, setRegion] = useState('')
-  const [institutionName, setInstitutionName] = useState('')
+function CasesContent() {
+  const [cases, setCases] = useState<InstabilityCase[]>([])
+  const [caseTitle, setCaseTitle] = useState('')
+  const [location, setLocation] = useState('SITE_A')
+  const [pressureType, setPressureType] = useState('FLOW')
+  const [affectedArea, setAffectedArea] = useState('ROUTING')
+  const [difficultyLevel, setDifficultyLevel] = useState('MODERATE')
+  const [sourceArea, setSourceArea] = useState('OPERATIONS_DESK')
+  const [currentOwner, setCurrentOwner] = useState('UNCLEAR')
   const [selectedSignals, setSelectedSignals] = useState<string[]>([])
-  const [safeguardingFlag, setSafeguardingFlag] = useState(false)
-
+  const [commandVisibility, setCommandVisibility] = useState(false)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
@@ -137,17 +151,9 @@ function BeneficiaryCaseEngineContent() {
     setCases(data || [])
   }
 
-  function finalBeneficiaryLevel() {
-    return beneficiaryLevel === 'Other' ? otherBeneficiaryLevel.trim() : beneficiaryLevel
-  }
-
-  function finalSupportDomain() {
-    return supportDomain === 'Other' ? otherSupportDomain.trim() : supportDomain
-  }
-
   async function createCase() {
-    if (!beneficiaryName.trim() || !finalSupportDomain()) {
-      alert('Enter beneficiary name and stabilization domain.')
+    if (!caseTitle.trim()) {
+      alert('Enter a short case title.')
       return
     }
 
@@ -157,15 +163,15 @@ function BeneficiaryCaseEngineContent() {
     const { data, error } = await supabase
       .from('beneficiary_cases')
       .insert({
-        beneficiary_name: beneficiaryName.trim(),
-        beneficiary_level: finalBeneficiaryLevel(),
-        support_domain: finalSupportDomain(),
-        severity_level: severityLevel,
+        beneficiary_name: caseTitle.trim(),
+        beneficiary_level: location,
+        support_domain: pressureType,
+        severity_level: difficultyLevel,
         instability_signals: selectedSignals,
-        region: region.trim(),
-        institution_name: institutionName.trim(),
-        safeguarding_flag: safeguardingFlag,
-        case_status: 'NEED_DETECTED',
+        region: sourceArea,
+        institution_name: currentOwner,
+        safeguarding_flag: commandVisibility,
+        case_status: 'UNDER_REVIEW',
       })
       .select()
       .single()
@@ -179,27 +185,25 @@ function BeneficiaryCaseEngineContent() {
     await supabase.from('case_timeline').insert({
       case_id: data.id,
       event_type: 'CASE_CREATED',
-      event_summary: 'Beneficiary stabilization case created',
+      event_summary: 'Visible instability accepted into case review',
     })
 
-    setBeneficiaryName('')
-    setBeneficiaryLevel('')
-    setOtherBeneficiaryLevel('')
-    setSupportDomain('')
-    setOtherSupportDomain('')
-    setSeverityLevel('MODERATE')
-    setRegion('')
-    setInstitutionName('')
+    setCaseTitle('')
+    setLocation('SITE_A')
+    setPressureType('FLOW')
+    setAffectedArea('ROUTING')
+    setDifficultyLevel('MODERATE')
+    setSourceArea('OPERATIONS_DESK')
+    setCurrentOwner('UNCLEAR')
     setSelectedSignals([])
-    setSafeguardingFlag(false)
-
-    setMessage('Beneficiary stabilization case created.')
+    setCommandVisibility(false)
+    setMessage('Instability case created for review.')
     setLoading(false)
 
     await loadCases()
   }
 
-  async function changeCaseStatus(caseItem: BeneficiaryCase, nextStatus: string) {
+  async function changeCaseStatus(caseItem: InstabilityCase, nextStatus: string) {
     const { error } = await supabase
       .from('beneficiary_cases')
       .update({
@@ -222,7 +226,10 @@ function BeneficiaryCaseEngineContent() {
     await loadCases()
   }
 
-  async function applyInterventionSummary(caseItem: BeneficiaryCase, summary: string) {
+  async function applyStabilizationAction(
+    caseItem: InstabilityCase,
+    summary: string
+  ) {
     if (!summary) return
 
     const { error } = await supabase
@@ -239,14 +246,14 @@ function BeneficiaryCaseEngineContent() {
 
     await supabase.from('case_interventions').insert({
       case_id: caseItem.id,
-      intervention_type: 'STANDARD_STABILIZATION_INTERVENTION',
+      intervention_type: 'CGI_STABILIZATION_ACTION',
       intervention_summary: summary,
     })
 
     await loadCases()
   }
 
-  async function applyOutcomeSummary(caseItem: BeneficiaryCase, outcome: string) {
+  async function applyOutcomeSummary(caseItem: InstabilityCase, outcome: string) {
     if (!outcome) return
 
     const { error } = await supabase
@@ -279,9 +286,13 @@ function BeneficiaryCaseEngineContent() {
   }
 
   const totalCases = cases.length
-  const criticalCases = cases.filter((item) => item.severity_level === 'CRITICAL').length
+  const highOrCriticalCases = cases.filter(
+    (item) => item.severity_level === 'HIGH' || item.severity_level === 'CRITICAL'
+  ).length
   const escalatedCases = cases.filter((item) => item.case_status === 'ESCALATED').length
-  const stabilizedCases = cases.filter((item) => item.case_status === 'STABILIZED').length
+  const stableCases = cases.filter(
+    (item) => item.case_status === 'STABLE' || item.case_status === 'ARCHIVED'
+  ).length
 
   return (
     <main style={styles.page}>
@@ -289,105 +300,106 @@ function BeneficiaryCaseEngineContent() {
         <section style={styles.hero}>
           <p style={styles.kicker}>TSINAXA CGI • CASE GOVERNANCE</p>
 
-          <h1 style={styles.title}>Beneficiary Stabilization Infrastructure</h1>
+          <h1 style={styles.title}>Active Instability Cases</h1>
 
           <p style={styles.subtitle}>
-            Governed case lifecycle management for beneficiary support breakdowns,
-            access barriers, continuity risks, safeguarding visibility, responder
-            coordination, escalation control, and institutional stabilization.
+            Use this page to govern visible instability that has moved beyond
+            simple intake and now requires review, ownership, routing, action,
+            evidence, or recovery follow-up.
           </p>
         </section>
 
         <section style={styles.metricsGrid}>
           <Metric label="Total Cases" value={totalCases} />
-          <Metric label="Critical Cases" value={criticalCases} />
-          <Metric label="Escalated Cases" value={escalatedCases} />
-          <Metric label="Stabilized Cases" value={stabilizedCases} />
+          <Metric label="High / Critical" value={highOrCriticalCases} />
+          <Metric label="Escalated" value={escalatedCases} />
+          <Metric label="Stable / Archived" value={stableCases} />
         </section>
 
         {message && <div style={styles.message}>{message}</div>}
 
         <section style={styles.formCard}>
-          <h2 style={styles.sectionTitle}>Create Beneficiary Stabilization Case</h2>
+          <p style={styles.sectionKicker}>Create case</p>
+
+          <h2 style={styles.sectionTitle}>Accept instability into review</h2>
 
           <p style={styles.panelNote}>
-            Use this page when a beneficiary needs structured support coordination.
-            The case should describe the stabilization need, not blame the beneficiary,
-            school, family, responder, or institution.
+            A case is visible instability under active review. It should remain
+            open until the situation is routed, action is visible, evidence is
+            checked, and stability is no longer uncertain.
           </p>
 
           <div style={styles.grid}>
-            <Input label="Beneficiary Name" value={beneficiaryName} setValue={setBeneficiaryName} />
-
-            <Select
-              label="Beneficiary Level / Population Group"
-              value={beneficiaryLevel}
-              setValue={setBeneficiaryLevel}
-              options={['', ...BENEFICIARY_LEVELS]}
-            />
-
-            {beneficiaryLevel === 'Other' && (
-              <Input
-                label="Other Beneficiary Level"
-                value={otherBeneficiaryLevel}
-                setValue={setOtherBeneficiaryLevel}
-                placeholder="Describe beneficiary group"
-              />
-            )}
-
-            <Select
-              label="Stabilization Domain"
-              value={supportDomain}
-              setValue={setSupportDomain}
-              options={['', ...SUPPORT_DOMAINS]}
-            />
-
-            {supportDomain === 'Other' && (
-              <Input
-                label="Other Stabilization Domain"
-                value={otherSupportDomain}
-                setValue={setOtherSupportDomain}
-                placeholder="Describe stabilization need"
-              />
-            )}
-
-            <Input label="Region" value={region} setValue={setRegion} />
-
             <Input
-              label="Institution / Referral Source"
-              value={institutionName}
-              setValue={setInstitutionName}
-              placeholder="School, NGO, district office, community site"
+              label="Case Title"
+              value={caseTitle}
+              setValue={setCaseTitle}
+              placeholder="Example: Repeated routing delay on Site A"
             />
-          </div>
 
-          <div style={{ marginTop: '24px' }}>
             <Select
-              label="Severity Level"
-              value={severityLevel}
-              setValue={setSeverityLevel}
-              options={SEVERITY_LEVELS}
+              label="Location"
+              value={location}
+              setValue={setLocation}
+              options={LOCATION_OPTIONS}
+            />
+
+            <Select
+              label="Operational Pressure"
+              value={pressureType}
+              setValue={setPressureType}
+              options={PRESSURE_TYPES}
+            />
+
+            <Select
+              label="Affected Area"
+              value={affectedArea}
+              setValue={setAffectedArea}
+              options={AFFECTED_AREAS}
+            />
+
+            <Select
+              label="Difficulty Level"
+              value={difficultyLevel}
+              setValue={setDifficultyLevel}
+              options={DIFFICULTY_LEVELS}
+            />
+
+            <Select
+              label="Source Area"
+              value={sourceArea}
+              setValue={setSourceArea}
+              options={LOCATION_OPTIONS}
+            />
+
+            <Select
+              label="Current Ownership"
+              value={currentOwner}
+              setValue={setCurrentOwner}
+              options={['CLEAR', 'UNCLEAR', 'MISSING', 'TRANSFERRED', 'CONTESTED']}
             />
           </div>
 
           <div style={{ marginTop: '24px' }}>
-            <label style={styles.label}>Stabilization Risk Signals</label>
+            <label style={styles.label}>Visible Signals</label>
 
             <p style={styles.panelNote}>
-              Select the visible system signals affecting the beneficiary’s support
-              pathway. These signals help routing, escalation, and responder coordination.
+              Select the governed signals that explain why this instability
+              requires review.
             </p>
 
             <div style={styles.signalGrid}>
-              {STABILIZATION_SIGNALS.map((signal) => (
+              {VISIBLE_SIGNALS.map((signal) => (
                 <button
                   key={signal}
                   type="button"
                   onClick={() => toggleSignal(signal)}
                   style={{
                     ...styles.signalButton,
-                    background: selectedSignals.includes(signal) ? '#67e8f9' : '#111827',
-                    color: selectedSignals.includes(signal) ? '#082f49' : 'white',
+                    background: selectedSignals.includes(signal)
+                      ? '#a7f3d0'
+                      : '#111827',
+                    color: selectedSignals.includes(signal) ? '#022c22' : 'white',
                   }}
                 >
                   {signal}
@@ -399,20 +411,22 @@ function BeneficiaryCaseEngineContent() {
           <div style={styles.checkboxRow}>
             <input
               type="checkbox"
-              checked={safeguardingFlag}
-              onChange={(event) => setSafeguardingFlag(event.target.checked)}
+              checked={commandVisibility}
+              onChange={(event) => setCommandVisibility(event.target.checked)}
             />
 
-            <span>Safeguarding visibility required</span>
+            <span>Command visibility may be needed</span>
           </div>
 
           <button onClick={createCase} disabled={loading} style={styles.primaryButton}>
-            {loading ? 'Creating Case...' : 'Create Stabilization Case'}
+            {loading ? 'Creating Case...' : 'Create Instability Case'}
           </button>
         </section>
 
         <section style={styles.caseSection}>
-          <h2 style={styles.sectionTitle}>Active Beneficiary Cases</h2>
+          <p style={styles.sectionKicker}>Active review</p>
+
+          <h2 style={styles.sectionTitle}>Instability under governance</h2>
 
           <div style={styles.caseList}>
             {cases.map((caseItem) => (
@@ -423,17 +437,20 @@ function BeneficiaryCaseEngineContent() {
                     <p style={styles.caseDomain}>{caseItem.support_domain}</p>
                   </div>
 
-                  <span style={severityBadge(caseItem.severity_level)}>
+                  <span style={difficultyBadge(caseItem.severity_level)}>
                     {caseItem.severity_level}
                   </span>
                 </div>
 
                 <div style={styles.infoGrid}>
-                  <Info label="Lifecycle" value={caseItem.case_status} />
-                  <Info label="Beneficiary Level" value={caseItem.beneficiary_level || 'Not provided'} />
-                  <Info label="Region" value={caseItem.region || 'Not provided'} />
+                  <Info label="Status" value={caseItem.case_status} />
                   <Info
-                    label="Institution / Referral"
+                    label="Location"
+                    value={caseItem.beneficiary_level || 'Not provided'}
+                  />
+                  <Info label="Source Area" value={caseItem.region || 'Not provided'} />
+                  <Info
+                    label="Current Ownership"
                     value={caseItem.institution_name || 'Not provided'}
                   />
                 </div>
@@ -459,16 +476,18 @@ function BeneficiaryCaseEngineContent() {
                 </div>
 
                 <div style={styles.dropdownSection}>
-                  <label style={styles.label}>Structured Stabilization Action</label>
+                  <label style={styles.label}>Stabilization Action</label>
 
                   <select
-                    onChange={(event) => applyInterventionSummary(caseItem, event.target.value)}
+                    onChange={(event) =>
+                      applyStabilizationAction(caseItem, event.target.value)
+                    }
                     style={styles.select}
                     value=""
                   >
                     <option value="">Select stabilization action</option>
 
-                    {INTERVENTION_TEMPLATES.map((item) => (
+                    {STABILIZATION_ACTIONS.map((item) => (
                       <option key={item} value={item}>
                         {item}
                       </option>
@@ -477,16 +496,18 @@ function BeneficiaryCaseEngineContent() {
                 </div>
 
                 <div style={styles.dropdownSection}>
-                  <label style={styles.label}>Structured Outcome Summary</label>
+                  <label style={styles.label}>Outcome Review</label>
 
                   <select
-                    onChange={(event) => applyOutcomeSummary(caseItem, event.target.value)}
+                    onChange={(event) =>
+                      applyOutcomeSummary(caseItem, event.target.value)
+                    }
                     style={styles.select}
                     value=""
                   >
-                    <option value="">Select outcome summary</option>
+                    <option value="">Select outcome review</option>
 
-                    {OUTCOME_TEMPLATES.map((item) => (
+                    {OUTCOME_OPTIONS.map((item) => (
                       <option key={item} value={item}>
                         {item}
                       </option>
@@ -496,7 +517,7 @@ function BeneficiaryCaseEngineContent() {
 
                 {caseItem.intervention_summary && (
                   <div style={styles.summaryBox}>
-                    <strong>Stabilization Action:</strong> {caseItem.intervention_summary}
+                    <strong>Action:</strong> {caseItem.intervention_summary}
                   </div>
                 )}
 
@@ -561,10 +582,14 @@ function Select({
   return (
     <label style={styles.label}>
       {label}
-      <select value={value} onChange={(event) => setValue(event.target.value)} style={styles.select}>
-        {options.map((option, index) => (
-          <option key={`${option || 'blank'}-${index}`} value={option}>
-            {option || 'Select option'}
+      <select
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        style={styles.select}
+      >
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
           </option>
         ))}
       </select>
@@ -581,7 +606,7 @@ function Info({ label, value }: { label: string; value: string }) {
   )
 }
 
-function severityBadge(level: string): CSSProperties {
+function difficultyBadge(level: string): CSSProperties {
   if (level === 'CRITICAL') {
     return {
       background: '#7f1d1d',
@@ -603,11 +628,12 @@ function severityBadge(level: string): CSSProperties {
   }
 
   return {
-    background: '#082f49',
-    color: '#67e8f9',
+    background: '#111827',
+    color: '#a7f3d0',
     padding: '8px 12px',
     borderRadius: '999px',
     fontWeight: 800,
+    border: '1px solid rgba(167,243,208,0.26)',
   }
 }
 
@@ -624,7 +650,7 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: '32px',
   },
   kicker: {
-    color: '#67e8f9',
+    color: '#cbd5e1',
     fontWeight: 900,
     letterSpacing: '2px',
     fontSize: '12px',
@@ -674,6 +700,14 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: '24px',
     padding: '24px',
     marginBottom: '32px',
+  },
+  sectionKicker: {
+    color: '#94a3b8',
+    fontSize: '12px',
+    fontWeight: 900,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+    margin: '0 0 10px',
   },
   sectionTitle: {
     fontSize: '28px',
@@ -733,8 +767,8 @@ const styles: Record<string, CSSProperties> = {
     alignItems: 'center',
   },
   primaryButton: {
-    background: '#67e8f9',
-    color: '#082f49',
+    background: '#e2e8f0',
+    color: '#020617',
     border: 'none',
     borderRadius: '14px',
     padding: '16px 20px',
@@ -767,7 +801,7 @@ const styles: Record<string, CSSProperties> = {
     margin: 0,
   },
   caseDomain: {
-    color: '#93c5fd',
+    color: '#cbd5e1',
     marginTop: '6px',
   },
   infoGrid: {
@@ -798,12 +832,13 @@ const styles: Record<string, CSSProperties> = {
     marginTop: '18px',
   },
   signalBadge: {
-    background: '#082f49',
-    color: '#67e8f9',
+    background: '#111827',
+    color: '#a7f3d0',
     borderRadius: '999px',
     padding: '8px 12px',
     fontSize: '12px',
     fontWeight: 800,
+    border: '1px solid rgba(167,243,208,0.22)',
   },
   lifecycleGrid: {
     display: 'grid',
