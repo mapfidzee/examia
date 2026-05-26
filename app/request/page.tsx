@@ -15,6 +15,15 @@ type CreatedRequest = {
   teacher_status: string | null
 }
 
+type IntakeIntelligence = {
+  visibilityClassification: string
+  governanceReadiness: string
+  ownershipPosture: string
+  evidencePosture: string
+  stabilizationRisk: string
+  commandMeaning: string
+}
+
 const instabilityClassOptions = [
   {
     value: 'FLOW',
@@ -130,20 +139,28 @@ const reviewUrgencyOptions = [
 
 const flowSteps = [
   {
-    title: 'Instability entered',
-    body: 'A visible issue is recorded with enough context for review.',
+    title: 'Visibility opened',
+    body: 'Visible instability is captured with governed context.',
   },
   {
-    title: 'Triage review',
-    body: 'CGI decides whether to watch, merge, return, escalate, or accept it as a case.',
+    title: 'Triage decision',
+    body: 'CGI decides whether it needs governance, clarity, escalation, monitoring, or closure.',
   },
   {
-    title: 'Routing decision',
-    body: 'The right owner, next action, urgency, and evidence need are identified.',
+    title: 'Case acceptance',
+    body: 'Accepted instability becomes an active continuity governance case.',
   },
   {
-    title: 'Stability check',
-    body: 'CGI checks whether the situation improved and whether recovery is holding.',
+    title: 'Routing direction',
+    body: 'Routing identifies the next stabilization movement and owner posture.',
+  },
+  {
+    title: 'Stabilization evidence',
+    body: 'Interventions and outcomes confirm whether the situation is improving.',
+  },
+  {
+    title: 'Recovery memory',
+    body: 'CGI checks whether recovery holds and preserves institutional memory.',
   },
 ]
 
@@ -188,51 +205,101 @@ export default function RequestPage() {
     )
   }, [instabilityClass])
 
+  const generatedIntakeIdentity = useMemo(() => {
+    return [
+      instabilityClass,
+      visibleSignal,
+      location,
+      affectedArea,
+      severity,
+    ].join(' • ')
+  }, [instabilityClass, visibleSignal, location, affectedArea, severity])
+
+  const intakeIntelligence = useMemo(() => {
+    return buildIntakeIntelligence({
+      severity,
+      ownershipState,
+      evidenceLevel,
+      location,
+      visibleSignal,
+      reviewUrgency,
+      entryRoute,
+    })
+  }, [
+    severity,
+    ownershipState,
+    evidenceLevel,
+    location,
+    visibleSignal,
+    reviewUrgency,
+    entryRoute,
+  ])
+
+  const governanceVisibility = useMemo(() => {
+    return resolveGovernanceVisibility({
+      severity,
+      ownershipState,
+      evidenceLevel,
+      location,
+      visibleSignal,
+    })
+  }, [severity, ownershipState, evidenceLevel, location, visibleSignal])
+
   async function submitRequest(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     setLoading(true)
-    setMessage('Submitting visible instability for review...')
+    setMessage('Preserving visible instability for governance review...')
     setCreatedRequest(null)
 
     const problemSummary = [
+      `Generated intake identity: ${generatedIntakeIdentity}`,
       `Entry route: ${entryRoute}`,
       `Operational pressure type: ${instabilityClass}`,
-      `Meaning: ${selectedClassDescription}`,
+      `Pressure meaning: ${selectedClassDescription}`,
       `Difficulty level: ${severity}`,
+      `Severity meaning: ${resolveSeverityMeaning(severity)}`,
       `Location: ${location}`,
       `Affected area: ${affectedArea}`,
       `Visible signal: ${visibleSignal}`,
       `Ownership state: ${ownershipState}`,
       `Evidence level: ${evidenceLevel}`,
       `Review urgency: ${reviewUrgency}`,
+      `Governance visibility: ${governanceVisibility}`,
+      `Visibility classification: ${intakeIntelligence.visibilityClassification}`,
+      `Governance readiness: ${intakeIntelligence.governanceReadiness}`,
+      `Ownership posture: ${intakeIntelligence.ownershipPosture}`,
+      `Evidence posture: ${intakeIntelligence.evidencePosture}`,
+      `Stabilization risk: ${intakeIntelligence.stabilizationRisk}`,
+      `Command meaning: ${intakeIntelligence.commandMeaning}`,
       `Brief note: ${briefNote.trim() || 'No additional note provided'}`,
     ].join('\n')
 
     const { data, error } = await supabase
       .from('lesson_requests')
       .insert({
-        subject: `${instabilityClass} — ${visibleSignal}`,
+        subject: generatedIntakeIdentity,
         grade_level: location,
         problem: problemSummary,
         preferred_time: reviewUrgency,
-        status: 'UNDER_REVIEW',
-        teacher_status: 'PENDING_TRIAGE',
+        status: 'PENDING_TRIAGE',
+        teacher_status: governanceVisibility,
       })
       .select()
       .single()
 
     if (error || !data) {
       console.error(error)
-      setMessage('Something went wrong. Please try again.')
+      setMessage('Submission failed. Visible instability was not preserved.')
       setLoading(false)
       return
     }
 
     setCreatedRequest(data)
     setMessage(
-      'Visible instability submitted. CGI can now review, route, track, and confirm whether the situation is stabilizing.'
+      'Visible instability preserved for governance review. CGI triage can now determine whether this should be monitored, clarified, escalated, merged, or accepted into active continuity governance.'
     )
+
     setEntryRoute('HUMAN_SUBMITTED')
     setInstabilityClass('FLOW')
     setSeverity('MODERATE')
@@ -261,33 +328,104 @@ export default function RequestPage() {
     <main style={styles.page}>
       <div style={styles.wrap}>
         <header style={styles.hero}>
-          <p style={styles.eyebrow}>TSINAXA CGI • INSTABILITY INTAKE</p>
+          <p style={styles.eyebrow}>
+            TSINAXA CGI • GOVERNED INTAKE INTELLIGENCE
+          </p>
 
-          <h1 style={styles.h1}>Submit Visible Instability</h1>
+          <h1 style={styles.h1}>
+            Open Visible Instability
+          </h1>
 
           <p style={styles.heroText}>
-            Use this page when an operational issue has become visible and may
-            need review, routing, ownership, evidence, or follow-up before it
-            can be treated as stable.
+            Use this surface when instability becomes visible and needs
+            governed continuity review before it can become a case, be routed,
+            acted on, or confirmed as stabilizing.
           </p>
         </header>
 
+        <section style={styles.metricsGrid}>
+          <Metric label="Current Entry Route" value={entryRoute} />
+          <Metric label="Pressure Type" value={instabilityClass} />
+          <Metric label="Severity" value={severity} />
+          <Metric label="Ownership" value={ownershipState} />
+          <Metric label="Evidence" value={evidenceLevel} />
+          <Metric label="Visibility" value={governanceVisibility} />
+        </section>
+
+        <section style={styles.identityCard}>
+          <p style={styles.eyebrow}>Generated intake identity</p>
+
+          <h2 style={styles.identityValue}>{generatedIntakeIdentity}</h2>
+
+          <p style={styles.cardText}>
+            This identity is generated from governed selections so visible
+            instability remains comparable, searchable, and ready for triage.
+          </p>
+
+          <div style={styles.badgeRow}>
+            <span style={styles.signalBadge}>{instabilityClass}</span>
+            <span style={styles.signalBadge}>{visibleSignal}</span>
+            <span style={styles.signalBadge}>{location}</span>
+            <span style={styles.signalBadge}>{affectedArea}</span>
+            <span style={styles.signalBadge}>{severity}</span>
+          </div>
+        </section>
+
+        <section style={styles.intelligenceCard}>
+          <p style={styles.eyebrow}>Intake intelligence panel</p>
+
+          <h2 style={styles.h2}>What does this visible instability mean?</h2>
+
+          <div style={styles.intelligenceGrid}>
+            <IntelligenceItem
+              label="Visibility Classification"
+              value={intakeIntelligence.visibilityClassification}
+            />
+
+            <IntelligenceItem
+              label="Governance Readiness"
+              value={intakeIntelligence.governanceReadiness}
+            />
+
+            <IntelligenceItem
+              label="Ownership Posture"
+              value={intakeIntelligence.ownershipPosture}
+            />
+
+            <IntelligenceItem
+              label="Evidence Posture"
+              value={intakeIntelligence.evidencePosture}
+            />
+
+            <IntelligenceItem
+              label="Stabilization Risk"
+              value={intakeIntelligence.stabilizationRisk}
+            />
+
+            <IntelligenceItem
+              label="Command Meaning"
+              value={intakeIntelligence.commandMeaning}
+            />
+          </div>
+        </section>
+
         <section style={styles.guidanceGrid}>
           <article style={styles.guidanceCard}>
-            <p style={styles.eyebrow}>When to use CGI</p>
+            <p style={styles.eyebrow}>Boundary lock</p>
 
-            <h2 style={styles.h2}>Use CGI when normal handling may not be enough.</h2>
+            <h2 style={styles.h2}>A request is not yet a case.</h2>
 
             <p style={styles.cardText}>
-              CGI is intended for issues that may continue affecting operations
-              unless they are reviewed, routed, tracked, or stabilized.
+              This page opens governed visibility. Triage decides whether the
+              instability should be monitored, returned for clarity, escalated,
+              merged, closed, or accepted into active case governance.
             </p>
           </article>
 
           <article style={styles.guidanceCard}>
             <p style={styles.eyebrow}>Typical users</p>
 
-            <h2 style={styles.h2}>Who usually submits?</h2>
+            <h2 style={styles.h2}>Who usually opens visibility?</h2>
 
             <div style={styles.pillGrid}>
               {typicalUsers.map((user) => (
@@ -300,14 +438,14 @@ export default function RequestPage() {
         </section>
 
         <section style={styles.flowCard}>
-          <p style={styles.eyebrow}>From visibility to stabilization</p>
+          <p style={styles.eyebrow}>From visibility to survivability</p>
 
           <h2 style={styles.h2}>CGI begins when instability becomes visible.</h2>
 
           <p style={styles.cardText}>
-            A submission does not automatically become a case. It first enters
-            review so CGI can decide whether to watch it, merge it, return it
-            for clarity, escalate it, or accept it for active tracking.
+            Intake preserves the signal. Triage judges it. Cases govern it.
+            Routing directs it. Interventions act on it. Outcomes verify it.
+            Recovery determines whether stabilization is holding.
           </p>
 
           <div style={styles.flowGrid}>
@@ -326,7 +464,7 @@ export default function RequestPage() {
         <section style={styles.examplesCard}>
           <p style={styles.eyebrow}>Examples</p>
 
-          <h2 style={styles.h2}>What belongs here?</h2>
+          <h2 style={styles.h2}>What belongs in governed intake?</h2>
 
           <div style={styles.exampleGrid}>
             {exampleSignals.map((example) => (
@@ -354,7 +492,7 @@ export default function RequestPage() {
         </section>
 
         <section style={styles.card}>
-          <p style={styles.eyebrow}>Instability intake</p>
+          <p style={styles.eyebrow}>Governed instability intake</p>
 
           <h2 style={styles.h2}>What has become visible?</h2>
 
@@ -404,6 +542,9 @@ export default function RequestPage() {
                   <option key={level}>{level}</option>
                 ))}
               </select>
+              <span style={styles.helperText}>
+                {resolveSeverityMeaning(severity)}
+              </span>
             </label>
 
             <label style={styles.label}>
@@ -446,7 +587,7 @@ export default function RequestPage() {
             </label>
 
             <label style={styles.label}>
-              Who owns it right now?
+              What is the ownership state?
               <select
                 value={ownershipState}
                 onChange={(event) => setOwnershipState(event.target.value)}
@@ -472,7 +613,7 @@ export default function RequestPage() {
             </label>
 
             <label style={styles.label}>
-              Preferred review time
+              Review urgency
               <select
                 value={reviewUrgency}
                 onChange={(event) => setReviewUrgency(event.target.value)}
@@ -496,8 +637,8 @@ export default function RequestPage() {
 
             <button type="submit" disabled={loading} style={styles.primaryButton}>
               {loading
-                ? 'Submitting Instability...'
-                : 'Submit Visible Instability'}
+                ? 'Preserving Instability...'
+                : 'Preserve Visible Instability for Triage'}
             </button>
           </form>
 
@@ -506,21 +647,20 @@ export default function RequestPage() {
 
         {createdRequest && (
           <section style={styles.successCard}>
-            <p style={styles.eyebrow}>Instability submitted</p>
+            <p style={styles.eyebrow}>Governance visibility opened</p>
 
-            <h2 style={styles.h2}>Save this Request ID</h2>
+            <h2 style={styles.h2}>Request preserved for triage</h2>
 
             <div style={styles.requestIdBox}>{createdRequest.id}</div>
 
             <p style={styles.smallText}>
-              This ID connects the visible instability to triage, routing,
-              ownership, stabilization action, evidence review, and recovery
-              follow-up.
+              This request opens visibility only. It becomes a case only if CGI
+              triage accepts it into active continuity governance.
             </p>
 
             <div style={styles.createdGrid}>
               <CreatedDetail
-                label="Operational Pressure"
+                label="Intake Identity"
                 value={createdRequest.subject}
               />
 
@@ -529,11 +669,14 @@ export default function RequestPage() {
                 value={createdRequest.grade_level ?? 'Not recorded'}
               />
 
-              <CreatedDetail label="Triage Status" value={createdRequest.status} />
+              <CreatedDetail
+                label="Triage State"
+                value={createdRequest.status}
+              />
 
               <CreatedDetail
-                label="Routing Status"
-                value={createdRequest.teacher_status ?? 'PENDING_TRIAGE'}
+                label="Governance Visibility"
+                value={createdRequest.teacher_status ?? 'GOVERNANCE'}
               />
             </div>
 
@@ -561,6 +704,153 @@ export default function RequestPage() {
   )
 }
 
+function buildIntakeIntelligence(input: {
+  severity: string
+  ownershipState: string
+  evidenceLevel: string
+  location: string
+  visibleSignal: string
+  reviewUrgency: string
+  entryRoute: string
+}): IntakeIntelligence {
+  const ownershipUnclear = ['UNCLEAR', 'MISSING', 'CONTESTED'].includes(
+    input.ownershipState
+  )
+
+  const evidenceWeak = ['NONE', 'LIMITED'].includes(input.evidenceLevel)
+
+  const crossSite =
+    input.location === 'CROSS_SITE' ||
+    input.visibleSignal === 'CROSS_TEAM_CONFUSION'
+
+  if (input.severity === 'CRITICAL') {
+    return {
+      visibilityClassification: 'Critical visible instability',
+      governanceReadiness: 'Immediate triage and command visibility recommended',
+      ownershipPosture: ownershipUnclear
+        ? 'Ownership unclear under critical conditions'
+        : 'Ownership present but urgent confirmation needed',
+      evidencePosture: evidenceWeak
+        ? 'Evidence weak under critical conditions'
+        : 'Evidence available for immediate review',
+      stabilizationRisk: 'High risk if review is delayed',
+      commandMeaning:
+        'This signal may threaten continuity if not governed quickly.',
+    }
+  }
+
+  if (input.severity === 'HIGH') {
+    return {
+      visibilityClassification: 'High-pressure visible instability',
+      governanceReadiness: 'Triage review likely required',
+      ownershipPosture: ownershipUnclear
+        ? 'Ownership gap may slow stabilization'
+        : 'Ownership appears available',
+      evidencePosture: evidenceWeak
+        ? 'Evidence may be insufficient for confident routing'
+        : 'Evidence appears usable for triage',
+      stabilizationRisk: 'Moderate to high if unresolved',
+      commandMeaning:
+        'This signal may become broader continuity pressure if movement stalls.',
+    }
+  }
+
+  if (ownershipUnclear || evidenceWeak || crossSite) {
+    return {
+      visibilityClassification: 'Visible instability with governance concern',
+      governanceReadiness: 'Ready for triage review',
+      ownershipPosture: ownershipUnclear
+        ? 'Ownership requires clarification'
+        : 'Ownership appears manageable',
+      evidencePosture: evidenceWeak
+        ? 'Evidence requires strengthening'
+        : 'Evidence appears sufficient for review',
+      stabilizationRisk: crossSite
+        ? 'Cross-site spread may increase instability'
+        : 'Moderate if not reviewed',
+      commandMeaning:
+        'The signal should remain visible until triage confirms the correct path.',
+    }
+  }
+
+  return {
+    visibilityClassification: 'Routine visible instability',
+    governanceReadiness: 'Ready for standard triage',
+    ownershipPosture: 'Ownership appears clear',
+    evidencePosture: 'Evidence appears sufficient for triage',
+    stabilizationRisk: 'Low to moderate if tracked promptly',
+    commandMeaning:
+      'The signal can enter ordinary governance review without immediate escalation.',
+  }
+}
+
+function resolveGovernanceVisibility(input: {
+  severity: string
+  ownershipState: string
+  evidenceLevel: string
+  location: string
+  visibleSignal: string
+}) {
+  if (input.severity === 'CRITICAL') return 'COMMAND_VISIBILITY'
+  if (input.severity === 'HIGH') return 'EXECUTIVE_VISIBILITY'
+
+  if (
+    input.location === 'CROSS_SITE' ||
+    input.visibleSignal === 'CROSS_TEAM_CONFUSION'
+  ) {
+    return 'CROSS_SITE_VISIBILITY'
+  }
+
+  if (
+    ['UNCLEAR', 'MISSING', 'CONTESTED'].includes(input.ownershipState) ||
+    ['NONE', 'LIMITED'].includes(input.evidenceLevel)
+  ) {
+    return 'GOVERNANCE_VISIBILITY'
+  }
+
+  return 'STANDARD_VISIBILITY'
+}
+
+function resolveSeverityMeaning(severity: string) {
+  if (severity === 'CRITICAL') {
+    return 'Executive visibility recommended immediately.'
+  }
+
+  if (severity === 'HIGH') {
+    return 'Stabilization delay may increase continuity risk.'
+  }
+
+  if (severity === 'MODERATE') {
+    return 'Governance review may be required before the issue becomes harder to stabilize.'
+  }
+
+  return 'Localized operational visibility; monitor for recurrence or spread.'
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <article style={styles.metricCard}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.metricValue}>{value}</p>
+    </article>
+  )
+}
+
+function IntelligenceItem({
+  label,
+  value,
+}: {
+  label: string
+  value: string
+}) {
+  return (
+    <article style={styles.intelligenceItem}>
+      <p style={styles.intelligenceLabel}>{label}</p>
+      <p style={styles.intelligenceValue}>{value}</p>
+    </article>
+  )
+}
+
 function CreatedDetail({
   label,
   value,
@@ -571,7 +861,6 @@ function CreatedDetail({
   return (
     <article style={styles.createdDetail}>
       <p style={styles.createdLabel}>{label}</p>
-
       <p style={styles.createdValue}>{value}</p>
     </article>
   )
@@ -587,14 +876,17 @@ const styles: Record<string, CSSProperties> = {
     fontFamily:
       'system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
   },
+
   wrap: {
     width: '100%',
-    maxWidth: '1060px',
+    maxWidth: '1120px',
     margin: '0 auto',
   },
+
   hero: {
     marginBottom: '28px',
   },
+
   eyebrow: {
     margin: '0 0 10px',
     color: '#cbd5e1',
@@ -603,6 +895,7 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: '0.14em',
     textTransform: 'uppercase',
   },
+
   h1: {
     margin: 0,
     color: '#ffffff',
@@ -611,6 +904,7 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: '-0.07em',
     fontWeight: 900,
   },
+
   h2: {
     margin: 0,
     color: '#ffffff',
@@ -619,19 +913,131 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 900,
     lineHeight: 1.1,
   },
+
   heroText: {
-    maxWidth: '790px',
+    maxWidth: '820px',
     color: '#cbd5e1',
     fontSize: '18px',
     lineHeight: 1.68,
     marginTop: '18px',
   },
+
+  metricsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+    gap: '14px',
+    marginBottom: '28px',
+  },
+
+  metricCard: {
+    background: '#0f172a',
+    border: '1px solid rgba(148,163,184,0.24)',
+    borderRadius: '18px',
+    padding: '16px',
+  },
+
+  metricLabel: {
+    margin: 0,
+    color: '#94a3b8',
+    fontSize: '11px',
+    fontWeight: 900,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+  },
+
+  metricValue: {
+    margin: '8px 0 0',
+    color: '#f8fafc',
+    fontSize: '14px',
+    fontWeight: 900,
+    lineHeight: 1.35,
+    wordBreak: 'break-word',
+  },
+
+  identityCard: {
+    background: '#020617',
+    color: '#ffffff',
+    border: '1px solid rgba(20,184,166,0.34)',
+    borderRadius: '26px',
+    boxShadow: '0 24px 70px rgba(0,0,0,0.3)',
+    padding: '30px',
+    marginBottom: '28px',
+  },
+
+  identityValue: {
+    color: '#a7f3d0',
+    fontSize: 'clamp(24px, 4vw, 38px)',
+    fontWeight: 900,
+    lineHeight: 1.12,
+    margin: 0,
+    wordBreak: 'break-word',
+  },
+
+  badgeRow: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '8px',
+    marginTop: '18px',
+  },
+
+  signalBadge: {
+    background: '#111827',
+    color: '#a7f3d0',
+    borderRadius: '999px',
+    padding: '7px 11px',
+    fontSize: '11px',
+    fontWeight: 900,
+    border: '1px solid rgba(167,243,208,0.22)',
+  },
+
+  intelligenceCard: {
+    background: '#0f172a',
+    color: '#ffffff',
+    border: '1px solid rgba(148,163,184,0.24)',
+    borderRadius: '26px',
+    boxShadow: '0 24px 70px rgba(0,0,0,0.3)',
+    padding: '30px',
+    marginBottom: '28px',
+  },
+
+  intelligenceGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+    gap: '12px',
+    marginTop: '22px',
+  },
+
+  intelligenceItem: {
+    background: '#020617',
+    border: '1px solid rgba(148,163,184,0.24)',
+    borderRadius: '16px',
+    padding: '14px',
+  },
+
+  intelligenceLabel: {
+    margin: 0,
+    color: '#94a3b8',
+    fontSize: '11px',
+    fontWeight: 900,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+  },
+
+  intelligenceValue: {
+    margin: '8px 0 0',
+    color: '#f8fafc',
+    fontSize: '13px',
+    fontWeight: 800,
+    lineHeight: 1.45,
+  },
+
   guidanceGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
     gap: '16px',
     marginBottom: '28px',
   },
+
   guidanceCard: {
     background: 'rgba(15,23,42,0.9)',
     color: '#ffffff',
@@ -640,6 +1046,7 @@ const styles: Record<string, CSSProperties> = {
     boxShadow: '0 24px 70px rgba(0,0,0,0.28)',
     padding: '24px',
   },
+
   flowCard: {
     background: 'rgba(15,23,42,0.92)',
     color: '#ffffff',
@@ -649,6 +1056,7 @@ const styles: Record<string, CSSProperties> = {
     padding: '30px',
     marginBottom: '28px',
   },
+
   examplesCard: {
     background: '#020617',
     color: '#ffffff',
@@ -658,6 +1066,7 @@ const styles: Record<string, CSSProperties> = {
     padding: '30px',
     marginBottom: '28px',
   },
+
   classCard: {
     background: '#111827',
     color: '#ffffff',
@@ -667,6 +1076,7 @@ const styles: Record<string, CSSProperties> = {
     padding: '30px',
     marginBottom: '28px',
   },
+
   card: {
     background: '#0f172a',
     color: '#ffffff',
@@ -676,6 +1086,7 @@ const styles: Record<string, CSSProperties> = {
     padding: '30px',
     marginBottom: '28px',
   },
+
   successCard: {
     background: '#0f172a',
     color: '#ffffff',
@@ -684,18 +1095,21 @@ const styles: Record<string, CSSProperties> = {
     boxShadow: '0 24px 70px rgba(0,0,0,0.36)',
     padding: '30px',
   },
+
   cardText: {
     color: '#cbd5e1',
     lineHeight: 1.65,
     margin: '12px 0 0',
-    maxWidth: '760px',
+    maxWidth: '780px',
   },
+
   pillGrid: {
     display: 'flex',
     flexWrap: 'wrap',
     gap: '10px',
     marginTop: '18px',
   },
+
   pill: {
     background: '#020617',
     border: '1px solid rgba(148,163,184,0.28)',
@@ -706,19 +1120,22 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 800,
     textTransform: 'capitalize',
   },
+
   flowGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
     gap: '12px',
     marginTop: '22px',
   },
+
   flowStep: {
     background: '#020617',
     border: '1px solid rgba(148,163,184,0.24)',
     borderRadius: '18px',
     padding: '16px',
-    minHeight: '170px',
+    minHeight: '160px',
   },
+
   stepNumber: {
     margin: 0,
     color: '#a7f3d0',
@@ -726,24 +1143,28 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '13px',
     letterSpacing: '0.12em',
   },
+
   stepTitle: {
     margin: '10px 0',
     color: '#ffffff',
-    fontSize: '18px',
+    fontSize: '17px',
     lineHeight: 1.15,
   },
+
   stepBody: {
     margin: 0,
     color: '#cbd5e1',
     lineHeight: 1.55,
-    fontSize: '14px',
+    fontSize: '13px',
   },
+
   exampleGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
     gap: '12px',
     marginTop: '22px',
   },
+
   exampleItem: {
     background: '#111827',
     border: '1px solid rgba(148,163,184,0.24)',
@@ -755,19 +1176,22 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.45,
     fontWeight: 800,
   },
+
   classGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
     gap: '10px',
     marginTop: '22px',
   },
+
   classItem: {
     background: '#020617',
     border: '1px solid rgba(148,163,184,0.24)',
     borderRadius: '16px',
     padding: '14px',
-    minHeight: '150px',
+    minHeight: '145px',
   },
+
   classTitle: {
     color: '#a7f3d0',
     fontSize: '14px',
@@ -775,17 +1199,20 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: '0.08em',
     margin: 0,
   },
+
   classText: {
     color: '#cbd5e1',
     fontSize: '13px',
     lineHeight: 1.45,
     margin: '10px 0 0',
   },
+
   form: {
     display: 'grid',
     gap: '16px',
     marginTop: '24px',
   },
+
   label: {
     display: 'grid',
     gap: '8px',
@@ -793,12 +1220,14 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 900,
     fontSize: '14px',
   },
+
   helperText: {
     color: '#cbd5e1',
     fontSize: '13px',
     fontWeight: 700,
     lineHeight: 1.45,
   },
+
   input: {
     width: '100%',
     boxSizing: 'border-box',
@@ -810,6 +1239,7 @@ const styles: Record<string, CSSProperties> = {
     background: '#ffffff',
     outline: 'none',
   },
+
   smallTextarea: {
     width: '100%',
     boxSizing: 'border-box',
@@ -823,6 +1253,7 @@ const styles: Record<string, CSSProperties> = {
     minHeight: '120px',
     resize: 'vertical',
   },
+
   primaryButton: {
     width: '100%',
     border: 'none',
@@ -834,6 +1265,7 @@ const styles: Record<string, CSSProperties> = {
     background: '#e2e8f0',
     color: '#020617',
   },
+
   secondaryButton: {
     width: '100%',
     border: 'none',
@@ -845,6 +1277,7 @@ const styles: Record<string, CSSProperties> = {
     background: '#a7f3d0',
     color: '#022c22',
   },
+
   message: {
     marginTop: '18px',
     background: 'rgba(148,163,184,0.14)',
@@ -854,6 +1287,7 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 900,
     border: '1px solid rgba(148,163,184,0.24)',
   },
+
   requestIdBox: {
     marginTop: '18px',
     background: '#1e293b',
@@ -864,23 +1298,27 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 900,
     lineHeight: 1.5,
   },
+
   smallText: {
     color: '#cbd5e1',
     lineHeight: 1.6,
     marginTop: '16px',
   },
+
   createdGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
     gap: '12px',
     marginTop: '18px',
   },
+
   createdDetail: {
     background: '#020617',
     border: '1px solid rgba(148,163,184,0.26)',
     borderRadius: '16px',
     padding: '14px',
   },
+
   createdLabel: {
     margin: 0,
     color: '#a7f3d0',
@@ -889,12 +1327,15 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: '0.12em',
     textTransform: 'uppercase',
   },
+
   createdValue: {
     margin: '8px 0 0',
     color: '#f8fafc',
     fontWeight: 900,
     lineHeight: 1.35,
+    wordBreak: 'break-word',
   },
+
   buttonGrid: {
     display: 'grid',
     gap: '12px',
