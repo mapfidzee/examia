@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { CSSProperties } from 'react'
 import { supabase } from '../../lib/supabase'
@@ -15,128 +15,101 @@ type CreatedRequest = {
   teacher_status: string | null
 }
 
-const categoryOptions: Record<string, string[]> = {
-  Education: [
-    'Mathematics',
-    'English',
-    'Science',
-    'History',
-    'Shona',
-    'Physics',
-    'Biology',
-    'Chemistry',
-    'Accounting',
-    'Economics',
-    'General Paper',
-    'Other',
-  ],
-  'Health Education / Outreach': [
-    'Health education',
-    'Community health outreach',
-    'HIV education',
-    'TB education',
-    'Maternal health education',
-    'Adolescent health education',
-    'Medication adherence education',
-    'Training support',
-    'Other',
-  ],
-  'NGO / Community Program': [
-    'Program training',
-    'Field worker support',
-    'Community mobilization',
-    'Report follow-up',
-    'Beneficiary support',
-    'Youth program support',
-    'Other',
-  ],
-  'Rural Operations': [
-    'Skills training',
-    'Agriculture support',
-    'Digital literacy',
-    'Community coordination',
-    'Livelihood support',
-    'Other',
-  ],
-  Other: ['Other'],
-}
+const instabilityClasses = [
+  'FLOW',
+  'COVERAGE',
+  'COORDINATION',
+  'OWNERSHIP',
+  'EVIDENCE',
+  'RECOVERY',
+  'RELIABILITY',
+]
+
+const entryRoutes = [
+  'HUMAN_SUBMITTED',
+  'SYSTEM_DETECTED',
+  'GOVERNANCE_INITIATED',
+]
+
+const severityLevels = ['LOW', 'MODERATE', 'HIGH', 'CRITICAL']
 
 const flowSteps = [
   {
-    title: 'Need captured',
-    body: 'The system records the support need and creates a traceable Request ID.',
+    title: 'Instability entered',
+    body: 'A visible issue is recorded with enough context for review.',
   },
   {
-    title: 'Routing begins',
-    body: 'The need can move toward governance review, priority reading, and responder assignment.',
+    title: 'Triage review',
+    body: 'CGI decides whether to watch, merge, return, escalate, or accept it as a case.',
   },
   {
-    title: 'Action becomes visible',
-    body: 'Intervention activity, room readiness, and completion evidence can be tracked.',
+    title: 'Routing decision',
+    body: 'The right owner, next action, urgency, and evidence need are identified.',
   },
   {
-    title: 'Meaning reaches command',
-    body: 'Unresolved needs, delays, and completion evidence can inform continuity review.',
+    title: 'Stabilization check',
+    body: 'CGI checks whether the situation improved and whether recovery is holding.',
   },
 ]
 
 export default function RequestPage() {
   const router = useRouter()
 
-  const [supportArea, setSupportArea] = useState('Education')
-  const [category, setCategory] = useState('Mathematics')
-  const [otherCategory, setOtherCategory] = useState('')
-  const [beneficiaryLevel, setBeneficiaryLevel] = useState('')
-  const [needDescription, setNeedDescription] = useState('')
-  const [preferredTime, setPreferredTime] = useState('')
+  const [entryRoute, setEntryRoute] = useState('HUMAN_SUBMITTED')
+  const [instabilityClass, setInstabilityClass] = useState('FLOW')
+  const [severity, setSeverity] = useState('MODERATE')
+  const [location, setLocation] = useState('')
+  const [affectedArea, setAffectedArea] = useState('')
+  const [visibleIssue, setVisibleIssue] = useState('')
+  const [currentOwner, setCurrentOwner] = useState('')
+  const [evidenceAvailable, setEvidenceAvailable] = useState('')
+  const [reviewTime, setReviewTime] = useState('')
   const [message, setMessage] = useState('')
   const [createdRequest, setCreatedRequest] =
     useState<CreatedRequest | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const availableCategories = useMemo(() => {
-    return categoryOptions[supportArea] || categoryOptions.Other
-  }, [supportArea])
-
-  function handleSupportAreaChange(value: string) {
-    setSupportArea(value)
-    setCategory(categoryOptions[value]?.[0] || 'Other')
-    setOtherCategory('')
-  }
-
   async function submitRequest(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    const finalCategory = category === 'Other' ? otherCategory.trim() : category
-
-    if (!finalCategory) {
-      alert('Please write the category, topic, or support area.')
+    if (!location.trim()) {
+      alert('Please state where the instability is happening.')
       return
     }
 
-    if (!beneficiaryLevel.trim()) {
-      alert('Please select the beneficiary level.')
+    if (!affectedArea.trim()) {
+      alert('Please state what area, team, unit, site, or function is affected.')
       return
     }
 
-    if (!needDescription.trim()) {
-      alert('Please describe the support need.')
+    if (!visibleIssue.trim()) {
+      alert('Please describe what has become visible.')
       return
     }
 
     setLoading(true)
-    setMessage('Submitting support request...')
+    setMessage('Submitting visible instability for review...')
     setCreatedRequest(null)
+
+    const problemSummary = [
+      `Visible issue: ${visibleIssue.trim()}`,
+      `Location: ${location.trim()}`,
+      `Affected area: ${affectedArea.trim()}`,
+      `Entry route: ${entryRoute}`,
+      `Severity: ${severity}`,
+      `Current owner: ${currentOwner.trim() || 'Not clear yet'}`,
+      `Evidence available: ${evidenceAvailable.trim() || 'Not provided yet'}`,
+    ].join('\n')
 
     const { data, error } = await supabase
       .from('lesson_requests')
       .insert({
-        subject: `${supportArea} — ${finalCategory}`,
-        grade_level: beneficiaryLevel,
-        problem: needDescription.trim(),
-        preferred_time: preferredTime.trim() || null,
-        status: 'NEW',
-        teacher_status: 'PENDING',
+        subject: `${instabilityClass} — ${affectedArea.trim()}`,
+        grade_level: location.trim(),
+        problem: problemSummary,
+        preferred_time: reviewTime.trim() || null,
+        status: 'UNDER_REVIEW',
+        teacher_status: 'PENDING_TRIAGE',
       })
       .select()
       .single()
@@ -150,14 +123,17 @@ export default function RequestPage() {
 
     setCreatedRequest(data)
     setMessage(
-      'Support request created. EXAMIA can now route this need through governed review, responder assignment, intervention tracking, and completion evidence.'
+      'Visible instability submitted. CGI can now review, route, track, and confirm whether the situation stabilizes.'
     )
-    setSupportArea('Education')
-    setCategory('Mathematics')
-    setOtherCategory('')
-    setBeneficiaryLevel('')
-    setNeedDescription('')
-    setPreferredTime('')
+    setEntryRoute('HUMAN_SUBMITTED')
+    setInstabilityClass('FLOW')
+    setSeverity('MODERATE')
+    setLocation('')
+    setAffectedArea('')
+    setVisibleIssue('')
+    setCurrentOwner('')
+    setEvidenceAvailable('')
+    setReviewTime('')
     setLoading(false)
   }
 
@@ -176,25 +152,26 @@ export default function RequestPage() {
     <main style={styles.page}>
       <div style={styles.wrap}>
         <header style={styles.hero}>
-          <p style={styles.eyebrow}>EXAMIA • NEED INTAKE</p>
+          <p style={styles.eyebrow}>TSINAXA CGI • INSTABILITY INTAKE</p>
 
-          <h1 style={styles.h1}>Submit a Support Need</h1>
+          <h1 style={styles.h1}>Submit Visible Instability</h1>
 
           <p style={styles.heroText}>
-            Intake is the first point of continuity. A need enters the system,
-            receives a Request ID, and becomes traceable through routing,
-            response, evidence, and outcome review.
+            Use this page when an operational issue has become visible and may
+            need review, routing, ownership, evidence, or follow-up before it
+            can be treated as stable.
           </p>
         </header>
 
         <section style={styles.flowCard}>
-          <p style={styles.eyebrow}>Intake to meaning</p>
+          <p style={styles.eyebrow}>From visibility to stabilization</p>
 
-          <h2 style={styles.h2}>A request is not just a form.</h2>
+          <h2 style={styles.h2}>CGI begins when instability becomes visible.</h2>
 
           <p style={styles.cardText}>
-            It is the beginning of a governed support pathway. EXAMIA helps make
-            the need visible, routeable, trackable, and reviewable.
+            A submission does not automatically become a case. It first enters
+            review so CGI can decide whether to watch it, merge it, return it
+            for clarity, escalate it, or accept it for active tracking.
           </p>
 
           <div style={styles.flowGrid}>
@@ -211,115 +188,121 @@ export default function RequestPage() {
         </section>
 
         <section style={styles.card}>
-          <p style={styles.eyebrow}>Need intake</p>
+          <p style={styles.eyebrow}>Instability intake</p>
 
-          <h2 style={styles.h2}>Tell us what support is needed</h2>
+          <h2 style={styles.h2}>What has become visible?</h2>
 
           <p style={styles.cardText}>
-            Keep the description clear and practical. The stronger the intake,
-            the easier it is to route the need, assign support, and confirm
-            completion evidence.
+            Keep the description simple and practical. CGI needs to understand
+            what is happening, where it is happening, what is affected, who owns
+            it now, and what evidence already exists.
           </p>
 
           <form onSubmit={submitRequest} style={styles.form}>
             <label style={styles.label}>
-              Support Area
+              Entry Route
               <select
-                value={supportArea}
-                onChange={(event) =>
-                  handleSupportAreaChange(event.target.value)
-                }
+                value={entryRoute}
+                onChange={(event) => setEntryRoute(event.target.value)}
                 style={styles.input}
               >
-                <option>Education</option>
-                <option>Health Education / Outreach</option>
-                <option>NGO / Community Program</option>
-                <option>Rural Operations</option>
-                <option>Other</option>
+                {entryRoutes.map((route) => (
+                  <option key={route}>{route}</option>
+                ))}
               </select>
             </label>
 
             <label style={styles.label}>
-              Category / Topic
+              Instability Class
               <select
-                value={category}
-                onChange={(event) => setCategory(event.target.value)}
+                value={instabilityClass}
+                onChange={(event) => setInstabilityClass(event.target.value)}
                 style={styles.input}
               >
-                {availableCategories.map((item) => (
+                {instabilityClasses.map((item) => (
                   <option key={item}>{item}</option>
                 ))}
               </select>
             </label>
 
-            {category === 'Other' && (
-              <label style={styles.label}>
-                Write Category / Topic
-                <input
-                  value={otherCategory}
-                  onChange={(event) => setOtherCategory(event.target.value)}
-                  placeholder="Example: Geography, diabetes education, youth training, farming support"
-                  style={styles.input}
-                />
-              </label>
-            )}
-
             <label style={styles.label}>
-              Beneficiary Level
+              Severity
               <select
-                value={beneficiaryLevel}
-                onChange={(event) => setBeneficiaryLevel(event.target.value)}
+                value={severity}
+                onChange={(event) => setSeverity(event.target.value)}
                 style={styles.input}
               >
-                <option value="">Select level...</option>
-                <option>Grade 1</option>
-                <option>Grade 2</option>
-                <option>Grade 3</option>
-                <option>Grade 4</option>
-                <option>Grade 5</option>
-                <option>Grade 6</option>
-                <option>Grade 7</option>
-                <option>Form 1</option>
-                <option>Form 2</option>
-                <option>Form 3</option>
-                <option>Form 4</option>
-                <option>Form 5</option>
-                <option>Form 6</option>
-                <option>O Level</option>
-                <option>A Level</option>
-                <option>College</option>
-                <option>Adult Beneficiary</option>
-                <option>Community Member</option>
-                <option>Field Worker</option>
-                <option>Parent / Caregiver</option>
-                <option>Youth Group</option>
-                <option>Other</option>
+                {severityLevels.map((level) => (
+                  <option key={level}>{level}</option>
+                ))}
               </select>
             </label>
 
             <label style={styles.label}>
-              What is the need?
+              Where is this happening?
+              <input
+                value={location}
+                onChange={(event) => setLocation(event.target.value)}
+                placeholder="Example: Site A, Unit 2, Region North, Operations Desk"
+                style={styles.input}
+              />
+            </label>
+
+            <label style={styles.label}>
+              What area is affected?
+              <input
+                value={affectedArea}
+                onChange={(event) => setAffectedArea(event.target.value)}
+                placeholder="Example: routing, staffing, handoff, backlog, recovery, coordination"
+                style={styles.input}
+              />
+            </label>
+
+            <label style={styles.label}>
+              What became visible?
               <textarea
-                value={needDescription}
-                onChange={(event) => setNeedDescription(event.target.value)}
-                placeholder="Describe the education support need, health education need, training need, community support issue, or coordination request."
+                value={visibleIssue}
+                onChange={(event) => setVisibleIssue(event.target.value)}
+                placeholder="Describe the visible issue in plain language. Example: The same handoff delay has happened three times this week and the next owner is unclear."
                 style={styles.textarea}
               />
             </label>
 
             <label style={styles.label}>
-              Preferred Support Time
+              Current Owner
               <input
-                value={preferredTime}
-                onChange={(event) => setPreferredTime(event.target.value)}
+                value={currentOwner}
+                onChange={(event) => setCurrentOwner(event.target.value)}
+                placeholder="Example: unit lead, site coordinator, governance reviewer, unclear"
+                style={styles.input}
+              />
+            </label>
+
+            <label style={styles.label}>
+              Evidence Available
+              <textarea
+                value={evidenceAvailable}
+                onChange={(event) => setEvidenceAvailable(event.target.value)}
+                placeholder="Example: missed handoff note, delay record, backlog count, completion note, recovery update, or none yet"
+                style={styles.smallTextarea}
+              />
+            </label>
+
+            <label style={styles.label}>
+              Preferred Review Time
+              <input
+                value={reviewTime}
+                onChange={(event) => setReviewTime(event.target.value)}
                 type="text"
-                placeholder="Example: Today 5pm"
+                placeholder="Example: Today 3pm, next shift, within 24 hours"
                 style={styles.input}
               />
             </label>
 
             <button type="submit" disabled={loading} style={styles.whiteButton}>
-              {loading ? 'Submitting Request...' : 'Submit Support Request'}
+              {loading
+                ? 'Submitting Instability...'
+                : 'Submit Visible Instability'}
             </button>
           </form>
 
@@ -328,31 +311,34 @@ export default function RequestPage() {
 
         {createdRequest && (
           <section style={styles.successCard}>
-            <p style={styles.eyebrow}>Request created</p>
+            <p style={styles.eyebrow}>Instability submitted</p>
 
-            <h2 style={styles.h2}>Save your Request ID</h2>
+            <h2 style={styles.h2}>Save this Request ID</h2>
 
             <div style={styles.requestIdBox}>{createdRequest.id}</div>
 
             <p style={styles.smallText}>
-              This ID connects the need to routing status, responder assignment,
-              room readiness, intervention progress, completion evidence, and
-              outcome review.
+              This ID connects the visible instability to triage, routing,
+              ownership, stabilization action, evidence review, and recovery
+              follow-up.
             </p>
 
             <div style={styles.createdGrid}>
-              <CreatedDetail label="Support Area" value={createdRequest.subject} />
+              <CreatedDetail
+                label="Instability Class"
+                value={createdRequest.subject}
+              />
 
               <CreatedDetail
-                label="Beneficiary Level"
+                label="Location"
                 value={createdRequest.grade_level ?? 'Not recorded'}
               />
 
-              <CreatedDetail label="Status" value={createdRequest.status} />
+              <CreatedDetail label="Triage Status" value={createdRequest.status} />
 
               <CreatedDetail
-                label="Responder Status"
-                value={createdRequest.teacher_status ?? 'PENDING'}
+                label="Routing Status"
+                value={createdRequest.teacher_status ?? 'PENDING_TRIAGE'}
               />
             </div>
 
@@ -370,7 +356,7 @@ export default function RequestPage() {
                 onClick={checkRequestStatus}
                 style={styles.greenButton}
               >
-                Check Request Status
+                Check Review Status
               </button>
             </div>
           </section>
@@ -542,6 +528,19 @@ const styles: Record<string, CSSProperties> = {
     background: '#ffffff',
     outline: 'none',
     minHeight: '170px',
+    resize: 'vertical',
+  },
+  smallTextarea: {
+    width: '100%',
+    boxSizing: 'border-box',
+    border: 'none',
+    borderRadius: '18px',
+    padding: '18px',
+    fontSize: '16px',
+    color: '#0f172a',
+    background: '#ffffff',
+    outline: 'none',
+    minHeight: '120px',
     resize: 'vertical',
   },
   whiteButton: {
