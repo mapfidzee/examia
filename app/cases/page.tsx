@@ -137,6 +137,7 @@ export default function CasesPage() {
 
 function CasesContent() {
   const [cases, setCases] = useState<InstabilityCase[]>([])
+
   const [location, setLocation] = useState('SITE_A')
   const [pressureType, setPressureType] = useState('FLOW')
   const [affectedArea, setAffectedArea] = useState('ROUTING')
@@ -145,10 +146,13 @@ function CasesContent() {
   const [sourceArea, setSourceArea] = useState('OPERATIONS_DESK')
   const [currentOwnership, setCurrentOwnership] = useState('UNCLEAR')
   const [reviewUrgency, setReviewUrgency] = useState('WITHIN_24_HOURS')
+
   const [selectedSignals, setSelectedSignals] = useState<string[]>([
     'ROUTING_DELAY',
   ])
+
   const [commandVisibility, setCommandVisibility] = useState(false)
+
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
@@ -164,7 +168,13 @@ function CasesContent() {
       affectedArea,
       difficultyLevel,
     ].join(' • ')
-  }, [pressureType, visibleSignal, location, affectedArea, difficultyLevel])
+  }, [
+    pressureType,
+    visibleSignal,
+    location,
+    affectedArea,
+    difficultyLevel,
+  ])
 
   async function loadCases() {
     const { data, error } = await supabase
@@ -213,7 +223,7 @@ function CasesContent() {
     await supabase.from('case_timeline').insert({
       case_id: data.id,
       event_type: 'CASE_CREATED',
-      event_summary: `Visible instability accepted into case review: ${generatedCaseIdentity}`,
+      event_summary: `Visible instability accepted into review: ${generatedCaseIdentity}`,
     })
 
     setLocation('SITE_A')
@@ -226,13 +236,17 @@ function CasesContent() {
     setReviewUrgency('WITHIN_24_HOURS')
     setSelectedSignals(['ROUTING_DELAY'])
     setCommandVisibility(false)
-    setMessage('Instability case created for review.')
+
+    setMessage('Instability case created.')
     setLoading(false)
 
     await loadCases()
   }
 
-  async function changeCaseStatus(caseItem: InstabilityCase, nextStatus: string) {
+  async function changeCaseStatus(
+    caseItem: InstabilityCase,
+    nextStatus: string
+  ) {
     const { error } = await supabase
       .from('beneficiary_cases')
       .update({
@@ -282,7 +296,10 @@ function CasesContent() {
     await loadCases()
   }
 
-  async function applyOutcomeSummary(caseItem: InstabilityCase, outcome: string) {
+  async function applyOutcomeSummary(
+    caseItem: InstabilityCase,
+    outcome: string
+  ) {
     if (!outcome) return
 
     const { error } = await supabase
@@ -308,62 +325,100 @@ function CasesContent() {
 
   function toggleSignal(signal: string) {
     if (selectedSignals.includes(signal)) {
-      setSelectedSignals(selectedSignals.filter((item) => item !== signal))
+      setSelectedSignals(
+        selectedSignals.filter((item) => item !== signal)
+      )
     } else {
       setSelectedSignals([...selectedSignals, signal])
     }
   }
 
-  const totalCases = cases.length
-  const highOrCriticalCases = cases.filter(
+  const visibleCases = cases.filter((item) =>
+    PRESSURE_TYPES.includes(item.support_domain)
+  )
+
+  const totalCases = visibleCases.length
+
+  const highOrCriticalCases = visibleCases.filter(
     (item) =>
-      item.severity_level === 'HIGH' || item.severity_level === 'CRITICAL'
+      item.severity_level === 'HIGH' ||
+      item.severity_level === 'CRITICAL'
   ).length
-  const escalatedCases = cases.filter(
+
+  const escalatedCases = visibleCases.filter(
     (item) => item.case_status === 'ESCALATED'
   ).length
-  const stableCases = cases.filter(
-    (item) => item.case_status === 'STABLE' || item.case_status === 'ARCHIVED'
+
+  const stableCases = visibleCases.filter(
+    (item) =>
+      item.case_status === 'STABLE' ||
+      item.case_status === 'ARCHIVED'
   ).length
 
   return (
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.hero}>
-          <p style={styles.kicker}>TSINAXA CGI • CASE GOVERNANCE</p>
+          <p style={styles.kicker}>
+            TSINAXA CGI • CASE GOVERNANCE
+          </p>
 
-          <h1 style={styles.title}>Active Instability Cases</h1>
+          <h1 style={styles.title}>
+            Active Instability Cases
+          </h1>
 
           <p style={styles.subtitle}>
-            Use this page to govern visible instability that has moved beyond
-            intake and now requires review, routing, action, evidence, or
-            recovery follow-up.
+            Use this page to govern visible instability
+            that has moved beyond intake and now requires
+            review, routing, action, evidence, or recovery
+            follow-up.
           </p>
         </section>
 
         <section style={styles.metricsGrid}>
           <Metric label="Total Cases" value={totalCases} />
-          <Metric label="High / Critical" value={highOrCriticalCases} />
-          <Metric label="Escalated" value={escalatedCases} />
-          <Metric label="Stable / Archived" value={stableCases} />
+          <Metric
+            label="High / Critical"
+            value={highOrCriticalCases}
+          />
+          <Metric
+            label="Escalated"
+            value={escalatedCases}
+          />
+          <Metric
+            label="Stable / Archived"
+            value={stableCases}
+          />
         </section>
 
-        {message && <div style={styles.message}>{message}</div>}
+        {message && (
+          <div style={styles.message}>{message}</div>
+        )}
 
         <section style={styles.formCard}>
-          <p style={styles.sectionKicker}>Create case</p>
+          <p style={styles.sectionKicker}>
+            Create case
+          </p>
 
-          <h2 style={styles.sectionTitle}>Accept instability into review</h2>
+          <h2 style={styles.sectionTitle}>
+            Accept instability into review
+          </h2>
 
           <p style={styles.panelNote}>
-            A case is visible instability under active review. CGI now generates
-            the case identity from governed dropdowns so cases remain
-            searchable, comparable, and easier to group later.
+            CGI generates the case identity from governed
+            operational selections so cases remain
+            comparable, searchable, and structurally
+            consistent.
           </p>
 
           <div style={styles.generatedBox}>
-            <p style={styles.generatedLabel}>Generated Case Identity</p>
-            <p style={styles.generatedValue}>{generatedCaseIdentity}</p>
+            <p style={styles.generatedLabel}>
+              Generated Case Identity
+            </p>
+
+            <p style={styles.generatedValue}>
+              {generatedCaseIdentity}
+            </p>
           </div>
 
           <div style={styles.grid}>
@@ -425,11 +480,12 @@ function CasesContent() {
           </div>
 
           <div style={{ marginTop: '24px' }}>
-            <label style={styles.label}>Additional Visible Signals</label>
+            <label style={styles.label}>
+              Additional Visible Signals
+            </label>
 
             <p style={styles.panelNote}>
-              Select any related signals. The main visible signal is always
-              included automatically.
+              Select any related operational signals.
             </p>
 
             <div style={styles.signalGrid}>
@@ -440,10 +496,14 @@ function CasesContent() {
                   onClick={() => toggleSignal(signal)}
                   style={{
                     ...styles.signalButton,
-                    background: selectedSignals.includes(signal)
-                      ? '#a7f3d0'
-                      : '#111827',
-                    color: selectedSignals.includes(signal) ? '#022c22' : 'white',
+                    background:
+                      selectedSignals.includes(signal)
+                        ? '#a7f3d0'
+                        : '#111827',
+                    color:
+                      selectedSignals.includes(signal)
+                        ? '#022c22'
+                        : 'white',
                   }}
                 >
                   {signal}
@@ -456,62 +516,112 @@ function CasesContent() {
             <input
               type="checkbox"
               checked={commandVisibility}
-              onChange={(event) => setCommandVisibility(event.target.checked)}
+              onChange={(event) =>
+                setCommandVisibility(event.target.checked)
+              }
             />
 
-            <span>Command visibility may be needed</span>
+            <span>
+              Command visibility may be needed
+            </span>
           </div>
 
-          <button onClick={createCase} disabled={loading} style={styles.primaryButton}>
-            {loading ? 'Creating Case...' : 'Create Instability Case'}
+          <button
+            onClick={createCase}
+            disabled={loading}
+            style={styles.primaryButton}
+          >
+            {loading
+              ? 'Creating Case...'
+              : 'Create Instability Case'}
           </button>
         </section>
 
         <section style={styles.caseSection}>
-          <p style={styles.sectionKicker}>Active review</p>
+          <p style={styles.sectionKicker}>
+            Active review
+          </p>
 
-          <h2 style={styles.sectionTitle}>Instability under governance</h2>
+          <h2 style={styles.sectionTitle}>
+            Instability under governance
+          </h2>
 
           <div style={styles.caseList}>
-            {cases.map((caseItem) => (
-              <article key={caseItem.id} style={styles.caseCard}>
+            {visibleCases.map((caseItem) => (
+              <article
+                key={caseItem.id}
+                style={styles.caseCard}
+              >
                 <div style={styles.caseHeader}>
                   <div>
-                    <h3 style={styles.caseName}>{caseItem.beneficiary_name}</h3>
-                    <p style={styles.caseDomain}>{caseItem.support_domain}</p>
+                    <h3 style={styles.caseName}>
+                      {caseItem.beneficiary_name}
+                    </h3>
+
+                    <p style={styles.caseDomain}>
+                      {caseItem.support_domain}
+                    </p>
                   </div>
 
-                  <span style={difficultyBadge(caseItem.severity_level)}>
+                  <span
+                    style={difficultyBadge(
+                      caseItem.severity_level
+                    )}
+                  >
                     {caseItem.severity_level}
                   </span>
                 </div>
 
                 <div style={styles.infoGrid}>
-                  <Info label="Status" value={caseItem.case_status} />
+                  <Info
+                    label="Status"
+                    value={caseItem.case_status}
+                  />
+
                   <Info
                     label="Location"
-                    value={caseItem.beneficiary_level || 'Not provided'}
+                    value={
+                      caseItem.beneficiary_level ||
+                      'Not provided'
+                    }
                   />
-                  <Info label="Source Area" value={caseItem.region || 'Not provided'} />
+
+                  <Info
+                    label="Source Area"
+                    value={
+                      caseItem.region || 'Not provided'
+                    }
+                  />
+
                   <Info
                     label="Current Ownership"
-                    value={caseItem.institution_name || 'Not provided'}
+                    value={
+                      caseItem.institution_name ||
+                      'Not provided'
+                    }
                   />
                 </div>
 
                 <div style={styles.signalContainer}>
-                  {(caseItem.instability_signals || []).map((signal, index) => (
-                    <span key={`${signal}-${index}`} style={styles.signalBadge}>
-                      {signal}
-                    </span>
-                  ))}
+                  {(caseItem.instability_signals || []).map(
+                    (signal, index) => (
+                      <span
+                        key={`${signal}-${index}`}
+                        style={styles.signalBadge}
+                      >
+                        {signal}
+                      </span>
+                    )
+                  )}
                 </div>
 
                 <div style={styles.lifecycleGrid}>
                   {CASE_STATUSES.map((status) => (
                     <button
                       key={status}
-                      onClick={() => changeCaseStatus(caseItem, status)}
+                      onClick={() =>
+                        changeCaseStatus(caseItem, status)
+                      }
                       style={styles.lifecycleButton}
                     >
                       {status}
@@ -520,19 +630,29 @@ function CasesContent() {
                 </div>
 
                 <div style={styles.dropdownSection}>
-                  <label style={styles.label}>Stabilization Action</label>
+                  <label style={styles.label}>
+                    Stabilization Action
+                  </label>
 
                   <select
                     onChange={(event) =>
-                      applyStabilizationAction(caseItem, event.target.value)
+                      applyStabilizationAction(
+                        caseItem,
+                        event.target.value
+                      )
                     }
                     style={styles.select}
                     value=""
                   >
-                    <option value="">Select stabilization action</option>
+                    <option value="">
+                      Select stabilization action
+                    </option>
 
                     {STABILIZATION_ACTIONS.map((item) => (
-                      <option key={item} value={item}>
+                      <option
+                        key={item}
+                        value={item}
+                      >
                         {item}
                       </option>
                     ))}
@@ -540,19 +660,29 @@ function CasesContent() {
                 </div>
 
                 <div style={styles.dropdownSection}>
-                  <label style={styles.label}>Outcome Review</label>
+                  <label style={styles.label}>
+                    Outcome Review
+                  </label>
 
                   <select
                     onChange={(event) =>
-                      applyOutcomeSummary(caseItem, event.target.value)
+                      applyOutcomeSummary(
+                        caseItem,
+                        event.target.value
+                      )
                     }
                     style={styles.select}
                     value=""
                   >
-                    <option value="">Select outcome review</option>
+                    <option value="">
+                      Select outcome review
+                    </option>
 
                     {OUTCOME_OPTIONS.map((item) => (
-                      <option key={item} value={item}>
+                      <option
+                        key={item}
+                        value={item}
+                      >
                         {item}
                       </option>
                     ))}
@@ -562,14 +692,18 @@ function CasesContent() {
                 {caseItem.intervention_summary && (
                   <div style={styles.summaryBox}>
                     <strong>Action:</strong>{' '}
-                    {formatLegacySummary(caseItem.intervention_summary)}
+                    {truncateLegacyText(
+                      caseItem.intervention_summary
+                    )}
                   </div>
                 )}
 
                 {caseItem.outcome_summary && (
                   <div style={styles.summaryBox}>
                     <strong>Outcome:</strong>{' '}
-                    {formatLegacySummary(caseItem.outcome_summary)}
+                    {truncateLegacyText(
+                      caseItem.outcome_summary
+                    )}
                   </div>
                 )}
               </article>
@@ -581,15 +715,23 @@ function CasesContent() {
   )
 }
 
-function formatLegacySummary(value: string) {
+function truncateLegacyText(value: string) {
   if (value.length <= 180) return value
+
   return `${value.slice(0, 180)}...`
 }
 
-function Metric({ label, value }: { label: string; value: number }) {
+function Metric({
+  label,
+  value,
+}: {
+  label: string
+  value: number
+}) {
   return (
     <div style={styles.metricCard}>
       <p style={styles.metricLabel}>{label}</p>
+
       <h2 style={styles.metricValue}>{value}</h2>
     </div>
   )
@@ -609,9 +751,12 @@ function Select({
   return (
     <label style={styles.label}>
       {label}
+
       <select
         value={value}
-        onChange={(event) => setValue(event.target.value)}
+        onChange={(event) =>
+          setValue(event.target.value)
+        }
         style={styles.select}
       >
         {options.map((option) => (
@@ -624,16 +769,25 @@ function Select({
   )
 }
 
-function Info({ label, value }: { label: string; value: string }) {
+function Info({
+  label,
+  value,
+}: {
+  label: string
+  value: string
+}) {
   return (
     <div style={styles.infoBox}>
       <p style={styles.infoLabel}>{label}</p>
+
       <p style={styles.infoValue}>{value}</p>
     </div>
   )
 }
 
-function difficultyBadge(level: string): CSSProperties {
+function difficultyBadge(
+  level: string
+): CSSProperties {
   if (level === 'CRITICAL') {
     return {
       background: '#7f1d1d',
@@ -669,50 +823,61 @@ const styles: Record<string, CSSProperties> = {
     minHeight: '100vh',
     color: 'white',
   },
+
   container: {
     maxWidth: '1200px',
     margin: '0 auto',
   },
+
   hero: {
     marginBottom: '32px',
   },
+
   kicker: {
     color: '#cbd5e1',
     fontWeight: 900,
     letterSpacing: '2px',
     fontSize: '12px',
   },
+
   title: {
     fontSize: 'clamp(34px, 6vw, 56px)',
     lineHeight: 1.05,
     margin: '12px 0',
   },
+
   subtitle: {
     color: '#cbd5e1',
     maxWidth: '920px',
     lineHeight: 1.7,
     fontSize: '18px',
   },
+
   metricsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gridTemplateColumns:
+      'repeat(auto-fit, minmax(220px, 1fr))',
     gap: '16px',
     marginBottom: '24px',
   },
+
   metricCard: {
     background: '#0f172a',
     border: '1px solid #1e293b',
     borderRadius: '18px',
     padding: '20px',
   },
+
   metricLabel: {
     color: '#94a3b8',
     fontWeight: 800,
   },
+
   metricValue: {
     fontSize: '42px',
     marginTop: '8px',
   },
+
   message: {
     background: '#064e3b',
     color: '#bbf7d0',
@@ -721,6 +886,7 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 800,
     marginBottom: '20px',
   },
+
   formCard: {
     background: '#020617',
     border: '1px solid #1e293b',
@@ -728,6 +894,7 @@ const styles: Record<string, CSSProperties> = {
     padding: '24px',
     marginBottom: '32px',
   },
+
   sectionKicker: {
     color: '#94a3b8',
     fontSize: '12px',
@@ -736,15 +903,18 @@ const styles: Record<string, CSSProperties> = {
     textTransform: 'uppercase',
     margin: '0 0 10px',
   },
+
   sectionTitle: {
     fontSize: '28px',
     marginBottom: '12px',
   },
+
   panelNote: {
     color: '#cbd5e1',
     lineHeight: 1.6,
     marginBottom: '18px',
   },
+
   generatedBox: {
     background: '#0f172a',
     border: '1px solid #334155',
@@ -752,6 +922,7 @@ const styles: Record<string, CSSProperties> = {
     padding: '16px',
     marginBottom: '22px',
   },
+
   generatedLabel: {
     color: '#94a3b8',
     fontSize: '12px',
@@ -760,6 +931,7 @@ const styles: Record<string, CSSProperties> = {
     textTransform: 'uppercase',
     margin: 0,
   },
+
   generatedValue: {
     color: '#a7f3d0',
     fontSize: '22px',
@@ -767,16 +939,20 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.25,
     margin: '8px 0 0',
   },
+
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gridTemplateColumns:
+      'repeat(auto-fit, minmax(220px, 1fr))',
     gap: '16px',
   },
+
   label: {
     display: 'block',
     fontWeight: 800,
     marginBottom: '10px',
   },
+
   select: {
     width: '100%',
     marginTop: '8px',
@@ -786,12 +962,14 @@ const styles: Record<string, CSSProperties> = {
     color: 'white',
     border: '1px solid #334155',
   },
+
   signalGrid: {
     display: 'flex',
     flexWrap: 'wrap',
     gap: '10px',
     marginTop: '12px',
   },
+
   signalButton: {
     border: '1px solid #334155',
     borderRadius: '999px',
@@ -799,6 +977,7 @@ const styles: Record<string, CSSProperties> = {
     cursor: 'pointer',
     fontWeight: 700,
   },
+
   checkboxRow: {
     display: 'flex',
     gap: '10px',
@@ -806,6 +985,7 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: '24px',
     alignItems: 'center',
   },
+
   primaryButton: {
     background: '#e2e8f0',
     color: '#020617',
@@ -817,60 +997,73 @@ const styles: Record<string, CSSProperties> = {
     width: '100%',
     fontSize: '16px',
   },
+
   caseSection: {
     marginBottom: '40px',
   },
+
   caseList: {
     display: 'grid',
     gap: '18px',
   },
+
   caseCard: {
     background: '#0f172a',
     border: '1px solid #334155',
     borderRadius: '20px',
     padding: '20px',
   },
+
   caseHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     gap: '16px',
     flexWrap: 'wrap',
   },
+
   caseName: {
     fontSize: '24px',
     margin: 0,
   },
+
   caseDomain: {
     color: '#cbd5e1',
     marginTop: '6px',
   },
+
   infoGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+    gridTemplateColumns:
+      'repeat(auto-fit, minmax(180px, 1fr))',
     gap: '12px',
     marginTop: '18px',
   },
+
   infoBox: {
     background: '#020617',
     borderRadius: '14px',
     padding: '12px',
     border: '1px solid #1e293b',
   },
+
   infoLabel: {
     color: '#94a3b8',
     fontSize: '12px',
     fontWeight: 900,
   },
+
   infoValue: {
     marginTop: '6px',
     lineHeight: 1.5,
   },
+
   signalContainer: {
     display: 'flex',
     flexWrap: 'wrap',
     gap: '8px',
     marginTop: '18px',
   },
+
   signalBadge: {
     background: '#111827',
     color: '#a7f3d0',
@@ -880,12 +1073,15 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 800,
     border: '1px solid rgba(167,243,208,0.22)',
   },
+
   lifecycleGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+    gridTemplateColumns:
+      'repeat(auto-fit, minmax(180px, 1fr))',
     gap: '10px',
     marginTop: '22px',
   },
+
   lifecycleButton: {
     background: '#111827',
     border: '1px solid #334155',
@@ -895,9 +1091,11 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 800,
     cursor: 'pointer',
   },
+
   dropdownSection: {
     marginTop: '20px',
   },
+
   summaryBox: {
     marginTop: '18px',
     background: '#020617',
