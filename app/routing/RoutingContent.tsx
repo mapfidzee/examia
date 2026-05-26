@@ -170,7 +170,18 @@ export default function RoutingContent() {
 
   async function governRouting(caseItem: StabilityCase) {
     const decisionValue = selectedDecisions[caseItem.id]
-    const ownerId = selectedOwners[caseItem.id] || null
+    const selectedOwnerId = selectedOwners[caseItem.id] || null
+
+    const priorRouting = activeRoutingActions.filter(
+      (item) => item.case_id === caseItem.id
+    )
+
+    const latestRouting = priorRouting[0]
+    const latestOwner = owners.find(
+      (owner) => owner.id === latestRouting?.assigned_responder_id
+    )
+
+    const ownerId = selectedOwnerId || latestOwner?.id || null
 
     if (!decisionValue) {
       setMessage('Select a governed routing decision before preserving movement.')
@@ -183,7 +194,11 @@ export default function RoutingContent() {
 
     if (!decision) return
 
-    if (decision.value === 'ROUTE_TO_STABILIZATION_OWNER' && !ownerId) {
+    if (
+      decision.value === 'ROUTE_TO_STABILIZATION_OWNER' &&
+      !ownerId &&
+      !latestOwner
+    ) {
       setMessage(
         'Select a stabilization owner before routing this instability forward.'
       )
@@ -191,10 +206,6 @@ export default function RoutingContent() {
     }
 
     const owner = owners.find((item) => item.id === ownerId)
-
-    const priorRouting = activeRoutingActions.filter(
-      (item) => item.case_id === caseItem.id
-    )
 
     const recurrenceCount = priorRouting.length
 
@@ -360,6 +371,7 @@ export default function RoutingContent() {
               const latestOwner = owners.find(
                 (owner) => owner.id === latestRouting?.assigned_responder_id
               )
+
               const intelligence = buildRoutingIntelligence({
                 caseItem,
                 routingHistory,
@@ -440,19 +452,24 @@ export default function RoutingContent() {
 
                     <div style={styles.intelligenceGrid}>
                       <Info label="Routing Phase" value={intelligence.phase} />
+
                       <Info
                         label="Required Next Movement"
                         value={intelligence.nextMovement}
                       />
+
                       <Info
                         label="Owner Posture"
                         value={intelligence.ownerPosture}
                       />
+
                       <Info
                         label="Evidence Requirement"
                         value={intelligence.evidenceRequirement}
                       />
+
                       <Info label="Stall Risk" value={intelligence.stallRisk} />
+
                       <Info
                         label="Command Meaning"
                         value={intelligence.commandMeaning}
@@ -487,7 +504,18 @@ export default function RoutingContent() {
                     </div>
 
                     <div>
-                      <label style={styles.label}>Stabilization Owner</label>
+                      <label style={styles.label}>
+                        {latestOwner
+                          ? 'Update / Reassign Stabilization Owner'
+                          : 'Select Stabilization Owner'}
+                      </label>
+
+                      {latestOwner && (
+                        <div style={styles.ownerConfirmedBox}>
+                          Current owner: {latestOwner.full_name} •{' '}
+                          {latestOwner.operational_status}
+                        </div>
+                      )}
 
                       <select
                         value={selectedOwners[caseItem.id] || ''}
@@ -499,7 +527,11 @@ export default function RoutingContent() {
                           }))
                         }
                       >
-                        <option value="">Select owner if required</option>
+                        <option value="">
+                          {latestOwner
+                            ? 'Keep current owner'
+                            : 'Select owner if required'}
+                        </option>
 
                         {owners.map((owner) => (
                           <option key={owner.id} value={owner.id}>
@@ -1095,6 +1127,17 @@ const styles: Record<string, CSSProperties> = {
 
   label: {
     display: 'block',
+    fontWeight: 800,
+    marginBottom: '10px',
+  },
+
+  ownerConfirmedBox: {
+    background: '#042f2e',
+    border: '1px solid #115e59',
+    color: '#ccfbf1',
+    borderRadius: '12px',
+    padding: '12px',
+    fontSize: '13px',
     fontWeight: 800,
     marginBottom: '10px',
   },
