@@ -6,6 +6,7 @@ import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import InfrastructureNav from '@/components/InfrastructureNav'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import CGICommandContinuityPanel from '@/components/cgi-command/CGICommandContinuityPanel'
+import { buildCGIExecutiveMemoryBoard } from '@/lib/cgiExecutiveMemoryBoardEngine'
 import {
   formatCGIExecutivePosture,
   formatCGIEvidenceLanguage,
@@ -13,11 +14,23 @@ import {
   formatCGIGovernanceSafeLanguage,
 } from '@/lib/cgiExecutivePostureFormatter'
 
+type MemoryBoardView = {
+  boardPosture: string
+  persistenceMaturity: string
+  executiveRisk: string
+  currentReading: string
+  executiveMeaning: string
+  evidenceGap: string
+  recoveryCredibility: string
+  copyReadyExecutiveMemoryBrief: string
+}
+
 export default function CommandPage() {
   const commandPosture = formatCGIExecutivePosture('ELEVATED')
   const evidenceLanguage = formatCGIEvidenceLanguage(false, 'ELEVATED')
   const survivabilityLanguage = formatCGISurvivabilityLanguage('ELEVATED')
   const governanceSafeLanguage = formatCGIGovernanceSafeLanguage()
+  const memoryBoard = buildMemoryBoardView()
 
   return (
     <GovernanceRouteGuard
@@ -38,15 +51,14 @@ export default function CommandPage() {
               <h1 style={styles.title}>Continuity Command Center</h1>
 
               <p style={styles.subtitle}>
-                Executive command visibility for continuity condition,
-                recovery credibility, structural memory, accountability,
-                required evidence, survivability protection, and stabilization
-                discipline.
+                Command visibility for continuity condition, recovery
+                credibility, evidence gaps, memory persistence, escalation
+                discipline, and stabilization follow-through.
               </p>
             </section>
 
             <section style={styles.commandPostureCard}>
-              <p style={styles.sectionKicker}>Executive Command Posture</p>
+              <p style={styles.sectionKicker}>Command Posture</p>
 
               <h2 style={styles.commandPostureTitle}>
                 {commandPosture.label}
@@ -81,6 +93,61 @@ export default function CommandPage() {
               </div>
             </section>
 
+            <section style={styles.memoryCommandCard}>
+              <div>
+                <p style={styles.sectionKicker}>Command Memory Reading</p>
+
+                <h2 style={styles.cardTitle}>
+                  Command decisions now carry continuity memory.
+                </h2>
+
+                <p style={styles.bodyText}>
+                  The command center should not treat pressure as a single
+                  event. It must read recurrence, persistence, evidence gaps,
+                  and recovery credibility before closing command attention.
+                </p>
+              </div>
+
+              <div style={styles.memoryGrid}>
+                <MemoryMetric
+                  label="Memory Posture"
+                  value={memoryBoard.boardPosture}
+                />
+
+                <MemoryMetric
+                  label="Persistence"
+                  value={memoryBoard.persistenceMaturity}
+                />
+
+                <MemoryMetric
+                  label="Command Risk"
+                  value={memoryBoard.executiveRisk}
+                />
+              </div>
+            </section>
+
+            <section style={styles.grid}>
+              <CommandPrinciple
+                title="What Is Happening?"
+                body={memoryBoard.currentReading}
+              />
+
+              <CommandPrinciple
+                title="Why It Matters"
+                body={memoryBoard.executiveMeaning}
+              />
+
+              <CommandPrinciple
+                title="Evidence Gap"
+                body={memoryBoard.evidenceGap}
+              />
+
+              <CommandPrinciple
+                title="Recovery Credibility"
+                body={memoryBoard.recoveryCredibility}
+              />
+            </section>
+
             <CGICommandContinuityPanel />
 
             <section style={styles.card}>
@@ -93,9 +160,22 @@ export default function CommandPage() {
               <p style={styles.bodyText}>
                 The command center must help leadership understand whether
                 visible instability is being contained, whether recovery is
-                truly holding, and whether the institution can still stabilize
-                itself reliably under pressure.
+                holding, and whether the institution can still stabilize itself
+                reliably under pressure.
               </p>
+            </section>
+
+            <section style={styles.card}>
+              <p style={styles.sectionKicker}>Command-Ready Memory Brief</p>
+
+              <h2 style={styles.cardTitle}>
+                One command reading for pressure, memory, evidence, and
+                recovery follow-through.
+              </h2>
+
+              <pre style={styles.summaryBox}>
+                {memoryBoard.copyReadyExecutiveMemoryBrief}
+              </pre>
             </section>
 
             <section style={styles.grid}>
@@ -126,6 +206,66 @@ export default function CommandPage() {
   )
 }
 
+function buildMemoryBoardView(): MemoryBoardView {
+  try {
+    const engineInput =
+      [] as Parameters<typeof buildCGIExecutiveMemoryBoard>[0]
+
+    const board = buildCGIExecutiveMemoryBoard(
+      engineInput
+    ) as unknown as Partial<MemoryBoardView>
+
+    return {
+      boardPosture: board.boardPosture ?? 'MEMORY VISIBLE',
+      persistenceMaturity: board.persistenceMaturity ?? 'EMERGING',
+      executiveRisk: board.executiveRisk ?? 'WATCHED',
+      currentReading:
+        board.currentReading ??
+        'Current pressure remains visible and must be interpreted with prior continuity memory.',
+      executiveMeaning:
+        board.executiveMeaning ??
+        'Command should not close attention until recurrence, ownership, evidence, and recovery durability are reviewed.',
+      evidenceGap:
+        board.evidenceGap ??
+        'Evidence is needed to confirm whether stabilization is durable, traceable, and not dependent on temporary relief.',
+      recoveryCredibility:
+        board.recoveryCredibility ??
+        'Recovery remains under command watch until pressure reduction is sustained across time.',
+      copyReadyExecutiveMemoryBrief:
+        board.copyReadyExecutiveMemoryBrief ??
+        [
+          'CGI Command Memory Reading',
+          '',
+          'Current pressure remains visible.',
+          'Continuity memory must remain active.',
+          'Recovery should not be treated as complete until evidence confirms durable stabilization.',
+          'Command action should focus on evidence, ownership, recurrence, survivability, and follow-through.',
+        ].join('\n'),
+    }
+  } catch {
+    return {
+      boardPosture: 'MEMORY VISIBLE',
+      persistenceMaturity: 'EMERGING',
+      executiveRisk: 'WATCHED',
+      currentReading:
+        'Current pressure remains visible and requires command-level memory review.',
+      executiveMeaning:
+        'Command should determine whether this condition is isolated, recurring, or becoming structurally persistent.',
+      evidenceGap:
+        'Evidence is needed to confirm whether recovery is durable, traceable, and survivable.',
+      recoveryCredibility:
+        'Recovery remains under watch until stabilization can be proven across time.',
+      copyReadyExecutiveMemoryBrief: [
+        'CGI Command Memory Reading',
+        '',
+        'CGI now preserves continuity memory across time.',
+        'The command center should treat unresolved pressure, evidence gaps, and recovery fragility as active command concerns.',
+        'Action should remain focused on credible stabilization, survivability, and governance-safe follow-through.',
+      ].join('\n'),
+    }
+  }
+}
+
 function CommandSignal({
   title,
   body,
@@ -142,6 +282,22 @@ function CommandSignal({
   )
 }
 
+function MemoryMetric({
+  label,
+  value,
+}: {
+  label: string
+  value: string
+}) {
+  return (
+    <article style={styles.memoryMetric}>
+      <p style={styles.metricLabel}>{label}</p>
+
+      <p style={styles.metricValue}>{value}</p>
+    </article>
+  )
+}
+
 function CommandPrinciple({
   title,
   body,
@@ -151,7 +307,7 @@ function CommandPrinciple({
 }) {
   return (
     <article style={styles.principleCard}>
-      <p style={styles.principleKicker}>CGI Principle</p>
+      <p style={styles.principleKicker}>CGI Command</p>
 
       <h3 style={styles.principleTitle}>{title}</h3>
 
@@ -239,6 +395,45 @@ const styles: Record<string, CSSProperties> = {
     margin: '10px 0 0',
     fontWeight: 800,
   },
+  memoryCommandCard: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.15fr) minmax(280px, 0.85fr)',
+    gap: '16px',
+    background: '#02111f',
+    border: '1px solid #2563eb',
+    borderRadius: '24px',
+    padding: '22px',
+    marginBottom: '16px',
+    boxShadow: '0 20px 50px rgba(0,0,0,0.24)',
+    boxSizing: 'border-box',
+    overflow: 'hidden',
+  },
+  memoryGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr',
+    gap: '10px',
+  },
+  memoryMetric: {
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '16px',
+    padding: '14px',
+  },
+  metricLabel: {
+    color: '#93c5fd',
+    fontSize: '11px',
+    fontWeight: 900,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    margin: 0,
+  },
+  metricValue: {
+    color: '#f8fafc',
+    fontSize: '20px',
+    lineHeight: 1.2,
+    fontWeight: 900,
+    margin: '8px 0 0',
+  },
   card: {
     background: '#020617',
     border: '1px solid #1e293b',
@@ -300,5 +495,17 @@ const styles: Record<string, CSSProperties> = {
     color: '#cbd5e1',
     lineHeight: 1.6,
     margin: 0,
+  },
+  summaryBox: {
+    whiteSpace: 'pre-wrap',
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '16px',
+    padding: '16px',
+    color: '#e2e8f0',
+    lineHeight: 1.55,
+    minHeight: '220px',
+    fontSize: '14px',
+    overflowX: 'auto',
   },
 }
