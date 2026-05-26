@@ -783,13 +783,16 @@ const styles: Record<string, CSSProperties> = {
   },
 
   caseName: {
-    fontSize: '24px',
+    fontSize: '18px',
     margin: 0,
+    lineHeight: 1.35,
+    wordBreak: 'break-word',
   },
 
   caseDomain: {
     color: '#cbd5e1',
     marginTop: '6px',
+    fontSize: '13px',
   },
 
   infoGrid: {
@@ -808,13 +811,17 @@ const styles: Record<string, CSSProperties> = {
 
   infoLabel: {
     color: '#94a3b8',
-    fontSize: '12px',
+    fontSize: '11px',
     fontWeight: 900,
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase',
   },
 
   infoValue: {
     marginTop: '6px',
-    lineHeight: 1.5,
+    lineHeight: 1.45,
+    fontSize: '13px',
+    wordBreak: 'break-word',
   },
 
   signalContainer: {
@@ -828,8 +835,8 @@ const styles: Record<string, CSSProperties> = {
     background: '#111827',
     color: '#a7f3d0',
     borderRadius: '999px',
-    padding: '8px 12px',
-    fontSize: '12px',
+    padding: '6px 10px',
+    fontSize: '11px',
     fontWeight: 800,
     border: '1px solid rgba(167,243,208,0.22)',
   },
@@ -850,7 +857,7 @@ const styles: Record<string, CSSProperties> = {
 
   intelligenceGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
     gap: '12px',
   },
 
@@ -876,7 +883,7 @@ const styles: Record<string, CSSProperties> = {
 
   lifecycleGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
     gap: '10px',
     marginTop: '22px',
   },
@@ -885,9 +892,10 @@ const styles: Record<string, CSSProperties> = {
     background: '#111827',
     border: '1px solid #334155',
     color: 'white',
-    padding: '12px',
+    padding: '11px',
     borderRadius: '12px',
     fontWeight: 800,
+    fontSize: '12px',
     cursor: 'pointer',
   },
 
@@ -918,6 +926,7 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: '14px',
     padding: '14px',
     lineHeight: 1.6,
+    fontSize: '13px',
   },
 
   emptyState: {
