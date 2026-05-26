@@ -63,27 +63,6 @@ const PRESSURE_TYPES = [
   'RELIABILITY',
 ]
 
-const STABILIZATION_ACTIONS = [
-  'OWNERSHIP_REVIEW_STARTED',
-  'ROUTING_REVIEW_STARTED',
-  'BACKLOG_REVIEW_STARTED',
-  'HANDOFF_REVIEW_STARTED',
-  'EVIDENCE_CHECK_REQUESTED',
-  'RECOVERY_WATCH_STARTED',
-  'CROSS_TEAM_COORDINATION_REQUESTED',
-  'COMMAND_REVIEW_RECOMMENDED',
-]
-
-const OUTCOME_OPTIONS = [
-  'STABILIZED',
-  'IMPROVEMENT_HOLDING',
-  'PARTIAL_IMPROVEMENT_ONLY',
-  'FURTHER_ACTION_REQUIRED',
-  'ESCALATION_REQUIRED',
-  'ISSUE_RETURNED_AFTER_IMPROVEMENT',
-  'READY_FOR_ARCHIVE',
-]
-
 export default function CasesPage() {
   return (
     <CGIGovernanceShell>
@@ -139,63 +118,7 @@ function CasesContent() {
       event_summary: `Governed instability moved to ${nextStatus}`,
     })
 
-    setMessage('Governed case movement preserved.')
-    await loadCases()
-  }
-
-  async function applyStabilizationAction(
-    caseItem: InstabilityCase,
-    summary: string
-  ) {
-    if (!summary) return
-
-    const { error } = await supabase
-      .from('beneficiary_cases')
-      .update({
-        intervention_summary: summary,
-      })
-      .eq('id', caseItem.id)
-
-    if (error) {
-      alert(error.message)
-      return
-    }
-
-    await supabase.from('case_interventions').insert({
-      case_id: caseItem.id,
-      intervention_type: 'CGI_STABILIZATION_ACTION',
-      intervention_summary: summary,
-    })
-
-    setMessage('Stabilization action preserved.')
-    await loadCases()
-  }
-
-  async function applyOutcomeSummary(
-    caseItem: InstabilityCase,
-    outcome: string
-  ) {
-    if (!outcome) return
-
-    const { error } = await supabase
-      .from('beneficiary_cases')
-      .update({
-        outcome_summary: outcome,
-      })
-      .eq('id', caseItem.id)
-
-    if (error) {
-      alert(error.message)
-      return
-    }
-
-    await supabase.from('case_outcomes').insert({
-      case_id: caseItem.id,
-      outcome_status: outcome,
-      outcome_summary: outcome,
-    })
-
-    setMessage('Outcome review preserved.')
+    setMessage('Governed lifecycle movement preserved.')
     await loadCases()
   }
 
@@ -233,7 +156,8 @@ function CasesContent() {
           <p style={styles.subtitle}>
             Govern accepted instability after triage. This surface preserves
             lifecycle phase, required next movement, evidence posture,
-            stagnation risk, and command meaning.
+            stagnation risk, and command meaning without executing intervention
+            or outcome work.
           </p>
         </section>
 
@@ -254,14 +178,15 @@ function CasesContent() {
           <h2 style={styles.sectionTitle}>Governed instability cases</h2>
 
           <p style={styles.panelNote}>
-            Triage decides whether instability deserves governance. Cases
-            govern accepted instability until it is stabilized, archived, or
-            escalated.
+            Triage decides whether instability deserves governance. Cases govern
+            accepted instability until it is stabilized, archived, escalated, or
+            transferred into recovery confirmation.
           </p>
 
           <div style={styles.caseList}>
             {cases.map((caseItem) => {
               const intelligence = buildCaseIntelligence(caseItem)
+              const simplifiedIdentity = buildSimplifiedIdentity(caseItem)
 
               return (
                 <article key={caseItem.id} style={styles.caseCard}>
@@ -269,12 +194,10 @@ function CasesContent() {
                     <div>
                       <p style={styles.caseKicker}>Accepted CGI Case</p>
 
-                      <h3 style={styles.caseName}>
-                        {caseItem.beneficiary_name}
-                      </h3>
+                      <h3 style={styles.caseName}>{simplifiedIdentity}</h3>
 
                       <p style={styles.caseDomain}>
-                        Pressure type: {caseItem.support_domain}
+                        Full identity: {caseItem.beneficiary_name}
                       </p>
                     </div>
 
@@ -303,11 +226,19 @@ function CasesContent() {
                   </div>
 
                   <div style={styles.signalContainer}>
+                    <span style={styles.signalBadge}>
+                      {caseItem.support_domain}
+                    </span>
+
                     {(caseItem.instability_signals || []).map((signal, index) => (
                       <span key={`${signal}-${index}`} style={styles.signalBadge}>
                         {signal}
                       </span>
                     ))}
+
+                    <span style={styles.signalBadge}>
+                      {caseItem.severity_level}
+                    </span>
                   </div>
 
                   <section style={styles.intelligencePanel}>
@@ -317,21 +248,60 @@ function CasesContent() {
 
                     <div style={styles.intelligenceGrid}>
                       <Info label="Lifecycle Phase" value={intelligence.phase} />
+
                       <Info
                         label="Required Next Movement"
                         value={intelligence.nextMovement}
                       />
+
                       <Info
                         label="Evidence Posture"
                         value={intelligence.evidencePosture}
                       />
+
                       <Info
                         label="Stagnation Risk"
                         value={intelligence.stagnationRisk}
                       />
+
                       <Info
                         label="Command Meaning"
                         value={intelligence.commandMeaning}
+                      />
+                    </div>
+                  </section>
+
+                  <section style={styles.executionSummary}>
+                    <p style={styles.executionTitle}>
+                      Linked Execution Visibility
+                    </p>
+
+                    <div style={styles.executionGrid}>
+                      <Info
+                        label="Action Evidence"
+                        value={
+                          caseItem.intervention_summary
+                            ? 'Present in interventions'
+                            : 'Missing — manage in /interventions'
+                        }
+                      />
+
+                      <Info
+                        label="Outcome Evidence"
+                        value={
+                          caseItem.outcome_summary
+                            ? 'Present in outcomes'
+                            : 'Missing — verify in /outcomes'
+                        }
+                      />
+
+                      <Info
+                        label="Recovery Observation"
+                        value={
+                          caseItem.case_status === 'RECOVERY_MONITORING'
+                            ? 'Active recovery watch'
+                            : 'Pending recovery confirmation'
+                        }
                       />
                     </div>
                   </section>
@@ -358,56 +328,16 @@ function CasesContent() {
                     ))}
                   </div>
 
-                  <div style={styles.dropdownSection}>
-                    <label style={styles.label}>Stabilization Action</label>
-
-                    <select
-                      onChange={(event) =>
-                        applyStabilizationAction(caseItem, event.target.value)
-                      }
-                      style={styles.select}
-                      value=""
-                    >
-                      <option value="">Select stabilization action</option>
-
-                      {STABILIZATION_ACTIONS.map((item) => (
-                        <option key={item} value={item}>
-                          {item}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div style={styles.dropdownSection}>
-                    <label style={styles.label}>Outcome Review</label>
-
-                    <select
-                      onChange={(event) =>
-                        applyOutcomeSummary(caseItem, event.target.value)
-                      }
-                      style={styles.select}
-                      value=""
-                    >
-                      <option value="">Select outcome review</option>
-
-                      {OUTCOME_OPTIONS.map((item) => (
-                        <option key={item} value={item}>
-                          {item}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
                   {caseItem.intervention_summary && (
                     <div style={styles.summaryBox}>
-                      <strong>Action:</strong>{' '}
+                      <strong>Latest linked action evidence:</strong>{' '}
                       {truncateText(caseItem.intervention_summary)}
                     </div>
                   )}
 
                   {caseItem.outcome_summary && (
                     <div style={styles.summaryBox}>
-                      <strong>Outcome:</strong>{' '}
+                      <strong>Latest linked outcome evidence:</strong>{' '}
                       {truncateText(caseItem.outcome_summary)}
                     </div>
                   )}
@@ -428,15 +358,21 @@ function CasesContent() {
   )
 }
 
+function buildSimplifiedIdentity(caseItem: InstabilityCase) {
+  const location = caseItem.beneficiary_level || 'Unspecified location'
+
+  return `${caseItem.support_domain} instability • ${location}`
+}
+
 function buildCaseIntelligence(caseItem: InstabilityCase): CaseIntelligence {
   const hasAction = Boolean(caseItem.intervention_summary)
   const hasOutcome = Boolean(caseItem.outcome_summary)
 
   const evidencePosture = [
-    `Routing evidence: ${hasRoutingEvidence(caseItem) ? 'present' : 'pending'}`,
-    `Action evidence: ${hasAction ? 'present' : 'missing'}`,
-    `Outcome evidence: ${hasOutcome ? 'present' : 'missing'}`,
-    `Recovery evidence: ${
+    `Routing: ${hasRoutingEvidence(caseItem) ? 'present' : 'pending'}`,
+    `Action: ${hasAction ? 'present' : 'missing'}`,
+    `Outcome: ${hasOutcome ? 'present' : 'missing'}`,
+    `Recovery: ${
       caseItem.case_status === 'RECOVERY_MONITORING' ? 'active' : 'pending'
     }`,
   ].join(' • ')
@@ -455,12 +391,12 @@ function buildCaseIntelligence(caseItem: InstabilityCase): CaseIntelligence {
     return {
       phase: 'Routed for stabilization',
       nextMovement: hasAction
-        ? 'Review action effect'
-        : 'Begin governed stabilization action',
+        ? 'Review action effect through /interventions'
+        : 'Begin governed stabilization action in /interventions',
       evidencePosture,
       stagnationRisk: hasAction
         ? 'Low if outcome review follows'
-        : 'High if no action is preserved',
+        : 'High if action evidence remains missing',
       commandMeaning:
         'Ownership movement exists, but stabilization is not credible until action and outcome evidence appear.',
     }
@@ -503,8 +439,8 @@ function buildCaseIntelligence(caseItem: InstabilityCase): CaseIntelligence {
     return {
       phase: 'Stabilization action active',
       nextMovement: hasOutcome
-        ? 'Move into improvement or recovery monitoring'
-        : 'Preserve outcome review',
+        ? 'Review outcome effect through /outcomes'
+        : 'Preserve outcome review in /outcomes',
       evidencePosture,
       stagnationRisk: hasOutcome
         ? 'Moderate until recovery is confirmed'
@@ -625,40 +561,32 @@ function Info({ label, value }: { label: string; value: string }) {
 function difficultyBadge(level: string): CSSProperties {
   if (level === 'CRITICAL') {
     return {
+      ...styles.severityBadge,
       background: '#7f1d1d',
       color: '#fecaca',
-      padding: '8px 12px',
-      borderRadius: '999px',
-      fontWeight: 800,
     }
   }
 
   if (level === 'HIGH') {
     return {
+      ...styles.severityBadge,
       background: '#7c2d12',
       color: '#fdba74',
-      padding: '8px 12px',
-      borderRadius: '999px',
-      fontWeight: 800,
     }
   }
 
   if (level === 'MODERATE') {
     return {
+      ...styles.severityBadge,
       background: '#713f12',
       color: '#fde68a',
-      padding: '8px 12px',
-      borderRadius: '999px',
-      fontWeight: 800,
     }
   }
 
   return {
+    ...styles.severityBadge,
     background: '#064e3b',
     color: '#a7f3d0',
-    padding: '8px 12px',
-    borderRadius: '999px',
-    fontWeight: 800,
     border: '1px solid rgba(167,243,208,0.26)',
   }
 }
@@ -783,16 +711,26 @@ const styles: Record<string, CSSProperties> = {
   },
 
   caseName: {
-    fontSize: '18px',
+    fontSize: '20px',
     margin: 0,
     lineHeight: 1.35,
     wordBreak: 'break-word',
   },
 
   caseDomain: {
-    color: '#cbd5e1',
+    color: '#94a3b8',
     marginTop: '6px',
-    fontSize: '13px',
+    fontSize: '12px',
+    lineHeight: 1.5,
+    wordBreak: 'break-word',
+  },
+
+  severityBadge: {
+    padding: '8px 12px',
+    borderRadius: '999px',
+    fontWeight: 800,
+    fontSize: '12px',
+    height: 'fit-content',
   },
 
   infoGrid: {
@@ -861,6 +799,26 @@ const styles: Record<string, CSSProperties> = {
     gap: '12px',
   },
 
+  executionSummary: {
+    marginTop: '20px',
+    background: '#111827',
+    border: '1px solid #334155',
+    borderRadius: '18px',
+    padding: '16px',
+  },
+
+  executionTitle: {
+    color: '#a7f3d0',
+    fontWeight: 900,
+    margin: '0 0 14px',
+  },
+
+  executionGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+    gap: '12px',
+  },
+
   interpretationBox: {
     marginTop: '20px',
     background: '#042f2e',
@@ -897,26 +855,6 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 800,
     fontSize: '12px',
     cursor: 'pointer',
-  },
-
-  dropdownSection: {
-    marginTop: '20px',
-  },
-
-  label: {
-    display: 'block',
-    fontWeight: 800,
-    marginBottom: '10px',
-  },
-
-  select: {
-    width: '100%',
-    marginTop: '8px',
-    padding: '14px',
-    borderRadius: '12px',
-    background: '#111827',
-    color: 'white',
-    border: '1px solid #334155',
   },
 
   summaryBox: {
