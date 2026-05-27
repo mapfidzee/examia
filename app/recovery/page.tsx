@@ -5,47 +5,48 @@ import { useMemo, useState } from 'react';
 type DurabilityResult =
   | 'DURABLE_RECOVERY_CONFIRMED'
   | 'RECOVERY_HOLDING'
-  | 'RECOVERY_FRAGILE'
+  | 'STABILITY_UNDER_VARIANCE'
   | 'REBURN_DETECTED'
   | 'RECOVERY_COLLAPSE';
 
 type RecoveryTrajectory =
   | 'STRENGTHENING'
   | 'HOLDING'
-  | 'FRAGILE'
+  | 'VARIABLE_STABILITY'
   | 'WEAKENING'
   | 'COLLAPSING';
 
 type ReburnSignal =
   | 'NO_REBURN_VISIBLE'
-  | 'REBURN_WATCH'
+  | 'RECURRENCE_OBSERVATION'
   | 'REBURN_DETECTED'
-  | 'RECURRENT_REBURN';
+  | 'RECURRENT_REBURN_PATTERN';
 
 type RecoveryConfidence =
   | 'CREDIBLE'
-  | 'CONDITIONAL'
-  | 'UNCERTAIN'
+  | 'BUILDING'
+  | 'VARIABLE'
   | 'LOW'
   | 'COLLAPSED';
 
 type MemoryImpact =
   | 'NO_MEMORY_ESCALATION_REQUIRED'
   | 'STRUCTURAL_MEMORY_PRESERVED'
-  | 'CARRY_FORWARD_WATCH'
+  | 'CONTINUITY_MEMORY_VISIBLE'
   | 'MEMORY_ESCALATION_REQUIRED'
-  | 'RECURRENT_MEMORY_PATTERN';
+  | 'RECURRING_STRUCTURAL_PATTERN';
 
 type CommandPosture =
-  | 'NORMAL_MONITORING'
+  | 'CONTINUITY_OBSERVATION'
   | 'STABILITY_HOLDING'
   | 'DURABILITY_BUILDING'
-  | 'RECOVERY_WATCH'
-  | 'EXECUTIVE_REVIEW'
+  | 'ELEVATED_RECOVERY_REVIEW'
+  | 'EXECUTIVE_CONTINUITY_REVIEW'
   | 'URGENT_CONTINUITY_REVIEW';
 
 type RecoveryMaturity =
   | 'EARLY_RECOVERY'
+  | 'VARIABLE_STABILITY'
   | 'HOLDING_STABLE'
   | 'DURABILITY_BUILDING'
   | 'RECOVERY_MATURING'
@@ -53,10 +54,10 @@ type RecoveryMaturity =
   | 'DURABLE_RECOVERY_ESTABLISHED';
 
 type RecoverySurvivabilitySignal =
-  | 'SURVIVABILITY_STABLE'
-  | 'SURVIVABILITY_OBSERVATION'
-  | 'RECOVERY_REMAINS_FRAGILE'
-  | 'SURVIVABILITY_RISK_RISING'
+  | 'SURVIVABILITY_BACKGROUND_STABLE'
+  | 'SURVIVABILITY_OBSERVATION_ACTIVE'
+  | 'DURABILITY_REQUIRES_OBSERVATION'
+  | 'SURVIVABILITY_PRESSURE_RISING'
   | 'SURVIVABILITY_COMPROMISED';
 
 const recoveryCases = [
@@ -70,14 +71,14 @@ const recoveryCases = [
     id: 'case-002',
     signal: 'Workflow pressure reduced after routing intervention',
     domain: 'Operational Flow',
-    status: 'Recovery watch active',
+    status: 'Durability confidence building',
   },
 ];
 
 const durabilityResults: DurabilityResult[] = [
   'DURABLE_RECOVERY_CONFIRMED',
   'RECOVERY_HOLDING',
-  'RECOVERY_FRAGILE',
+  'STABILITY_UNDER_VARIANCE',
   'REBURN_DETECTED',
   'RECOVERY_COLLAPSE',
 ];
@@ -85,22 +86,22 @@ const durabilityResults: DurabilityResult[] = [
 const recoveryTrajectories: RecoveryTrajectory[] = [
   'STRENGTHENING',
   'HOLDING',
-  'FRAGILE',
+  'VARIABLE_STABILITY',
   'WEAKENING',
   'COLLAPSING',
 ];
 
 const reburnSignals: ReburnSignal[] = [
   'NO_REBURN_VISIBLE',
-  'REBURN_WATCH',
+  'RECURRENCE_OBSERVATION',
   'REBURN_DETECTED',
-  'RECURRENT_REBURN',
+  'RECURRENT_REBURN_PATTERN',
 ];
 
 const recoveryConfidences: RecoveryConfidence[] = [
   'CREDIBLE',
-  'CONDITIONAL',
-  'UNCERTAIN',
+  'BUILDING',
+  'VARIABLE',
   'LOW',
   'COLLAPSED',
 ];
@@ -108,9 +109,9 @@ const recoveryConfidences: RecoveryConfidence[] = [
 const memoryImpacts: MemoryImpact[] = [
   'NO_MEMORY_ESCALATION_REQUIRED',
   'STRUCTURAL_MEMORY_PRESERVED',
-  'CARRY_FORWARD_WATCH',
+  'CONTINUITY_MEMORY_VISIBLE',
   'MEMORY_ESCALATION_REQUIRED',
-  'RECURRENT_MEMORY_PATTERN',
+  'RECURRING_STRUCTURAL_PATTERN',
 ];
 
 function deriveRecoveryMaturity(
@@ -136,7 +137,6 @@ function deriveRecoveryMaturity(
 
   if (
     durabilityResult === 'DURABLE_RECOVERY_CONFIRMED' &&
-    reburnSignal === 'NO_REBURN_VISIBLE' &&
     confidence === 'CREDIBLE'
   ) {
     return 'STABLE_UNDER_OBSERVATION';
@@ -144,22 +144,23 @@ function deriveRecoveryMaturity(
 
   if (
     durabilityResult === 'RECOVERY_HOLDING' &&
-    (trajectory === 'STRENGTHENING' || trajectory === 'HOLDING') &&
-    reburnSignal === 'NO_REBURN_VISIBLE'
+    trajectory === 'STRENGTHENING'
   ) {
     return 'RECOVERY_MATURING';
   }
 
   if (
     durabilityResult === 'RECOVERY_HOLDING' &&
-    confidence !== 'LOW' &&
-    confidence !== 'COLLAPSED'
+    confidence !== 'LOW'
   ) {
     return 'DURABILITY_BUILDING';
   }
 
-  if (durabilityResult === 'RECOVERY_FRAGILE') {
-    return 'HOLDING_STABLE';
+  if (
+    durabilityResult === 'STABILITY_UNDER_VARIANCE' ||
+    trajectory === 'VARIABLE_STABILITY'
+  ) {
+    return 'VARIABLE_STABILITY';
   }
 
   return 'EARLY_RECOVERY';
@@ -170,7 +171,6 @@ function deriveCommandPosture(
   trajectory: RecoveryTrajectory,
   reburnSignal: ReburnSignal,
   confidence: RecoveryConfidence,
-  memoryImpact: MemoryImpact,
   maturity: RecoveryMaturity,
 ): CommandPosture {
   if (
@@ -183,66 +183,52 @@ function deriveCommandPosture(
 
   if (
     durabilityResult === 'REBURN_DETECTED' ||
-    reburnSignal === 'RECURRENT_REBURN' ||
-    memoryImpact === 'RECURRENT_MEMORY_PATTERN'
+    reburnSignal === 'RECURRENT_REBURN_PATTERN'
   ) {
-    return 'EXECUTIVE_REVIEW';
+    return 'EXECUTIVE_CONTINUITY_REVIEW';
   }
 
   if (
-    durabilityResult === 'RECOVERY_FRAGILE' ||
-    reburnSignal === 'REBURN_WATCH' ||
-    confidence === 'UNCERTAIN' ||
-    confidence === 'LOW'
+    maturity === 'VARIABLE_STABILITY' ||
+    confidence === 'VARIABLE'
   ) {
-    return 'RECOVERY_WATCH';
+    return 'ELEVATED_RECOVERY_REVIEW';
   }
 
-  if (maturity === 'DURABILITY_BUILDING' || maturity === 'RECOVERY_MATURING') {
+  if (maturity === 'DURABILITY_BUILDING') {
     return 'DURABILITY_BUILDING';
   }
 
-  if (maturity === 'STABLE_UNDER_OBSERVATION') {
+  if (
+    maturity === 'RECOVERY_MATURING' ||
+    maturity === 'STABLE_UNDER_OBSERVATION'
+  ) {
     return 'STABILITY_HOLDING';
   }
 
-  if (maturity === 'DURABLE_RECOVERY_ESTABLISHED') {
-    return 'NORMAL_MONITORING';
-  }
-
-  return 'RECOVERY_WATCH';
+  return 'CONTINUITY_OBSERVATION';
 }
 
 function deriveSurvivabilitySignal(
-  durabilityResult: DurabilityResult,
-  trajectory: RecoveryTrajectory,
-  reburnSignal: ReburnSignal,
   commandPosture: CommandPosture,
 ): RecoverySurvivabilitySignal {
-  if (
-    commandPosture === 'URGENT_CONTINUITY_REVIEW' ||
-    durabilityResult === 'RECOVERY_COLLAPSE'
-  ) {
-    return 'SURVIVABILITY_COMPROMISED';
-  }
+  switch (commandPosture) {
+    case 'URGENT_CONTINUITY_REVIEW':
+      return 'SURVIVABILITY_COMPROMISED';
 
-  if (
-    commandPosture === 'EXECUTIVE_REVIEW' ||
-    durabilityResult === 'REBURN_DETECTED' ||
-    reburnSignal === 'RECURRENT_REBURN'
-  ) {
-    return 'SURVIVABILITY_RISK_RISING';
-  }
+    case 'EXECUTIVE_CONTINUITY_REVIEW':
+      return 'SURVIVABILITY_PRESSURE_RISING';
 
-  if (durabilityResult === 'RECOVERY_FRAGILE' || trajectory === 'FRAGILE') {
-    return 'RECOVERY_REMAINS_FRAGILE';
-  }
+    case 'ELEVATED_RECOVERY_REVIEW':
+      return 'DURABILITY_REQUIRES_OBSERVATION';
 
-  if (commandPosture === 'DURABILITY_BUILDING' || commandPosture === 'STABILITY_HOLDING') {
-    return 'SURVIVABILITY_OBSERVATION';
-  }
+    case 'DURABILITY_BUILDING':
+    case 'STABILITY_HOLDING':
+      return 'SURVIVABILITY_OBSERVATION_ACTIVE';
 
-  return 'SURVIVABILITY_STABLE';
+    default:
+      return 'SURVIVABILITY_BACKGROUND_STABLE';
+  }
 }
 
 function deriveExecutiveMeaning(
@@ -251,93 +237,104 @@ function deriveExecutiveMeaning(
 ): string {
   const meanings: Record<RecoveryMaturity, string> = {
     EARLY_RECOVERY:
-      'Recovery is still early. Stabilization evidence should continue to be observed before institutional confidence is restored.',
+      'Recovery evidence is still early. Durability observation should continue before confidence matures.',
+
+    VARIABLE_STABILITY:
+      `Recovery is showing variable stability across the ${durabilityWindow} observation window. Current conditions support continued continuity observation without escalation.`,
+
     HOLDING_STABLE:
-      `Recovery is holding across the ${durabilityWindow} durability window, but fragile indicators still require measured observation.`,
+      `Recovery is holding across the ${durabilityWindow} durability window while confidence continues to strengthen.`,
+
     DURABILITY_BUILDING:
-      `Recovery is building credibility across the ${durabilityWindow} durability window. Continued stability may support increased confidence if no reburn or recurrence appears.`,
+      `Recovery durability is building steadily across the ${durabilityWindow} observation window. Current continuity signals support measured confidence progression.`,
+
     RECOVERY_MATURING:
-      `Recovery is maturing across the ${durabilityWindow} durability window. Current evidence supports cautious confidence while durability continues to strengthen.`,
+      `Recovery maturity is strengthening across the ${durabilityWindow} durability window. No major deterioration signal is currently weakening continuity confidence.`,
+
     STABLE_UNDER_OBSERVATION:
-      `Recovery remains stable across the ${durabilityWindow} durability window. No visible reburn or collapse signal is currently weakening confidence.`,
+      `Recovery remains stable across the ${durabilityWindow} durability window under normal continuity observation conditions.`,
+
     DURABLE_RECOVERY_ESTABLISHED:
-      `Durable recovery is established across the ${durabilityWindow} durability window. Continued monitoring may return to normal continuity observation.`,
+      `Durable recovery credibility is established across the ${durabilityWindow} durability window. Continuity monitoring may remain calm and proportional.`,
   };
 
   return meanings[maturity];
 }
 
 function deriveRecoveryPressure(
-  commandPosture: CommandPosture,
-  maturity: RecoveryMaturity,
-  reburnSignal: ReburnSignal,
-  memoryImpact: MemoryImpact,
+  posture: CommandPosture,
 ): string {
-  if (commandPosture === 'URGENT_CONTINUITY_REVIEW') {
-    return 'Recovery durability is weakening. Collapse indicators require urgent executive continuity review before trust can be restored.';
-  }
+  switch (posture) {
+    case 'CONTINUITY_OBSERVATION':
+      return 'Recovery durability remains stable under current continuity observation conditions.';
 
-  if (commandPosture === 'EXECUTIVE_REVIEW') {
-    return 'Recovery has re-entered executive concern. Reburn, recurrence, or memory escalation signals require leadership visibility.';
-  }
+    case 'STABILITY_HOLDING':
+      return 'Recovery stability remains credible while durability confidence continues to mature.';
 
-  if (commandPosture === 'RECOVERY_WATCH') {
-    return 'Recovery remains under active observation due to fragile durability indicators or recurrence watch conditions.';
-  }
+    case 'DURABILITY_BUILDING':
+      return 'Recovery durability is strengthening steadily while continuity observation remains active.';
 
-  if (maturity === 'DURABILITY_BUILDING' || maturity === 'RECOVERY_MATURING') {
-    return 'Recovery durability is strengthening. Current signals support measured confidence while observation continues.';
-  }
+    case 'ELEVATED_RECOVERY_REVIEW':
+      return 'Recovery remains under measured observation due to variability indicators or recurrence visibility conditions.';
 
-  if (
-    maturity === 'STABLE_UNDER_OBSERVATION' ||
-    maturity === 'DURABLE_RECOVERY_ESTABLISHED'
-  ) {
-    return 'Recovery durability remains stable across the current observation window. No reburn, collapse, or escalation signals are currently visible.';
-  }
+    case 'EXECUTIVE_CONTINUITY_REVIEW':
+      return 'Recovery durability is weakening. Recurrence visibility or structural instability indicators require executive awareness.';
 
-  if (
-    reburnSignal === 'NO_REBURN_VISIBLE' &&
-    memoryImpact === 'NO_MEMORY_ESCALATION_REQUIRED'
-  ) {
-    return 'Recovery remains calm under current observation. No active reburn or memory escalation signal is visible.';
-  }
+    case 'URGENT_CONTINUITY_REVIEW':
+      return 'Recovery collapse indicators require urgent executive continuity review.';
 
-  return 'Recovery durability remains under measured observation while confidence continues to mature.';
+    default:
+      return 'Recovery durability remains under proportional continuity observation.';
+  }
 }
 
-function deriveMemoryMeaning(memoryImpact: MemoryImpact): string {
+function deriveMemoryMeaning(
+  impact: MemoryImpact,
+): string {
   const meanings: Record<MemoryImpact, string> = {
     NO_MEMORY_ESCALATION_REQUIRED:
-      'No memory escalation is required. Structural memory remains available for continuity learning if future recurrence appears.',
+      'No memory escalation is currently required. Structural continuity memory remains available for future learning.',
+
     STRUCTURAL_MEMORY_PRESERVED:
       'Structural memory preserved for future continuity learning.',
-    CARRY_FORWARD_WATCH:
-      'Structural memory should remain visible while recovery confidence continues to mature.',
+
+    CONTINUITY_MEMORY_VISIBLE:
+      'Continuity memory remains visible while durability confidence continues to mature.',
+
     MEMORY_ESCALATION_REQUIRED:
-      'Memory escalation is required because recovery evidence suggests unresolved structural risk.',
-    RECURRENT_MEMORY_PATTERN:
-      'Recurring memory patterns are visible. Leadership should review whether the same structural weakness is returning.',
+      'Structural memory escalation is advised because unresolved continuity instability may still exist.',
+
+    RECURRING_STRUCTURAL_PATTERN:
+      'Recurring structural continuity patterns remain visible and may require leadership review.',
   };
 
-  return meanings[memoryImpact];
+  return meanings[impact];
 }
 
 export default function RecoveryPage() {
   const [selectedCaseId, setSelectedCaseId] = useState('');
   const [durabilityResult, setDurabilityResult] =
-    useState<DurabilityResult>('RECOVERY_FRAGILE');
+    useState<DurabilityResult>('STABILITY_UNDER_VARIANCE');
+
   const [recoveryTrajectory, setRecoveryTrajectory] =
-    useState<RecoveryTrajectory>('FRAGILE');
-  const [reburnSignal, setReburnSignal] = useState<ReburnSignal>('REBURN_WATCH');
+    useState<RecoveryTrajectory>('VARIABLE_STABILITY');
+
+  const [reburnSignal, setReburnSignal] =
+    useState<ReburnSignal>('RECURRENCE_OBSERVATION');
+
   const [recoveryConfidence, setRecoveryConfidence] =
-    useState<RecoveryConfidence>('CONDITIONAL');
+    useState<RecoveryConfidence>('VARIABLE');
+
   const [durabilityWindow, setDurabilityWindow] = useState('7 days');
+
   const [memoryImpact, setMemoryImpact] =
-    useState<MemoryImpact>('CARRY_FORWARD_WATCH');
+    useState<MemoryImpact>('CONTINUITY_MEMORY_VISIBLE');
+
   const [interpretation, setInterpretation] = useState('');
 
-  const selectedCase = recoveryCases.find((item) => item.id === selectedCaseId);
+  const selectedCase = recoveryCases.find(
+    (item) => item.id === selectedCaseId,
+  );
 
   const recoveryMaturity = useMemo(
     () =>
@@ -366,7 +363,6 @@ export default function RecoveryPage() {
         recoveryTrajectory,
         reburnSignal,
         recoveryConfidence,
-        memoryImpact,
         recoveryMaturity,
       ),
     [
@@ -374,38 +370,48 @@ export default function RecoveryPage() {
       recoveryTrajectory,
       reburnSignal,
       recoveryConfidence,
-      memoryImpact,
       recoveryMaturity,
     ],
   );
 
   const survivabilitySignal = useMemo(
     () =>
-      deriveSurvivabilitySignal(
-        durabilityResult,
-        recoveryTrajectory,
-        reburnSignal,
-        commandPosture,
-      ),
-    [durabilityResult, recoveryTrajectory, reburnSignal, commandPosture],
+      deriveSurvivabilitySignal(commandPosture),
+    [commandPosture],
   );
 
-  const executiveMeaning = deriveExecutiveMeaning(recoveryMaturity, durabilityWindow);
-  const recoveryPressure = deriveRecoveryPressure(
-    commandPosture,
+  const executiveMeaning = deriveExecutiveMeaning(
     recoveryMaturity,
-    reburnSignal,
-    memoryImpact,
+    durabilityWindow,
   );
-  const memoryMeaning = deriveMemoryMeaning(memoryImpact);
 
-  const metrics = [
-    { label: 'Cases Under Recovery Watch', value: recoveryCases.length },
-    { label: 'Durable Recovery Confirmed', value: 0 },
-    { label: 'Fragile Recovery', value: 0 },
-    { label: 'Reburn Detected', value: 0 },
-    { label: 'Recovery Collapse', value: 0 },
-    { label: 'Memory Carry-Forward', value: 0 },
+  const recoveryPressure =
+    deriveRecoveryPressure(commandPosture);
+
+  const memoryMeaning =
+    deriveMemoryMeaning(memoryImpact);
+
+  const continuityProfiles = [
+    {
+      title: 'Recovery Stability Distribution',
+      value:
+        'No concentrated fragile recovery pattern currently visible.',
+    },
+    {
+      title: 'Durability Observation Load',
+      value:
+        'Recovery observation activity remains within manageable continuity thresholds.',
+    },
+    {
+      title: 'Reburn Visibility',
+      value:
+        'No active reburn concentration currently requiring escalation.',
+    },
+    {
+      title: 'Continuity Memory Visibility',
+      value:
+        'Structural continuity memory remains preserved for longitudinal learning.',
+    },
   ];
 
   const synthesisRows = [
@@ -421,13 +427,31 @@ export default function RecoveryPage() {
     ['EXECUTIVE MEANING', executiveMeaning],
     ['RECOVERY PRESSURE', recoveryPressure],
     ['MEMORY MEANING', memoryMeaning],
-    ['NEXT LIFECYCLE STATE', selectedCase ? 'Recovery durability observation continues' : 'Pending stability case selection'],
-    ['CASE SIGNAL', selectedCase?.signal ?? 'Pending stability case selection'],
-    ['STABILITY DOMAIN', selectedCase?.domain ?? 'Pending stability case selection'],
-    ['CURRENT CONTINUITY STATUS', selectedCase?.status ?? 'Pending stability case selection'],
+    [
+      'NEXT LIFECYCLE STATE',
+      selectedCase
+        ? 'Recovery durability observation continues under proportional continuity governance.'
+        : 'Awaiting recovery durability review assignment.',
+    ],
+    [
+      'CASE SIGNAL',
+      selectedCase?.signal ??
+        'Executive synthesis will activate after continuity case selection.',
+    ],
+    [
+      'STABILITY DOMAIN',
+      selectedCase?.domain ??
+        'Continuity domain visibility pending case assignment.',
+    ],
+    [
+      'CURRENT CONTINUITY STATUS',
+      selectedCase?.status ??
+        'Recovery continuity posture pending operational review.',
+    ],
     [
       'RECOVERY INTERPRETATION',
-      interpretation.trim() || 'No additional recovery interpretation entered.',
+      interpretation.trim() ||
+        'No additional operational recovery interpretation entered.',
     ],
   ];
 
@@ -438,31 +462,38 @@ export default function RecoveryPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.35em] text-amber-400">
             TSINAXA CGI
           </p>
+
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white md:text-5xl">
             Recovery Intelligence
           </h1>
+
           <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-300 md:text-base">
             Executive Continuity Intelligence Infrastructure
           </p>
+
           <p className="mt-4 max-w-4xl text-sm leading-6 text-neutral-400 md:text-base">
-            Assess whether verified stabilization is converting into durable recovery
-            without erasing structural memory, recurrence visibility, or survivability
-            awareness.
+            Assess whether verified stabilization is converting into durable
+            recovery without erasing structural memory, recurrence visibility,
+            or survivability awareness.
           </p>
 
           <div className="mt-6 flex flex-wrap gap-3 text-xs font-medium uppercase tracking-wide text-neutral-300">
             <span className="rounded-full border border-neutral-700 px-3 py-2">
               Infrastructure
             </span>
+
             <span className="rounded-full border border-neutral-700 px-3 py-2">
               Continuity Governance
             </span>
+
             <span className="rounded-full border border-neutral-700 px-3 py-2">
               Executive Boundary
             </span>
+
             <span className="rounded-full border border-neutral-700 px-3 py-2">
               Stabilization Visibility
             </span>
+
             <span className="rounded-full border border-neutral-700 px-3 py-2">
               Governed Continuity Intelligence
             </span>
@@ -479,27 +510,33 @@ export default function RecoveryPage() {
           <h2 className="text-2xl font-semibold text-white">
             Recovery Durability Intelligence
           </h2>
+
           <p className="mt-3 max-w-5xl text-sm leading-6 text-neutral-300">
-            Confirm whether verified stabilization is holding over time. Detect
-            reburn, recovery collapse, fragile recovery, memory carry-forward,
-            survivability risk, and command posture before trust is restored.
+            Confirm whether verified stabilization is holding over time.
+            Detect reburn, recovery collapse, continuity variance,
+            structural memory persistence, survivability pressure,
+            and executive continuity posture before trust is restored.
           </p>
+
           <p className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
-            <span className="font-semibold">Boundary:</span> /recovery confirms
-            durability. It does not erase structural memory, remove recurrence
-            visibility, or close survivability risk automatically.
+            <span className="font-semibold">Boundary:</span> /recovery confirms durability.
+            It does not erase structural memory, remove recurrence visibility,
+            or close survivability risk automatically.
           </p>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-3 lg:grid-cols-6">
-          {metrics.map((metric) => (
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {continuityProfiles.map((profile) => (
             <div
-              key={metric.label}
-              className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4"
+              key={profile.title}
+              className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5"
             >
-              <p className="text-2xl font-semibold text-white">{metric.value}</p>
-              <p className="mt-2 text-xs leading-5 text-neutral-400">
-                {metric.label}
+              <p className="text-sm font-semibold text-white">
+                {profile.title}
+              </p>
+
+              <p className="mt-3 text-sm leading-6 text-neutral-400">
+                {profile.value}
               </p>
             </div>
           ))}
@@ -509,6 +546,7 @@ export default function RecoveryPage() {
           <h3 className="text-lg font-semibold text-white">
             Recovery Pressure Intelligence
           </h3>
+
           <p className="mt-3 text-sm leading-6 text-neutral-300">
             {recoveryPressure}
           </p>
@@ -519,25 +557,37 @@ export default function RecoveryPage() {
             <h3 className="text-xl font-semibold text-white">
               Preserve Recovery Durability Review
             </h3>
+
             <p className="mt-3 text-sm leading-6 text-neutral-400">
-              Use this after outcome verification suggests recovery monitoring may
-              begin. Confirm whether stabilization is holding, weakening, reburning,
-              collapsing, or requiring structural memory carry-forward.
+              Use this after outcome verification suggests recovery durability
+              observation may begin. Preserve continuity visibility,
+              recurrence awareness, structural memory relevance,
+              and executive continuity meaning.
             </p>
 
             <div className="mt-6 space-y-5">
+
               <label className="block">
                 <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
                   Stability Case
                 </span>
+
                 <select
                   value={selectedCaseId}
-                  onChange={(event) => setSelectedCaseId(event.target.value)}
+                  onChange={(event) =>
+                    setSelectedCaseId(event.target.value)
+                  }
                   className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
                 >
-                  <option value="">Select stability case</option>
+                  <option value="">
+                    Select stability case
+                  </option>
+
                   {recoveryCases.map((item) => (
-                    <option key={item.id} value={item.id}>
+                    <option
+                      key={item.id}
+                      value={item.id}
+                    >
                       {item.signal}
                     </option>
                   ))}
@@ -548,15 +598,21 @@ export default function RecoveryPage() {
                 <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
                   Durability Result
                 </span>
+
                 <select
                   value={durabilityResult}
                   onChange={(event) =>
-                    setDurabilityResult(event.target.value as DurabilityResult)
+                    setDurabilityResult(
+                      event.target.value as DurabilityResult,
+                    )
                   }
                   className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
                 >
                   {durabilityResults.map((item) => (
-                    <option key={item} value={item}>
+                    <option
+                      key={item}
+                      value={item}
+                    >
                       {item}
                     </option>
                   ))}
@@ -567,15 +623,21 @@ export default function RecoveryPage() {
                 <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
                   Recovery Trajectory
                 </span>
+
                 <select
                   value={recoveryTrajectory}
                   onChange={(event) =>
-                    setRecoveryTrajectory(event.target.value as RecoveryTrajectory)
+                    setRecoveryTrajectory(
+                      event.target.value as RecoveryTrajectory,
+                    )
                   }
                   className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
                 >
                   {recoveryTrajectories.map((item) => (
-                    <option key={item} value={item}>
+                    <option
+                      key={item}
+                      value={item}
+                    >
                       {item}
                     </option>
                   ))}
@@ -586,15 +648,21 @@ export default function RecoveryPage() {
                 <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
                   Reburn Signal
                 </span>
+
                 <select
                   value={reburnSignal}
                   onChange={(event) =>
-                    setReburnSignal(event.target.value as ReburnSignal)
+                    setReburnSignal(
+                      event.target.value as ReburnSignal,
+                    )
                   }
                   className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
                 >
                   {reburnSignals.map((item) => (
-                    <option key={item} value={item}>
+                    <option
+                      key={item}
+                      value={item}
+                    >
                       {item}
                     </option>
                   ))}
@@ -605,15 +673,21 @@ export default function RecoveryPage() {
                 <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
                   Recovery Confidence
                 </span>
+
                 <select
                   value={recoveryConfidence}
                   onChange={(event) =>
-                    setRecoveryConfidence(event.target.value as RecoveryConfidence)
+                    setRecoveryConfidence(
+                      event.target.value as RecoveryConfidence,
+                    )
                   }
                   className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
                 >
                   {recoveryConfidences.map((item) => (
-                    <option key={item} value={item}>
+                    <option
+                      key={item}
+                      value={item}
+                    >
                       {item}
                     </option>
                   ))}
@@ -624,9 +698,12 @@ export default function RecoveryPage() {
                 <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
                   Durability Window
                 </span>
+
                 <input
                   value={durabilityWindow}
-                  onChange={(event) => setDurabilityWindow(event.target.value)}
+                  onChange={(event) =>
+                    setDurabilityWindow(event.target.value)
+                  }
                   className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
                 />
               </label>
@@ -635,15 +712,21 @@ export default function RecoveryPage() {
                 <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
                   Memory Impact
                 </span>
+
                 <select
                   value={memoryImpact}
                   onChange={(event) =>
-                    setMemoryImpact(event.target.value as MemoryImpact)
+                    setMemoryImpact(
+                      event.target.value as MemoryImpact,
+                    )
                   }
                   className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
                 >
                   {memoryImpacts.map((item) => (
-                    <option key={item} value={item}>
+                    <option
+                      key={item}
+                      value={item}
+                    >
                       {item}
                     </option>
                   ))}
@@ -654,11 +737,14 @@ export default function RecoveryPage() {
                 <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
                   Recovery Interpretation
                 </span>
+
                 <textarea
                   value={interpretation}
-                  onChange={(event) => setInterpretation(event.target.value)}
+                  onChange={(event) =>
+                    setInterpretation(event.target.value)
+                  }
                   rows={5}
-                  placeholder="Use operational facts only. Preserve durability evidence, reburn visibility, memory implications, survivability meaning, and executive relevance."
+                  placeholder="Use operational facts only. Preserve durability evidence, continuity variance, recurrence visibility, structural memory meaning, survivability relevance, and executive continuity interpretation."
                   className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
                 />
               </label>
@@ -673,18 +759,26 @@ export default function RecoveryPage() {
             <h3 className="text-xl font-semibold text-white">
               Executive Recovery Synthesis
             </h3>
+
             <p className="mt-3 text-sm leading-6 text-neutral-400">
-              This synthesis confirms whether stabilization is holding over time,
-              weakening, reburning, collapsing, or requiring memory carry-forward.
+              This synthesis confirms whether stabilization is strengthening,
+              varying, reburning, weakening, collapsing,
+              or preserving continuity durability over time.
             </p>
 
             <div className="mt-6 divide-y divide-neutral-800 rounded-2xl border border-neutral-800">
               {synthesisRows.map(([label, value]) => (
-                <div key={label} className="grid gap-2 p-4 md:grid-cols-[0.42fr_1fr]">
+                <div
+                  key={label}
+                  className="grid gap-2 p-4 md:grid-cols-[0.42fr_1fr]"
+                >
                   <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                     {label}
                   </p>
-                  <p className="text-sm leading-6 text-neutral-100">{value}</p>
+
+                  <p className="text-sm leading-6 text-neutral-100">
+                    {value}
+                  </p>
                 </div>
               ))}
             </div>
@@ -693,29 +787,39 @@ export default function RecoveryPage() {
               <h4 className="text-sm font-semibold uppercase tracking-wide text-amber-400">
                 Lifecycle Boundary
               </h4>
+
               <p className="mt-3 text-sm leading-6 text-neutral-300">
-                Action is not outcome. Outcome is not recovery. Recovery is not
-                memory erasure. Durability must be observed before trust is
-                restored.
+                Action is not outcome.
+                Outcome is not recovery.
+                Recovery is not memory erasure.
+                Durability must be observed before trust is restored.
               </p>
             </div>
           </section>
         </div>
 
         <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
-          <h3 className="text-xl font-semibold text-white">Recovery Doctrine</h3>
+          <h3 className="text-xl font-semibold text-white">
+            Recovery Doctrine
+          </h3>
+
           <p className="mt-4 text-sm leading-7 text-neutral-300">
-            Recovery is a credibility test, not a status label. CGI does not restore
-            trust simply because a case appears recovered. Recovery must hold across
-            time without reburn, relapse, unresolved pressure, recurring instability,
-            or memory escalation. Durability must survive time, pressure, and
-            recurrence before institutional trust is restored.
+            Recovery is a credibility test, not a status label.
+            CGI does not restore trust simply because a case appears recovered.
+            Recovery durability must hold across time without reburn,
+            unresolved continuity pressure,
+            recurring instability,
+            structural deterioration,
+            or continuity collapse before institutional confidence matures.
           </p>
+
           <p className="mt-4 text-sm leading-7 text-neutral-300">
             Mature recovery intelligence must also recognize earned stability.
-            When recovery holds without reburn, collapse, or escalation, the system
-            should express measured confidence while preserving structural memory
-            for future continuity learning.
+            When recovery holds without reburn, collapse,
+            escalation concentration,
+            or structural deterioration,
+            the system should express measured confidence while preserving
+            structural continuity memory for future institutional learning.
           </p>
         </section>
       </section>
