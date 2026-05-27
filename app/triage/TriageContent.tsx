@@ -33,6 +33,7 @@ type TriageIntelligence = {
   ownershipMeaning: string
   riskMeaning: string
   nextMovement: string
+  downstreamSurface: string
   commandMeaning: string
 }
 
@@ -48,14 +49,22 @@ const CGI_PRESSURE_TYPES = [
   'RELIABILITY',
 ]
 
-const TRIAGE_QUEUE_STATUSES = [
+const ACTIVE_TRIAGE_STATUSES = [
   'PENDING_TRIAGE',
   'UNDER_REVIEW',
   'TRIAGE_EVIDENCE_REQUIRED',
   'TRIAGE_COMMAND_ESCALATION',
   'TRIAGE_CLARITY_REQUIRED',
-  'TRIAGE_CLOSED_NO_CGI_ACTION',
+]
+
+const PRESERVED_TRIAGE_STATUSES = [
   'ACCEPTED_FOR_GOVERNANCE',
+  'TRIAGE_CLOSED_NO_CGI_ACTION',
+]
+
+const TRIAGE_QUEUE_STATUSES = [
+  ...ACTIVE_TRIAGE_STATUSES,
+  ...PRESERVED_TRIAGE_STATUSES,
 ]
 
 const TRIAGE_DECISIONS: {
@@ -125,10 +134,15 @@ export default function TriageContent() {
       return
     }
 
-    setItems(data || [])
+    setItems(sortByTriagePriority(data || []))
   }
 
   async function preserveTriageDecision(item: VisibleInstability) {
+    if (isDecisionLocked(item)) {
+      setMessage('This triage decision is already preserved and locked.')
+      return
+    }
+
     const decisionValue = selectedDecisions[item.id]
 
     if (!decisionValue) {
@@ -171,14 +185,18 @@ export default function TriageContent() {
     await loadData()
   }
 
+  const activeReviewItems = useMemo(() => {
+    return items.filter((item) => !isDecisionLocked(item))
+  }, [items])
+
+  const preservedReviewItems = useMemo(() => {
+    return items.filter((item) => isDecisionLocked(item))
+  }, [items])
+
   const metrics = useMemo(() => {
     return {
       visibleInstability: items.length,
-      pending: items.filter(
-        (item) =>
-          item.case_status === 'PENDING_TRIAGE' ||
-          item.case_status === 'UNDER_REVIEW'
-      ).length,
+      awaitingTriage: activeReviewItems.length,
       accepted: items.filter(
         (item) => item.case_status === 'ACCEPTED_FOR_GOVERNANCE'
       ).length,
@@ -195,7 +213,7 @@ export default function TriageContent() {
         item.case_status.includes('CLOSED_NO_CGI_ACTION')
       ).length,
     }
-  }, [items])
+  }, [items, activeReviewItems])
 
   return (
     <main style={styles.page}>
@@ -214,7 +232,7 @@ export default function TriageContent() {
 
         <section style={styles.metricsGrid}>
           <Metric label="Visible Intake" value={metrics.visibleInstability} />
-          <Metric label="Pending Review" value={metrics.pending} />
+          <Metric label="Awaiting Triage" value={metrics.awaitingTriage} />
           <Metric label="Accepted" value={metrics.accepted} />
           <Metric label="Evidence Required" value={metrics.evidenceRequired} />
           <Metric label="Command Escalation" value={metrics.commandEscalation} />
@@ -227,172 +245,243 @@ export default function TriageContent() {
         <section style={styles.card}>
           <div style={styles.sectionHeader}>
             <div>
-              <h2 style={styles.sectionTitle}>Triage Review Queue</h2>
+              <h2 style={styles.sectionTitle}>
+                Awaiting Triage Review
+              </h2>
 
               <p style={styles.sectionText}>
-                Request opens visibility. Triage judges eligibility. Cases only
-                receive instability that has crossed the acceptance threshold
-                into active continuity governance.
+                Request opens visibility. Triage judges eligibility. Only
+                instability that crosses the acceptance threshold should move
+                into active case governance.
               </p>
             </div>
           </div>
 
           <div style={styles.caseList}>
-            {items.map((item) => {
-              const intelligence = buildTriageIntelligence(item)
+            {activeReviewItems.map((item) => (
+              <TriageCard
+                key={item.id}
+                item={item}
+                selectedDecision={selectedDecisions[item.id] || ''}
+                setSelectedDecisions={setSelectedDecisions}
+                preserveTriageDecision={preserveTriageDecision}
+              />
+            ))}
 
-              return (
-                <article key={item.id} style={styles.caseCard}>
-                  <div style={styles.caseHeader}>
-                    <div>
-                      <p style={styles.caseKicker}>Visible Instability</p>
-
-                      <h3 style={styles.caseName}>
-                        {buildSimplifiedIdentity(item)}
-                      </h3>
-
-                      <p style={styles.caseDomain}>
-                        Full identity: {item.beneficiary_name}
-                      </p>
-                    </div>
-
-                    <span style={severityBadge(item.severity_level)}>
-                      {item.severity_level}
-                    </span>
-                  </div>
-
-                  <div style={styles.infoGrid}>
-                    <Info label="Triage State" value={item.case_status} />
-
-                    <Info
-                      label="Pressure Type"
-                      value={item.support_domain}
-                    />
-
-                    <Info
-                      label="Site / Institution"
-                      value={item.institution_name || GOVERNANCE_INSTITUTION}
-                    />
-
-                    <Info
-                      label="Region"
-                      value={item.region || 'Not provided'}
-                    />
-
-                    <Info
-                      label="Visibility"
-                      value={
-                        item.safeguarding_flag ||
-                        item.severity_level === 'CRITICAL'
-                          ? 'Executive visibility'
-                          : 'Governance visibility'
-                      }
-                    />
-                  </div>
-
-                  <div style={styles.signalContainer}>
-                    <span style={styles.signalBadge}>{item.support_domain}</span>
-                    <span style={styles.signalBadge}>{item.severity_level}</span>
-
-                    {item.safeguarding_flag && (
-                      <span style={styles.signalBadge}>
-                        SAFEGUARDING_VISIBILITY
-                      </span>
-                    )}
-
-                    {item.case_status === 'ACCEPTED_FOR_GOVERNANCE' && (
-                      <span style={styles.signalBadge}>CASE_ACCEPTED</span>
-                    )}
-                  </div>
-
-                  <section style={styles.intelligencePanel}>
-                    <p style={styles.intelligenceTitle}>
-                      Triage Intelligence Panel
-                    </p>
-
-                    <div style={styles.intelligenceGrid}>
-                      <Info label="Gate Status" value={intelligence.gateStatus} />
-
-                      <Info
-                        label="Recommended Posture"
-                        value={intelligence.recommendedPosture}
-                      />
-
-                      <Info
-                        label="Evidence Meaning"
-                        value={intelligence.evidenceMeaning}
-                      />
-
-                      <Info
-                        label="Ownership Meaning"
-                        value={intelligence.ownershipMeaning}
-                      />
-
-                      <Info label="Risk Meaning" value={intelligence.riskMeaning} />
-
-                      <Info
-                        label="Required Next Movement"
-                        value={intelligence.nextMovement}
-                      />
-
-                      <Info
-                        label="Command Meaning"
-                        value={intelligence.commandMeaning}
-                      />
-                    </div>
-                  </section>
-
-                  <div style={styles.meaningBox}>
-                    <p style={styles.meaningTitle}>Triage interpretation</p>
-
-                    <p style={styles.meaningText}>
-                      {buildTriageInterpretation(item)}
-                    </p>
-                  </div>
-
-                  <div style={styles.dropdownSection}>
-                    <label style={styles.label}>Triage Decision</label>
-
-                    <select
-                      value={selectedDecisions[item.id] || ''}
-                      style={styles.select}
-                      onChange={(event) =>
-                        setSelectedDecisions((current) => ({
-                          ...current,
-                          [item.id]: event.target.value as TriageDecision,
-                        }))
-                      }
-                    >
-                      <option value="">Select triage decision</option>
-
-                      {TRIAGE_DECISIONS.map((decision) => (
-                        <option key={decision.value} value={decision.value}>
-                          {decision.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <button
-                    type="button"
-                    style={styles.button}
-                    onClick={() => preserveTriageDecision(item)}
-                  >
-                    Preserve Triage Decision
-                  </button>
-                </article>
-              )
-            })}
-
-            {items.length === 0 && (
+            {activeReviewItems.length === 0 && (
               <div style={styles.emptyState}>
-                No visible CGI instability is currently waiting for triage.
+                No visible CGI instability is currently awaiting triage review.
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section style={styles.card}>
+          <div style={styles.sectionHeader}>
+            <div>
+              <h2 style={styles.sectionTitle}>
+                Preserved Triage Decisions
+              </h2>
+
+              <p style={styles.sectionText}>
+                These signals have already been triaged. Their decision is
+                preserved here for governance visibility, not repeated review.
+              </p>
+            </div>
+          </div>
+
+          <div style={styles.caseList}>
+            {preservedReviewItems.map((item) => (
+              <TriageCard
+                key={item.id}
+                item={item}
+                selectedDecision={selectedDecisions[item.id] || ''}
+                setSelectedDecisions={setSelectedDecisions}
+                preserveTriageDecision={preserveTriageDecision}
+              />
+            ))}
+
+            {preservedReviewItems.length === 0 && (
+              <div style={styles.emptyState}>
+                No preserved triage decisions are currently visible.
               </div>
             )}
           </div>
         </section>
       </div>
     </main>
+  )
+}
+
+function TriageCard({
+  item,
+  selectedDecision,
+  setSelectedDecisions,
+  preserveTriageDecision,
+}: {
+  item: VisibleInstability
+  selectedDecision: TriageDecision | ''
+  setSelectedDecisions: React.Dispatch<
+    React.SetStateAction<Record<string, TriageDecision | ''>>
+  >
+  preserveTriageDecision: (item: VisibleInstability) => void
+}) {
+  const intelligence = buildTriageIntelligence(item)
+  const locked = isDecisionLocked(item)
+
+  return (
+    <article style={styles.caseCard}>
+      <div style={styles.caseHeader}>
+        <div>
+          <p style={styles.caseKicker}>
+            {locked ? 'Decision Preserved' : 'Visible Instability'}
+          </p>
+
+          <h3 style={styles.caseName}>
+            {buildSimplifiedIdentity(item)}
+          </h3>
+
+          <p style={styles.caseDomain}>
+            Full identity: {item.beneficiary_name}
+          </p>
+        </div>
+
+        <span style={severityBadge(item.severity_level)}>
+          {item.severity_level}
+        </span>
+      </div>
+
+      <div style={styles.infoGrid}>
+        <Info label="Triage State" value={item.case_status} />
+
+        <Info label="Pressure Type" value={item.support_domain} />
+
+        <Info
+          label="Site / Institution"
+          value={item.institution_name || GOVERNANCE_INSTITUTION}
+        />
+
+        <Info label="Region" value={item.region || 'Not provided'} />
+
+        <Info
+          label="Visibility"
+          value={
+            item.safeguarding_flag || item.severity_level === 'CRITICAL'
+              ? 'Executive visibility'
+              : 'Governance visibility'
+          }
+        />
+
+        <Info
+          label="Next Surface"
+          value={intelligence.downstreamSurface}
+        />
+      </div>
+
+      <div style={styles.signalContainer}>
+        <span style={styles.signalBadge}>{item.support_domain}</span>
+        <span style={styles.signalBadge}>{item.severity_level}</span>
+
+        {(item.safeguarding_flag || item.severity_level === 'CRITICAL') && (
+          <span style={styles.signalBadge}>EXECUTIVE_VISIBILITY</span>
+        )}
+
+        {item.case_status === 'ACCEPTED_FOR_GOVERNANCE' && (
+          <span style={styles.signalBadge}>CASE_ACCEPTED</span>
+        )}
+
+        {locked && <span style={styles.lockedBadge}>DECISION_LOCKED</span>}
+      </div>
+
+      <section style={styles.intelligencePanel}>
+        <p style={styles.intelligenceTitle}>
+          Triage Intelligence Panel
+        </p>
+
+        <div style={styles.intelligenceGrid}>
+          <Info label="Gate Status" value={intelligence.gateStatus} />
+
+          <Info
+            label="Recommended Posture"
+            value={intelligence.recommendedPosture}
+          />
+
+          <Info
+            label="Evidence Meaning"
+            value={intelligence.evidenceMeaning}
+          />
+
+          <Info
+            label="Ownership Meaning"
+            value={intelligence.ownershipMeaning}
+          />
+
+          <Info label="Risk Meaning" value={intelligence.riskMeaning} />
+
+          <Info
+            label="Required Next Movement"
+            value={intelligence.nextMovement}
+          />
+
+          <Info
+            label="Command Meaning"
+            value={intelligence.commandMeaning}
+          />
+        </div>
+      </section>
+
+      <div style={styles.meaningBox}>
+        <p style={styles.meaningTitle}>Triage interpretation</p>
+
+        <p style={styles.meaningText}>
+          {buildTriageInterpretation(item)}
+        </p>
+      </div>
+
+      {locked ? (
+        <div style={styles.lockBox}>
+          <p style={styles.lockTitle}>Decision preserved</p>
+
+          <p style={styles.lockText}>
+            This triage decision is locked for governance visibility. Continue
+            movement through {intelligence.downstreamSurface}.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div style={styles.dropdownSection}>
+            <label style={styles.label}>Triage Decision</label>
+
+            <select
+              value={selectedDecision}
+              style={styles.select}
+              onChange={(event) =>
+                setSelectedDecisions((current) => ({
+                  ...current,
+                  [item.id]: event.target.value as TriageDecision,
+                }))
+              }
+            >
+              <option value="">Select triage decision</option>
+
+              {TRIAGE_DECISIONS.map((decision) => (
+                <option key={decision.value} value={decision.value}>
+                  {decision.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            type="button"
+            style={styles.button}
+            onClick={() => preserveTriageDecision(item)}
+          >
+            Preserve Triage Decision
+          </button>
+        </>
+      )}
+    </article>
   )
 }
 
@@ -456,6 +545,38 @@ async function preserveTriageEvidence(input: {
   if (error) console.error(error)
 }
 
+function isDecisionLocked(item: VisibleInstability) {
+  return PRESERVED_TRIAGE_STATUSES.includes(item.case_status)
+}
+
+function sortByTriagePriority(items: VisibleInstability[]) {
+  return [...items].sort((a, b) => {
+    const aScore = triagePriorityScore(a)
+    const bScore = triagePriorityScore(b)
+
+    if (aScore !== bScore) return bScore - aScore
+
+    return (
+      new Date(b.created_at || 0).getTime() -
+      new Date(a.created_at || 0).getTime()
+    )
+  })
+}
+
+function triagePriorityScore(item: VisibleInstability) {
+  let score = 0
+
+  if (!isDecisionLocked(item)) score += 100
+  if (item.case_status.includes('COMMAND_ESCALATION')) score += 50
+  if (item.severity_level === 'CRITICAL') score += 40
+  if (item.severity_level === 'HIGH') score += 30
+  if (item.safeguarding_flag) score += 20
+  if (item.case_status.includes('CLARITY_REQUIRED')) score += 15
+  if (item.case_status.includes('EVIDENCE_REQUIRED')) score += 10
+
+  return score
+}
+
 function buildSimplifiedIdentity(item: VisibleInstability) {
   const location = item.beneficiary_level || item.region || 'Unspecified site'
 
@@ -477,6 +598,7 @@ function buildTriageIntelligence(item: VisibleInstability): TriageIntelligence {
       ownershipMeaning: 'Ownership can be clarified downstream if required',
       riskMeaning: 'Risk now belongs inside active case governance',
       nextMovement: 'Move toward case lifecycle governance and routing',
+      downstreamSurface: '/cases',
       commandMeaning:
         'This instability has crossed the threshold into active CGI oversight.',
     }
@@ -490,6 +612,7 @@ function buildTriageIntelligence(item: VisibleInstability): TriageIntelligence {
       ownershipMeaning: 'Ownership may remain secondary until evidence improves',
       riskMeaning: 'Risk increases if evidence remains weak',
       nextMovement: 'Request missing evidence before acceptance',
+      downstreamSurface: '/triage',
       commandMeaning:
         'Weak evidence can create false stabilization confidence if accepted too early.',
     }
@@ -503,6 +626,7 @@ function buildTriageIntelligence(item: VisibleInstability): TriageIntelligence {
       ownershipMeaning: 'Ownership may require command-level clarification',
       riskMeaning: 'High visibility risk if handled routinely',
       nextMovement: 'Preserve command review before downstream movement',
+      downstreamSurface: '/command',
       commandMeaning:
         'This instability exceeds routine triage and requires executive awareness.',
     }
@@ -516,6 +640,7 @@ function buildTriageIntelligence(item: VisibleInstability): TriageIntelligence {
       ownershipMeaning: 'Ownership or scope is not clear enough',
       riskMeaning: 'Risk of misrouting if accepted too early',
       nextMovement: 'Clarify ownership, scope, or institutional context',
+      downstreamSurface: '/triage',
       commandMeaning:
         'CGI is preventing unclear instability from entering the active chain prematurely.',
     }
@@ -529,6 +654,7 @@ function buildTriageIntelligence(item: VisibleInstability): TriageIntelligence {
       ownershipMeaning: 'Ownership can remain outside CGI governance',
       riskMeaning: 'Low if no recurrence appears',
       nextMovement: 'Monitor only if signal returns',
+      downstreamSurface: 'Archive / memory watch',
       commandMeaning:
         'Triage protected the system from unnecessary case creation.',
     }
@@ -542,6 +668,7 @@ function buildTriageIntelligence(item: VisibleInstability): TriageIntelligence {
       ownershipMeaning: 'Ownership must not remain unclear',
       riskMeaning: 'High if review is delayed',
       nextMovement: 'Escalate or accept with strong governance visibility',
+      downstreamSurface: '/triage or /command',
       commandMeaning:
         'This instability should not move silently into routine handling.',
     }
@@ -555,6 +682,7 @@ function buildTriageIntelligence(item: VisibleInstability): TriageIntelligence {
       ownershipMeaning: 'Ownership should be identified quickly',
       riskMeaning: 'May expand if triage stalls',
       nextMovement: 'Decide acceptance, evidence request, or escalation',
+      downstreamSurface: '/triage',
       commandMeaning:
         'This signal may become broader continuity pressure if delayed.',
     }
@@ -567,6 +695,7 @@ function buildTriageIntelligence(item: VisibleInstability): TriageIntelligence {
     ownershipMeaning: 'Ownership should be clear enough for routing',
     riskMeaning: 'Moderate if not reviewed',
     nextMovement: 'Choose acceptance, clarity, evidence, escalation, or closure',
+    downstreamSurface: '/triage',
     commandMeaning:
       'The signal should remain visible until triage determines the correct path.',
   }
@@ -574,7 +703,7 @@ function buildTriageIntelligence(item: VisibleInstability): TriageIntelligence {
 
 function buildTriageInterpretation(item: VisibleInstability) {
   if (item.case_status === 'ACCEPTED_FOR_GOVERNANCE') {
-    return 'This instability has already been accepted into CGI case governance and may move toward routing.'
+    return 'This instability has already been accepted into CGI case governance and should continue through case lifecycle governance.'
   }
 
   if (item.case_status.includes('EVIDENCE_REQUIRED')) {
@@ -861,6 +990,16 @@ const styles: Record<string, CSSProperties> = {
     border: '1px solid rgba(167,243,208,0.22)',
   },
 
+  lockedBadge: {
+    background: '#312e81',
+    color: '#c4b5fd',
+    borderRadius: '999px',
+    padding: '6px 10px',
+    fontSize: '11px',
+    fontWeight: 900,
+    border: '1px solid rgba(196,181,253,0.28)',
+  },
+
   intelligencePanel: {
     marginTop: '20px',
     background: '#020617',
@@ -897,6 +1036,29 @@ const styles: Record<string, CSSProperties> = {
 
   meaningText: {
     color: '#ccfbf1',
+    lineHeight: 1.6,
+    margin: '8px 0 0',
+  },
+
+  lockBox: {
+    marginTop: '18px',
+    background: '#111827',
+    border: '1px solid #4c1d95',
+    borderRadius: '16px',
+    padding: '14px',
+  },
+
+  lockTitle: {
+    color: '#c4b5fd',
+    fontWeight: 900,
+    margin: 0,
+    textTransform: 'uppercase',
+    fontSize: '12px',
+    letterSpacing: '0.08em',
+  },
+
+  lockText: {
+    color: '#ddd6fe',
     lineHeight: 1.6,
     margin: '8px 0 0',
   },
