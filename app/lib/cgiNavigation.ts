@@ -43,7 +43,7 @@ export const cgiNavigationGroups: CGINavigationGroup[] = [
   {
     title: 'Governed Response',
     purpose:
-      'Route instability, govern stabilization action evidence, and preserve continuity before verification begins.',
+      'Route instability, govern stabilization action evidence, verify action impact, and preserve continuity before recovery monitoring begins.',
     items: [
       {
         label: 'Routing Intelligence',
@@ -58,6 +58,14 @@ export const cgiNavigationGroups: CGINavigationGroup[] = [
         href: '/interventions',
         description:
           'Govern stabilization action evidence, continuity movement, residual risk, and executive visibility before outcome verification begins.',
+        systemArea: 'COORDINATION',
+        status: 'ACTIVE',
+      },
+      {
+        label: 'Stabilization Verification Intelligence',
+        href: '/outcomes',
+        description:
+          'Verify action impact, recurrence signals, recovery readiness, and executive meaning before recovery monitoring begins.',
         systemArea: 'COORDINATION',
         status: 'ACTIVE',
       },
