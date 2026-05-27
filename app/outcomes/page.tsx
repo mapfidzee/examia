@@ -97,6 +97,14 @@ const CONTINUITY_OUTLOOKS = [
   'HIGH_RISK',
 ]
 
+const VERIFICATION_TRAJECTORIES = [
+  'IMPROVING',
+  'STABLE',
+  'FRAGILE',
+  'WEAKENING',
+  'DESTABILIZING',
+]
+
 export default function OutcomesPage() {
   return (
     <GovernanceRouteGuard
@@ -125,6 +133,7 @@ function OutcomesContent() {
   const [recurrenceSignal, setRecurrenceSignal] = useState('RECURRENCE_WATCH')
   const [recoveryReadiness, setRecoveryReadiness] = useState('NOT_READY_FOR_RECOVERY')
   const [continuityOutlook, setContinuityOutlook] = useState('MONITOR')
+  const [verificationTrajectory, setVerificationTrajectory] = useState('FRAGILE')
   const [verificationInterpretation, setVerificationInterpretation] = useState('')
 
   const [message, setMessage] = useState('')
@@ -206,14 +215,53 @@ function OutcomesContent() {
         item.outcome_summary?.includes('RECOVERY_MONITORING_RECOMMENDED')
     ).length
 
+    const weakeningVerification = outcomes.filter(
+      (item) =>
+        item.outcome_summary?.includes('WEAKENING') ||
+        item.outcome_summary?.includes('DESTABILIZING') ||
+        item.outcome_summary?.includes('FRAGILE')
+    ).length
+
     return {
       verified,
       partialOrUncertain,
       recurrenceDetected,
       escalationRequired,
       recoveryEligible,
+      weakeningVerification,
     }
   }, [outcomes])
+
+  const commandPosture = buildCommandPosture({
+    verificationResult,
+    verificationCredibility,
+    recurrenceSignal,
+    recoveryReadiness,
+    continuityOutlook,
+    verificationTrajectory,
+    commandVisibility: lifecycleDecision.commandVisibility,
+  })
+
+  const stabilizationConfidence = buildStabilizationConfidence({
+    verificationResult,
+    verificationCredibility,
+    recurrenceSignal,
+    recoveryReadiness,
+    continuityOutlook,
+    verificationTrajectory,
+  })
+
+  const survivabilitySignal = buildSurvivabilitySignal({
+    verificationResult,
+    verificationCredibility,
+    recurrenceSignal,
+    recoveryReadiness,
+    continuityOutlook,
+    verificationTrajectory,
+    escalationPressure: outcomePressure.escalationRequired,
+    recurrencePressure: outcomePressure.recurrenceDetected,
+    partialPressure: outcomePressure.partialOrUncertain,
+  })
 
   const executiveMeaning = buildExecutiveVerificationMeaning({
     verificationResult,
@@ -222,7 +270,9 @@ function OutcomesContent() {
     recurrenceSignal,
     recoveryReadiness,
     continuityOutlook,
-    commandVisibility: lifecycleDecision.commandVisibility,
+    verificationTrajectory,
+    commandPosture,
+    survivabilitySignal,
   })
 
   const verificationPressureMeaning = buildVerificationPressureMeaning({
@@ -230,6 +280,7 @@ function OutcomesContent() {
     recurrenceDetected: outcomePressure.recurrenceDetected,
     escalationRequired: outcomePressure.escalationRequired,
     recoveryEligible: outcomePressure.recoveryEligible,
+    weakeningVerification: outcomePressure.weakeningVerification,
   })
 
   function buildCaseLabel(caseItem: StabilityCase) {
@@ -247,6 +298,9 @@ ${actionImpact || 'Awaiting action impact selection'}
 VERIFICATION CREDIBILITY
 ${verificationCredibility}
 
+VERIFICATION TRAJECTORY
+${verificationTrajectory}
+
 RECURRENCE SIGNAL
 ${recurrenceSignal}
 
@@ -256,20 +310,23 @@ ${recoveryReadiness}
 CONTINUITY OUTLOOK
 ${continuityOutlook}
 
+COMMAND POSTURE
+${commandPosture}
+
+STABILIZATION CONFIDENCE
+${stabilizationConfidence}
+
+SURVIVABILITY SIGNAL
+${survivabilitySignal}
+
 EXECUTIVE MEANING
 ${executiveMeaning}
 
 VERIFICATION PRESSURE
 ${verificationPressureMeaning}
 
-COMMAND VISIBILITY
-${lifecycleDecision.commandVisibility ? 'ACTIVE GOVERNANCE WATCH' : 'NORMAL'}
-
 NEXT LIFECYCLE STATE
 ${selectedCase ? lifecycleDecision.nextStatus : 'Pending stability case selection'}
-
-STABILIZATION CONFIDENCE
-${lifecycleDecision.stabilizationConfidence}
 
 CASE SIGNAL
 ${selectedCase?.beneficiary_name || 'Pending stability case selection'}
@@ -296,7 +353,15 @@ Verification may support recovery monitoring, but durable recovery must be confi
       return
     }
 
-    if (!verificationResult || !actionImpact || !verificationCredibility || !recurrenceSignal || !recoveryReadiness || !continuityOutlook) {
+    if (
+      !verificationResult ||
+      !actionImpact ||
+      !verificationCredibility ||
+      !recurrenceSignal ||
+      !recoveryReadiness ||
+      !continuityOutlook ||
+      !verificationTrajectory
+    ) {
       alert('Complete all stabilization verification fields.')
       return
     }
@@ -345,7 +410,7 @@ Verification may support recovery monitoring, but durable recovery must be confi
     const { error: timelineError } = await supabase.from('case_timeline').insert({
       case_id: selectedCaseId,
       event_type: lifecycleDecision.timelineEventType,
-      event_summary: `${lifecycleDecision.timelineSummary} Verification result: ${verificationResult}. Credibility: ${verificationCredibility}. Recurrence: ${recurrenceSignal}. Recovery readiness: ${recoveryReadiness}.`,
+      event_summary: `${lifecycleDecision.timelineSummary} Verification result: ${verificationResult}. Credibility: ${verificationCredibility}. Trajectory: ${verificationTrajectory}. Command posture: ${commandPosture}.`,
       actor: 'TSINAXA CGI Stabilization Verification Intelligence',
     })
 
@@ -365,6 +430,10 @@ Verification may support recovery monitoring, but durable recovery must be confi
       recurrenceSignal,
       recoveryReadiness,
       continuityOutlook,
+      verificationTrajectory,
+      commandPosture,
+      stabilizationConfidence,
+      survivabilitySignal,
       executiveMeaning,
       verificationPressureMeaning,
       verificationInterpretation,
@@ -377,10 +446,11 @@ Verification may support recovery monitoring, but durable recovery must be confi
     setRecurrenceSignal('RECURRENCE_WATCH')
     setRecoveryReadiness('NOT_READY_FOR_RECOVERY')
     setContinuityOutlook('MONITOR')
+    setVerificationTrajectory('FRAGILE')
     setVerificationInterpretation('')
 
     setMessage(
-      'Stabilization verification preserved. Executive meaning, recurrence visibility, recovery readiness, and lifecycle memory are now updated.'
+      'Stabilization verification preserved. Command posture, verification trajectory, survivability signal, recurrence visibility, and lifecycle memory are now updated.'
     )
 
     setLoading(false)
@@ -399,9 +469,9 @@ Verification may support recovery monitoring, but durable recovery must be confi
 
           <p style={styles.subtitle}>
             Verify whether governed stabilization action actually worked. Preserve
-            action impact, verification credibility, recurrence signals, recovery
-            readiness, executive meaning, and lifecycle movement without declaring
-            durable recovery prematurely.
+            action impact, verification credibility, verification trajectory, recurrence
+            signals, recovery readiness, command posture, survivability meaning, and
+            lifecycle movement without declaring durable recovery prematurely.
           </p>
 
           <div style={styles.boundaryBox}>
@@ -420,6 +490,7 @@ Verification may support recovery monitoring, but durable recovery must be confi
           <Metric label="Recurrence Detected" value={outcomePressure.recurrenceDetected} />
           <Metric label="Escalation Required" value={outcomePressure.escalationRequired} />
           <Metric label="Recovery Watch Eligible" value={outcomePressure.recoveryEligible} />
+          <Metric label="Weakening Verification" value={outcomePressure.weakeningVerification} />
         </section>
 
         <section style={styles.pressurePanel}>
@@ -433,8 +504,8 @@ Verification may support recovery monitoring, but durable recovery must be confi
 
             <p style={styles.panelNote}>
               Use this after stabilization action has occurred. Verify whether movement
-              is credible, partial, uncertain, recurring, ineffective, or ready for
-              recovery watch.
+              is credible, partial, uncertain, recurring, ineffective, weakening, or
+              ready for recovery watch.
             </p>
 
             <label style={styles.label}>
@@ -481,6 +552,14 @@ Verification may support recovery monitoring, but durable recovery must be confi
             />
 
             <Select
+              label="Verification Trajectory"
+              placeholder="Select verification trajectory"
+              value={verificationTrajectory}
+              setValue={setVerificationTrajectory}
+              options={VERIFICATION_TRAJECTORIES}
+            />
+
+            <Select
               label="Recurrence Signal"
               placeholder="Select recurrence signal"
               value={recurrenceSignal}
@@ -509,7 +588,7 @@ Verification may support recovery monitoring, but durable recovery must be confi
               <textarea
                 value={verificationInterpretation}
                 onChange={(event) => setVerificationInterpretation(event.target.value)}
-                placeholder="Use operational facts only. Preserve verification credibility, recurrence visibility, recovery readiness, and executive meaning."
+                placeholder="Use operational facts only. Preserve verification credibility, recurrence visibility, recovery readiness, command posture, survivability meaning, and executive relevance."
                 style={styles.textarea}
               />
             </label>
@@ -530,7 +609,8 @@ Verification may support recovery monitoring, but durable recovery must be confi
 
             <p style={styles.panelNote}>
               This synthesis preserves whether action impact is verified, partial,
-              uncertain, recurring, ineffective, or ready for recovery monitoring.
+              uncertain, recurring, ineffective, weakening, or ready for recovery
+              monitoring.
             </p>
 
             <pre style={styles.summaryBox}>{verificationSynthesis()}</pre>
@@ -560,6 +640,10 @@ async function preserveOutcomeGovernanceEvidence(input: {
   recurrenceSignal: string
   recoveryReadiness: string
   continuityOutlook: string
+  verificationTrajectory: string
+  commandPosture: string
+  stabilizationConfidence: string
+  survivabilitySignal: string
   executiveMeaning: string
   verificationPressureMeaning: string
   verificationInterpretation: string
@@ -573,7 +657,7 @@ async function preserveOutcomeGovernanceEvidence(input: {
   const severity = resolveOutcomeAuditSeverity({
     verificationResult: input.verificationResult,
     continuityOutlook: input.continuityOutlook,
-    commandVisibility: input.lifecycleDecision.commandVisibility,
+    commandPosture: input.commandPosture,
   })
 
   const { error } = await supabase.from('audit_logs').insert({
@@ -603,12 +687,16 @@ async function preserveOutcomeGovernanceEvidence(input: {
       verification_result: input.verificationResult,
       action_impact: input.actionImpact,
       verification_credibility: input.verificationCredibility,
+      verification_trajectory: input.verificationTrajectory,
       recurrence_signal: input.recurrenceSignal,
       recovery_readiness: input.recoveryReadiness,
       continuity_outlook: input.continuityOutlook,
+      command_posture: input.commandPosture,
+      stabilization_confidence_interpretation: input.stabilizationConfidence,
+      survivability_signal: input.survivabilitySignal,
 
       continuity_risk: input.lifecycleDecision.continuityRisk,
-      stabilization_confidence: input.lifecycleDecision.stabilizationConfidence,
+      lifecycle_stabilization_confidence: input.lifecycleDecision.stabilizationConfidence,
       escalation_required: input.lifecycleDecision.shouldEscalate,
       recovery_monitoring_required: input.lifecycleDecision.shouldMonitorRecovery,
       command_visibility_required: input.lifecycleDecision.commandVisibility,
@@ -647,6 +735,157 @@ function mapVerificationToLifecycleStatus(verificationResult: string) {
   return 'PARTIAL_STABILIZATION'
 }
 
+function buildCommandPosture(input: {
+  verificationResult: string
+  verificationCredibility: string
+  recurrenceSignal: string
+  recoveryReadiness: string
+  continuityOutlook: string
+  verificationTrajectory: string
+  commandVisibility: boolean
+}) {
+  if (
+    input.verificationResult === 'ESCALATION_REQUIRED' ||
+    input.continuityOutlook === 'HIGH_RISK'
+  ) {
+    return 'CRITICAL_CONTINUITY_POSTURE'
+  }
+
+  if (
+    input.verificationResult === 'RECURRENCE_DETECTED' ||
+    input.verificationResult === 'ACTION_INEFFECTIVE' ||
+    input.recurrenceSignal === 'REPEATED_RECURRENCE' ||
+    input.continuityOutlook === 'ESCALATE' ||
+    input.verificationTrajectory === 'DESTABILIZING'
+  ) {
+    return 'EXECUTIVE_REVIEW'
+  }
+
+  if (
+    input.verificationCredibility === 'WEAK' ||
+    input.verificationCredibility === 'CONFLICTED' ||
+    input.recurrenceSignal === 'RECURRENCE_DETECTED' ||
+    input.recoveryReadiness === 'RECOVERY_BLOCKED' ||
+    input.verificationTrajectory === 'WEAKENING' ||
+    input.commandVisibility
+  ) {
+    return 'ELEVATED_REVIEW'
+  }
+
+  if (
+    input.verificationCredibility === 'UNCERTAIN' ||
+    input.recurrenceSignal === 'RECURRENCE_WATCH' ||
+    input.recoveryReadiness === 'NOT_READY_FOR_RECOVERY' ||
+    input.continuityOutlook === 'MONITOR' ||
+    input.verificationTrajectory === 'FRAGILE'
+  ) {
+    return 'CONTINUITY_WATCH'
+  }
+
+  return 'NORMAL_MONITORING'
+}
+
+function buildStabilizationConfidence(input: {
+  verificationResult: string
+  verificationCredibility: string
+  recurrenceSignal: string
+  recoveryReadiness: string
+  continuityOutlook: string
+  verificationTrajectory: string
+}) {
+  if (
+    input.verificationResult === 'ESCALATION_REQUIRED' ||
+    input.verificationResult === 'ACTION_INEFFECTIVE' ||
+    input.continuityOutlook === 'HIGH_RISK' ||
+    input.verificationTrajectory === 'DESTABILIZING'
+  ) {
+    return 'DESTABILIZING'
+  }
+
+  if (
+    input.verificationResult === 'RECURRENCE_DETECTED' ||
+    input.recurrenceSignal === 'REPEATED_RECURRENCE' ||
+    input.verificationTrajectory === 'WEAKENING'
+  ) {
+    return 'FRAGILE'
+  }
+
+  if (
+    input.verificationResult === 'UNVERIFIED_IMPROVEMENT' ||
+    input.verificationCredibility === 'UNCERTAIN' ||
+    input.verificationCredibility === 'CONFLICTED'
+  ) {
+    return 'UNVERIFIED'
+  }
+
+  if (
+    input.verificationResult === 'PARTIAL_VERIFICATION' ||
+    input.recoveryReadiness === 'NOT_READY_FOR_RECOVERY' ||
+    input.verificationTrajectory === 'FRAGILE'
+  ) {
+    return 'CONDITIONAL'
+  }
+
+  if (
+    input.verificationResult === 'VERIFIED_STABILIZATION' &&
+    input.verificationCredibility === 'STRONG' &&
+    input.recurrenceSignal === 'NO_RECURRENCE_VISIBLE'
+  ) {
+    return 'CREDIBLE'
+  }
+
+  return 'EMERGING'
+}
+
+function buildSurvivabilitySignal(input: {
+  verificationResult: string
+  verificationCredibility: string
+  recurrenceSignal: string
+  recoveryReadiness: string
+  continuityOutlook: string
+  verificationTrajectory: string
+  escalationPressure: number
+  recurrencePressure: number
+  partialPressure: number
+}) {
+  if (
+    input.verificationResult === 'ESCALATION_REQUIRED' ||
+    input.continuityOutlook === 'HIGH_RISK' ||
+    input.escalationPressure > 0
+  ) {
+    return 'SURVIVABILITY_RISK_ACTIVE'
+  }
+
+  if (
+    input.recurrenceSignal === 'REPEATED_RECURRENCE' ||
+    input.recurrencePressure > 0 ||
+    input.verificationTrajectory === 'DESTABILIZING'
+  ) {
+    return 'RECURRENCE_THREATENING_DURABILITY'
+  }
+
+  if (
+    input.verificationCredibility === 'WEAK' ||
+    input.verificationCredibility === 'CONFLICTED' ||
+    input.verificationTrajectory === 'WEAKENING'
+  ) {
+    return 'VERIFICATION_CREDIBILITY_WEAKENING'
+  }
+
+  if (
+    input.recoveryReadiness === 'RECOVERY_WATCH_ELIGIBLE' ||
+    input.recoveryReadiness === 'RECOVERY_MONITORING_RECOMMENDED'
+  ) {
+    return 'RECOVERY_WATCH_POSSIBLE_NOT_CONFIRMED'
+  }
+
+  if (input.partialPressure > 0 || input.verificationResult === 'PARTIAL_VERIFICATION') {
+    return 'PARTIAL_STABILIZATION_REQUIRES_WATCH'
+  }
+
+  return 'NO_SURVIVABILITY_THREAT_VISIBLE'
+}
+
 function buildExecutiveVerificationMeaning(input: {
   verificationResult: string
   actionImpact: string
@@ -654,47 +893,45 @@ function buildExecutiveVerificationMeaning(input: {
   recurrenceSignal: string
   recoveryReadiness: string
   continuityOutlook: string
-  commandVisibility: boolean
+  verificationTrajectory: string
+  commandPosture: string
+  survivabilitySignal: string
 }) {
   if (!input.verificationResult && !input.actionImpact) {
-    return 'Awaiting verification selections. Executive meaning will derive from action impact, credibility, recurrence, recovery readiness, and continuity outlook.'
+    return 'Awaiting verification selections. Executive meaning will derive from action impact, credibility, recurrence, recovery readiness, trajectory, and continuity outlook.'
   }
 
   if (
-    input.verificationResult === 'ESCALATION_REQUIRED' ||
-    input.continuityOutlook === 'HIGH_RISK' ||
-    input.continuityOutlook === 'ESCALATE'
+    input.commandPosture === 'CRITICAL_CONTINUITY_POSTURE' ||
+    input.survivabilitySignal === 'SURVIVABILITY_RISK_ACTIVE'
   ) {
-    return 'Verification indicates material continuity exposure. Executive visibility should remain active and stabilization action may need escalation before recovery monitoring is appropriate.'
+    return 'Verification indicates survivability-level continuity exposure. Executive command visibility is required before recovery monitoring can be trusted.'
   }
 
   if (
-    input.verificationResult === 'RECURRENCE_DETECTED' ||
-    input.recurrenceSignal === 'RECURRENCE_DETECTED' ||
-    input.recurrenceSignal === 'REPEATED_RECURRENCE'
+    input.commandPosture === 'EXECUTIVE_REVIEW' ||
+    input.survivabilitySignal === 'RECURRENCE_THREATENING_DURABILITY'
   ) {
-    return 'Verification shows recurrence risk. Action impact cannot be treated as durable, and recovery readiness should remain blocked or under watch.'
+    return 'Verification shows recurrence, ineffective action, or destabilizing movement. Executive review should remain active until action impact becomes credible.'
   }
 
   if (
-    input.verificationResult === 'ACTION_INEFFECTIVE' ||
-    input.verificationCredibility === 'WEAK' ||
-    input.verificationCredibility === 'CONFLICTED'
+    input.commandPosture === 'ELEVATED_REVIEW' ||
+    input.survivabilitySignal === 'VERIFICATION_CREDIBILITY_WEAKENING'
   ) {
-    return 'Verification credibility is weak or action impact appears ineffective. Governance should review whether action must restart, escalate, or be redesigned.'
+    return 'Verification credibility is weakening or conflicted. Governance should review whether action must restart, escalate, or be redesigned before recovery readiness is accepted.'
   }
 
   if (
-    input.verificationResult === 'PARTIAL_VERIFICATION' ||
-    input.verificationCredibility === 'UNCERTAIN' ||
+    input.commandPosture === 'CONTINUITY_WATCH' ||
+    input.verificationTrajectory === 'FRAGILE' ||
     input.recoveryReadiness === 'NOT_READY_FOR_RECOVERY'
   ) {
-    return 'Stabilization is partially verified but not yet durable. Recovery monitoring should not begin until confidence improves and recurrence pressure remains controlled.'
+    return 'Stabilization is not yet durable. Continuity watch remains appropriate until verification trajectory strengthens and recurrence pressure remains controlled.'
   }
 
   if (
     input.verificationResult === 'VERIFIED_STABILIZATION' &&
-    input.verificationCredibility === 'STRONG' &&
     input.recoveryReadiness !== 'RECOVERY_BLOCKED'
   ) {
     return 'Action impact appears verified at outcome level. The case may move toward recovery monitoring, but durable recovery must still be confirmed separately.'
@@ -708,6 +945,7 @@ function buildVerificationPressureMeaning(input: {
   recurrenceDetected: number
   escalationRequired: number
   recoveryEligible: number
+  weakeningVerification: number
 }) {
   const signals: string[] = []
 
@@ -723,6 +961,10 @@ function buildVerificationPressureMeaning(input: {
     signals.push('escalation pressure remains active')
   }
 
+  if (input.weakeningVerification > 0) {
+    signals.push('verification weakening is visible')
+  }
+
   if (input.recoveryEligible > 0) {
     signals.push('some cases are eligible for recovery watch')
   }
@@ -731,17 +973,18 @@ function buildVerificationPressureMeaning(input: {
     return 'No material verification pressure is currently visible from preserved outcome evidence.'
   }
 
-  return `Verification pressure is active: ${signals.join(', ')}. Executive review should watch whether verified action impact moves into recovery monitoring or weakens into recurrence, uncertainty, or escalation.`
+  return `Verification pressure is active: ${signals.join(', ')}. Executive review should watch whether verified action impact moves into recovery monitoring or weakens into recurrence, uncertainty, weakening trajectory, or escalation.`
 }
 
 function resolveOutcomeAuditSeverity(input: {
   verificationResult: string
   continuityOutlook: string
-  commandVisibility: boolean
+  commandPosture: string
 }): AuditSeverity {
   if (
     input.verificationResult === 'ESCALATION_REQUIRED' ||
-    input.continuityOutlook === 'HIGH_RISK'
+    input.continuityOutlook === 'HIGH_RISK' ||
+    input.commandPosture === 'CRITICAL_CONTINUITY_POSTURE'
   ) {
     return 'CRITICAL'
   }
@@ -750,7 +993,8 @@ function resolveOutcomeAuditSeverity(input: {
     input.verificationResult === 'RECURRENCE_DETECTED' ||
     input.verificationResult === 'ACTION_INEFFECTIVE' ||
     input.continuityOutlook === 'ESCALATE' ||
-    input.commandVisibility
+    input.commandPosture === 'EXECUTIVE_REVIEW' ||
+    input.commandPosture === 'ELEVATED_REVIEW'
   ) {
     return 'HIGH'
   }
@@ -758,7 +1002,8 @@ function resolveOutcomeAuditSeverity(input: {
   if (
     input.verificationResult === 'PARTIAL_VERIFICATION' ||
     input.verificationResult === 'UNVERIFIED_IMPROVEMENT' ||
-    input.continuityOutlook === 'AT_RISK'
+    input.continuityOutlook === 'AT_RISK' ||
+    input.commandPosture === 'CONTINUITY_WATCH'
   ) {
     return 'MODERATE'
   }
@@ -950,6 +1195,6 @@ const styles: Record<string, CSSProperties> = {
     padding: '18px',
     color: '#e2e8f0',
     lineHeight: 1.7,
-    minHeight: '620px',
+    minHeight: '660px',
   },
 }
