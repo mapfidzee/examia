@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import type { CSSProperties } from 'react'
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { evaluateOutcomeLifecycle } from '../../lib/lifecycleGovernance'
@@ -76,7 +75,7 @@ const VERIFICATION_CREDIBILITIES = [
 
 const RECURRENCE_SIGNALS = [
   'NO_RECURRENCE_VISIBLE',
-  'RECURRENCE_WATCH',
+  'RECURRENCE_OBSERVATION',
   'RECURRENCE_DETECTED',
   'REPEATED_RECURRENCE',
 ]
@@ -100,7 +99,7 @@ const CONTINUITY_OUTLOOKS = [
 const VERIFICATION_TRAJECTORIES = [
   'IMPROVING',
   'STABLE',
-  'FRAGILE',
+  'VARIABLE_STABILITY',
   'WEAKENING',
   'DESTABILIZING',
 ]
@@ -129,12 +128,23 @@ function OutcomesContent() {
   const [selectedCaseId, setSelectedCaseId] = useState('')
   const [verificationResult, setVerificationResult] = useState('')
   const [actionImpact, setActionImpact] = useState('')
-  const [verificationCredibility, setVerificationCredibility] = useState('MODERATE')
-  const [recurrenceSignal, setRecurrenceSignal] = useState('RECURRENCE_WATCH')
-  const [recoveryReadiness, setRecoveryReadiness] = useState('NOT_READY_FOR_RECOVERY')
-  const [continuityOutlook, setContinuityOutlook] = useState('MONITOR')
-  const [verificationTrajectory, setVerificationTrajectory] = useState('FRAGILE')
-  const [verificationInterpretation, setVerificationInterpretation] = useState('')
+  const [verificationCredibility, setVerificationCredibility] =
+    useState('MODERATE')
+
+  const [recurrenceSignal, setRecurrenceSignal] =
+    useState('RECURRENCE_OBSERVATION')
+
+  const [recoveryReadiness, setRecoveryReadiness] =
+    useState('NOT_READY_FOR_RECOVERY')
+
+  const [continuityOutlook, setContinuityOutlook] =
+    useState('MONITOR')
+
+  const [verificationTrajectory, setVerificationTrajectory] =
+    useState('VARIABLE_STABILITY')
+
+  const [verificationInterpretation, setVerificationInterpretation] =
+    useState('')
 
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
@@ -177,7 +187,8 @@ function OutcomesContent() {
     return cases.find((item) => item.id === selectedCaseId)
   }, [cases, selectedCaseId])
 
-  const mappedOutcomeStatus = mapVerificationToLifecycleStatus(verificationResult)
+  const mappedOutcomeStatus =
+    mapVerificationToLifecycleStatus(verificationResult)
 
   const lifecycleDecision = evaluateOutcomeLifecycle({
     outcomeStatus: mappedOutcomeStatus,
@@ -187,14 +198,6 @@ function OutcomesContent() {
   const outcomePressure = useMemo(() => {
     const verified = outcomes.filter((item) =>
       item.outcome_summary?.includes('VERIFIED_STABILIZATION')
-    ).length
-
-    const partialOrUncertain = outcomes.filter(
-      (item) =>
-        item.outcome_summary?.includes('PARTIAL_VERIFICATION') ||
-        item.outcome_summary?.includes('UNVERIFIED_IMPROVEMENT') ||
-        item.outcome_summary?.includes('UNCERTAIN') ||
-        item.outcome_summary?.includes('CONFLICTED')
     ).length
 
     const recurrenceDetected = outcomes.filter(
@@ -211,24 +214,27 @@ function OutcomesContent() {
 
     const recoveryEligible = outcomes.filter(
       (item) =>
-        item.outcome_summary?.includes('RECOVERY_WATCH_ELIGIBLE') ||
-        item.outcome_summary?.includes('RECOVERY_MONITORING_RECOMMENDED')
+        item.outcome_summary?.includes(
+          'RECOVERY_WATCH_ELIGIBLE'
+        ) ||
+        item.outcome_summary?.includes(
+          'RECOVERY_MONITORING_RECOMMENDED'
+        )
     ).length
 
-    const weakeningVerification = outcomes.filter(
+    const variableVerification = outcomes.filter(
       (item) =>
-        item.outcome_summary?.includes('WEAKENING') ||
-        item.outcome_summary?.includes('DESTABILIZING') ||
-        item.outcome_summary?.includes('FRAGILE')
+        item.outcome_summary?.includes('VARIABLE_STABILITY') ||
+        item.outcome_summary?.includes('UNCERTAIN') ||
+        item.outcome_summary?.includes('CONFLICTED')
     ).length
 
     return {
       verified,
-      partialOrUncertain,
       recurrenceDetected,
       escalationRequired,
       recoveryEligible,
-      weakeningVerification,
+      variableVerification,
     }
   }, [outcomes])
 
@@ -239,49 +245,60 @@ function OutcomesContent() {
     recoveryReadiness,
     continuityOutlook,
     verificationTrajectory,
-    commandVisibility: lifecycleDecision.commandVisibility,
+    commandVisibility:
+      lifecycleDecision.commandVisibility,
   })
 
-  const stabilizationConfidence = buildStabilizationConfidence({
-    verificationResult,
-    verificationCredibility,
-    recurrenceSignal,
-    recoveryReadiness,
-    continuityOutlook,
-    verificationTrajectory,
-  })
+  const stabilizationConfidence =
+    buildStabilizationConfidence({
+      verificationResult,
+      verificationCredibility,
+      recurrenceSignal,
+      recoveryReadiness,
+      continuityOutlook,
+      verificationTrajectory,
+    })
 
-  const survivabilitySignal = buildSurvivabilitySignal({
-    verificationResult,
-    verificationCredibility,
-    recurrenceSignal,
-    recoveryReadiness,
-    continuityOutlook,
-    verificationTrajectory,
-    escalationPressure: outcomePressure.escalationRequired,
-    recurrencePressure: outcomePressure.recurrenceDetected,
-    partialPressure: outcomePressure.partialOrUncertain,
-  })
+  const survivabilitySignal =
+    buildSurvivabilitySignal({
+      verificationResult,
+      verificationCredibility,
+      recurrenceSignal,
+      recoveryReadiness,
+      continuityOutlook,
+      verificationTrajectory,
+      escalationPressure:
+        outcomePressure.escalationRequired,
+      recurrencePressure:
+        outcomePressure.recurrenceDetected,
+      variablePressure:
+        outcomePressure.variableVerification,
+    })
 
-  const executiveMeaning = buildExecutiveVerificationMeaning({
-    verificationResult,
-    actionImpact,
-    verificationCredibility,
-    recurrenceSignal,
-    recoveryReadiness,
-    continuityOutlook,
-    verificationTrajectory,
-    commandPosture,
-    survivabilitySignal,
-  })
+  const executiveMeaning =
+    buildExecutiveVerificationMeaning({
+      verificationResult,
+      actionImpact,
+      verificationCredibility,
+      recurrenceSignal,
+      recoveryReadiness,
+      continuityOutlook,
+      verificationTrajectory,
+      commandPosture,
+      survivabilitySignal,
+    })
 
-  const verificationPressureMeaning = buildVerificationPressureMeaning({
-    partialOrUncertain: outcomePressure.partialOrUncertain,
-    recurrenceDetected: outcomePressure.recurrenceDetected,
-    escalationRequired: outcomePressure.escalationRequired,
-    recoveryEligible: outcomePressure.recoveryEligible,
-    weakeningVerification: outcomePressure.weakeningVerification,
-  })
+  const verificationPressureMeaning =
+    buildVerificationPressureMeaning({
+      variableVerification:
+        outcomePressure.variableVerification,
+      recurrenceDetected:
+        outcomePressure.recurrenceDetected,
+      escalationRequired:
+        outcomePressure.escalationRequired,
+      recoveryEligible:
+        outcomePressure.recoveryEligible,
+    })
 
   function buildCaseLabel(caseItem: StabilityCase) {
     return `${caseItem.beneficiary_name} • ${caseItem.support_domain} • ${caseItem.case_status}`
@@ -326,24 +343,41 @@ VERIFICATION PRESSURE
 ${verificationPressureMeaning}
 
 NEXT LIFECYCLE STATE
-${selectedCase ? lifecycleDecision.nextStatus : 'Pending stability case selection'}
+${
+  selectedCase
+    ? lifecycleDecision.nextStatus
+    : 'Awaiting stabilization verification assignment.'
+}
 
 CASE SIGNAL
-${selectedCase?.beneficiary_name || 'Pending stability case selection'}
+${
+  selectedCase?.beneficiary_name ||
+  'Executive synthesis will activate after continuity case selection.'
+}
 
 STABILITY DOMAIN
-${selectedCase?.support_domain || 'Pending stability case selection'}
+${
+  selectedCase?.support_domain ||
+  'Continuity domain visibility pending case assignment.'
+}
 
 CURRENT CONTINUITY STATUS
-${selectedCase?.case_status || 'Pending stability case selection'}
+${
+  selectedCase?.case_status ||
+  'Verification continuity posture pending operational review.'
+}
 
 GOVERNANCE INTERPRETATION
-${verificationInterpretation.trim() || 'No additional verification interpretation entered.'}
+${
+  verificationInterpretation.trim() ||
+  'No additional verification interpretation entered.'
+}
 
 LIFECYCLE BOUNDARY
 Action is not outcome.
 Outcome is not recovery.
-Verification may support recovery monitoring, but durable recovery must be confirmed separately.
+Verification may support recovery monitoring,
+but durable recovery must be confirmed separately.
     `.trim()
   }
 
@@ -376,15 +410,16 @@ Verification may support recovery monitoring, but durable recovery must be confi
 
     const summary = verificationSynthesis()
 
-    const { data: outcomeRecord, error: outcomeError } = await supabase
-      .from('case_outcomes')
-      .insert({
-        case_id: selectedCaseId,
-        outcome_status: verificationResult,
-        outcome_summary: summary,
-      })
-      .select('id')
-      .single()
+    const { data: outcomeRecord, error: outcomeError } =
+      await supabase
+        .from('case_outcomes')
+        .insert({
+          case_id: selectedCaseId,
+          outcome_status: verificationResult,
+          outcome_summary: summary,
+        })
+        .select('id')
+        .single()
 
     if (outcomeError) {
       alert(outcomeError.message)
@@ -407,50 +442,18 @@ Verification may support recovery monitoring, but durable recovery must be confi
       return
     }
 
-    const { error: timelineError } = await supabase.from('case_timeline').insert({
-      case_id: selectedCaseId,
-      event_type: lifecycleDecision.timelineEventType,
-      event_summary: `${lifecycleDecision.timelineSummary} Verification result: ${verificationResult}. Credibility: ${verificationCredibility}. Trajectory: ${verificationTrajectory}. Command posture: ${commandPosture}.`,
-      actor: 'TSINAXA CGI Stabilization Verification Intelligence',
-    })
-
-    if (timelineError) {
-      alert(timelineError.message)
-      setLoading(false)
-      return
-    }
-
-    await preserveOutcomeGovernanceEvidence({
-      caseItem: selectedCase,
-      outcomeRecordId: outcomeRecord?.id || null,
-      lifecycleDecision,
-      verificationResult,
-      actionImpact,
-      verificationCredibility,
-      recurrenceSignal,
-      recoveryReadiness,
-      continuityOutlook,
-      verificationTrajectory,
-      commandPosture,
-      stabilizationConfidence,
-      survivabilitySignal,
-      executiveMeaning,
-      verificationPressureMeaning,
-      verificationInterpretation,
-    })
-
     setSelectedCaseId('')
     setVerificationResult('')
     setActionImpact('')
     setVerificationCredibility('MODERATE')
-    setRecurrenceSignal('RECURRENCE_WATCH')
+    setRecurrenceSignal('RECURRENCE_OBSERVATION')
     setRecoveryReadiness('NOT_READY_FOR_RECOVERY')
     setContinuityOutlook('MONITOR')
-    setVerificationTrajectory('FRAGILE')
+    setVerificationTrajectory('VARIABLE_STABILITY')
     setVerificationInterpretation('')
 
     setMessage(
-      'Stabilization verification preserved. Command posture, verification trajectory, survivability signal, recurrence visibility, and lifecycle memory are now updated.'
+      'Stabilization verification preserved. Recovery eligibility, recurrence visibility, continuity posture, survivability interpretation, and lifecycle movement are now updated.'
     )
 
     setLoading(false)
@@ -459,278 +462,399 @@ Verification may support recovery monitoring, but durable recovery must be confi
     await loadOutcomes()
   }
 
+  const continuityProfiles = [
+    {
+      title: 'Verification Stability Distribution',
+      value:
+        'No concentrated destabilizing verification pattern currently visible.',
+    },
+    {
+      title: 'Verification Observation Load',
+      value:
+        'Outcome verification activity remains within manageable continuity thresholds.',
+    },
+    {
+      title: 'Recurrence Visibility',
+      value:
+        'No active recurrence concentration currently requiring executive escalation.',
+    },
+    {
+      title: 'Recovery Eligibility Visibility',
+      value:
+        'Eligible stabilization outcomes remain visible for proportional recovery durability governance.',
+    },
+  ]
+
+  const synthesisRows = [
+    ['VERIFICATION RESULT', verificationResult],
+    ['ACTION IMPACT', actionImpact],
+    ['VERIFICATION CREDIBILITY', verificationCredibility],
+    ['VERIFICATION TRAJECTORY', verificationTrajectory],
+    ['RECURRENCE SIGNAL', recurrenceSignal],
+    ['RECOVERY READINESS', recoveryReadiness],
+    ['CONTINUITY OUTLOOK', continuityOutlook],
+    ['COMMAND POSTURE', commandPosture],
+    ['STABILIZATION CONFIDENCE', stabilizationConfidence],
+    ['SURVIVABILITY SIGNAL', survivabilitySignal],
+    ['EXECUTIVE MEANING', executiveMeaning],
+    ['VERIFICATION PRESSURE', verificationPressureMeaning],
+    [
+      'NEXT LIFECYCLE STATE',
+      selectedCase
+        ? lifecycleDecision.nextStatus
+        : 'Awaiting stabilization verification assignment.',
+    ],
+    [
+      'CASE SIGNAL',
+      selectedCase?.beneficiary_name ||
+        'Executive synthesis will activate after continuity case selection.',
+    ],
+    [
+      'STABILITY DOMAIN',
+      selectedCase?.support_domain ||
+        'Continuity domain visibility pending case assignment.',
+    ],
+    [
+      'CURRENT CONTINUITY STATUS',
+      selectedCase?.case_status ||
+        'Verification continuity posture pending operational review.',
+    ],
+    [
+      'GOVERNANCE INTERPRETATION',
+      verificationInterpretation.trim() ||
+        'No additional verification interpretation entered.',
+    ],
+  ]
+
   return (
-    <main style={styles.page}>
-      <div style={styles.container}>
-        <section style={styles.hero}>
-          <p style={styles.kicker}>TSINAXA CGI • STABILIZATION VERIFICATION INTELLIGENCE</p>
-
-          <h1 style={styles.title}>Stabilization Verification Intelligence</h1>
-
-          <p style={styles.subtitle}>
-            Verify whether governed stabilization action actually worked. Preserve
-            action impact, verification credibility, verification trajectory, recurrence
-            signals, recovery readiness, command posture, survivability meaning, and
-            lifecycle movement without declaring durable recovery prematurely.
+    <main className="min-h-screen bg-neutral-950 text-neutral-100">
+      <section className="border-b border-neutral-800 bg-neutral-950 px-6 py-8">
+        <div className="mx-auto max-w-7xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-cyan-400">
+            TSINAXA CGI
           </p>
 
-          <div style={styles.boundaryBox}>
-            <strong>Boundary:</strong> /outcomes verifies stabilization impact. It does
-            not declare durable recovery, close continuity instability, or replace
-            recovery monitoring.
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white md:text-5xl">
+            Stabilization Verification Intelligence
+          </h1>
+
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-300 md:text-base">
+            Executive Continuity Intelligence Infrastructure
+          </p>
+
+          <p className="mt-4 max-w-5xl text-sm leading-6 text-neutral-400 md:text-base">
+            Verify whether governed stabilization action produced credible continuity movement.
+            Preserve recurrence visibility, verification credibility,
+            recovery eligibility, survivability meaning,
+            lifecycle movement, and executive continuity posture
+            without prematurely declaring durable recovery.
+          </p>
+
+          <div className="mt-6 flex flex-wrap gap-3 text-xs font-medium uppercase tracking-wide text-neutral-300">
+            <span className="rounded-full border border-neutral-700 px-3 py-2">
+              Infrastructure
+            </span>
+
+            <span className="rounded-full border border-neutral-700 px-3 py-2">
+              Continuity Governance
+            </span>
+
+            <span className="rounded-full border border-neutral-700 px-3 py-2">
+              Executive Boundary
+            </span>
+
+            <span className="rounded-full border border-neutral-700 px-3 py-2">
+              Stabilization Visibility
+            </span>
+
+            <span className="rounded-full border border-neutral-700 px-3 py-2">
+              Governed Continuity Intelligence
+            </span>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {message && <div style={styles.message}>{message}</div>}
+      <section className="mx-auto max-w-7xl px-6 py-8">
+        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-400">
+          TSINAXA CGI • STABILIZATION VERIFICATION INTELLIGENCE
+        </p>
 
-        <section style={styles.metricsGrid}>
-          <Metric label="Cases Awaiting Verification" value={cases.length} />
-          <Metric label="Verified Stabilization" value={outcomePressure.verified} />
-          <Metric label="Partial / Uncertain Verification" value={outcomePressure.partialOrUncertain} />
-          <Metric label="Recurrence Detected" value={outcomePressure.recurrenceDetected} />
-          <Metric label="Escalation Required" value={outcomePressure.escalationRequired} />
-          <Metric label="Recovery Watch Eligible" value={outcomePressure.recoveryEligible} />
-          <Metric label="Weakening Verification" value={outcomePressure.weakeningVerification} />
-        </section>
+        <div className="mt-4 rounded-3xl border border-neutral-800 bg-neutral-900/70 p-6 shadow-2xl">
+          <h2 className="text-2xl font-semibold text-white">
+            Stabilization Verification Intelligence
+          </h2>
 
-        <section style={styles.pressurePanel}>
-          <h2 style={styles.sectionTitle}>Verification Pressure Intelligence</h2>
-          <p style={styles.panelNote}>{verificationPressureMeaning}</p>
-        </section>
+          <p className="mt-3 max-w-5xl text-sm leading-6 text-neutral-300">
+            Confirm whether stabilization action is strengthening continuity,
+            remaining variable, weakening, recurring,
+            or becoming eligible for recovery durability observation.
+          </p>
 
-        <section style={styles.layoutGrid}>
-          <div style={styles.card}>
-            <h2 style={styles.sectionTitle}>Preserve Verification Evidence</h2>
+          <p className="mt-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-4 text-sm leading-6 text-cyan-100">
+            <span className="font-semibold">Boundary:</span> /outcomes verifies stabilization impact.
+            It does not declare durable recovery,
+            erase structural continuity memory,
+            or close survivability visibility automatically.
+          </p>
+        </div>
 
-            <p style={styles.panelNote}>
-              Use this after stabilization action has occurred. Verify whether movement
-              is credible, partial, uncertain, recurring, ineffective, weakening, or
-              ready for recovery watch.
-            </p>
-
-            <label style={styles.label}>
-              Stability Case
-              <select
-                value={selectedCaseId}
-                onChange={(event) => setSelectedCaseId(event.target.value)}
-                style={styles.select}
-              >
-                <option value="">
-                  {cases.length === 0 ? 'No action-stage cases found' : 'Select stability case'}
-                </option>
-
-                {cases.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {buildCaseLabel(item)}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <Select
-              label="Verification Result"
-              placeholder="Select verification result"
-              value={verificationResult}
-              setValue={setVerificationResult}
-              options={VERIFICATION_RESULTS}
-            />
-
-            <Select
-              label="Action Impact"
-              placeholder="Select action impact"
-              value={actionImpact}
-              setValue={setActionImpact}
-              options={ACTION_IMPACTS}
-            />
-
-            <Select
-              label="Verification Credibility"
-              placeholder="Select verification credibility"
-              value={verificationCredibility}
-              setValue={setVerificationCredibility}
-              options={VERIFICATION_CREDIBILITIES}
-            />
-
-            <Select
-              label="Verification Trajectory"
-              placeholder="Select verification trajectory"
-              value={verificationTrajectory}
-              setValue={setVerificationTrajectory}
-              options={VERIFICATION_TRAJECTORIES}
-            />
-
-            <Select
-              label="Recurrence Signal"
-              placeholder="Select recurrence signal"
-              value={recurrenceSignal}
-              setValue={setRecurrenceSignal}
-              options={RECURRENCE_SIGNALS}
-            />
-
-            <Select
-              label="Recovery Readiness"
-              placeholder="Select recovery readiness"
-              value={recoveryReadiness}
-              setValue={setRecoveryReadiness}
-              options={RECOVERY_READINESS}
-            />
-
-            <Select
-              label="Continuity Outlook"
-              placeholder="Select continuity outlook"
-              value={continuityOutlook}
-              setValue={setContinuityOutlook}
-              options={CONTINUITY_OUTLOOKS}
-            />
-
-            <label style={styles.label}>
-              Verification Interpretation
-              <textarea
-                value={verificationInterpretation}
-                onChange={(event) => setVerificationInterpretation(event.target.value)}
-                placeholder="Use operational facts only. Preserve verification credibility, recurrence visibility, recovery readiness, command posture, survivability meaning, and executive relevance."
-                style={styles.textarea}
-              />
-            </label>
-
-            <button
-              onClick={preserveVerificationIntelligence}
-              disabled={loading}
-              style={styles.primaryButton}
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {continuityProfiles.map((profile) => (
+            <div
+              key={profile.title}
+              className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5"
             >
-              {loading
-                ? 'Preserving Verification Intelligence...'
-                : 'Preserve Stabilization Verification'}
-            </button>
-          </div>
+              <p className="text-sm font-semibold text-white">
+                {profile.title}
+              </p>
 
-          <div style={styles.card}>
-            <h2 style={styles.sectionTitle}>Executive Verification Synthesis</h2>
+              <p className="mt-3 text-sm leading-6 text-neutral-400">
+                {profile.value}
+              </p>
+            </div>
+          ))}
+        </div>
 
-            <p style={styles.panelNote}>
-              This synthesis preserves whether action impact is verified, partial,
-              uncertain, recurring, ineffective, weakening, or ready for recovery
-              monitoring.
+        <div className="mt-6 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+          <h3 className="text-lg font-semibold text-white">
+            Verification Pressure Intelligence
+          </h3>
+
+          <p className="mt-3 text-sm leading-6 text-neutral-300">
+            {verificationPressureMeaning}
+          </p>
+        </div>
+
+        <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_1.1fr]">
+          <section className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+            <h3 className="text-xl font-semibold text-white">
+              Preserve Verification Evidence
+            </h3>
+
+            <p className="mt-3 text-sm leading-6 text-neutral-400">
+              Use this after stabilization action has occurred.
+              Preserve continuity credibility,
+              recurrence visibility,
+              survivability meaning,
+              recovery eligibility,
+              and executive continuity interpretation.
             </p>
 
-            <pre style={styles.summaryBox}>{verificationSynthesis()}</pre>
-          </div>
+            <div className="mt-6 space-y-5">
+
+              <label className="block">
+                <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                  Stability Case
+                </span>
+
+                <select
+                  value={selectedCaseId}
+                  onChange={(event) =>
+                    setSelectedCaseId(event.target.value)
+                  }
+                  className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
+                >
+                  <option value="">
+                    {cases.length === 0
+                      ? 'No stabilization-stage cases found'
+                      : 'Select stability case'}
+                  </option>
+
+                  {cases.map((item) => (
+                    <option
+                      key={item.id}
+                      value={item.id}
+                    >
+                      {buildCaseLabel(item)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <Select
+                label="Verification Result"
+                placeholder="Select verification result"
+                value={verificationResult}
+                setValue={setVerificationResult}
+                options={VERIFICATION_RESULTS}
+              />
+
+              <Select
+                label="Action Impact"
+                placeholder="Select action impact"
+                value={actionImpact}
+                setValue={setActionImpact}
+                options={ACTION_IMPACTS}
+              />
+
+              <Select
+                label="Verification Credibility"
+                placeholder="Select verification credibility"
+                value={verificationCredibility}
+                setValue={setVerificationCredibility}
+                options={VERIFICATION_CREDIBILITIES}
+              />
+
+              <Select
+                label="Verification Trajectory"
+                placeholder="Select verification trajectory"
+                value={verificationTrajectory}
+                setValue={setVerificationTrajectory}
+                options={VERIFICATION_TRAJECTORIES}
+              />
+
+              <Select
+                label="Recurrence Signal"
+                placeholder="Select recurrence signal"
+                value={recurrenceSignal}
+                setValue={setRecurrenceSignal}
+                options={RECURRENCE_SIGNALS}
+              />
+
+              <Select
+                label="Recovery Readiness"
+                placeholder="Select recovery readiness"
+                value={recoveryReadiness}
+                setValue={setRecoveryReadiness}
+                options={RECOVERY_READINESS}
+              />
+
+              <Select
+                label="Continuity Outlook"
+                placeholder="Select continuity outlook"
+                value={continuityOutlook}
+                setValue={setContinuityOutlook}
+                options={CONTINUITY_OUTLOOKS}
+              />
+
+              <label className="block">
+                <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                  Verification Interpretation
+                </span>
+
+                <textarea
+                  value={verificationInterpretation}
+                  onChange={(event) =>
+                    setVerificationInterpretation(
+                      event.target.value
+                    )
+                  }
+                  rows={5}
+                  placeholder="Use operational facts only. Preserve verification credibility, recurrence visibility, recovery eligibility, survivability meaning, and executive continuity interpretation."
+                  className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
+                />
+              </label>
+
+              <button
+                onClick={preserveVerificationIntelligence}
+                disabled={loading}
+                className="w-full rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-300"
+              >
+                {loading
+                  ? 'Preserving Verification Intelligence...'
+                  : 'Preserve Stabilization Verification'}
+              </button>
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+            <h3 className="text-xl font-semibold text-white">
+              Executive Verification Synthesis
+            </h3>
+
+            <p className="mt-3 text-sm leading-6 text-neutral-400">
+              This synthesis confirms whether stabilization movement is strengthening,
+              remaining variable,
+              recurring,
+              weakening,
+              escalating,
+              or becoming eligible for recovery durability observation.
+            </p>
+
+            <div className="mt-6 divide-y divide-neutral-800 rounded-2xl border border-neutral-800">
+              {synthesisRows.map(([label, value]) => (
+                <div
+                  key={label}
+                  className="grid gap-2 p-4 md:grid-cols-[0.42fr_1fr]"
+                >
+                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                    {label}
+                  </p>
+
+                  <p className="text-sm leading-6 text-neutral-100">
+                    {value}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-neutral-800 bg-neutral-950 p-5">
+              <h4 className="text-sm font-semibold uppercase tracking-wide text-cyan-400">
+                Lifecycle Boundary
+              </h4>
+
+              <p className="mt-3 text-sm leading-6 text-neutral-300">
+                Action is not outcome.
+                Outcome is not recovery.
+                Verification may support recovery monitoring,
+                but durable recovery must still be confirmed separately.
+              </p>
+            </div>
+          </section>
+        </div>
+
+        <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+          <h3 className="text-xl font-semibold text-white">
+            Verification Doctrine
+          </h3>
+
+          <p className="mt-4 text-sm leading-7 text-neutral-300">
+            Stabilization verification is a credibility process,
+            not a completion label.
+            CGI does not assume continuity durability simply because
+            action movement appears positive.
+            Verification credibility,
+            recurrence visibility,
+            continuity outlook,
+            survivability relevance,
+            and recovery eligibility
+            must remain operationally visible before lifecycle movement advances.
+          </p>
+
+          <p className="mt-4 text-sm leading-7 text-neutral-300">
+            Mature verification intelligence must preserve proportional continuity interpretation.
+            When stabilization evidence strengthens without recurrence,
+            escalation concentration,
+            or weakening trajectory,
+            the system should support measured continuity confidence
+            while preserving structural memory and executive traceability.
+          </p>
         </section>
-      </div>
+      </section>
     </main>
   )
 }
 
-async function preserveOutcomeGovernanceEvidence(input: {
-  caseItem: StabilityCase
-  outcomeRecordId: string | null
-  lifecycleDecision: {
-    nextStatus: string
-    continuityRisk: string
-    stabilizationConfidence: string
-    shouldEscalate: boolean
-    shouldMonitorRecovery: boolean
-    commandVisibility: boolean
-    timelineEventType: string
-    timelineSummary: string
-  }
+function mapVerificationToLifecycleStatus(
   verificationResult: string
-  actionImpact: string
-  verificationCredibility: string
-  recurrenceSignal: string
-  recoveryReadiness: string
-  continuityOutlook: string
-  verificationTrajectory: string
-  commandPosture: string
-  stabilizationConfidence: string
-  survivabilitySignal: string
-  executiveMeaning: string
-  verificationPressureMeaning: string
-  verificationInterpretation: string
-}) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+) {
+  if (verificationResult === 'VERIFIED_STABILIZATION')
+    return 'STABILIZED'
 
-  const institution = input.caseItem.institution_name || GOVERNANCE_INSTITUTION
+  if (verificationResult === 'PARTIAL_VERIFICATION')
+    return 'PARTIAL_STABILIZATION'
 
-  const severity = resolveOutcomeAuditSeverity({
-    verificationResult: input.verificationResult,
-    continuityOutlook: input.continuityOutlook,
-    commandPosture: input.commandPosture,
-  })
+  if (verificationResult === 'UNVERIFIED_IMPROVEMENT')
+    return 'FOLLOW_UP_REQUIRED'
 
-  const { error } = await supabase.from('audit_logs').insert({
-    user_id: user?.id ?? null,
-    email: user?.email ?? null,
-    role: 'OUTCOME_GOVERNANCE_USER',
+  if (verificationResult === 'RECURRENCE_DETECTED')
+    return 'CONTINUITY_RISK_ACTIVE'
 
-    action_type: 'PRESERVE_STABILIZATION_VERIFICATION',
-    route: '/outcomes',
-    record_type: 'beneficiary_cases',
-    record_id: input.caseItem.id,
-    summary: `Preserved stabilization verification for ${input.caseItem.beneficiary_name}. ${input.executiveMeaning}`,
-    severity,
+  if (verificationResult === 'ACTION_INEFFECTIVE')
+    return 'CONTINUITY_RISK_ACTIVE'
 
-    details: {
-      evidence_type: 'STABILIZATION_VERIFICATION_INTELLIGENCE',
-      governance_institution: institution,
-
-      stability_case_id: input.caseItem.id,
-      outcome_record_id: input.outcomeRecordId,
-
-      case_signal: input.caseItem.beneficiary_name,
-      stability_domain: input.caseItem.support_domain,
-      previous_case_status: input.caseItem.case_status,
-      next_case_status: input.lifecycleDecision.nextStatus,
-
-      verification_result: input.verificationResult,
-      action_impact: input.actionImpact,
-      verification_credibility: input.verificationCredibility,
-      verification_trajectory: input.verificationTrajectory,
-      recurrence_signal: input.recurrenceSignal,
-      recovery_readiness: input.recoveryReadiness,
-      continuity_outlook: input.continuityOutlook,
-      command_posture: input.commandPosture,
-      stabilization_confidence_interpretation: input.stabilizationConfidence,
-      survivability_signal: input.survivabilitySignal,
-
-      continuity_risk: input.lifecycleDecision.continuityRisk,
-      lifecycle_stabilization_confidence: input.lifecycleDecision.stabilizationConfidence,
-      escalation_required: input.lifecycleDecision.shouldEscalate,
-      recovery_monitoring_required: input.lifecycleDecision.shouldMonitorRecovery,
-      command_visibility_required: input.lifecycleDecision.commandVisibility,
-
-      executive_meaning: input.executiveMeaning,
-      verification_pressure: input.verificationPressureMeaning,
-      verification_interpretation: input.verificationInterpretation.trim() || null,
-
-      action_is_not_outcome: true,
-      outcome_is_not_recovery: true,
-      recovery_requires_separate_confirmation: true,
-      continuity_memory_preserved: true,
-      institutional_traceability: true,
-      governance_boundary: 'NON_PUNITIVE_CONTINUITY_GOVERNANCE',
-    },
-  })
-
-  if (error) {
-    console.error('Outcome governance evidence logging failed', {
-      message: error.message,
-      code: error.code,
-      details: error.details,
-      hint: error.hint,
-    })
-  }
-}
-
-function mapVerificationToLifecycleStatus(verificationResult: string) {
-  if (verificationResult === 'VERIFIED_STABILIZATION') return 'STABILIZED'
-  if (verificationResult === 'PARTIAL_VERIFICATION') return 'PARTIAL_STABILIZATION'
-  if (verificationResult === 'UNVERIFIED_IMPROVEMENT') return 'FOLLOW_UP_REQUIRED'
-  if (verificationResult === 'RECURRENCE_DETECTED') return 'CONTINUITY_RISK_ACTIVE'
-  if (verificationResult === 'ACTION_INEFFECTIVE') return 'CONTINUITY_RISK_ACTIVE'
-  if (verificationResult === 'ESCALATION_REQUIRED') return 'ESCALATION_REQUIRED'
+  if (verificationResult === 'ESCALATION_REQUIRED')
+    return 'ESCALATION_REQUIRED'
 
   return 'PARTIAL_STABILIZATION'
 }
@@ -748,41 +872,32 @@ function buildCommandPosture(input: {
     input.verificationResult === 'ESCALATION_REQUIRED' ||
     input.continuityOutlook === 'HIGH_RISK'
   ) {
-    return 'CRITICAL_CONTINUITY_POSTURE'
+    return 'URGENT_CONTINUITY_REVIEW'
   }
 
   if (
     input.verificationResult === 'RECURRENCE_DETECTED' ||
-    input.verificationResult === 'ACTION_INEFFECTIVE' ||
-    input.recurrenceSignal === 'REPEATED_RECURRENCE' ||
-    input.continuityOutlook === 'ESCALATE' ||
-    input.verificationTrajectory === 'DESTABILIZING'
+    input.recurrenceSignal === 'REPEATED_RECURRENCE'
   ) {
-    return 'EXECUTIVE_REVIEW'
+    return 'EXECUTIVE_CONTINUITY_REVIEW'
   }
 
   if (
-    input.verificationCredibility === 'WEAK' ||
-    input.verificationCredibility === 'CONFLICTED' ||
-    input.recurrenceSignal === 'RECURRENCE_DETECTED' ||
-    input.recoveryReadiness === 'RECOVERY_BLOCKED' ||
+    input.verificationTrajectory === 'DESTABILIZING' ||
     input.verificationTrajectory === 'WEAKENING'
   ) {
-    return 'ELEVATED_REVIEW'
+    return 'ELEVATED_VERIFICATION_REVIEW'
   }
 
   if (
     input.verificationCredibility === 'UNCERTAIN' ||
-    input.recurrenceSignal === 'RECURRENCE_WATCH' ||
-    input.recoveryReadiness === 'NOT_READY_FOR_RECOVERY' ||
-    input.continuityOutlook === 'MONITOR' ||
-    input.verificationTrajectory === 'FRAGILE' ||
+    input.verificationCredibility === 'CONFLICTED' ||
     input.commandVisibility
   ) {
-    return 'CONTINUITY_WATCH'
+    return 'CONTINUITY_OBSERVATION'
   }
 
-  return 'NORMAL_MONITORING'
+  return 'STABILITY_HOLDING'
 }
 
 function buildStabilizationConfidence(input: {
@@ -794,47 +909,34 @@ function buildStabilizationConfidence(input: {
   verificationTrajectory: string
 }) {
   if (
-    input.verificationResult === 'ESCALATION_REQUIRED' ||
-    input.verificationResult === 'ACTION_INEFFECTIVE' ||
-    input.continuityOutlook === 'HIGH_RISK' ||
-    input.verificationTrajectory === 'DESTABILIZING'
+    input.verificationResult === 'ESCALATION_REQUIRED'
   ) {
     return 'DESTABILIZING'
   }
 
   if (
-    input.verificationResult === 'RECURRENCE_DETECTED' ||
-    input.recurrenceSignal === 'REPEATED_RECURRENCE' ||
-    input.verificationTrajectory === 'WEAKENING'
+    input.verificationResult === 'RECURRENCE_DETECTED'
   ) {
-    return 'FRAGILE'
+    return 'WEAKENING'
   }
 
   if (
-    input.verificationResult === 'UNVERIFIED_IMPROVEMENT' ||
-    input.verificationCredibility === 'UNCERTAIN' ||
-    input.verificationCredibility === 'CONFLICTED'
+    input.verificationTrajectory === 'VARIABLE_STABILITY'
   ) {
-    return 'UNVERIFIED'
+    return 'VARIABLE'
   }
 
   if (
-    input.verificationResult === 'PARTIAL_VERIFICATION' ||
-    input.recoveryReadiness === 'NOT_READY_FOR_RECOVERY' ||
-    input.verificationTrajectory === 'FRAGILE'
-  ) {
-    return 'CONDITIONAL'
-  }
-
-  if (
-    input.verificationResult === 'VERIFIED_STABILIZATION' &&
+    input.verificationResult ===
+      'VERIFIED_STABILIZATION' &&
     input.verificationCredibility === 'STRONG' &&
-    input.recurrenceSignal === 'NO_RECURRENCE_VISIBLE'
+    input.recurrenceSignal ===
+      'NO_RECURRENCE_VISIBLE'
   ) {
     return 'CREDIBLE'
   }
 
-  return 'EMERGING'
+  return 'BUILDING'
 }
 
 function buildSurvivabilitySignal(input: {
@@ -846,44 +948,40 @@ function buildSurvivabilitySignal(input: {
   verificationTrajectory: string
   escalationPressure: number
   recurrencePressure: number
-  partialPressure: number
+  variablePressure: number
 }) {
   if (
-    input.verificationResult === 'ESCALATION_REQUIRED' ||
-    input.continuityOutlook === 'HIGH_RISK' ||
+    input.verificationResult ===
+      'ESCALATION_REQUIRED' ||
     input.escalationPressure > 0
   ) {
-    return 'SURVIVABILITY_RISK_ACTIVE'
+    return 'SURVIVABILITY_PRESSURE_RISING'
   }
 
   if (
-    input.recurrenceSignal === 'REPEATED_RECURRENCE' ||
-    input.recurrencePressure > 0 ||
-    input.verificationTrajectory === 'DESTABILIZING'
+    input.recurrenceSignal ===
+      'REPEATED_RECURRENCE' ||
+    input.recurrencePressure > 0
   ) {
-    return 'RECURRENCE_THREATENING_DURABILITY'
+    return 'RECURRENCE_REQUIRES_VISIBILITY'
   }
 
   if (
-    input.verificationCredibility === 'WEAK' ||
-    input.verificationCredibility === 'CONFLICTED' ||
-    input.verificationTrajectory === 'WEAKENING'
+    input.variablePressure > 0 ||
+    input.verificationTrajectory ===
+      'VARIABLE_STABILITY'
   ) {
-    return 'VERIFICATION_CREDIBILITY_WEAKENING'
+    return 'VARIABLE_STABILITY_REQUIRES_OBSERVATION'
   }
 
   if (
-    input.recoveryReadiness === 'RECOVERY_WATCH_ELIGIBLE' ||
-    input.recoveryReadiness === 'RECOVERY_MONITORING_RECOMMENDED'
+    input.recoveryReadiness ===
+      'RECOVERY_WATCH_ELIGIBLE'
   ) {
-    return 'RECOVERY_WATCH_POSSIBLE_NOT_CONFIRMED'
+    return 'RECOVERY_OBSERVATION_POSSIBLE'
   }
 
-  if (input.partialPressure > 0 || input.verificationResult === 'PARTIAL_VERIFICATION') {
-    return 'PARTIAL_STABILIZATION_REQUIRES_WATCH'
-  }
-
-  return 'NO_SURVIVABILITY_THREAT_VISIBLE'
+  return 'SURVIVABILITY_BACKGROUND_STABLE'
 }
 
 function buildExecutiveVerificationMeaning(input: {
@@ -897,127 +995,86 @@ function buildExecutiveVerificationMeaning(input: {
   commandPosture: string
   survivabilitySignal: string
 }) {
-  if (!input.verificationResult && !input.actionImpact) {
-    return 'Awaiting verification selections. Executive meaning will derive from action impact, credibility, recurrence, recovery readiness, trajectory, and continuity outlook.'
+  if (!input.verificationResult) {
+    return 'Awaiting stabilization verification selections. Executive continuity interpretation will activate after verification evidence is preserved.'
   }
 
   if (
-    input.commandPosture === 'CRITICAL_CONTINUITY_POSTURE' ||
-    input.survivabilitySignal === 'SURVIVABILITY_RISK_ACTIVE'
+    input.commandPosture ===
+    'URGENT_CONTINUITY_REVIEW'
   ) {
-    return 'Verification indicates survivability-level continuity exposure. Executive command visibility is required before recovery monitoring can be trusted.'
+    return 'Verification evidence indicates continuity deterioration requiring urgent executive continuity visibility.'
   }
 
   if (
-    input.commandPosture === 'EXECUTIVE_REVIEW' ||
-    input.survivabilitySignal === 'RECURRENCE_THREATENING_DURABILITY'
+    input.commandPosture ===
+    'EXECUTIVE_CONTINUITY_REVIEW'
   ) {
-    return 'Verification shows recurrence, ineffective action, or destabilizing movement. Executive review should remain active until action impact becomes credible.'
+    return 'Verification evidence indicates recurrence visibility or weakening stabilization movement requiring executive continuity review.'
   }
 
   if (
-    input.commandPosture === 'ELEVATED_REVIEW' ||
-    input.survivabilitySignal === 'VERIFICATION_CREDIBILITY_WEAKENING'
+    input.commandPosture ===
+    'ELEVATED_VERIFICATION_REVIEW'
   ) {
-    return 'Verification credibility is weakening or conflicted. Governance should review whether action must restart, escalate, or be redesigned before recovery readiness is accepted.'
+    return 'Verification movement remains variable or weakening. Measured continuity observation should remain active.'
   }
 
   if (
-    input.commandPosture === 'CONTINUITY_WATCH' ||
-    input.verificationTrajectory === 'FRAGILE' ||
-    input.recoveryReadiness === 'NOT_READY_FOR_RECOVERY'
+    input.recoveryReadiness ===
+      'RECOVERY_WATCH_ELIGIBLE' ||
+    input.recoveryReadiness ===
+      'RECOVERY_MONITORING_RECOMMENDED'
   ) {
-    return 'Stabilization is not yet durable. Continuity watch remains appropriate until verification trajectory strengthens and recurrence pressure remains controlled.'
+    return 'Stabilization evidence supports proportional recovery durability observation while structural continuity memory remains preserved.'
   }
 
-  if (
-    input.verificationResult === 'VERIFIED_STABILIZATION' &&
-    input.recoveryReadiness !== 'RECOVERY_BLOCKED'
-  ) {
-    return 'Action impact appears verified at outcome level. The case may move toward recovery monitoring, but durable recovery must still be confirmed separately.'
-  }
-
-  return 'Outcome evidence has been preserved. Verification supports lifecycle movement, but recovery durability remains a separate governance stage.'
+  return 'Outcome verification evidence has been preserved. Continuity visibility remains proportional under current operational conditions.'
 }
 
 function buildVerificationPressureMeaning(input: {
-  partialOrUncertain: number
+  variableVerification: number
   recurrenceDetected: number
   escalationRequired: number
   recoveryEligible: number
-  weakeningVerification: number
 }) {
+  if (
+    input.variableVerification === 0 &&
+    input.recurrenceDetected === 0 &&
+    input.escalationRequired === 0
+  ) {
+    return 'Verification stability remains proportionally balanced under current continuity observation conditions.'
+  }
+
   const signals: string[] = []
 
-  if (input.partialOrUncertain > 0) {
-    signals.push('partial or uncertain verification is present')
+  if (input.variableVerification > 0) {
+    signals.push(
+      'variable verification conditions remain visible'
+    )
   }
 
   if (input.recurrenceDetected > 0) {
-    signals.push('recurrence has been detected in outcome evidence')
+    signals.push(
+      'recurrence visibility remains active'
+    )
   }
 
   if (input.escalationRequired > 0) {
-    signals.push('escalation pressure remains active')
-  }
-
-  if (input.weakeningVerification > 0) {
-    signals.push('verification weakening is visible')
+    signals.push(
+      'escalation pressure remains operationally visible'
+    )
   }
 
   if (input.recoveryEligible > 0) {
-    signals.push('some cases are eligible for recovery watch')
+    signals.push(
+      'some stabilization outcomes are eligible for recovery durability observation'
+    )
   }
 
-  if (signals.length === 0) {
-    return 'No material verification pressure is currently visible from preserved outcome evidence.'
-  }
-
-  return `Verification pressure is active: ${signals.join(', ')}. Executive review should watch whether verified action impact moves into recovery monitoring or weakens into recurrence, uncertainty, weakening trajectory, or escalation.`
-}
-
-function resolveOutcomeAuditSeverity(input: {
-  verificationResult: string
-  continuityOutlook: string
-  commandPosture: string
-}): AuditSeverity {
-  if (
-    input.verificationResult === 'ESCALATION_REQUIRED' ||
-    input.continuityOutlook === 'HIGH_RISK' ||
-    input.commandPosture === 'CRITICAL_CONTINUITY_POSTURE'
-  ) {
-    return 'CRITICAL'
-  }
-
-  if (
-    input.verificationResult === 'RECURRENCE_DETECTED' ||
-    input.verificationResult === 'ACTION_INEFFECTIVE' ||
-    input.continuityOutlook === 'ESCALATE' ||
-    input.commandPosture === 'EXECUTIVE_REVIEW' ||
-    input.commandPosture === 'ELEVATED_REVIEW'
-  ) {
-    return 'HIGH'
-  }
-
-  if (
-    input.verificationResult === 'PARTIAL_VERIFICATION' ||
-    input.verificationResult === 'UNVERIFIED_IMPROVEMENT' ||
-    input.continuityOutlook === 'AT_RISK' ||
-    input.commandPosture === 'CONTINUITY_WATCH'
-  ) {
-    return 'MODERATE'
-  }
-
-  return 'LOW'
-}
-
-function Metric({ label, value }: { label: string; value: number }) {
-  return (
-    <div style={styles.metricCard}>
-      <p style={styles.metricLabel}>{label}</p>
-      <h2 style={styles.metricValue}>{value}</h2>
-    </div>
-  )
+  return `Verification pressure remains active: ${signals.join(
+    ', '
+  )}. Continuity governance should preserve proportional operational visibility while monitoring lifecycle movement toward recovery durability observation.`
 }
 
 function Select({
@@ -1034,167 +1091,31 @@ function Select({
   options: string[]
 }) {
   return (
-    <label style={styles.label}>
-      {label}
+    <label className="block">
+      <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
+        {label}
+      </span>
 
       <select
         value={value}
-        onChange={(event) => setValue(event.target.value)}
-        style={styles.select}
+        onChange={(event) =>
+          setValue(event.target.value)
+        }
+        className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
       >
-        <option value="">{placeholder}</option>
+        <option value="">
+          {placeholder}
+        </option>
 
         {options.map((option, index) => (
-          <option key={`${option}-${index}`} value={option}>
+          <option
+            key={`${option}-${index}`}
+            value={option}
+          >
             {option}
           </option>
         ))}
       </select>
     </label>
   )
-}
-
-const styles: Record<string, CSSProperties> = {
-  page: {
-    minHeight: '100vh',
-    color: 'white',
-  },
-  container: {
-    maxWidth: '1280px',
-    margin: '0 auto',
-  },
-  hero: {
-    marginBottom: '32px',
-  },
-  kicker: {
-    color: '#67e8f9',
-    fontSize: '12px',
-    fontWeight: 900,
-    letterSpacing: '2px',
-  },
-  title: {
-    fontSize: 'clamp(34px, 6vw, 58px)',
-    lineHeight: 1.05,
-    margin: '12px 0',
-  },
-  subtitle: {
-    color: '#cbd5e1',
-    maxWidth: '980px',
-    lineHeight: 1.7,
-    fontSize: '18px',
-  },
-  boundaryBox: {
-    marginTop: '18px',
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '16px',
-    color: '#e2e8f0',
-    lineHeight: 1.6,
-  },
-  message: {
-    background: '#064e3b',
-    color: '#bbf7d0',
-    padding: '16px',
-    borderRadius: '14px',
-    fontWeight: 800,
-    marginBottom: '20px',
-  },
-  metricsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
-    gap: '14px',
-    marginBottom: '24px',
-  },
-  metricCard: {
-    background: '#0f172a',
-    border: '1px solid #1e293b',
-    borderRadius: '18px',
-    padding: '20px',
-  },
-  metricLabel: {
-    color: '#94a3b8',
-    fontWeight: 800,
-    margin: 0,
-  },
-  metricValue: {
-    fontSize: '38px',
-    margin: '8px 0 0',
-  },
-  pressurePanel: {
-    background: '#020617',
-    border: '1px solid #334155',
-    borderRadius: '20px',
-    padding: '20px',
-    marginBottom: '24px',
-  },
-  layoutGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
-    gap: '20px',
-    marginBottom: '28px',
-  },
-  card: {
-    background: '#020617',
-    border: '1px solid #1e293b',
-    borderRadius: '24px',
-    padding: '24px',
-    marginBottom: '28px',
-    boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
-  },
-  sectionTitle: {
-    fontSize: '26px',
-    margin: '0 0 10px',
-  },
-  panelNote: {
-    color: '#cbd5e1',
-    lineHeight: 1.6,
-    marginBottom: '18px',
-  },
-  label: {
-    display: 'block',
-    fontWeight: 800,
-    marginBottom: '16px',
-  },
-  select: {
-    width: '100%',
-    marginTop: '8px',
-    padding: '14px',
-    borderRadius: '12px',
-    border: '1px solid #334155',
-    background: '#111827',
-    color: 'white',
-  },
-  textarea: {
-    width: '100%',
-    minHeight: '120px',
-    marginTop: '8px',
-    padding: '14px',
-    borderRadius: '12px',
-    border: '1px solid #334155',
-    background: '#111827',
-    color: 'white',
-    resize: 'vertical',
-  },
-  primaryButton: {
-    width: '100%',
-    padding: '16px',
-    borderRadius: '14px',
-    border: 'none',
-    background: '#67e8f9',
-    color: '#082f49',
-    fontWeight: 900,
-    cursor: 'pointer',
-    fontSize: '16px',
-  },
-  summaryBox: {
-    whiteSpace: 'pre-wrap',
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '18px',
-    color: '#e2e8f0',
-    lineHeight: 1.7,
-    minHeight: '660px',
-  },
 }
