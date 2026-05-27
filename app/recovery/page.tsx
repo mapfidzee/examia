@@ -118,11 +118,11 @@ function RecoveryContent() {
 
   const [selectedCaseId, setSelectedCaseId] = useState('')
   const [durabilityResult, setDurabilityResult] = useState('')
-  const [recoveryTrajectory, setRecoveryTrajectory] = useState('FRAGILE')
-  const [reburnSignal, setReburnSignal] = useState('REBURN_WATCH')
-  const [recoveryConfidence, setRecoveryConfidence] = useState('CONDITIONAL')
-  const [durabilityWindow, setDurabilityWindow] = useState('7 days')
-  const [memoryImpact, setMemoryImpact] = useState('CARRY_FORWARD_WATCH')
+  const [recoveryTrajectory, setRecoveryTrajectory] = useState('')
+  const [reburnSignal, setReburnSignal] = useState('')
+  const [recoveryConfidence, setRecoveryConfidence] = useState('')
+  const [durabilityWindow, setDurabilityWindow] = useState('')
+  const [memoryImpact, setMemoryImpact] = useState('')
   const [recoveryInterpretation, setRecoveryInterpretation] = useState('')
 
   const [message, setMessage] = useState('')
@@ -215,6 +215,17 @@ function RecoveryContent() {
     memoryImpact,
   })
 
+  const recoverySurvivabilitySignal = buildRecoverySurvivabilitySignal({
+    durabilityResult,
+    recoveryTrajectory,
+    reburnSignal,
+    recoveryConfidence,
+    memoryImpact,
+    reburnPressure: recoveryPressure.reburnDetected,
+    collapsePressure: recoveryPressure.recoveryCollapse,
+    memoryPressure: recoveryPressure.memoryCarryForward,
+  })
+
   const recoveryMeaning = buildExecutiveRecoveryMeaning({
     durabilityResult,
     recoveryTrajectory,
@@ -223,9 +234,11 @@ function RecoveryContent() {
     durabilityWindow,
     memoryImpact,
     commandPosture,
+    recoverySurvivabilitySignal,
   })
 
   const recoveryPressureMeaning = buildRecoveryPressureMeaning({
+    casesUnderWatch: cases.length,
     durableRecovery: recoveryPressure.durableRecovery,
     fragileRecovery: recoveryPressure.fragileRecovery,
     reburnDetected: recoveryPressure.reburnDetected,
@@ -250,22 +263,25 @@ DURABILITY RESULT
 ${durabilityResult || 'Awaiting durability result selection'}
 
 RECOVERY TRAJECTORY
-${recoveryTrajectory}
+${recoveryTrajectory || 'Awaiting recovery trajectory selection'}
 
 REBURN SIGNAL
-${reburnSignal}
+${reburnSignal || 'Awaiting reburn signal selection'}
 
 RECOVERY CONFIDENCE
-${recoveryConfidence}
+${recoveryConfidence || 'Awaiting recovery confidence selection'}
 
 DURABILITY WINDOW
-${durabilityWindow}
+${durabilityWindow || 'Awaiting durability window selection'}
 
 MEMORY IMPACT
-${memoryImpact}
+${memoryImpact || 'Awaiting memory impact selection'}
 
 COMMAND POSTURE
 ${commandPosture}
+
+RECOVERY SURVIVABILITY SIGNAL
+${recoverySurvivabilitySignal}
 
 EXECUTIVE MEANING
 ${recoveryMeaning}
@@ -358,7 +374,7 @@ Durability must be observed before trust is restored.
     const { error: timelineError } = await supabase.from('case_timeline').insert({
       case_id: selectedCaseId,
       event_type: 'RECOVERY_DURABILITY_REVIEW',
-      event_summary: `Recovery durability reviewed. Result: ${durabilityResult}. Trajectory: ${recoveryTrajectory}. Reburn: ${reburnSignal}. Command posture: ${commandPosture}.`,
+      event_summary: `Recovery durability reviewed. Result: ${durabilityResult}. Trajectory: ${recoveryTrajectory}. Reburn: ${reburnSignal}. Command posture: ${commandPosture}. Survivability: ${recoverySurvivabilitySignal}.`,
       actor: 'TSINAXA CGI Recovery Durability Intelligence',
     })
 
@@ -378,6 +394,7 @@ Durability must be observed before trust is restored.
       durabilityWindow,
       memoryImpact,
       commandPosture,
+      recoverySurvivabilitySignal,
       recoveryMeaning,
       recoveryPressureMeaning,
       nextLifecycleState,
@@ -386,15 +403,15 @@ Durability must be observed before trust is restored.
 
     setSelectedCaseId('')
     setDurabilityResult('')
-    setRecoveryTrajectory('FRAGILE')
-    setReburnSignal('REBURN_WATCH')
-    setRecoveryConfidence('CONDITIONAL')
-    setDurabilityWindow('7 days')
-    setMemoryImpact('CARRY_FORWARD_WATCH')
+    setRecoveryTrajectory('')
+    setReburnSignal('')
+    setRecoveryConfidence('')
+    setDurabilityWindow('')
+    setMemoryImpact('')
     setRecoveryInterpretation('')
 
     setMessage(
-      'Recovery durability review preserved. Reburn visibility, memory impact, command posture, and lifecycle continuity are now updated.'
+      'Recovery durability review preserved. Reburn visibility, memory impact, survivability signal, command posture, and lifecycle continuity are now updated.'
     )
 
     setLoading(false)
@@ -413,8 +430,8 @@ Durability must be observed before trust is restored.
 
           <p style={styles.subtitle}>
             Confirm whether verified stabilization is holding over time. Detect reburn,
-            recovery collapse, fragile recovery, memory carry-forward, and command
-            posture before trust is restored.
+            recovery collapse, fragile recovery, memory carry-forward, survivability
+            risk, and command posture before trust is restored.
           </p>
 
           <div style={styles.boundaryBox}>
@@ -434,6 +451,11 @@ Durability must be observed before trust is restored.
           <Metric label="Recovery Collapse" value={recoveryPressure.recoveryCollapse} />
           <Metric label="Memory Carry-Forward" value={recoveryPressure.memoryCarryForward} />
         </section>
+
+        <p style={styles.visibilityNote}>
+          Cases under recovery watch are still under durability observation before
+          institutional confidence can be fully restored.
+        </p>
 
         <section style={styles.pressurePanel}>
           <h2 style={styles.sectionTitle}>Recovery Pressure Intelligence</h2>
@@ -522,7 +544,7 @@ Durability must be observed before trust is restored.
               <textarea
                 value={recoveryInterpretation}
                 onChange={(event) => setRecoveryInterpretation(event.target.value)}
-                placeholder="Use operational facts only. Preserve durability evidence, reburn visibility, memory implications, and executive relevance."
+                placeholder="Use operational facts only. Preserve durability evidence, reburn visibility, memory implications, survivability meaning, and executive relevance."
                 style={styles.textarea}
               />
             </label>
@@ -558,7 +580,8 @@ Durability must be observed before trust is restored.
           <p style={styles.bodyText}>
             CGI does not restore trust simply because a case appears recovered.
             Recovery must hold across time without reburn, relapse, unresolved pressure,
-            recurring instability, or memory escalation.
+            recurring instability, or memory escalation. Durability must survive time,
+            pressure, and recurrence before institutional trust is restored.
           </p>
         </section>
       </div>
@@ -576,6 +599,7 @@ async function preserveRecoveryAuditEvidence(input: {
   durabilityWindow: string
   memoryImpact: string
   commandPosture: string
+  recoverySurvivabilitySignal: string
   recoveryMeaning: string
   recoveryPressureMeaning: string
   nextLifecycleState: string
@@ -625,6 +649,7 @@ async function preserveRecoveryAuditEvidence(input: {
       durability_window: input.durabilityWindow,
       memory_impact: input.memoryImpact,
       command_posture: input.commandPosture,
+      recovery_survivability_signal: input.recoverySurvivabilitySignal,
 
       executive_meaning: input.recoveryMeaning,
       recovery_pressure: input.recoveryPressureMeaning,
@@ -695,6 +720,62 @@ function buildRecoveryCommandPosture(input: {
   return 'NORMAL_MONITORING'
 }
 
+function buildRecoverySurvivabilitySignal(input: {
+  durabilityResult: string
+  recoveryTrajectory: string
+  reburnSignal: string
+  recoveryConfidence: string
+  memoryImpact: string
+  reburnPressure: number
+  collapsePressure: number
+  memoryPressure: number
+}) {
+  if (
+    input.durabilityResult === 'RECOVERY_COLLAPSE' ||
+    input.reburnSignal === 'RECOVERY_COLLAPSE' ||
+    input.collapsePressure > 0
+  ) {
+    return 'RECOVERY_COLLAPSE_VISIBLE'
+  }
+
+  if (
+    input.durabilityResult === 'REBURN_DETECTED' ||
+    input.reburnSignal === 'REBURN_DETECTED' ||
+    input.reburnSignal === 'REPEATED_REBURN' ||
+    input.reburnPressure > 0
+  ) {
+    return 'REBURN_RISK_ACTIVE'
+  }
+
+  if (
+    input.memoryImpact === 'STRUCTURAL_MEMORY_ESCALATION' ||
+    input.memoryPressure > 0
+  ) {
+    return 'STRUCTURAL_MEMORY_ESCALATION_ACTIVE'
+  }
+
+  if (
+    input.durabilityResult === 'RECOVERY_FRAGILE' ||
+    input.recoveryTrajectory === 'FRAGILE' ||
+    input.recoveryTrajectory === 'WEAKENING' ||
+    input.recoveryConfidence === 'CONDITIONAL' ||
+    input.recoveryConfidence === 'FRAGILE' ||
+    input.memoryImpact === 'CARRY_FORWARD_WATCH'
+  ) {
+    return 'RECOVERY_REMAINS_FRAGILE'
+  }
+
+  if (
+    input.durabilityResult === 'DURABLE_RECOVERY_CONFIRMED' &&
+    input.recoveryConfidence === 'CREDIBLE' &&
+    input.reburnSignal === 'NO_REBURN_VISIBLE'
+  ) {
+    return 'RECOVERY_APPEARS_CREDIBLE'
+  }
+
+  return 'RECOVERY_DURABILITY_NOT_YET_PROVEN'
+}
+
 function buildNextRecoveryState(input: {
   durabilityResult: string
   reburnSignal: string
@@ -742,16 +823,24 @@ function buildExecutiveRecoveryMeaning(input: {
   durabilityWindow: string
   memoryImpact: string
   commandPosture: string
+  recoverySurvivabilitySignal: string
 }) {
   if (!input.durabilityResult) {
-    return 'Awaiting recovery durability selections. Executive meaning will derive from durability result, recovery trajectory, reburn signal, recovery confidence, durability window, and memory impact.'
+    return 'Awaiting recovery durability selections. Executive meaning will derive from durability result, recovery trajectory, reburn signal, recovery confidence, durability window, memory impact, and survivability signal.'
   }
 
-  if (input.commandPosture === 'SURVIVABILITY_RISK_ACTIVE') {
+  if (
+    input.commandPosture === 'SURVIVABILITY_RISK_ACTIVE' ||
+    input.recoverySurvivabilitySignal === 'RECOVERY_COLLAPSE_VISIBLE'
+  ) {
     return 'Recovery has collapsed or survivability risk is active. Trust cannot be restored, and executive command visibility must remain active.'
   }
 
-  if (input.commandPosture === 'EXECUTIVE_REVIEW') {
+  if (
+    input.commandPosture === 'EXECUTIVE_REVIEW' ||
+    input.recoverySurvivabilitySignal === 'REBURN_RISK_ACTIVE' ||
+    input.recoverySurvivabilitySignal === 'STRUCTURAL_MEMORY_ESCALATION_ACTIVE'
+  ) {
     return 'Recovery evidence shows reburn, collapse risk, or structural memory escalation. Executive review should remain active until durability becomes credible.'
   }
 
@@ -767,13 +856,14 @@ function buildExecutiveRecoveryMeaning(input: {
     input.durabilityResult === 'DURABLE_RECOVERY_CONFIRMED' &&
     input.recoveryConfidence === 'CREDIBLE'
   ) {
-    return 'Durable recovery appears credible. Structural memory should still be preserved, but active recovery pressure may reduce.'
+    return `Durable recovery appears credible across the ${input.durabilityWindow} durability window. Structural memory should still be preserved, but active recovery pressure may reduce.`
   }
 
   return 'Recovery evidence has been preserved. Durability remains governed until recovery holds across the selected observation window.'
 }
 
 function buildRecoveryPressureMeaning(input: {
+  casesUnderWatch: number
   durableRecovery: number
   fragileRecovery: number
   reburnDetected: number
@@ -800,6 +890,10 @@ function buildRecoveryPressureMeaning(input: {
 
   if (input.durableRecovery > 0) {
     signals.push('some recovery evidence appears durable')
+  }
+
+  if (signals.length === 0 && input.casesUnderWatch > 0) {
+    return 'Recovery durability monitoring remains active. No major reburn, collapse, or memory escalation is currently visible, but recovery trust has not yet fully matured.'
   }
 
   if (signals.length === 0) {
@@ -931,6 +1025,12 @@ const styles: Record<string, CSSProperties> = {
     padding: '16px',
     color: '#e2e8f0',
     lineHeight: 1.6,
+  },
+  visibilityNote: {
+    color: '#94a3b8',
+    lineHeight: 1.6,
+    margin: '-10px 0 20px',
+    fontSize: '14px',
   },
   message: {
     background: '#064e3b',
