@@ -27,6 +27,32 @@ type AuditSeverity = 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL'
 
 const GOVERNANCE_INSTITUTION = 'TSINAXA CGI'
 
+const ACTION_READY_STATUSES = [
+  'ACCEPTED',
+  'ROUTED',
+  'ASSIGNED',
+  'RESPONDER_ASSIGNED',
+  'ROUTING_CONFIRMED',
+  'STABILIZATION_ROUTED',
+  'ROUTED_TO_RESPONDER',
+  'INTERVENTION_READY',
+  'INTERVENTION_ACTIVE',
+  'INTERVENTION_RECORDED',
+  'STABILIZING',
+  'ESCALATED',
+]
+
+const ROUTED_OR_ASSIGNED_STATUSES = [
+  'ROUTED',
+  'ASSIGNED',
+  'RESPONDER_ASSIGNED',
+  'ROUTING_CONFIRMED',
+  'STABILIZATION_ROUTED',
+  'ROUTED_TO_RESPONDER',
+  'INTERVENTION_READY',
+  'INTERVENTION_ACTIVE',
+]
+
 const ACTION_TYPES = [
   'Stabilization contact completed',
   'Operational coordination action',
@@ -136,14 +162,7 @@ function InterventionCompletionContent() {
     const { data, error } = await supabase
       .from('beneficiary_cases')
       .select('*')
-      .in('case_status', [
-        'ROUTED',
-        'RESPONDER_ASSIGNED',
-        'INTERVENTION_ACTIVE',
-        'INTERVENTION_RECORDED',
-        'STABILIZING',
-        'ESCALATED',
-      ])
+      .in('case_status', ACTION_READY_STATUSES)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -176,6 +195,9 @@ ${caseItem.beneficiary_name} • ${caseItem.support_domain} • ${caseItem.sever
 
 Institution / Governance Context:
 ${caseItem.institution_name || GOVERNANCE_INSTITUTION}
+
+Current Case Status:
+${caseItem.case_status}
 
 Action Type:
 ${actionType || 'Not specified'}
@@ -354,7 +376,7 @@ Routing is not action. Action is not outcome. Outcome is not recovery.
     (item) => item.safeguarding_flag || item.severity_level === 'CRITICAL'
   ).length
   const routedCases = cases.filter((item) =>
-    ['ROUTED', 'RESPONDER_ASSIGNED', 'INTERVENTION_ACTIVE'].includes(item.case_status)
+    ROUTED_OR_ASSIGNED_STATUSES.includes(item.case_status)
   ).length
 
   return (
