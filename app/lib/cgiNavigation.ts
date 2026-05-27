@@ -42,21 +42,22 @@ export const cgiNavigationGroups: CGINavigationGroup[] = [
   },
   {
     title: 'Governed Response',
-    purpose: 'Route instability and govern intervention evidence without losing continuity.',
+    purpose:
+      'Route instability, govern stabilization action evidence, and preserve continuity before verification begins.',
     items: [
       {
         label: 'Routing Intelligence',
         href: '/routing',
         description:
-          'Coordinate routing ownership, responder alignment, and stabilization direction.',
+          'Coordinate routing ownership, owner alignment, and stabilization direction.',
         systemArea: 'COORDINATION',
         status: 'ACTIVE',
       },
       {
-        label: 'Controlled Interventions',
+        label: 'Stabilization Action Governance',
         href: '/interventions',
         description:
-          'Govern intervention activity and preserve traceable stabilization evidence.',
+          'Govern stabilization action evidence, continuity movement, residual risk, and executive visibility before outcome verification begins.',
         systemArea: 'COORDINATION',
         status: 'ACTIVE',
       },
@@ -175,7 +176,7 @@ export const cgiNavigationGroups: CGINavigationGroup[] = [
   {
     title: 'Administration',
     purpose:
-      'Control institutional setup, assignment governance, and responder ownership pathways.',
+      'Control institutional setup, assignment governance, and owner accountability pathways.',
     items: [
       {
         label: 'Admin Hub',
@@ -188,7 +189,7 @@ export const cgiNavigationGroups: CGINavigationGroup[] = [
         label: 'Assignment Control',
         href: '/admin/assign',
         description:
-          'Assign responders and coordinate governed case ownership.',
+          'Assign owners and coordinate governed continuity ownership.',
         systemArea: 'ADMINISTRATION',
         status: 'ACTIVE',
       },
