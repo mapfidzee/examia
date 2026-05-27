@@ -242,7 +242,11 @@ function InterventionCompletionContent() {
   const criticalCases = cases.filter((item) => item.severity_level === 'CRITICAL').length
 
   const executiveVisibilityCases = cases.filter(
-    (item) => item.safeguarding_flag || item.severity_level === 'CRITICAL'
+    (item) =>
+      item.safeguarding_flag ||
+      item.severity_level === 'CRITICAL' ||
+      item.case_status === 'ROUTING_RECURRENCE' ||
+      item.case_status === 'ESCALATED'
   ).length
 
   const routedCases = cases.filter((item) =>
@@ -254,12 +258,16 @@ function InterventionCompletionContent() {
     continuityRisk,
   })
 
+  const commandVisibilityLabel = buildCommandVisibilityLabel({
+    continuityRisk,
+    actionStatus,
+    commandVisibility: lifecycleDecision.commandVisibility,
+  })
+
   const executiveMeaning = buildExecutiveMeaning({
     actionStatus,
     evidencePosture,
     ownerVisibility,
-    riskRemaining,
-    reviewTiming,
     continuityRisk,
     stabilizationMovementScore,
     commandVisibility: lifecycleDecision.commandVisibility,
@@ -304,7 +312,7 @@ PRESSURE CONCENTRATION
 ${pressureMeaning}
 
 COMMAND VISIBILITY
-${lifecycleDecision.commandVisibility ? 'REQUIRED' : 'NORMAL'}
+${commandVisibilityLabel}
 
 NEXT LIFECYCLE STATE
 ${selectedCase ? lifecycleDecision.nextStatus : 'Pending stability case selection'}
@@ -400,7 +408,7 @@ Outcome is not recovery.
     const { error: timelineError } = await supabase.from('case_timeline').insert({
       case_id: selectedCaseId,
       event_type: lifecycleDecision.timelineEventType,
-      event_summary: `${lifecycleDecision.timelineSummary} Action status: ${actionStatus}. Continuity risk: ${continuityRisk}. Executive meaning: ${executiveMeaning}`,
+      event_summary: `${lifecycleDecision.timelineSummary} Action movement: ${actionStatus}. Continuity risk: ${continuityRisk}. Executive meaning: ${executiveMeaning}`,
       actor: 'TSINAXA CGI Stabilization Action Governance',
     })
 
@@ -426,6 +434,7 @@ Outcome is not recovery.
       governanceInterpretation,
       executiveMeaning,
       pressureMeaning,
+      commandVisibilityLabel,
     })
 
     setSelectedCaseId('')
@@ -477,6 +486,11 @@ Outcome is not recovery.
           <Metric label="Critical Continuity Cases" value={criticalCases} />
           <Metric label="Executive Visibility Cases" value={executiveVisibilityCases} />
         </section>
+
+        <p style={styles.visibilityNote}>
+          Executive visibility may arise from recurrence, governance sensitivity,
+          escalation concentration, or continuity exposure — not severity alone.
+        </p>
 
         <section style={styles.intelligenceGrid}>
           <IntelligenceCard
@@ -682,6 +696,7 @@ async function preserveInterventionGovernanceEvidence(input: {
   governanceInterpretation: string
   executiveMeaning: string
   pressureMeaning: string
+  commandVisibilityLabel: string
 }) {
   const {
     data: { user },
@@ -751,6 +766,7 @@ async function preserveInterventionGovernanceEvidence(input: {
       stabilization_confidence: input.lifecycleDecision.stabilizationConfidence,
 
       executive_meaning: input.executiveMeaning,
+      command_visibility_interpretation: input.commandVisibilityLabel,
       pressure_concentration: input.pressureMeaning,
       governance_interpretation: input.governanceInterpretation.trim() || null,
 
@@ -778,12 +794,33 @@ async function preserveInterventionGovernanceEvidence(input: {
   }
 }
 
+function buildCommandVisibilityLabel(input: {
+  continuityRisk: ContinuityRisk
+  actionStatus: string
+  commandVisibility: boolean
+}) {
+  if (
+    input.continuityRisk === 'CRITICAL' ||
+    input.actionStatus === 'ESCALATION_REQUIRED'
+  ) {
+    return 'REQUIRED'
+  }
+
+  if (input.continuityRisk === 'HIGH' || input.commandVisibility) {
+    return 'ACTIVE GOVERNANCE WATCH'
+  }
+
+  if (input.continuityRisk === 'MODERATE') {
+    return 'ADVISED IF PRESSURE CONTINUES'
+  }
+
+  return 'NORMAL'
+}
+
 function buildExecutiveMeaning(input: {
   actionStatus: string
   evidencePosture: string
   ownerVisibility: string
-  riskRemaining: string
-  reviewTiming: string
   continuityRisk: ContinuityRisk
   stabilizationMovementScore: string
   commandVisibility: boolean
@@ -797,10 +834,13 @@ function buildExecutiveMeaning(input: {
 
   if (
     input.actionStatus === 'ESCALATION_REQUIRED' ||
-    input.continuityRisk === 'CRITICAL' ||
-    input.commandVisibility
+    input.continuityRisk === 'CRITICAL'
   ) {
-    return 'Stabilization movement requires executive visibility. Continuity risk remains material, and governance action must remain active before outcome verification or recovery credibility can be considered.'
+    return 'Executive visibility is required due to survivability-level continuity exposure. Governance action must remain active before outcome verification or recovery credibility can be considered.'
+  }
+
+  if (input.continuityRisk === 'HIGH' || input.commandVisibility) {
+    return 'Executive visibility should remain active until stabilization credibility improves. Action evidence exists, but continuity exposure remains material.'
   }
 
   if (
@@ -808,7 +848,7 @@ function buildExecutiveMeaning(input: {
     input.evidencePosture.includes('follow-up') ||
     input.followUpActions > 0
   ) {
-    return 'Stabilization movement exists, but continuity credibility is not yet durable. Follow-up pressure remains active and must be governed before recovery can be trusted.'
+    return 'Stabilization movement exists, but continuity credibility is not yet durable. Executive visibility is advised if recurrence, follow-up accumulation, or governance sensitivity continues increasing.'
   }
 
   if (
@@ -820,7 +860,7 @@ function buildExecutiveMeaning(input: {
   }
 
   if (Number(input.stabilizationMovementScore) >= 4 && input.continuityRisk === 'LOW') {
-    return 'Stabilization movement appears credible at action level. Outcome verification is still required before recovery can be declared.'
+    return 'Stabilization movement appears credible at action level. Executive visibility is not currently required, but outcome verification is still required before recovery can be declared.'
   }
 
   if (input.recurrenceCases > 0 || input.escalationActions > 0) {
@@ -1021,7 +1061,13 @@ const styles: Record<string, CSSProperties> = {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
     gap: '14px',
-    marginBottom: '18px',
+    marginBottom: '10px',
+  },
+  visibilityNote: {
+    color: '#94a3b8',
+    lineHeight: 1.6,
+    margin: '0 0 20px',
+    fontSize: '14px',
   },
   metricCard: {
     background: '#0f172a',
