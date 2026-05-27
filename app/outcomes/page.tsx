@@ -766,8 +766,7 @@ function buildCommandPosture(input: {
     input.verificationCredibility === 'CONFLICTED' ||
     input.recurrenceSignal === 'RECURRENCE_DETECTED' ||
     input.recoveryReadiness === 'RECOVERY_BLOCKED' ||
-    input.verificationTrajectory === 'WEAKENING' ||
-    input.commandVisibility
+    input.verificationTrajectory === 'WEAKENING'
   ) {
     return 'ELEVATED_REVIEW'
   }
@@ -777,7 +776,8 @@ function buildCommandPosture(input: {
     input.recurrenceSignal === 'RECURRENCE_WATCH' ||
     input.recoveryReadiness === 'NOT_READY_FOR_RECOVERY' ||
     input.continuityOutlook === 'MONITOR' ||
-    input.verificationTrajectory === 'FRAGILE'
+    input.verificationTrajectory === 'FRAGILE' ||
+    input.commandVisibility
   ) {
     return 'CONTINUITY_WATCH'
   }
