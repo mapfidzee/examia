@@ -7,12 +7,17 @@ import { supabase } from '../../lib/supabase'
 
 type CreatedRequest = {
   id: string
-  subject: string
-  problem: string
-  preferred_time: string | null
-  grade_level: string | null
-  status: string
-  teacher_status: string | null
+  beneficiary_name: string
+  beneficiary_level: string | null
+  support_domain: string
+  case_status: string
+  severity_level: string
+  instability_signals: string[] | null
+  region: string | null
+  institution_name: string | null
+  safeguarding_flag: boolean
+  intervention_summary: string | null
+  outcome_summary: string | null
 }
 
 type IntakeIntelligence = {
@@ -249,7 +254,7 @@ export default function RequestPage() {
     event.preventDefault()
 
     setLoading(true)
-    setMessage('Preserving visible instability for governance review...')
+    setMessage('Preserving visible instability for CGI triage review...')
     setCreatedRequest(null)
 
     const problemSummary = [
@@ -276,14 +281,22 @@ export default function RequestPage() {
     ].join('\n')
 
     const { data, error } = await supabase
-      .from('lesson_requests')
+      .from('beneficiary_cases')
       .insert({
-        subject: generatedIntakeIdentity,
-        grade_level: location,
-        problem: problemSummary,
-        preferred_time: reviewUrgency,
-        status: 'PENDING_TRIAGE',
-        teacher_status: governanceVisibility,
+        beneficiary_name: generatedIntakeIdentity,
+        beneficiary_level: location,
+        support_domain: instabilityClass,
+        case_status: 'PENDING_TRIAGE',
+        severity_level: severity,
+        instability_signals: [visibleSignal, affectedArea],
+        region: affectedArea,
+        institution_name: ownershipState,
+        safeguarding_flag:
+          severity === 'CRITICAL' ||
+          governanceVisibility === 'COMMAND_VISIBILITY' ||
+          governanceVisibility === 'EXECUTIVE_VISIBILITY',
+        intervention_summary: null,
+        outcome_summary: problemSummary,
       })
       .select()
       .single()
@@ -296,8 +309,9 @@ export default function RequestPage() {
     }
 
     setCreatedRequest(data)
+
     setMessage(
-      'Visible instability preserved successfully. The signal is now waiting for CGI triage review to determine governance acceptance, clarification, escalation, monitoring, or closure direction.'
+      'Visible instability preserved successfully. The signal is now waiting inside CGI triage for governance acceptance, clarification, escalation, monitoring, or closure direction.'
     )
 
     setEntryRoute('HUMAN_SUBMITTED')
@@ -313,15 +327,8 @@ export default function RequestPage() {
     setLoading(false)
   }
 
-  async function copyRequestId() {
-    if (!createdRequest) return
-    await navigator.clipboard.writeText(createdRequest.id)
-    alert('Request ID copied.')
-  }
-
-  function checkRequestStatus() {
-    if (!createdRequest) return
-    router.push(`/student-dashboard?lessonId=${createdRequest.id}`)
+  function openTriageQueue() {
+    router.push('/triage')
   }
 
   return (
@@ -580,37 +587,36 @@ export default function RequestPage() {
             <div style={styles.createdGrid}>
               <CreatedDetail
                 label="Intake Identity"
-                value={createdRequest.subject}
+                value={createdRequest.beneficiary_name}
               />
 
               <CreatedDetail
                 label="Location"
-                value={createdRequest.grade_level ?? 'Not recorded'}
+                value={createdRequest.beneficiary_level ?? 'Not recorded'}
               />
 
-              <CreatedDetail label="Triage State" value={createdRequest.status} />
+              <CreatedDetail
+                label="Triage State"
+                value={createdRequest.case_status}
+              />
 
               <CreatedDetail
                 label="Governance Visibility"
-                value={createdRequest.teacher_status ?? 'GOVERNANCE'}
+                value={
+                  createdRequest.safeguarding_flag
+                    ? 'EXECUTIVE_VISIBILITY'
+                    : 'GOVERNANCE_VISIBILITY'
+                }
               />
             </div>
 
             <div style={styles.buttonGrid}>
               <button
                 type="button"
-                onClick={copyRequestId}
-                style={styles.primaryButton}
-              >
-                Copy Request ID
-              </button>
-
-              <button
-                type="button"
-                onClick={checkRequestStatus}
+                onClick={openTriageQueue}
                 style={styles.secondaryButton}
               >
-                Check Review Status
+                Open Triage Queue
               </button>
             </div>
 
