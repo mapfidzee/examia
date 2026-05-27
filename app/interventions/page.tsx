@@ -27,28 +27,29 @@ type AuditSeverity = 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL'
 
 const GOVERNANCE_INSTITUTION = 'TSINAXA CGI'
 
-const INTERVENTION_TYPES = [
-  'Learning continuity stabilization',
-  'Low-data support intervention',
-  'Responder-guided support session',
-  'Institution-coordinated intervention',
-  'Family/guardian coordination intervention',
-  'Safeguarding-aware support pathway',
-  'District escalation support',
-  'Continuity follow-up intervention',
+const ACTION_TYPES = [
+  'Stabilization contact completed',
+  'Operational coordination action',
+  'Responder-directed stabilization action',
+  'Institution-directed stabilization action',
+  'Escalation pathway action',
+  'Continuity follow-up action',
+  'Barrier removal action',
+  'Executive visibility action',
 ]
 
-const INTERVENTION_MODES = [
-  'Text-based support',
-  'Audio-first support',
-  'Live guided session',
-  'File-supported intervention',
-  'Institution-led coordination',
-  'Responder-led coordination',
-  'Hybrid low-bandwidth support',
+const ACTION_MODES = [
+  'Direct contact',
+  'Internal coordination',
+  'Responder coordination',
+  'Institution coordination',
+  'Low-bandwidth communication',
+  'Documented follow-up',
+  'Escalation coordination',
+  'Hybrid stabilization action',
 ]
 
-const COMPLETION_STATUSES = [
+const ACTION_STATUSES = [
   'COMPLETED',
   'PARTIALLY_COMPLETED',
   'INTERRUPTED',
@@ -56,28 +57,40 @@ const COMPLETION_STATUSES = [
   'ESCALATION_REQUIRED',
 ]
 
+const EVIDENCE_LEVELS = [
+  'Action recorded with sufficient movement evidence',
+  'Action partially evidenced; follow-up required',
+  'Action attempted but blocked by operational barrier',
+  'Action requires escalation before stabilization can continue',
+  'Action completed but continuity risk remains active',
+]
+
+const OWNER_POSTURES = [
+  'Owner confirmed and action moving',
+  'Owner confirmed but follow-up required',
+  'Owner unclear; governance review required',
+  'Owner blocked by dependency',
+  'Executive owner visibility required',
+]
+
+const RESIDUAL_RISK_NOTES = [
+  'Residual risk is low; monitor through normal lifecycle review.',
+  'Residual risk is moderate; recovery watch should remain active.',
+  'Residual risk is high; governance follow-up is required.',
+  'Residual risk is critical; executive visibility is required.',
+  'Residual risk cannot be reduced until dependency is resolved.',
+]
+
+const REVIEW_WINDOWS = [
+  '24 hours',
+  '48 hours',
+  '72 hours',
+  '5 business days',
+  '7 days',
+  'Governance review required immediately',
+]
+
 const CONTINUITY_RISKS: ContinuityRisk[] = ['LOW', 'MODERATE', 'HIGH', 'CRITICAL']
-
-const SESSION_SUMMARIES = [
-  'Beneficiary received structured support and immediate pathway is stable.',
-  'Beneficiary received partial support; follow-up is needed.',
-  'Support was attempted but access or continuity barriers remain.',
-  'Responder completed intervention and recommends monitoring.',
-  'Institution coordination is still required before stabilization.',
-  'Safeguarding-aware escalation is recommended.',
-  'District or regional visibility is recommended.',
-]
-
-const RESPONDER_NOTE_TEMPLATES = [
-  'Beneficiary engaged successfully during intervention.',
-  'Continuity pathway remains active but follow-up is recommended.',
-  'Access limitations affected intervention continuity.',
-  'Institution coordination remains necessary.',
-  'Low-bandwidth conditions affected session flow.',
-  'Beneficiary requires continued stabilization support.',
-  'Safeguarding-aware handling remains advised.',
-  'District or regional visibility may be required.',
-]
 
 export default function InterventionCompletionPage() {
   return (
@@ -101,14 +114,16 @@ function InterventionCompletionContent() {
   const [cases, setCases] = useState<BeneficiaryCase[]>([])
 
   const [selectedCaseId, setSelectedCaseId] = useState('')
-  const [interventionType, setInterventionType] = useState('')
-  const [interventionMode, setInterventionMode] = useState('')
-  const [completionStatus, setCompletionStatus] = useState('')
-  const [sessionSummary, setSessionSummary] = useState('')
-  const [stabilizationScore, setStabilizationScore] = useState('3')
+  const [actionType, setActionType] = useState('')
+  const [actionMode, setActionMode] = useState('')
+  const [actionStatus, setActionStatus] = useState('')
+  const [evidenceLevel, setEvidenceLevel] = useState('')
+  const [ownerPosture, setOwnerPosture] = useState('')
+  const [residualRiskNote, setResidualRiskNote] = useState('')
+  const [reviewWindow, setReviewWindow] = useState('')
+  const [stabilizationMovementScore, setStabilizationMovementScore] = useState('3')
   const [continuityRisk, setContinuityRisk] = useState<ContinuityRisk>('MODERATE')
-  const [responderTemplate, setResponderTemplate] = useState('')
-  const [additionalResponderNotes, setAdditionalResponderNotes] = useState('')
+  const [additionalGovernanceNotes, setAdditionalGovernanceNotes] = useState('')
 
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
@@ -126,7 +141,6 @@ function InterventionCompletionContent() {
         'RESPONDER_ASSIGNED',
         'INTERVENTION_ACTIVE',
         'INTERVENTION_RECORDED',
-        'RECOVERY_MONITORING',
         'STABILIZING',
         'ESCALATED',
       ])
@@ -150,35 +164,44 @@ function InterventionCompletionContent() {
     if (!caseItem) return ''
 
     const lifecycleDecision = evaluateInterventionLifecycle({
-      completionStatus,
+      completionStatus: actionStatus,
       continuityRisk,
     })
 
     return `
-CONTROLLED INTERVENTION EVIDENCE RECORD
+GOVERNED STABILIZATION ACTION EVIDENCE
 
-Beneficiary Case:
+Case Identity:
 ${caseItem.beneficiary_name} • ${caseItem.support_domain} • ${caseItem.severity_level}
 
-Institution:
+Institution / Governance Context:
 ${caseItem.institution_name || GOVERNANCE_INSTITUTION}
 
-Intervention Type:
-${interventionType || 'Not specified'}
+Action Type:
+${actionType || 'Not specified'}
 
-Intervention Mode:
-${interventionMode || 'Not specified'}
+Action Mode:
+${actionMode || 'Not specified'}
 
-Completion Status:
-${completionStatus || 'Not specified'}
+Action Status:
+${actionStatus || 'Not specified'}
 
-Structured Session Summary:
-${sessionSummary || 'Not specified'}
+Evidence Level:
+${evidenceLevel || 'Not specified'}
 
-Stabilization Score:
-${stabilizationScore}/5
+Owner Posture:
+${ownerPosture || 'Not specified'}
 
-Continuity Risk After Intervention:
+Residual Risk:
+${residualRiskNote || 'Not specified'}
+
+Review Window:
+${reviewWindow || 'Not specified'}
+
+Stabilization Movement Score:
+${stabilizationMovementScore}/5
+
+Continuity Risk After Action:
 ${continuityRisk}
 
 Lifecycle Governance:
@@ -188,28 +211,36 @@ Escalation Required: ${lifecycleDecision.shouldEscalate ? 'YES' : 'NO'}
 Recovery Monitoring Required: ${lifecycleDecision.shouldMonitorRecovery ? 'YES' : 'NO'}
 Command Visibility: ${lifecycleDecision.commandVisibility ? 'YES' : 'NO'}
 
-Governance-Safe Responder Notes:
-${responderTemplate || 'No template selected'}
+Additional Governance Notes:
+${additionalGovernanceNotes.trim() || 'No additional notes entered.'}
 
-Additional Operational Notes:
-${additionalResponderNotes.trim() || 'No additional notes entered.'}
+Governance Boundary:
+This record confirms whether a routed case converted into governed stabilization action. It does not verify final outcome, declare recovery, or close the case. Outcome verification belongs to /outcomes. Recovery durability belongs to /recovery.
 
-Governance Statement:
-This intervention record documents support delivery, stabilization progress, continuity risk, and follow-up needs. It does not blame the beneficiary, family, responder, school, institution, or partner. It exists to support governed stabilization, safe coordination, accountable intervention continuity, and lifecycle movement.
+Non-Punitive Statement:
+This action evidence record does not blame a person, team, family, responder, institution, or partner. It preserves operational movement, remaining risk, ownership posture, review need, and continuity visibility.
 
-Lifecycle Principle:
-Intervention is not recovery. TSINAXA CGI records the intervention, evaluates continuity risk, and keeps recovery monitoring active until stabilization is confirmed.
+CGI Principle:
+Routing is not action. Action is not outcome. Outcome is not recovery.
     `.trim()
   }
 
   async function saveInterventionEvidence() {
     if (!selectedCaseId) {
-      alert('Select a beneficiary case.')
+      alert('Select a CGI case.')
       return
     }
 
-    if (!interventionType || !interventionMode || !completionStatus || !sessionSummary) {
-      alert('Complete the intervention type, mode, completion status, and session summary.')
+    if (
+      !actionType ||
+      !actionMode ||
+      !actionStatus ||
+      !evidenceLevel ||
+      !ownerPosture ||
+      !residualRiskNote ||
+      !reviewWindow
+    ) {
+      alert('Complete all required action evidence fields.')
       return
     }
 
@@ -225,7 +256,7 @@ Intervention is not recovery. TSINAXA CGI records the intervention, evaluates co
     }
 
     const lifecycleDecision = evaluateInterventionLifecycle({
-      completionStatus,
+      completionStatus: actionStatus,
       continuityRisk,
     })
 
@@ -235,7 +266,7 @@ Intervention is not recovery. TSINAXA CGI records the intervention, evaluates co
       .from('case_interventions')
       .insert({
         case_id: selectedCaseId,
-        intervention_type: interventionType,
+        intervention_type: actionType,
         intervention_summary: evidence,
       })
       .select('id')
@@ -267,8 +298,8 @@ Intervention is not recovery. TSINAXA CGI records the intervention, evaluates co
       .insert({
         case_id: selectedCaseId,
         event_type: lifecycleDecision.timelineEventType,
-        event_summary: `${lifecycleDecision.timelineSummary} Completion: ${completionStatus}. Continuity risk: ${continuityRisk}. Stabilization confidence: ${lifecycleDecision.stabilizationConfidence}.`,
-        actor: 'TSINAXA CGI Lifecycle Governance Intervention',
+        event_summary: `${lifecycleDecision.timelineSummary} Action status: ${actionStatus}. Continuity risk: ${continuityRisk}. Evidence level: ${evidenceLevel}. Owner posture: ${ownerPosture}. Review window: ${reviewWindow}.`,
+        actor: 'TSINAXA CGI Intervention Evidence Governance',
       })
       .select('id')
       .single()
@@ -285,35 +316,43 @@ Intervention is not recovery. TSINAXA CGI records the intervention, evaluates co
       timelineRecordId: timelineRecord?.id || null,
       lifecycleDecision,
       evidence,
-      interventionType,
-      interventionMode,
-      completionStatus,
-      sessionSummary,
-      stabilizationScore,
+      actionType,
+      actionMode,
+      actionStatus,
+      evidenceLevel,
+      ownerPosture,
+      residualRiskNote,
+      reviewWindow,
+      stabilizationMovementScore,
       continuityRisk,
-      responderTemplate,
-      additionalResponderNotes,
+      additionalGovernanceNotes,
     })
 
     setSelectedCaseId('')
-    setInterventionType('')
-    setInterventionMode('')
-    setCompletionStatus('')
-    setSessionSummary('')
-    setStabilizationScore('3')
+    setActionType('')
+    setActionMode('')
+    setActionStatus('')
+    setEvidenceLevel('')
+    setOwnerPosture('')
+    setResidualRiskNote('')
+    setReviewWindow('')
+    setStabilizationMovementScore('3')
     setContinuityRisk('MODERATE')
-    setResponderTemplate('')
-    setAdditionalResponderNotes('')
+    setAdditionalGovernanceNotes('')
 
-    setMessage('Controlled intervention evidence saved. Lifecycle governance, timeline memory, and audit evidence preserved.')
+    setMessage(
+      'Governed stabilization action evidence saved. Lifecycle movement, timeline evidence, and audit memory preserved.'
+    )
+
     setLoading(false)
-
     await loadCases()
   }
 
-  const activeInterventionCases = cases.length
+  const activeActionCases = cases.length
   const criticalCases = cases.filter((item) => item.severity_level === 'CRITICAL').length
-  const safeguardingCases = cases.filter((item) => item.safeguarding_flag).length
+  const executiveVisibilityCases = cases.filter(
+    (item) => item.safeguarding_flag || item.severity_level === 'CRITICAL'
+  ).length
   const routedCases = cases.filter((item) =>
     ['ROUTED', 'RESPONDER_ASSIGNED', 'INTERVENTION_ACTIVE'].includes(item.case_status)
   ).length
@@ -322,115 +361,135 @@ Intervention is not recovery. TSINAXA CGI records the intervention, evaluates co
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.hero}>
-          <p style={styles.kicker}>TSINAXA CGI • INTERVENTION GOVERNANCE</p>
+          <p style={styles.kicker}>TSINAXA CGI • INTERVENTION EVIDENCE</p>
 
-          <h1 style={styles.title}>Intervention Completion Evidence</h1>
+          <h1 style={styles.title}>Governed Stabilization Action Evidence</h1>
 
           <p style={styles.subtitle}>
-            Govern actual support delivery by converting each intervention into a
-            structured evidence record for stabilization tracking, continuity scoring,
-            responder accountability, lifecycle movement, and safe institutional follow-up.
+            Convert routed instability into structured action evidence. This surface
+            records what action was taken, who owns the movement, what evidence exists,
+            what risk remains, and when governance review is required.
           </p>
+
+          <div style={styles.boundaryBox}>
+            <strong>Boundary:</strong> /interventions records governed action evidence only.
+            It does not verify outcomes, declare recovery, or close continuity risk.
+          </div>
         </section>
 
         <section style={styles.metricsGrid}>
-          <Metric label="Cases Ready for Intervention" value={activeInterventionCases} />
+          <Metric label="Cases Ready for Action" value={activeActionCases} />
           <Metric label="Routed / Assigned Cases" value={routedCases} />
           <Metric label="Critical Cases" value={criticalCases} />
-          <Metric label="Safeguarding Flags" value={safeguardingCases} />
+          <Metric label="Executive Visibility Cases" value={executiveVisibilityCases} />
         </section>
 
         {message && <div style={styles.message}>{message}</div>}
 
         <section style={styles.layoutGrid}>
           <div style={styles.card}>
-            <h2 style={styles.sectionTitle}>Record Controlled Intervention</h2>
+            <h2 style={styles.sectionTitle}>Record Action Evidence</h2>
 
             <p style={styles.panelNote}>
-              Use this after a responder, institution, NGO, district office, or support
-              pathway has delivered an intervention. Record what happened in structured,
-              governance-safe language.
+              Use this only after a routed case has received a real stabilization
+              action. Record operational facts, ownership posture, evidence strength,
+              residual risk, and review timing.
             </p>
 
             <label style={styles.label}>
-              Beneficiary Case
+              CGI Case
               <select
                 value={selectedCaseId}
                 onChange={(event) => setSelectedCaseId(event.target.value)}
                 style={styles.select}
               >
                 <option value="">
-                  {cases.length === 0 ? 'No routed or active cases found' : 'Select beneficiary case'}
+                  {cases.length === 0 ? 'No routed or active cases found' : 'Select CGI case'}
                 </option>
 
                 {cases.map((caseItem) => (
                   <option key={caseItem.id} value={caseItem.id}>
-                    {caseItem.beneficiary_name} • {caseItem.support_domain} • {caseItem.case_status}
+                    {caseItem.beneficiary_name} • {caseItem.support_domain} •{' '}
+                    {caseItem.case_status}
                   </option>
                 ))}
               </select>
             </label>
 
             <Select
-              label="Intervention Type"
-              value={interventionType}
-              setValue={setInterventionType}
-              options={['', ...INTERVENTION_TYPES]}
+              label="Action Type"
+              value={actionType}
+              setValue={setActionType}
+              options={['', ...ACTION_TYPES]}
             />
 
             <Select
-              label="Intervention Mode"
-              value={interventionMode}
-              setValue={setInterventionMode}
-              options={['', ...INTERVENTION_MODES]}
+              label="Action Mode"
+              value={actionMode}
+              setValue={setActionMode}
+              options={['', ...ACTION_MODES]}
             />
 
             <Select
-              label="Completion Status"
-              value={completionStatus}
-              setValue={setCompletionStatus}
-              options={['', ...COMPLETION_STATUSES]}
+              label="Action Status"
+              value={actionStatus}
+              setValue={setActionStatus}
+              options={['', ...ACTION_STATUSES]}
             />
 
             <Select
-              label="Structured Session Summary"
-              value={sessionSummary}
-              setValue={setSessionSummary}
-              options={['', ...SESSION_SUMMARIES]}
+              label="Evidence Level"
+              value={evidenceLevel}
+              setValue={setEvidenceLevel}
+              options={['', ...EVIDENCE_LEVELS]}
+            />
+
+            <Select
+              label="Owner Posture"
+              value={ownerPosture}
+              setValue={setOwnerPosture}
+              options={['', ...OWNER_POSTURES]}
+            />
+
+            <Select
+              label="Residual Risk"
+              value={residualRiskNote}
+              setValue={setResidualRiskNote}
+              options={['', ...RESIDUAL_RISK_NOTES]}
+            />
+
+            <Select
+              label="Review Window"
+              value={reviewWindow}
+              setValue={setReviewWindow}
+              options={['', ...REVIEW_WINDOWS]}
             />
 
             <label style={styles.label}>
-              Stabilization Score: {stabilizationScore}/5
+              Stabilization Movement Score: {stabilizationMovementScore}/5
               <input
                 type="range"
                 min="1"
                 max="5"
-                value={stabilizationScore}
-                onChange={(event) => setStabilizationScore(event.target.value)}
+                value={stabilizationMovementScore}
+                onChange={(event) => setStabilizationMovementScore(event.target.value)}
                 style={styles.range}
               />
             </label>
 
             <Select
-              label="Continuity Risk After Intervention"
+              label="Continuity Risk After Action"
               value={continuityRisk}
               setValue={(value) => setContinuityRisk(value as ContinuityRisk)}
               options={CONTINUITY_RISKS}
             />
 
-            <Select
-              label="Governance-Safe Responder Notes Template"
-              value={responderTemplate}
-              setValue={setResponderTemplate}
-              options={['', ...RESPONDER_NOTE_TEMPLATES]}
-            />
-
             <label style={styles.label}>
-              Optional Additional Operational Notes
+              Optional Governance Notes
               <textarea
-                value={additionalResponderNotes}
-                onChange={(event) => setAdditionalResponderNotes(event.target.value)}
-                placeholder="Use operational facts only. Avoid blame, emotional language, or unnecessary personal details."
+                value={additionalGovernanceNotes}
+                onChange={(event) => setAdditionalGovernanceNotes(event.target.value)}
+                placeholder="Use operational facts only. Avoid blame, emotional language, or unnecessary personal detail."
                 style={styles.textarea}
               />
             </label>
@@ -440,7 +499,7 @@ Intervention is not recovery. TSINAXA CGI records the intervention, evaluates co
               disabled={loading}
               style={styles.primaryButton}
             >
-              {loading ? 'Saving Evidence...' : 'Save Lifecycle Intervention Evidence'}
+              {loading ? 'Saving Evidence...' : 'Save Stabilization Action Evidence'}
             </button>
           </div>
 
@@ -448,14 +507,14 @@ Intervention is not recovery. TSINAXA CGI records the intervention, evaluates co
             <h2 style={styles.sectionTitle}>Generated Evidence Record</h2>
 
             <p style={styles.panelNote}>
-              This is the structured lifecycle record that will be saved to the
-              intervention table, added to the case timeline, and used for recovery
-              continuity visibility.
+              This is the governed action evidence record that will be saved to the
+              intervention table, preserved in the timeline, and carried into lifecycle
+              governance.
             </p>
 
             <pre style={styles.summaryBox}>
               {interventionEvidence() ||
-                'Select a beneficiary case to generate controlled intervention evidence.'}
+                'Select a CGI case to generate governed stabilization action evidence.'}
             </pre>
           </div>
         </section>
@@ -478,22 +537,22 @@ async function preserveInterventionGovernanceEvidence(input: {
     timelineSummary: string
   }
   evidence: string
-  interventionType: string
-  interventionMode: string
-  completionStatus: string
-  sessionSummary: string
-  stabilizationScore: string
+  actionType: string
+  actionMode: string
+  actionStatus: string
+  evidenceLevel: string
+  ownerPosture: string
+  residualRiskNote: string
+  reviewWindow: string
+  stabilizationMovementScore: string
   continuityRisk: ContinuityRisk
-  responderTemplate: string
-  additionalResponderNotes: string
+  additionalGovernanceNotes: string
 }) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const institution =
-    input.caseItem.institution_name ||
-    GOVERNANCE_INSTITUTION
+  const institution = input.caseItem.institution_name || GOVERNANCE_INSTITUTION
 
   const visibilityLevel =
     input.lifecycleDecision.commandVisibility ||
@@ -503,32 +562,27 @@ async function preserveInterventionGovernanceEvidence(input: {
       ? 'EXECUTIVE'
       : 'GOVERNANCE'
 
-  const governancePosture =
-    resolveInterventionGovernancePosture({
-      continuityRisk: input.continuityRisk,
-      completionStatus: input.completionStatus,
-      commandVisibility:
-        input.lifecycleDecision.commandVisibility,
-      shouldEscalate:
-        input.lifecycleDecision.shouldEscalate,
-    })
+  const governancePosture = resolveInterventionGovernancePosture({
+    continuityRisk: input.continuityRisk,
+    actionStatus: input.actionStatus,
+    commandVisibility: input.lifecycleDecision.commandVisibility,
+    shouldEscalate: input.lifecycleDecision.shouldEscalate,
+  })
 
   const severity = resolveInterventionSeverity({
     continuityRisk: input.continuityRisk,
-    completionStatus: input.completionStatus,
-    commandVisibility:
-      input.lifecycleDecision.commandVisibility,
+    actionStatus: input.actionStatus,
+    commandVisibility: input.lifecycleDecision.commandVisibility,
   })
 
-  const summary =
-    `Saved intervention evidence for ${input.caseItem.beneficiary_name}. Completion: ${input.completionStatus}. Continuity risk: ${input.continuityRisk}. Next status: ${input.lifecycleDecision.nextStatus}. Institution: ${institution}.`
+  const summary = `Saved governed stabilization action evidence for ${input.caseItem.beneficiary_name}. Action status: ${input.actionStatus}. Continuity risk: ${input.continuityRisk}. Next status: ${input.lifecycleDecision.nextStatus}. Institution: ${institution}.`
 
   const { error } = await supabase.from('audit_logs').insert({
     user_id: user?.id ?? null,
     email: user?.email ?? null,
     role: 'INTERVENTION_GOVERNANCE_USER',
 
-    action_type: 'SAVE_INTERVENTION_EVIDENCE',
+    action_type: 'SAVE_STABILIZATION_ACTION_EVIDENCE',
     route: '/interventions',
     record_type: 'beneficiary_cases',
     record_id: input.caseItem.id,
@@ -536,21 +590,18 @@ async function preserveInterventionGovernanceEvidence(input: {
     severity,
 
     details: {
-      evidence_type: 'CONTROLLED_INTERVENTION_EVIDENCE',
+      evidence_type: 'GOVERNED_STABILIZATION_ACTION_EVIDENCE',
       immutability_status: 'IMMUTABLE_GOVERNANCE_RECORD',
       reconstruction_capability: 'ENABLED',
 
       linked_snapshot_id: input.caseItem.id,
       beneficiary_case_id: input.caseItem.id,
-      intervention_record_id:
-        input.interventionRecordId,
-      timeline_record_id:
-        input.timelineRecordId,
+      intervention_record_id: input.interventionRecordId,
+      timeline_record_id: input.timelineRecordId,
 
       governance_reason: summary,
       governance_institution: institution,
-      governance_scope:
-        'Controlled intervention completion and recovery continuity',
+      governance_scope: 'Governed stabilization action evidence',
       governance_posture: governancePosture,
       visibility_level: visibilityLevel,
 
@@ -562,58 +613,52 @@ async function preserveInterventionGovernanceEvidence(input: {
       actor_email: user?.email ?? null,
       actor_role: 'INTERVENTION_GOVERNANCE_USER',
 
-      beneficiary_name: input.caseItem.beneficiary_name,
-      beneficiary_level: input.caseItem.beneficiary_level,
+      case_label: input.caseItem.beneficiary_name,
+      case_level: input.caseItem.beneficiary_level,
       support_domain: input.caseItem.support_domain,
       previous_case_status: input.caseItem.case_status,
       next_case_status: input.lifecycleDecision.nextStatus,
       severity_level: input.caseItem.severity_level,
-      safeguarding_flag: input.caseItem.safeguarding_flag,
+      executive_visibility_flag: input.caseItem.safeguarding_flag,
 
-      intervention_type: input.interventionType,
-      intervention_mode: input.interventionMode,
-      completion_status: input.completionStatus,
-      session_summary: input.sessionSummary,
-      stabilization_score:
-        Number(input.stabilizationScore),
-      continuity_risk_after_intervention:
-        input.continuityRisk,
+      action_type: input.actionType,
+      action_mode: input.actionMode,
+      action_status: input.actionStatus,
+      evidence_level: input.evidenceLevel,
+      owner_posture: input.ownerPosture,
+      residual_risk_note: input.residualRiskNote,
+      review_window: input.reviewWindow,
 
-      stabilization_confidence:
-        input.lifecycleDecision.stabilizationConfidence,
-      escalation_required:
-        input.lifecycleDecision.shouldEscalate,
-      recovery_monitoring_required:
-        input.lifecycleDecision.shouldMonitorRecovery,
-      command_visibility_required:
-        input.lifecycleDecision.commandVisibility,
+      stabilization_movement_score: Number(input.stabilizationMovementScore),
+      continuity_risk_after_action: input.continuityRisk,
 
-      responder_note_template:
-        input.responderTemplate || null,
-      additional_operational_notes:
-        input.additionalResponderNotes.trim() || null,
+      stabilization_confidence: input.lifecycleDecision.stabilizationConfidence,
+      escalation_required: input.lifecycleDecision.shouldEscalate,
+      recovery_monitoring_required: input.lifecycleDecision.shouldMonitorRecovery,
+      command_visibility_required: input.lifecycleDecision.commandVisibility,
+
+      additional_governance_notes: input.additionalGovernanceNotes.trim() || null,
 
       continuity_relevance:
-        'Intervention evidence preserves whether routed support converted into completed action, partial action, escalation, follow-up, or recovery monitoring.',
+        'This record preserves whether routed instability converted into governed stabilization action, what evidence exists, what risk remains, and when review is required.',
 
-      survivability_context:
-        buildInterventionSurvivabilityContext({
-          caseItem: input.caseItem,
-          completionStatus: input.completionStatus,
-          continuityRisk: input.continuityRisk,
-          stabilizationConfidence:
-            input.lifecycleDecision.stabilizationConfidence,
-          nextStatus: input.lifecycleDecision.nextStatus,
-        }),
+      survivability_context: buildInterventionSurvivabilityContext({
+        caseItem: input.caseItem,
+        actionStatus: input.actionStatus,
+        continuityRisk: input.continuityRisk,
+        stabilizationConfidence: input.lifecycleDecision.stabilizationConfidence,
+        nextStatus: input.lifecycleDecision.nextStatus,
+        reviewWindow: input.reviewWindow,
+      }),
 
-      intervention_is_not_recovery: true,
+      routing_is_not_action: true,
+      action_is_not_outcome: true,
+      outcome_is_not_recovery: true,
       continuity_memory_preserved: true,
       institutional_traceability: true,
-      executive_visibility_enabled:
-        visibilityLevel === 'EXECUTIVE',
+      executive_visibility_enabled: visibilityLevel === 'EXECUTIVE',
 
-      governance_boundary:
-        'NON_PUNITIVE_CONTINUITY_GOVERNANCE',
+      governance_boundary: 'NON_PUNITIVE_CONTINUITY_GOVERNANCE',
     },
   })
 
@@ -629,20 +674,17 @@ async function preserveInterventionGovernanceEvidence(input: {
 
 function resolveInterventionSeverity(input: {
   continuityRisk: ContinuityRisk
-  completionStatus: string
+  actionStatus: string
   commandVisibility: boolean
 }): AuditSeverity {
   if (
     input.continuityRisk === 'CRITICAL' ||
-    input.completionStatus === 'ESCALATION_REQUIRED'
+    input.actionStatus === 'ESCALATION_REQUIRED'
   ) {
     return 'CRITICAL'
   }
 
-  if (
-    input.continuityRisk === 'HIGH' ||
-    input.commandVisibility
-  ) {
+  if (input.continuityRisk === 'HIGH' || input.commandVisibility) {
     return 'HIGH'
   }
 
@@ -655,13 +697,13 @@ function resolveInterventionSeverity(input: {
 
 function resolveInterventionGovernancePosture(input: {
   continuityRisk: ContinuityRisk
-  completionStatus: string
+  actionStatus: string
   commandVisibility: boolean
   shouldEscalate: boolean
 }) {
   if (
     input.continuityRisk === 'CRITICAL' ||
-    input.completionStatus === 'ESCALATION_REQUIRED' ||
+    input.actionStatus === 'ESCALATION_REQUIRED' ||
     input.shouldEscalate
   ) {
     return 'EXECUTIVE_REVIEW'
@@ -670,8 +712,8 @@ function resolveInterventionGovernancePosture(input: {
   if (
     input.continuityRisk === 'HIGH' ||
     input.commandVisibility ||
-    input.completionStatus === 'FOLLOW_UP_REQUIRED' ||
-    input.completionStatus === 'INTERRUPTED'
+    input.actionStatus === 'FOLLOW_UP_REQUIRED' ||
+    input.actionStatus === 'INTERRUPTED'
   ) {
     return 'GOVERNANCE_WATCH'
   }
@@ -680,17 +722,18 @@ function resolveInterventionGovernancePosture(input: {
     return 'RECOVERY_MONITORING'
   }
 
-  return 'STABILIZATION_EVIDENCE_HOLDING'
+  return 'ACTION_EVIDENCE_HOLDING'
 }
 
 function buildInterventionSurvivabilityContext(input: {
   caseItem: BeneficiaryCase
-  completionStatus: string
+  actionStatus: string
   continuityRisk: ContinuityRisk
   stabilizationConfidence: string
   nextStatus: string
+  reviewWindow: string
 }) {
-  return `Intervention completion is ${input.completionStatus.toLowerCase()} with ${input.continuityRisk.toLowerCase()} continuity risk and ${input.stabilizationConfidence.toLowerCase()} stabilization confidence. The case moves toward ${input.nextStatus.toLowerCase()}. Recovery is not assumed; survivability depends on follow-up, monitoring, escalation handling, and durable stabilization evidence.`
+  return `Stabilization action is ${input.actionStatus.toLowerCase()} with ${input.continuityRisk.toLowerCase()} continuity risk and ${input.stabilizationConfidence.toLowerCase()} stabilization confidence. The case moves toward ${input.nextStatus.toLowerCase()}. Review window is ${input.reviewWindow.toLowerCase()}. Recovery is not assumed; survivability depends on outcome verification, continued monitoring, escalation handling, and durable stabilization evidence.`
 }
 
 function Metric({ label, value }: { label: string; value: number }) {
@@ -759,6 +802,15 @@ const styles: Record<string, CSSProperties> = {
     maxWidth: '940px',
     lineHeight: 1.7,
     fontSize: '18px',
+  },
+  boundaryBox: {
+    marginTop: '18px',
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '18px',
+    padding: '16px',
+    color: '#e2e8f0',
+    lineHeight: 1.6,
   },
   metricsGrid: {
     display: 'grid',
