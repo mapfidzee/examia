@@ -7,7 +7,7 @@ import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { evaluateOutcomeLifecycle } from '../../lib/lifecycleGovernance'
 import { supabase } from '../../lib/supabase'
 
-type BeneficiaryCase = {
+type StabilityCase = {
   id: string
   beneficiary_name: string
   beneficiary_level: string | null
@@ -19,47 +19,82 @@ type BeneficiaryCase = {
   safeguarding_flag: boolean
   intervention_summary: string | null
   outcome_summary: string | null
+  created_at?: string | null
+  updated_at?: string | null
 }
 
-const OUTCOME_TEMPLATES = [
-  'Stabilization achieved and continuity pathway remains active.',
-  'Partial stabilization achieved but continued follow-up is required.',
-  'Intervention engagement improved but instability indicators remain.',
-  'Escalation risk reduced after intervention.',
-  'Safeguarding-aware stabilization remains necessary.',
-  'Institutional coordination support remains required.',
-  'Continuity instability remains visible after intervention.',
-]
+type OutcomeRecord = {
+  id: string
+  case_id: string
+  outcome_status: string | null
+  outcome_summary: string | null
+  created_at?: string | null
+}
 
-const OUTCOME_STATUSES = [
-  'STABILIZED',
+type AuditSeverity = 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL'
+
+const GOVERNANCE_INSTITUTION = 'TSINAXA CGI'
+
+const OUTCOME_READY_STATUSES = [
+  'INTERVENTION_ACTIVE',
+  'INTERVENTION_RECORDED',
   'PARTIAL_STABILIZATION',
+  'STABILIZING',
+  'ESCALATED',
+  'RECOVERY_MONITORING',
   'FOLLOW_UP_REQUIRED',
   'CONTINUITY_RISK_ACTIVE',
+  'STABILIZATION_OWNER_ROUTED',
+  'ROUTING_RECURRENCE',
+]
+
+const VERIFICATION_RESULTS = [
+  'VERIFIED_STABILIZATION',
+  'PARTIAL_VERIFICATION',
+  'UNVERIFIED_IMPROVEMENT',
+  'RECURRENCE_DETECTED',
+  'ACTION_INEFFECTIVE',
   'ESCALATION_REQUIRED',
 ]
 
-const EFFECTIVENESS_LEVELS = ['LOW', 'MODERATE', 'HIGH', 'VERY_HIGH']
-
-const CONTINUITY_OUTLOOKS = ['STABLE', 'MONITOR', 'AT_RISK', 'UNSTABLE', 'ESCALATE', 'HIGH_RISK']
-
-const GOVERNANCE_NOTES = [
-  'Beneficiary continuity appears stable after intervention.',
-  'Continued monitoring is recommended.',
-  'Institution coordination remains active.',
-  'Responder follow-up is recommended.',
-  'Safeguarding-aware handling remains advised.',
-  'Regional visibility may still be required.',
-  'Escalation monitoring remains active.',
+const ACTION_IMPACTS = [
+  'Action produced credible stabilization movement',
+  'Action produced partial stabilization movement',
+  'Action produced temporary improvement only',
+  'Action did not materially reduce instability',
+  'Action exposed recurrence after movement',
+  'Action requires escalation before verification can continue',
 ]
 
-const OUTCOME_ACTIONS = [
-  'Maintain stabilization monitoring.',
-  'Schedule continuity follow-up.',
-  'Increase responder engagement frequency.',
-  'Escalate for district coordination review.',
-  'Strengthen safeguarding-aware support.',
-  'Review intervention quality and continuity barriers.',
+const VERIFICATION_CREDIBILITIES = [
+  'STRONG',
+  'MODERATE',
+  'WEAK',
+  'UNCERTAIN',
+  'CONFLICTED',
+]
+
+const RECURRENCE_SIGNALS = [
+  'NO_RECURRENCE_VISIBLE',
+  'RECURRENCE_WATCH',
+  'RECURRENCE_DETECTED',
+  'REPEATED_RECURRENCE',
+]
+
+const RECOVERY_READINESS = [
+  'NOT_READY_FOR_RECOVERY',
+  'RECOVERY_WATCH_ELIGIBLE',
+  'RECOVERY_MONITORING_RECOMMENDED',
+  'RECOVERY_BLOCKED',
+]
+
+const CONTINUITY_OUTLOOKS = [
+  'STABLE',
+  'MONITOR',
+  'AT_RISK',
+  'UNSTABLE',
+  'ESCALATE',
+  'HIGH_RISK',
 ]
 
 export default function OutcomesPage() {
@@ -80,37 +115,31 @@ export default function OutcomesPage() {
 }
 
 function OutcomesContent() {
-  const [cases, setCases] = useState<BeneficiaryCase[]>([])
+  const [cases, setCases] = useState<StabilityCase[]>([])
+  const [outcomes, setOutcomes] = useState<OutcomeRecord[]>([])
 
   const [selectedCaseId, setSelectedCaseId] = useState('')
-  const [outcomeTemplate, setOutcomeTemplate] = useState('')
-  const [outcomeStatus, setOutcomeStatus] = useState('PARTIAL_STABILIZATION')
-  const [effectivenessLevel, setEffectivenessLevel] = useState('MODERATE')
+  const [verificationResult, setVerificationResult] = useState('')
+  const [actionImpact, setActionImpact] = useState('')
+  const [verificationCredibility, setVerificationCredibility] = useState('MODERATE')
+  const [recurrenceSignal, setRecurrenceSignal] = useState('RECURRENCE_WATCH')
+  const [recoveryReadiness, setRecoveryReadiness] = useState('NOT_READY_FOR_RECOVERY')
   const [continuityOutlook, setContinuityOutlook] = useState('MONITOR')
-  const [governanceNote, setGovernanceNote] = useState('')
-  const [recommendedAction, setRecommendedAction] = useState('')
-  const [additionalOperationalNotes, setAdditionalOperationalNotes] = useState('')
+  const [verificationInterpretation, setVerificationInterpretation] = useState('')
 
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     loadCases()
+    loadOutcomes()
   }, [])
 
   async function loadCases() {
     const { data, error } = await supabase
       .from('beneficiary_cases')
       .select('*')
-      .in('case_status', [
-        'INTERVENTION_ACTIVE',
-        'INTERVENTION_RECORDED',
-        'RECOVERY_MONITORING',
-        'PARTIAL_STABILIZATION',
-        'STABILIZING',
-        'ESCALATED',
-        'RESPONDER_ASSIGNED',
-      ])
+      .in('case_status', OUTCOME_READY_STATUSES)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -121,90 +150,176 @@ function OutcomesContent() {
     setCases(data || [])
   }
 
+  async function loadOutcomes() {
+    const { data, error } = await supabase
+      .from('case_outcomes')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error(error)
+      return
+    }
+
+    setOutcomes(data || [])
+  }
+
   const selectedCase = useMemo(() => {
     return cases.find((item) => item.id === selectedCaseId)
   }, [cases, selectedCaseId])
 
-  function outcomeRecord() {
-    if (!selectedCase) return ''
+  const mappedOutcomeStatus = mapVerificationToLifecycleStatus(verificationResult)
 
-    const lifecycleDecision = evaluateOutcomeLifecycle({
-      outcomeStatus,
-      continuityOutlook,
-    })
+  const lifecycleDecision = evaluateOutcomeLifecycle({
+    outcomeStatus: mappedOutcomeStatus,
+    continuityOutlook,
+  })
 
+  const outcomePressure = useMemo(() => {
+    const verified = outcomes.filter((item) =>
+      item.outcome_summary?.includes('VERIFIED_STABILIZATION')
+    ).length
+
+    const partialOrUncertain = outcomes.filter(
+      (item) =>
+        item.outcome_summary?.includes('PARTIAL_VERIFICATION') ||
+        item.outcome_summary?.includes('UNVERIFIED_IMPROVEMENT') ||
+        item.outcome_summary?.includes('UNCERTAIN') ||
+        item.outcome_summary?.includes('CONFLICTED')
+    ).length
+
+    const recurrenceDetected = outcomes.filter(
+      (item) =>
+        item.outcome_summary?.includes('RECURRENCE_DETECTED') ||
+        item.outcome_summary?.includes('REPEATED_RECURRENCE')
+    ).length
+
+    const escalationRequired = outcomes.filter(
+      (item) =>
+        item.outcome_summary?.includes('ESCALATION_REQUIRED') ||
+        item.outcome_summary?.includes('HIGH_RISK')
+    ).length
+
+    const recoveryEligible = outcomes.filter(
+      (item) =>
+        item.outcome_summary?.includes('RECOVERY_WATCH_ELIGIBLE') ||
+        item.outcome_summary?.includes('RECOVERY_MONITORING_RECOMMENDED')
+    ).length
+
+    return {
+      verified,
+      partialOrUncertain,
+      recurrenceDetected,
+      escalationRequired,
+      recoveryEligible,
+    }
+  }, [outcomes])
+
+  const executiveMeaning = buildExecutiveVerificationMeaning({
+    verificationResult,
+    actionImpact,
+    verificationCredibility,
+    recurrenceSignal,
+    recoveryReadiness,
+    continuityOutlook,
+    commandVisibility: lifecycleDecision.commandVisibility,
+  })
+
+  const verificationPressureMeaning = buildVerificationPressureMeaning({
+    partialOrUncertain: outcomePressure.partialOrUncertain,
+    recurrenceDetected: outcomePressure.recurrenceDetected,
+    escalationRequired: outcomePressure.escalationRequired,
+    recoveryEligible: outcomePressure.recoveryEligible,
+  })
+
+  function buildCaseLabel(caseItem: StabilityCase) {
+    return `${caseItem.beneficiary_name} • ${caseItem.support_domain} • ${caseItem.case_status}`
+  }
+
+  function verificationSynthesis() {
     return `
-TSINAXA CGI STRUCTURED OUTCOME RECORD
+VERIFICATION RESULT
+${verificationResult || 'Awaiting verification result selection'}
 
-Beneficiary Case:
-${selectedCase.beneficiary_name} • ${selectedCase.support_domain}
+ACTION IMPACT
+${actionImpact || 'Awaiting action impact selection'}
 
-Current Lifecycle:
-${selectedCase.case_status}
+VERIFICATION CREDIBILITY
+${verificationCredibility}
 
-Outcome Status:
-${outcomeStatus}
+RECURRENCE SIGNAL
+${recurrenceSignal}
 
-Structured Outcome Template:
-${outcomeTemplate || 'Not selected'}
+RECOVERY READINESS
+${recoveryReadiness}
 
-Intervention Effectiveness:
-${effectivenessLevel}
-
-Continuity Outlook:
+CONTINUITY OUTLOOK
 ${continuityOutlook}
 
-Lifecycle Governance:
-Next Status: ${lifecycleDecision.nextStatus}
-Continuity Risk: ${lifecycleDecision.continuityRisk}
-Stabilization Confidence: ${lifecycleDecision.stabilizationConfidence}
-Escalation Required: ${lifecycleDecision.shouldEscalate ? 'YES' : 'NO'}
-Recovery Monitoring Required: ${lifecycleDecision.shouldMonitorRecovery ? 'YES' : 'NO'}
-Command Visibility: ${lifecycleDecision.commandVisibility ? 'YES' : 'NO'}
+EXECUTIVE MEANING
+${executiveMeaning}
 
-Governance-Safe Outcome Note:
-${governanceNote || 'No governance-safe note selected'}
+VERIFICATION PRESSURE
+${verificationPressureMeaning}
 
-Recommended Operational Action:
-${recommendedAction || 'No action selected'}
+COMMAND VISIBILITY
+${lifecycleDecision.commandVisibility ? 'ACTIVE GOVERNANCE WATCH' : 'NORMAL'}
 
-Additional Operational Notes:
-${additionalOperationalNotes.trim() || 'No additional operational notes entered.'}
+NEXT LIFECYCLE STATE
+${selectedCase ? lifecycleDecision.nextStatus : 'Pending stability case selection'}
 
-Governance Interpretation:
-This outcome record summarizes stabilization progress, continuity outlook, intervention effectiveness, and operational follow-up requirements. It exists to support safe stabilization governance and coordinated continuity management without assigning blame to beneficiaries, responders, institutions, or families.
+STABILIZATION CONFIDENCE
+${lifecycleDecision.stabilizationConfidence}
 
-Lifecycle Principle:
-Outcome is not automatically stabilization. TSINAXA CGI confirms, monitors, or escalates based on recovery evidence and continuity outlook.
+CASE SIGNAL
+${selectedCase?.beneficiary_name || 'Pending stability case selection'}
+
+STABILITY DOMAIN
+${selectedCase?.support_domain || 'Pending stability case selection'}
+
+CURRENT CONTINUITY STATUS
+${selectedCase?.case_status || 'Pending stability case selection'}
+
+GOVERNANCE INTERPRETATION
+${verificationInterpretation.trim() || 'No additional verification interpretation entered.'}
+
+LIFECYCLE BOUNDARY
+Action is not outcome.
+Outcome is not recovery.
+Verification may support recovery monitoring, but durable recovery must be confirmed separately.
     `.trim()
   }
 
-  async function saveOutcomeRecord() {
+  async function preserveVerificationIntelligence() {
     if (!selectedCaseId) {
-      alert('Select a beneficiary case.')
+      alert('Select a stability case.')
       return
     }
 
-    if (!outcomeTemplate || !outcomeStatus || !effectivenessLevel || !continuityOutlook) {
-      alert('Complete all structured outcome selections.')
+    if (!verificationResult || !actionImpact || !verificationCredibility || !recurrenceSignal || !recoveryReadiness || !continuityOutlook) {
+      alert('Complete all stabilization verification fields.')
+      return
+    }
+
+    if (!selectedCase) {
+      alert('Selected stability case could not be found.')
       return
     }
 
     setLoading(true)
     setMessage('')
 
-    const lifecycleDecision = evaluateOutcomeLifecycle({
-      outcomeStatus,
-      continuityOutlook,
-    })
+    const summary = verificationSynthesis()
 
-    const summary = outcomeRecord()
-
-    const { error: outcomeError } = await supabase.from('case_outcomes').insert({
-      case_id: selectedCaseId,
-      outcome_status: outcomeStatus,
-      outcome_summary: summary,
-    })
+    const { data: outcomeRecord, error: outcomeError } = await supabase
+      .from('case_outcomes')
+      .insert({
+        case_id: selectedCaseId,
+        outcome_status: verificationResult,
+        outcome_summary: summary,
+      })
+      .select('id')
+      .single()
 
     if (outcomeError) {
       alert(outcomeError.message)
@@ -230,8 +345,8 @@ Outcome is not automatically stabilization. TSINAXA CGI confirms, monitors, or e
     const { error: timelineError } = await supabase.from('case_timeline').insert({
       case_id: selectedCaseId,
       event_type: lifecycleDecision.timelineEventType,
-      event_summary: `${lifecycleDecision.timelineSummary} Outcome status: ${outcomeStatus}. Continuity outlook: ${continuityOutlook}. Stabilization confidence: ${lifecycleDecision.stabilizationConfidence}.`,
-      actor: 'TSINAXA CGI Lifecycle Governance Outcome',
+      event_summary: `${lifecycleDecision.timelineSummary} Verification result: ${verificationResult}. Credibility: ${verificationCredibility}. Recurrence: ${recurrenceSignal}. Recovery readiness: ${recoveryReadiness}.`,
+      actor: 'TSINAXA CGI Stabilization Verification Intelligence',
     })
 
     if (timelineError) {
@@ -240,152 +355,415 @@ Outcome is not automatically stabilization. TSINAXA CGI confirms, monitors, or e
       return
     }
 
-    setSelectedCaseId('')
-    setOutcomeTemplate('')
-    setOutcomeStatus('PARTIAL_STABILIZATION')
-    setEffectivenessLevel('MODERATE')
-    setContinuityOutlook('MONITOR')
-    setGovernanceNote('')
-    setRecommendedAction('')
-    setAdditionalOperationalNotes('')
+    await preserveOutcomeGovernanceEvidence({
+      caseItem: selectedCase,
+      outcomeRecordId: outcomeRecord?.id || null,
+      lifecycleDecision,
+      verificationResult,
+      actionImpact,
+      verificationCredibility,
+      recurrenceSignal,
+      recoveryReadiness,
+      continuityOutlook,
+      executiveMeaning,
+      verificationPressureMeaning,
+      verificationInterpretation,
+    })
 
-    setMessage('Structured outcome saved. Lifecycle governance and timeline memory updated.')
+    setSelectedCaseId('')
+    setVerificationResult('')
+    setActionImpact('')
+    setVerificationCredibility('MODERATE')
+    setRecurrenceSignal('RECURRENCE_WATCH')
+    setRecoveryReadiness('NOT_READY_FOR_RECOVERY')
+    setContinuityOutlook('MONITOR')
+    setVerificationInterpretation('')
+
+    setMessage(
+      'Stabilization verification preserved. Executive meaning, recurrence visibility, recovery readiness, and lifecycle memory are now updated.'
+    )
+
     setLoading(false)
 
     await loadCases()
+    await loadOutcomes()
   }
-
-  const stabilizedCases = cases.filter((item) => item.case_status === 'STABILIZED').length
-  const escalatedCases = cases.filter((item) => item.case_status === 'ESCALATED').length
-  const safeguardingCases = cases.filter((item) => item.safeguarding_flag).length
 
   return (
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.hero}>
-          <p style={styles.kicker}>TSINAXA CGI • OUTCOME GOVERNANCE</p>
+          <p style={styles.kicker}>TSINAXA CGI • STABILIZATION VERIFICATION INTELLIGENCE</p>
 
-          <h1 style={styles.title}>Structured Stabilization Outcome Infrastructure</h1>
+          <h1 style={styles.title}>Stabilization Verification Intelligence</h1>
 
           <p style={styles.subtitle}>
-            Measure intervention effectiveness, stabilization outcomes, continuity outlook,
-            escalation visibility, lifecycle movement, and governance-safe operational
-            follow-up using standardized outcome intelligence.
+            Verify whether governed stabilization action actually worked. Preserve
+            action impact, verification credibility, recurrence signals, recovery
+            readiness, executive meaning, and lifecycle movement without declaring
+            durable recovery prematurely.
           </p>
+
+          <div style={styles.boundaryBox}>
+            <strong>Boundary:</strong> /outcomes verifies stabilization impact. It does
+            not declare durable recovery, close continuity instability, or replace
+            recovery monitoring.
+          </div>
         </section>
 
         {message && <div style={styles.message}>{message}</div>}
 
         <section style={styles.metricsGrid}>
-          <Metric label="Cases Awaiting Outcome Review" value={cases.length} />
-          <Metric label="Stabilized Cases" value={stabilizedCases} />
-          <Metric label="Escalated Cases" value={escalatedCases} />
-          <Metric label="Safeguarding Visibility" value={safeguardingCases} />
+          <Metric label="Cases Awaiting Verification" value={cases.length} />
+          <Metric label="Verified Stabilization" value={outcomePressure.verified} />
+          <Metric label="Partial / Uncertain Verification" value={outcomePressure.partialOrUncertain} />
+          <Metric label="Recurrence Detected" value={outcomePressure.recurrenceDetected} />
+          <Metric label="Escalation Required" value={outcomePressure.escalationRequired} />
+          <Metric label="Recovery Watch Eligible" value={outcomePressure.recoveryEligible} />
+        </section>
+
+        <section style={styles.pressurePanel}>
+          <h2 style={styles.sectionTitle}>Verification Pressure Intelligence</h2>
+          <p style={styles.panelNote}>{verificationPressureMeaning}</p>
         </section>
 
         <section style={styles.layoutGrid}>
           <div style={styles.card}>
-            <h2 style={styles.sectionTitle}>Structured Outcome Recording</h2>
+            <h2 style={styles.sectionTitle}>Preserve Verification Evidence</h2>
 
             <p style={styles.panelNote}>
-              Use dropdown templates to keep stabilization reporting governance-safe,
-              nationally consistent, lifecycle-aware, and operationally measurable.
+              Use this after stabilization action has occurred. Verify whether movement
+              is credible, partial, uncertain, recurring, ineffective, or ready for
+              recovery watch.
             </p>
 
             <label style={styles.label}>
-              Beneficiary Case
+              Stability Case
               <select
                 value={selectedCaseId}
                 onChange={(event) => setSelectedCaseId(event.target.value)}
                 style={styles.select}
               >
                 <option value="">
-                  {cases.length === 0 ? 'No intervention-stage cases found' : 'Select beneficiary case'}
+                  {cases.length === 0 ? 'No action-stage cases found' : 'Select stability case'}
                 </option>
 
                 {cases.map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.beneficiary_name} • {item.support_domain} • {item.case_status}
+                    {buildCaseLabel(item)}
                   </option>
                 ))}
               </select>
             </label>
 
             <Select
-              label="Structured Outcome Template"
-              value={outcomeTemplate}
-              setValue={setOutcomeTemplate}
-              options={['', ...OUTCOME_TEMPLATES]}
+              label="Verification Result"
+              placeholder="Select verification result"
+              value={verificationResult}
+              setValue={setVerificationResult}
+              options={VERIFICATION_RESULTS}
             />
 
             <Select
-              label="Outcome Status"
-              value={outcomeStatus}
-              setValue={setOutcomeStatus}
-              options={OUTCOME_STATUSES}
+              label="Action Impact"
+              placeholder="Select action impact"
+              value={actionImpact}
+              setValue={setActionImpact}
+              options={ACTION_IMPACTS}
             />
 
             <Select
-              label="Intervention Effectiveness"
-              value={effectivenessLevel}
-              setValue={setEffectivenessLevel}
-              options={EFFECTIVENESS_LEVELS}
+              label="Verification Credibility"
+              placeholder="Select verification credibility"
+              value={verificationCredibility}
+              setValue={setVerificationCredibility}
+              options={VERIFICATION_CREDIBILITIES}
+            />
+
+            <Select
+              label="Recurrence Signal"
+              placeholder="Select recurrence signal"
+              value={recurrenceSignal}
+              setValue={setRecurrenceSignal}
+              options={RECURRENCE_SIGNALS}
+            />
+
+            <Select
+              label="Recovery Readiness"
+              placeholder="Select recovery readiness"
+              value={recoveryReadiness}
+              setValue={setRecoveryReadiness}
+              options={RECOVERY_READINESS}
             />
 
             <Select
               label="Continuity Outlook"
+              placeholder="Select continuity outlook"
               value={continuityOutlook}
               setValue={setContinuityOutlook}
               options={CONTINUITY_OUTLOOKS}
             />
 
-            <Select
-              label="Governance-Safe Outcome Note"
-              value={governanceNote}
-              setValue={setGovernanceNote}
-              options={['', ...GOVERNANCE_NOTES]}
-            />
-
-            <Select
-              label="Recommended Operational Action"
-              value={recommendedAction}
-              setValue={setRecommendedAction}
-              options={['', ...OUTCOME_ACTIONS]}
-            />
-
             <label style={styles.label}>
-              Optional Additional Operational Notes
+              Verification Interpretation
               <textarea
-                value={additionalOperationalNotes}
-                onChange={(event) => setAdditionalOperationalNotes(event.target.value)}
-                placeholder="Use operational language only. Avoid blame or unnecessary personal details."
+                value={verificationInterpretation}
+                onChange={(event) => setVerificationInterpretation(event.target.value)}
+                placeholder="Use operational facts only. Preserve verification credibility, recurrence visibility, recovery readiness, and executive meaning."
                 style={styles.textarea}
               />
             </label>
 
-            <button onClick={saveOutcomeRecord} disabled={loading} style={styles.primaryButton}>
-              {loading ? 'Saving Outcome...' : 'Save Lifecycle Outcome Intelligence'}
+            <button
+              onClick={preserveVerificationIntelligence}
+              disabled={loading}
+              style={styles.primaryButton}
+            >
+              {loading
+                ? 'Preserving Verification Intelligence...'
+                : 'Preserve Stabilization Verification'}
             </button>
           </div>
 
           <div style={styles.card}>
-            <h2 style={styles.sectionTitle}>Generated Outcome Intelligence</h2>
+            <h2 style={styles.sectionTitle}>Executive Verification Synthesis</h2>
 
             <p style={styles.panelNote}>
-              Structured outcome reporting keeps stabilization intelligence measurable,
-              lifecycle-aware, and governance-safe across institutions, districts,
-              NGOs, ministries, and responders.
+              This synthesis preserves whether action impact is verified, partial,
+              uncertain, recurring, ineffective, or ready for recovery monitoring.
             </p>
 
-            <pre style={styles.summaryBox}>
-              {outcomeRecord() ||
-                'Select a beneficiary case to generate structured outcome intelligence.'}
-            </pre>
+            <pre style={styles.summaryBox}>{verificationSynthesis()}</pre>
           </div>
         </section>
       </div>
     </main>
   )
+}
+
+async function preserveOutcomeGovernanceEvidence(input: {
+  caseItem: StabilityCase
+  outcomeRecordId: string | null
+  lifecycleDecision: {
+    nextStatus: string
+    continuityRisk: string
+    stabilizationConfidence: string
+    shouldEscalate: boolean
+    shouldMonitorRecovery: boolean
+    commandVisibility: boolean
+    timelineEventType: string
+    timelineSummary: string
+  }
+  verificationResult: string
+  actionImpact: string
+  verificationCredibility: string
+  recurrenceSignal: string
+  recoveryReadiness: string
+  continuityOutlook: string
+  executiveMeaning: string
+  verificationPressureMeaning: string
+  verificationInterpretation: string
+}) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const institution = input.caseItem.institution_name || GOVERNANCE_INSTITUTION
+
+  const severity = resolveOutcomeAuditSeverity({
+    verificationResult: input.verificationResult,
+    continuityOutlook: input.continuityOutlook,
+    commandVisibility: input.lifecycleDecision.commandVisibility,
+  })
+
+  const { error } = await supabase.from('audit_logs').insert({
+    user_id: user?.id ?? null,
+    email: user?.email ?? null,
+    role: 'OUTCOME_GOVERNANCE_USER',
+
+    action_type: 'PRESERVE_STABILIZATION_VERIFICATION',
+    route: '/outcomes',
+    record_type: 'beneficiary_cases',
+    record_id: input.caseItem.id,
+    summary: `Preserved stabilization verification for ${input.caseItem.beneficiary_name}. ${input.executiveMeaning}`,
+    severity,
+
+    details: {
+      evidence_type: 'STABILIZATION_VERIFICATION_INTELLIGENCE',
+      governance_institution: institution,
+
+      stability_case_id: input.caseItem.id,
+      outcome_record_id: input.outcomeRecordId,
+
+      case_signal: input.caseItem.beneficiary_name,
+      stability_domain: input.caseItem.support_domain,
+      previous_case_status: input.caseItem.case_status,
+      next_case_status: input.lifecycleDecision.nextStatus,
+
+      verification_result: input.verificationResult,
+      action_impact: input.actionImpact,
+      verification_credibility: input.verificationCredibility,
+      recurrence_signal: input.recurrenceSignal,
+      recovery_readiness: input.recoveryReadiness,
+      continuity_outlook: input.continuityOutlook,
+
+      continuity_risk: input.lifecycleDecision.continuityRisk,
+      stabilization_confidence: input.lifecycleDecision.stabilizationConfidence,
+      escalation_required: input.lifecycleDecision.shouldEscalate,
+      recovery_monitoring_required: input.lifecycleDecision.shouldMonitorRecovery,
+      command_visibility_required: input.lifecycleDecision.commandVisibility,
+
+      executive_meaning: input.executiveMeaning,
+      verification_pressure: input.verificationPressureMeaning,
+      verification_interpretation: input.verificationInterpretation.trim() || null,
+
+      action_is_not_outcome: true,
+      outcome_is_not_recovery: true,
+      recovery_requires_separate_confirmation: true,
+      continuity_memory_preserved: true,
+      institutional_traceability: true,
+      governance_boundary: 'NON_PUNITIVE_CONTINUITY_GOVERNANCE',
+    },
+  })
+
+  if (error) {
+    console.error('Outcome governance evidence logging failed', {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+    })
+  }
+}
+
+function mapVerificationToLifecycleStatus(verificationResult: string) {
+  if (verificationResult === 'VERIFIED_STABILIZATION') return 'STABILIZED'
+  if (verificationResult === 'PARTIAL_VERIFICATION') return 'PARTIAL_STABILIZATION'
+  if (verificationResult === 'UNVERIFIED_IMPROVEMENT') return 'FOLLOW_UP_REQUIRED'
+  if (verificationResult === 'RECURRENCE_DETECTED') return 'CONTINUITY_RISK_ACTIVE'
+  if (verificationResult === 'ACTION_INEFFECTIVE') return 'CONTINUITY_RISK_ACTIVE'
+  if (verificationResult === 'ESCALATION_REQUIRED') return 'ESCALATION_REQUIRED'
+
+  return 'PARTIAL_STABILIZATION'
+}
+
+function buildExecutiveVerificationMeaning(input: {
+  verificationResult: string
+  actionImpact: string
+  verificationCredibility: string
+  recurrenceSignal: string
+  recoveryReadiness: string
+  continuityOutlook: string
+  commandVisibility: boolean
+}) {
+  if (!input.verificationResult && !input.actionImpact) {
+    return 'Awaiting verification selections. Executive meaning will derive from action impact, credibility, recurrence, recovery readiness, and continuity outlook.'
+  }
+
+  if (
+    input.verificationResult === 'ESCALATION_REQUIRED' ||
+    input.continuityOutlook === 'HIGH_RISK' ||
+    input.continuityOutlook === 'ESCALATE'
+  ) {
+    return 'Verification indicates material continuity exposure. Executive visibility should remain active and stabilization action may need escalation before recovery monitoring is appropriate.'
+  }
+
+  if (
+    input.verificationResult === 'RECURRENCE_DETECTED' ||
+    input.recurrenceSignal === 'RECURRENCE_DETECTED' ||
+    input.recurrenceSignal === 'REPEATED_RECURRENCE'
+  ) {
+    return 'Verification shows recurrence risk. Action impact cannot be treated as durable, and recovery readiness should remain blocked or under watch.'
+  }
+
+  if (
+    input.verificationResult === 'ACTION_INEFFECTIVE' ||
+    input.verificationCredibility === 'WEAK' ||
+    input.verificationCredibility === 'CONFLICTED'
+  ) {
+    return 'Verification credibility is weak or action impact appears ineffective. Governance should review whether action must restart, escalate, or be redesigned.'
+  }
+
+  if (
+    input.verificationResult === 'PARTIAL_VERIFICATION' ||
+    input.verificationCredibility === 'UNCERTAIN' ||
+    input.recoveryReadiness === 'NOT_READY_FOR_RECOVERY'
+  ) {
+    return 'Stabilization is partially verified but not yet durable. Recovery monitoring should not begin until confidence improves and recurrence pressure remains controlled.'
+  }
+
+  if (
+    input.verificationResult === 'VERIFIED_STABILIZATION' &&
+    input.verificationCredibility === 'STRONG' &&
+    input.recoveryReadiness !== 'RECOVERY_BLOCKED'
+  ) {
+    return 'Action impact appears verified at outcome level. The case may move toward recovery monitoring, but durable recovery must still be confirmed separately.'
+  }
+
+  return 'Outcome evidence has been preserved. Verification supports lifecycle movement, but recovery durability remains a separate governance stage.'
+}
+
+function buildVerificationPressureMeaning(input: {
+  partialOrUncertain: number
+  recurrenceDetected: number
+  escalationRequired: number
+  recoveryEligible: number
+}) {
+  const signals: string[] = []
+
+  if (input.partialOrUncertain > 0) {
+    signals.push('partial or uncertain verification is present')
+  }
+
+  if (input.recurrenceDetected > 0) {
+    signals.push('recurrence has been detected in outcome evidence')
+  }
+
+  if (input.escalationRequired > 0) {
+    signals.push('escalation pressure remains active')
+  }
+
+  if (input.recoveryEligible > 0) {
+    signals.push('some cases are eligible for recovery watch')
+  }
+
+  if (signals.length === 0) {
+    return 'No material verification pressure is currently visible from preserved outcome evidence.'
+  }
+
+  return `Verification pressure is active: ${signals.join(', ')}. Executive review should watch whether verified action impact moves into recovery monitoring or weakens into recurrence, uncertainty, or escalation.`
+}
+
+function resolveOutcomeAuditSeverity(input: {
+  verificationResult: string
+  continuityOutlook: string
+  commandVisibility: boolean
+}): AuditSeverity {
+  if (
+    input.verificationResult === 'ESCALATION_REQUIRED' ||
+    input.continuityOutlook === 'HIGH_RISK'
+  ) {
+    return 'CRITICAL'
+  }
+
+  if (
+    input.verificationResult === 'RECURRENCE_DETECTED' ||
+    input.verificationResult === 'ACTION_INEFFECTIVE' ||
+    input.continuityOutlook === 'ESCALATE' ||
+    input.commandVisibility
+  ) {
+    return 'HIGH'
+  }
+
+  if (
+    input.verificationResult === 'PARTIAL_VERIFICATION' ||
+    input.verificationResult === 'UNVERIFIED_IMPROVEMENT' ||
+    input.continuityOutlook === 'AT_RISK'
+  ) {
+    return 'MODERATE'
+  }
+
+  return 'LOW'
 }
 
 function Metric({ label, value }: { label: string; value: number }) {
@@ -399,11 +777,13 @@ function Metric({ label, value }: { label: string; value: number }) {
 
 function Select({
   label,
+  placeholder,
   value,
   setValue,
   options,
 }: {
   label: string
+  placeholder: string
   value: string
   setValue: (value: string) => void
   options: string[]
@@ -417,9 +797,11 @@ function Select({
         onChange={(event) => setValue(event.target.value)}
         style={styles.select}
       >
+        <option value="">{placeholder}</option>
+
         {options.map((option, index) => (
-          <option key={`${option || 'blank'}-${index}`} value={option}>
-            {option || 'Select option'}
+          <option key={`${option}-${index}`} value={option}>
+            {option}
           </option>
         ))}
       </select>
@@ -456,6 +838,15 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.7,
     fontSize: '18px',
   },
+  boundaryBox: {
+    marginTop: '18px',
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '18px',
+    padding: '16px',
+    color: '#e2e8f0',
+    lineHeight: 1.6,
+  },
   message: {
     background: '#064e3b',
     color: '#bbf7d0',
@@ -466,7 +857,7 @@ const styles: Record<string, CSSProperties> = {
   },
   metricsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
     gap: '14px',
     marginBottom: '24px',
   },
@@ -485,9 +876,16 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '38px',
     margin: '8px 0 0',
   },
+  pressurePanel: {
+    background: '#020617',
+    border: '1px solid #334155',
+    borderRadius: '20px',
+    padding: '20px',
+    marginBottom: '24px',
+  },
   layoutGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
     gap: '20px',
     marginBottom: '28px',
   },
@@ -551,7 +949,7 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: '18px',
     padding: '18px',
     color: '#e2e8f0',
-    lineHeight: 1.6,
-    minHeight: '540px',
+    lineHeight: 1.7,
+    minHeight: '620px',
   },
 }
