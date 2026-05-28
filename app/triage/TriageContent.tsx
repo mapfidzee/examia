@@ -679,80 +679,108 @@ async function preserveTriageEvidence(input: {
 }
 
 function buildInheritedIntakeContext(item: VisibleInstability): InheritedIntakeContext {
-  const source = item.outcome_summary || ''
+  const source =
+    item.intervention_summary ||
+    item.outcome_summary ||
+    ''
 
   return {
     intakeIdentity:
+      extractIntakeField(source, 'INTAKE IDENTITY') ||
       extractIntakeField(source, 'Generated intake identity') ||
       item.beneficiary_name ||
       buildSimplifiedIdentity(item),
-    entryRoute: extractIntakeField(source, 'Entry route') || 'Entry route not recorded',
+    entryRoute:
+      extractIntakeField(source, 'ENTRY ROUTE') ||
+      extractIntakeField(source, 'Entry route') ||
+      'Entry route not recorded',
     pressureType:
+      extractIntakeField(source, 'OPERATIONAL PRESSURE TYPE') ||
       extractIntakeField(source, 'Operational pressure type') ||
       item.support_domain ||
       'Pressure type not recorded',
     pressureMeaning:
+      extractIntakeField(source, 'PRESSURE MEANING') ||
       extractIntakeField(source, 'Pressure meaning') ||
       'Pressure meaning not inherited from intake.',
     severityMeaning:
+      extractIntakeField(source, 'SEVERITY MEANING') ||
       extractIntakeField(source, 'Severity meaning') ||
       'Severity meaning not inherited from intake.',
     location:
+      extractIntakeField(source, 'LOCATION') ||
       extractIntakeField(source, 'Location') ||
       item.beneficiary_level ||
       'Location not recorded',
     affectedArea:
+      extractIntakeField(source, 'AFFECTED AREA') ||
       extractIntakeField(source, 'Affected area') ||
       item.region ||
       'Affected area not recorded',
     visibleSignal:
+      extractIntakeField(source, 'VISIBLE SIGNAL') ||
       extractIntakeField(source, 'Visible signal') ||
       item.region ||
       'Visible signal not recorded',
     ownershipState:
+      extractIntakeField(source, 'OWNERSHIP STATE') ||
       extractIntakeField(source, 'Ownership state') ||
       item.institution_name ||
       'Ownership state not recorded',
     evidenceLevel:
+      extractIntakeField(source, 'EVIDENCE LEVEL') ||
       extractIntakeField(source, 'Evidence level') ||
       'Evidence level not recorded',
     reviewUrgency:
+      extractIntakeField(source, 'REVIEW URGENCY') ||
       extractIntakeField(source, 'Review urgency') ||
       'Review urgency not recorded',
     governanceVisibility:
+      extractIntakeField(source, 'GOVERNANCE VISIBILITY') ||
       extractIntakeField(source, 'Governance visibility') ||
       (item.safeguarding_flag ? 'EXECUTIVE_VISIBILITY' : 'GOVERNANCE_VISIBILITY'),
     visibilityClassification:
+      extractIntakeField(source, 'VISIBILITY CLASSIFICATION') ||
       extractIntakeField(source, 'Visibility classification') ||
       'Visibility classification inherited from request is unavailable.',
     intakeMaturity:
+      extractIntakeField(source, 'INTAKE MATURITY') ||
       extractIntakeField(source, 'Intake maturity') ||
       'Intake maturity inherited from request is unavailable.',
     intakeConfidence:
+      extractIntakeField(source, 'INTAKE CONFIDENCE') ||
       extractIntakeField(source, 'Intake confidence') ||
       'Intake confidence inherited from request is unavailable.',
     governanceReadiness:
+      extractIntakeField(source, 'GOVERNANCE READINESS') ||
       extractIntakeField(source, 'Governance readiness') ||
       'Governance readiness inherited from request is unavailable.',
     ownershipPosture:
+      extractIntakeField(source, 'OWNERSHIP POSTURE') ||
       extractIntakeField(source, 'Ownership posture') ||
       'Ownership posture inherited from request is unavailable.',
     evidencePosture:
+      extractIntakeField(source, 'EVIDENCE POSTURE') ||
       extractIntakeField(source, 'Evidence posture') ||
       'Evidence posture inherited from request is unavailable.',
     stabilizationRisk:
+      extractIntakeField(source, 'STABILIZATION RISK') ||
       extractIntakeField(source, 'Stabilization risk') ||
       'Stabilization risk inherited from request is unavailable.',
     triageMeaning:
+      extractIntakeField(source, 'TRIAGE MEANING') ||
       extractIntakeField(source, 'Triage meaning') ||
       'Triage meaning inherited from request is unavailable.',
     commandMeaning:
+      extractIntakeField(source, 'COMMAND MEANING') ||
       extractIntakeField(source, 'Command meaning') ||
       'Command meaning inherited from request is unavailable.',
     lifecycleBoundary:
+      extractIntakeField(source, 'LIFECYCLE BOUNDARY') ||
       extractIntakeField(source, 'Lifecycle boundary') ||
       'Request opens visibility. Triage determines eligibility.',
     briefNote:
+      extractIntakeField(source, 'BRIEF NOTE') ||
       extractIntakeField(source, 'Brief note') ||
       'No inherited intake note recorded.',
   }
@@ -761,15 +789,32 @@ function buildInheritedIntakeContext(item: VisibleInstability): InheritedIntakeC
 function extractIntakeField(source: string, label: string) {
   if (!source) return ''
 
+  const lines = source.split('\n')
+  const target = label.trim().toLowerCase()
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index].trim()
+    const normalized = line.replace(':', '').trim().toLowerCase()
+
+    if (normalized !== target) continue
+
+    for (let nextIndex = index + 1; nextIndex < lines.length; nextIndex += 1) {
+      const value = lines[nextIndex].trim()
+
+      if (!value) continue
+
+      return value
+    }
+  }
+
   const prefix = `${label}:`
-  const line = source
-    .split('\n')
+  const inline = lines
     .map((item) => item.trim())
     .find((item) => item.startsWith(prefix))
 
-  if (!line) return ''
+  if (!inline) return ''
 
-  return line.replace(prefix, '').trim()
+  return inline.replace(prefix, '').trim()
 }
 
 function buildTriageClimate(input: {
