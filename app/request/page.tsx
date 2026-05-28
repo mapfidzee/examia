@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { CSSProperties } from 'react'
 import { supabase } from '../../lib/supabase'
 
 type CreatedRequest = {
@@ -22,10 +21,13 @@ type CreatedRequest = {
 
 type IntakeIntelligence = {
   visibilityClassification: string
+  intakeMaturity: string
+  intakeConfidence: string
   governanceReadiness: string
   ownershipPosture: string
   evidencePosture: string
   stabilizationRisk: string
+  triageMeaning: string
   commandMeaning: string
 }
 
@@ -148,24 +150,24 @@ const flowSteps = [
     body: 'Visible instability is captured with governed context.',
   },
   {
-    title: 'Triage decision',
-    body: 'CGI decides whether it needs governance, clarity, escalation, monitoring, or closure.',
+    title: 'Triage eligibility',
+    body: 'CGI decides whether the signal becomes a governed case, pauses for clarity, escalates, or closes.',
   },
   {
-    title: 'Case acceptance',
-    body: 'Accepted instability becomes an active continuity governance case.',
+    title: 'Case custody',
+    body: 'Accepted instability becomes visible inside active continuity governance.',
   },
   {
     title: 'Routing direction',
-    body: 'Routing identifies the next stabilization movement and owner posture.',
+    body: 'Routing determines ownership direction and the next credible stabilization movement.',
   },
   {
-    title: 'Stabilization evidence',
-    body: 'Interventions and outcomes confirm whether the situation is improving.',
+    title: 'Action and verification',
+    body: 'Interventions preserve action evidence, and outcomes verify whether movement is credible.',
   },
   {
-    title: 'Recovery memory',
-    body: 'CGI checks whether recovery holds and preserves institutional memory.',
+    title: 'Recovery durability',
+    body: 'Recovery confirms whether stabilization is holding before trust is restored.',
   },
 ]
 
@@ -199,8 +201,9 @@ export default function RequestPage() {
   const [reviewUrgency, setReviewUrgency] = useState('WITHIN_24_HOURS')
   const [briefNote, setBriefNote] = useState('')
   const [message, setMessage] = useState('')
-  const [createdRequest, setCreatedRequest] =
-    useState<CreatedRequest | null>(null)
+  const [createdRequest, setCreatedRequest] = useState<CreatedRequest | null>(
+    null,
+  )
   const [loading, setLoading] = useState(false)
 
   const selectedClassDescription = useMemo(() => {
@@ -272,11 +275,15 @@ export default function RequestPage() {
       `Review urgency: ${reviewUrgency}`,
       `Governance visibility: ${governanceVisibility}`,
       `Visibility classification: ${intakeIntelligence.visibilityClassification}`,
+      `Intake maturity: ${intakeIntelligence.intakeMaturity}`,
+      `Intake confidence: ${intakeIntelligence.intakeConfidence}`,
       `Governance readiness: ${intakeIntelligence.governanceReadiness}`,
       `Ownership posture: ${intakeIntelligence.ownershipPosture}`,
       `Evidence posture: ${intakeIntelligence.evidencePosture}`,
       `Stabilization risk: ${intakeIntelligence.stabilizationRisk}`,
+      `Triage meaning: ${intakeIntelligence.triageMeaning}`,
       `Command meaning: ${intakeIntelligence.commandMeaning}`,
+      `Lifecycle boundary: Request opens visibility. Triage determines eligibility. A request is not yet a governed case.`,
       `Brief note: ${briefNote.trim() || 'No additional note provided'}`,
     ].join('\n')
 
@@ -311,7 +318,7 @@ export default function RequestPage() {
     setCreatedRequest(data)
 
     setMessage(
-      'Visible instability preserved successfully. The signal is now waiting inside CGI triage for governance acceptance, clarification, escalation, monitoring, or closure direction.'
+      'Visible instability preserved successfully. The signal is now waiting inside CGI triage for eligibility review, clarification, escalation, closure, or acceptance into case governance.',
     )
 
     setEntryRoute('HUMAN_SUBMITTED')
@@ -332,274 +339,290 @@ export default function RequestPage() {
   }
 
   return (
-    <main style={styles.page}>
-      <div style={styles.wrap}>
-        <header style={styles.hero}>
-          <p style={styles.eyebrow}>
-            TSINAXA CGI • GOVERNED INTAKE INTELLIGENCE
+    <main className="min-h-screen text-neutral-100">
+      <section className="mx-auto max-w-7xl px-6 py-8">
+        {message && (
+          <div className="mb-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm font-semibold text-emerald-100">
+            {message}
+          </div>
+        )}
+
+        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-400">
+          TSINAXA CGI • GOVERNED INTAKE INTELLIGENCE
+        </p>
+
+        <div className="mt-4 rounded-3xl border border-neutral-800 bg-neutral-900/70 p-6 shadow-2xl">
+          <h2 className="text-2xl font-semibold text-white">
+            Open Visible Instability
+          </h2>
+
+          <p className="mt-3 max-w-5xl text-sm leading-6 text-neutral-300">
+            Preserve visible instability using governed operational selections.
+            Intake opens continuity visibility before triage, case governance,
+            routing, action, outcome verification, or recovery durability begins.
           </p>
 
-          <h1 style={styles.h1}>Open Visible Instability</h1>
-
-          <p style={styles.heroText}>
-            Use this surface when instability becomes visible and needs
-            governed continuity review before it can become a case, be routed,
-            acted on, or confirmed as stabilizing.
+          <p className="mt-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-4 text-sm leading-6 text-cyan-100">
+            <span className="font-semibold">Boundary:</span> /request opens
+            visibility. It does not accept the case, route ownership, execute
+            stabilization action, verify outcomes, declare recovery, or erase
+            structural continuity memory.
           </p>
-        </header>
+        </div>
 
-        <section style={styles.metricsGrid}>
-          <Metric label="Current Entry Route" value={entryRoute} />
-          <Metric label="Pressure Type" value={instabilityClass} />
-          <Metric label="Severity" value={severity} />
-          <Metric label="Ownership" value={ownershipState} />
-          <Metric label="Evidence" value={evidenceLevel} />
-          <Metric label="Visibility" value={governanceVisibility} />
-        </section>
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <IntakePanel
+            title="Intake Visibility Climate"
+            value={intakeIntelligence.visibilityClassification}
+          />
+          <IntakePanel
+            title="Triage Readiness Posture"
+            value={intakeIntelligence.governanceReadiness}
+          />
+          <IntakePanel
+            title="Evidence Threshold Visibility"
+            value={intakeIntelligence.evidencePosture}
+          />
+          <IntakePanel
+            title="Command Visibility Meaning"
+            value={intakeIntelligence.commandMeaning}
+          />
+        </div>
 
-        <section style={styles.identityCard}>
-          <p style={styles.eyebrow}>Generated intake identity</p>
+        <div className="mt-6 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+          <h3 className="text-lg font-semibold text-white">
+            Intake Pressure Intelligence
+          </h3>
 
-          <h2 style={styles.identityValue}>{generatedIntakeIdentity}</h2>
+          <p className="mt-3 text-sm leading-6 text-neutral-300">
+            {intakeIntelligence.triageMeaning}
+          </p>
+        </div>
 
-          <p style={styles.cardText}>
+        <div className="mt-6 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+          <h3 className="text-lg font-semibold text-white">
+            Generated Intake Identity
+          </h3>
+
+          <p className="mt-3 text-xl font-semibold leading-7 text-cyan-100">
+            {generatedIntakeIdentity}
+          </p>
+
+          <p className="mt-3 max-w-4xl text-sm leading-6 text-neutral-400">
             This identity is generated from governed selections so visible
             instability remains comparable, searchable, and ready for triage.
           </p>
 
-          <div style={styles.badgeRow}>
-            <span style={styles.signalBadge}>{instabilityClass}</span>
-            <span style={styles.signalBadge}>{visibleSignal}</span>
-            <span style={styles.signalBadge}>{location}</span>
-            <span style={styles.signalBadge}>{affectedArea}</span>
-            <span style={styles.signalBadge}>{severity}</span>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <SignalBadge>{instabilityClass}</SignalBadge>
+            <SignalBadge>{visibleSignal}</SignalBadge>
+            <SignalBadge>{location}</SignalBadge>
+            <SignalBadge>{affectedArea}</SignalBadge>
+            <SignalBadge>{severity}</SignalBadge>
+            <SignalBadge>{governanceVisibility}</SignalBadge>
           </div>
-        </section>
+        </div>
 
-        <section style={styles.intelligenceCard}>
-          <p style={styles.eyebrow}>Intake intelligence panel</p>
+        <section className="mt-8 grid gap-6 lg:grid-cols-[1fr_1.05fr]">
+          <section className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+            <h3 className="text-xl font-semibold text-white">
+              Operational Intake Workspace
+            </h3>
 
-          <h2 style={styles.h2}>What does this visible instability mean?</h2>
+            <p className="mt-3 text-sm leading-6 text-neutral-400">
+              Preserve visible instability using standardized operational
+              choices. Triage will decide whether the signal should be accepted,
+              clarified, escalated, closed, or held for stronger evidence.
+            </p>
 
-          <div style={styles.intelligenceGrid}>
-            <IntelligenceItem
-              label="Visibility Classification"
-              value={intakeIntelligence.visibilityClassification}
-            />
-
-            <IntelligenceItem
-              label="Governance Readiness"
-              value={intakeIntelligence.governanceReadiness}
-            />
-
-            <IntelligenceItem
-              label="Ownership Posture"
-              value={intakeIntelligence.ownershipPosture}
-            />
-
-            <IntelligenceItem
-              label="Evidence Posture"
-              value={intakeIntelligence.evidencePosture}
-            />
-
-            <IntelligenceItem
-              label="Stabilization Risk"
-              value={intakeIntelligence.stabilizationRisk}
-            />
-
-            <IntelligenceItem
-              label="Command Meaning"
-              value={intakeIntelligence.commandMeaning}
-            />
-          </div>
-        </section>
-
-        <section style={styles.card}>
-          <p style={styles.eyebrow}>Governed instability intake</p>
-
-          <h2 style={styles.h2}>Operational Intake Workspace</h2>
-
-          <p style={styles.cardText}>
-            Preserve visible instability using governed operational selections.
-            CGI intake exists to open continuity visibility before triage,
-            routing, intervention, or recovery confirmation begins.
-          </p>
-
-          <form onSubmit={submitRequest} style={styles.form}>
-            <label style={styles.label}>
-              How did this enter CGI?
-              <select
+            <form onSubmit={submitRequest} className="mt-6 space-y-5">
+              <Select
+                label="How did this enter CGI?"
                 value={entryRoute}
-                onChange={(event) => setEntryRoute(event.target.value)}
-                style={styles.input}
-              >
-                {entryRoutes.map((route) => (
-                  <option key={route}>{route}</option>
-                ))}
-              </select>
-            </label>
-
-            <label style={styles.label}>
-              What kind of operational pressure is visible?
-              <select
-                value={instabilityClass}
-                onChange={(event) => setInstabilityClass(event.target.value)}
-                style={styles.input}
-              >
-                {instabilityClassOptions.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-              <span style={styles.helperText}>{selectedClassDescription}</span>
-            </label>
-
-            <label style={styles.label}>
-              How difficult is this becoming to manage?
-              <select
-                value={severity}
-                onChange={(event) => setSeverity(event.target.value)}
-                style={styles.input}
-              >
-                {severityLevels.map((level) => (
-                  <option key={level}>{level}</option>
-                ))}
-              </select>
-              <span style={styles.helperText}>
-                {resolveSeverityMeaning(severity)}
-              </span>
-            </label>
-
-            <label style={styles.label}>
-              Where is this happening?
-              <select
-                value={location}
-                onChange={(event) => setLocation(event.target.value)}
-                style={styles.input}
-              >
-                {locationOptions.map((item) => (
-                  <option key={item}>{item}</option>
-                ))}
-              </select>
-            </label>
-
-            <label style={styles.label}>
-              What area is affected?
-              <select
-                value={affectedArea}
-                onChange={(event) => setAffectedArea(event.target.value)}
-                style={styles.input}
-              >
-                {affectedAreaOptions.map((item) => (
-                  <option key={item}>{item}</option>
-                ))}
-              </select>
-            </label>
-
-            <label style={styles.label}>
-              What visible signal is present?
-              <select
-                value={visibleSignal}
-                onChange={(event) => setVisibleSignal(event.target.value)}
-                style={styles.input}
-              >
-                {visibleSignalOptions.map((item) => (
-                  <option key={item}>{item}</option>
-                ))}
-              </select>
-            </label>
-
-            <label style={styles.label}>
-              What is the ownership state?
-              <select
-                value={ownershipState}
-                onChange={(event) => setOwnershipState(event.target.value)}
-                style={styles.input}
-              >
-                {ownershipStates.map((item) => (
-                  <option key={item}>{item}</option>
-                ))}
-              </select>
-            </label>
-
-            <label style={styles.label}>
-              What evidence is already available?
-              <select
-                value={evidenceLevel}
-                onChange={(event) => setEvidenceLevel(event.target.value)}
-                style={styles.input}
-              >
-                {evidenceLevels.map((item) => (
-                  <option key={item}>{item}</option>
-                ))}
-              </select>
-            </label>
-
-            <label style={styles.label}>
-              Review urgency
-              <select
-                value={reviewUrgency}
-                onChange={(event) => setReviewUrgency(event.target.value)}
-                style={styles.input}
-              >
-                {reviewUrgencyOptions.map((item) => (
-                  <option key={item}>{item}</option>
-                ))}
-              </select>
-            </label>
-
-            <label style={styles.label}>
-              Brief operational note
-              <textarea
-                value={briefNote}
-                onChange={(event) => setBriefNote(event.target.value)}
-                placeholder="Optional: add one short sentence if the dropdowns do not fully capture the context."
-                style={styles.smallTextarea}
+                setValue={setEntryRoute}
+                options={entryRoutes}
               />
-            </label>
 
-            <button type="submit" disabled={loading} style={styles.primaryButton}>
-              {loading
-                ? 'Preserving Instability...'
-                : 'Preserve Visible Instability for Triage'}
-            </button>
-          </form>
+              <Select
+                label="What kind of operational pressure is visible?"
+                value={instabilityClass}
+                setValue={setInstabilityClass}
+                options={instabilityClassOptions.map((item) => item.value)}
+                helper={selectedClassDescription}
+              />
 
-          {message && <p style={styles.message}>{message}</p>}
+              <Select
+                label="How difficult is this becoming to manage?"
+                value={severity}
+                setValue={setSeverity}
+                options={severityLevels}
+                helper={resolveSeverityMeaning(severity)}
+              />
+
+              <Select
+                label="Where is this happening?"
+                value={location}
+                setValue={setLocation}
+                options={locationOptions}
+              />
+
+              <Select
+                label="What area is affected?"
+                value={affectedArea}
+                setValue={setAffectedArea}
+                options={affectedAreaOptions}
+              />
+
+              <Select
+                label="What visible signal is present?"
+                value={visibleSignal}
+                setValue={setVisibleSignal}
+                options={visibleSignalOptions}
+              />
+
+              <Select
+                label="What is the ownership state?"
+                value={ownershipState}
+                setValue={setOwnershipState}
+                options={ownershipStates}
+              />
+
+              <Select
+                label="What evidence is already available?"
+                value={evidenceLevel}
+                setValue={setEvidenceLevel}
+                options={evidenceLevels}
+              />
+
+              <Select
+                label="Review urgency"
+                value={reviewUrgency}
+                setValue={setReviewUrgency}
+                options={reviewUrgencyOptions}
+              />
+
+              <label className="block">
+                <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                  Brief operational note
+                </span>
+
+                <textarea
+                  value={briefNote}
+                  onChange={(event) => setBriefNote(event.target.value)}
+                  rows={5}
+                  placeholder="Optional: add one short sentence if the dropdowns do not fully capture the context."
+                  className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
+                />
+              </label>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-300 disabled:opacity-60"
+              >
+                {loading
+                  ? 'Preserving Visible Instability...'
+                  : 'Preserve Visible Instability for Triage'}
+              </button>
+            </form>
+          </section>
+
+          <section className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+            <h3 className="text-xl font-semibold text-white">
+              Intake Intelligence Panel
+            </h3>
+
+            <p className="mt-3 text-sm leading-6 text-neutral-400">
+              This synthesis explains the intake meaning before triage accepts,
+              pauses, escalates, or closes the signal.
+            </p>
+
+            <div className="mt-6 divide-y divide-neutral-800 rounded-2xl border border-neutral-800">
+              <Info
+                label="Visibility Classification"
+                value={intakeIntelligence.visibilityClassification}
+              />
+              <Info
+                label="Intake Maturity"
+                value={intakeIntelligence.intakeMaturity}
+              />
+              <Info
+                label="Intake Confidence"
+                value={intakeIntelligence.intakeConfidence}
+              />
+              <Info
+                label="Governance Readiness"
+                value={intakeIntelligence.governanceReadiness}
+              />
+              <Info
+                label="Ownership Posture"
+                value={intakeIntelligence.ownershipPosture}
+              />
+              <Info
+                label="Evidence Posture"
+                value={intakeIntelligence.evidencePosture}
+              />
+              <Info
+                label="Stabilization Risk"
+                value={intakeIntelligence.stabilizationRisk}
+              />
+              <Info
+                label="Triage Meaning"
+                value={intakeIntelligence.triageMeaning}
+              />
+              <Info
+                label="Command Meaning"
+                value={intakeIntelligence.commandMeaning}
+              />
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-neutral-800 bg-neutral-950 p-5">
+              <h4 className="text-sm font-semibold uppercase tracking-wide text-cyan-400">
+                Lifecycle Boundary
+              </h4>
+
+              <p className="mt-3 text-sm leading-6 text-neutral-300">
+                Request is not triage. Triage is not case governance. Case
+                governance is not routing. Routing is not action. Action is not
+                outcome. Outcome is not recovery.
+              </p>
+            </div>
+          </section>
         </section>
 
         {createdRequest && (
-          <section style={styles.successCard}>
-            <p style={styles.eyebrow}>Governance visibility opened</p>
-
-            <h2 style={styles.h2}>Request preserved for triage</h2>
-
-            <div style={styles.requestIdBox}>{createdRequest.id}</div>
-
-            <p style={styles.smallText}>
-              Intake visibility has been opened successfully. CGI triage now
-              decides whether this instability should be clarified, monitored,
-              escalated, merged, closed, or accepted into active continuity
-              governance.
+          <section className="mt-8 rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-200">
+              Governance Visibility Opened
             </p>
 
-            <div style={styles.createdGrid}>
+            <h3 className="mt-3 text-2xl font-semibold text-white">
+              Request preserved for triage
+            </h3>
+
+            <div className="mt-5 rounded-2xl border border-emerald-500/30 bg-neutral-950 p-4 text-sm font-semibold leading-6 text-emerald-100">
+              {createdRequest.id}
+            </div>
+
+            <p className="mt-4 max-w-4xl text-sm leading-6 text-emerald-50">
+              Intake visibility has been opened successfully. CGI triage now
+              determines whether this instability should be clarified, escalated,
+              closed, or accepted into active continuity governance.
+            </p>
+
+            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <CreatedDetail
                 label="Intake Identity"
                 value={createdRequest.beneficiary_name}
               />
-
               <CreatedDetail
                 label="Location"
                 value={createdRequest.beneficiary_level ?? 'Not recorded'}
               />
-
               <CreatedDetail
                 label="Triage State"
                 value={createdRequest.case_status}
               />
-
               <CreatedDetail
                 label="Governance Visibility"
                 value={
@@ -610,109 +633,166 @@ export default function RequestPage() {
               />
             </div>
 
-            <div style={styles.buttonGrid}>
-              <button
-                type="button"
-                onClick={openTriageQueue}
-                style={styles.secondaryButton}
-              >
-                Open Triage Queue
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={openTriageQueue}
+              className="mt-5 w-full rounded-xl bg-emerald-300 px-4 py-3 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-200"
+            >
+              Open Triage Queue
+            </button>
 
-            <div style={styles.triageBridge}>
-              <p style={styles.bridgeTitle}>Next governance movement</p>
+            <div className="mt-5 rounded-2xl border border-emerald-500/30 bg-neutral-950 p-5">
+              <p className="text-sm font-semibold text-emerald-100">
+                Next Governance Movement
+              </p>
 
-              <p style={styles.bridgeText}>
+              <p className="mt-2 text-sm leading-6 text-emerald-50">
                 This signal should now appear inside the CGI triage queue for
-                governance review and continuity classification.
+                governance eligibility review and continuity classification.
               </p>
             </div>
           </section>
         )}
 
-        <section style={styles.guidanceGrid}>
-          <article style={styles.guidanceCard}>
-            <p style={styles.eyebrow}>Boundary lock</p>
+        <section className="mt-8 grid gap-6 lg:grid-cols-2">
+          <article className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-400">
+              Boundary Lock
+            </p>
 
-            <h2 style={styles.h2}>A request is not yet a case.</h2>
+            <h3 className="mt-3 text-xl font-semibold text-white">
+              A request is not yet a case.
+            </h3>
 
-            <p style={styles.cardText}>
+            <p className="mt-3 text-sm leading-6 text-neutral-400">
               This page opens governed visibility. Triage decides whether the
-              instability should be monitored, returned for clarity, escalated,
-              merged, closed, or accepted into active case governance.
+              instability should be accepted, returned for clarity, escalated,
+              closed, or held for stronger evidence.
             </p>
           </article>
 
-          <article style={styles.guidanceCard}>
-            <p style={styles.eyebrow}>Typical users</p>
+          <article className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-400">
+              Typical Users
+            </p>
 
-            <h2 style={styles.h2}>Who usually opens visibility?</h2>
+            <h3 className="mt-3 text-xl font-semibold text-white">
+              Who usually opens visibility?
+            </h3>
 
-            <div style={styles.pillGrid}>
+            <div className="mt-5 flex flex-wrap gap-2">
               {typicalUsers.map((user) => (
-                <span key={user} style={styles.pill}>
-                  {user}
-                </span>
+                <SignalBadge key={user}>{user}</SignalBadge>
               ))}
             </div>
           </article>
         </section>
 
-        <section style={styles.flowCard}>
-          <p style={styles.eyebrow}>From visibility to survivability</p>
+        <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-400">
+            From Visibility to Survivability
+          </p>
 
-          <h2 style={styles.h2}>CGI begins when instability becomes visible.</h2>
+          <h3 className="mt-3 text-xl font-semibold text-white">
+            CGI begins when instability becomes visible.
+          </h3>
 
-          <p style={styles.cardText}>
+          <p className="mt-3 max-w-5xl text-sm leading-6 text-neutral-400">
             Intake preserves the signal. Triage judges it. Cases govern it.
             Routing directs it. Interventions act on it. Outcomes verify it.
             Recovery determines whether stabilization is holding.
           </p>
 
-          <div style={styles.flowGrid}>
+          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {flowSteps.map((step, index) => (
-              <article key={step.title} style={styles.flowStep}>
-                <p style={styles.stepNumber}>0{index + 1}</p>
+              <article
+                key={step.title}
+                className="rounded-2xl border border-neutral-800 bg-neutral-950 p-5"
+              >
+                <p className="text-xs font-semibold uppercase tracking-wide text-cyan-400">
+                  0{index + 1}
+                </p>
 
-                <h3 style={styles.stepTitle}>{step.title}</h3>
+                <h4 className="mt-3 text-lg font-semibold text-white">
+                  {step.title}
+                </h4>
 
-                <p style={styles.stepBody}>{step.body}</p>
+                <p className="mt-2 text-sm leading-6 text-neutral-400">
+                  {step.body}
+                </p>
               </article>
             ))}
           </div>
         </section>
 
-        <section style={styles.examplesCard}>
-          <p style={styles.eyebrow}>Examples</p>
+        <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-400">
+            Examples
+          </p>
 
-          <h2 style={styles.h2}>What belongs in governed intake?</h2>
+          <h3 className="mt-3 text-xl font-semibold text-white">
+            What belongs in governed intake?
+          </h3>
 
-          <div style={styles.exampleGrid}>
+          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {exampleSignals.map((example) => (
-              <article key={example} style={styles.exampleItem}>
+              <article
+                key={example}
+                className="rounded-2xl border border-neutral-800 bg-neutral-950 p-5 text-sm font-semibold leading-6 text-neutral-300"
+              >
                 {example}
               </article>
             ))}
           </div>
         </section>
 
-        <section style={styles.classCard}>
-          <p style={styles.eyebrow}>Operational pressure types</p>
+        <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-400">
+            Operational Pressure Types
+          </p>
 
-          <h2 style={styles.h2}>What do these categories mean?</h2>
+          <h3 className="mt-3 text-xl font-semibold text-white">
+            What do these categories mean?
+          </h3>
 
-          <div style={styles.classGrid}>
+          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {instabilityClassOptions.map((item) => (
-              <article key={item.value} style={styles.classItem}>
-                <h3 style={styles.classTitle}>{item.label}</h3>
+              <article
+                key={item.value}
+                className="rounded-2xl border border-neutral-800 bg-neutral-950 p-5"
+              >
+                <h4 className="text-sm font-semibold tracking-wide text-cyan-100">
+                  {item.label}
+                </h4>
 
-                <p style={styles.classText}>{item.description}</p>
+                <p className="mt-3 text-sm leading-6 text-neutral-400">
+                  {item.description}
+                </p>
               </article>
             ))}
           </div>
         </section>
-      </div>
+
+        <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+          <h3 className="text-xl font-semibold text-white">
+            Intake Governance Doctrine
+          </h3>
+
+          <p className="mt-4 text-sm leading-7 text-neutral-300">
+            Governed intake opens continuity visibility. It does not prove that a
+            case exists, that stabilization has begun, that ownership is assigned,
+            or that recovery is underway.
+          </p>
+
+          <p className="mt-4 text-sm leading-7 text-neutral-300">
+            Mature intake intelligence must preserve proportional visibility.
+            When a signal is clear and evidence is sufficient, it should move
+            calmly into triage. When evidence is weak, ownership is unclear, or
+            command visibility is needed, the system should preserve the signal
+            without pretending downstream governance has already occurred.
+          </p>
+        </section>
+      </section>
     </main>
   )
 }
@@ -727,7 +807,7 @@ function buildIntakeIntelligence(input: {
   entryRoute: string
 }): IntakeIntelligence {
   const ownershipUnclear = ['UNCLEAR', 'MISSING', 'CONTESTED'].includes(
-    input.ownershipState
+    input.ownershipState,
   )
 
   const evidenceWeak = ['NONE', 'LIMITED'].includes(input.evidenceLevel)
@@ -739,6 +819,10 @@ function buildIntakeIntelligence(input: {
   if (input.severity === 'CRITICAL') {
     return {
       visibilityClassification: 'Critical visible instability',
+      intakeMaturity: 'VISIBILITY_OPENED_WITH_COMMAND_RISK',
+      intakeConfidence: evidenceWeak
+        ? 'EVIDENCE_CONFIDENCE_LIMITED'
+        : 'URGENT_VISIBILITY_CONFIDENCE',
       governanceReadiness: 'Immediate triage and command visibility recommended',
       ownershipPosture: ownershipUnclear
         ? 'Ownership unclear under critical conditions'
@@ -747,6 +831,8 @@ function buildIntakeIntelligence(input: {
         ? 'Evidence weak under critical conditions'
         : 'Evidence available for immediate review',
       stabilizationRisk: 'High risk if review is delayed',
+      triageMeaning:
+        'This signal should enter triage with executive visibility preserved.',
       commandMeaning:
         'This signal may threaten continuity if not governed quickly.',
     }
@@ -755,6 +841,10 @@ function buildIntakeIntelligence(input: {
   if (input.severity === 'HIGH') {
     return {
       visibilityClassification: 'High-pressure visible instability',
+      intakeMaturity: 'VISIBILITY_OPENED_WITH_HIGH_PRESSURE',
+      intakeConfidence: evidenceWeak
+        ? 'BUILDING_INTAKE_CONFIDENCE'
+        : 'INTAKE_CONFIDENCE_SUPPORTED',
       governanceReadiness: 'Triage review likely required',
       ownershipPosture: ownershipUnclear
         ? 'Ownership gap may slow stabilization'
@@ -763,6 +853,8 @@ function buildIntakeIntelligence(input: {
         ? 'Evidence may be insufficient for confident routing'
         : 'Evidence appears usable for triage',
       stabilizationRisk: 'Moderate to high if unresolved',
+      triageMeaning:
+        'This signal is likely eligible for triage review and may become active case governance if evidence supports it.',
       commandMeaning:
         'This signal may become broader continuity pressure if movement stalls.',
     }
@@ -771,6 +863,8 @@ function buildIntakeIntelligence(input: {
   if (ownershipUnclear || evidenceWeak || crossSite) {
     return {
       visibilityClassification: 'Visible instability with governance concern',
+      intakeMaturity: 'VISIBILITY_OPENED_WITH_CLARITY_NEED',
+      intakeConfidence: 'VARIABLE_INTAKE_CONFIDENCE',
       governanceReadiness: 'Ready for triage review',
       ownershipPosture: ownershipUnclear
         ? 'Ownership requires clarification'
@@ -781,6 +875,8 @@ function buildIntakeIntelligence(input: {
       stabilizationRisk: crossSite
         ? 'Cross-site spread may increase instability'
         : 'Moderate if not reviewed',
+      triageMeaning:
+        'This signal should enter triage so eligibility, evidence strength, and ownership clarity can be judged before downstream movement.',
       commandMeaning:
         'The signal should remain visible until triage confirms the correct path.',
     }
@@ -788,10 +884,14 @@ function buildIntakeIntelligence(input: {
 
   return {
     visibilityClassification: 'Routine visible instability',
+    intakeMaturity: 'VISIBILITY_OPENED',
+    intakeConfidence: 'STANDARD_INTAKE_CONFIDENCE',
     governanceReadiness: 'Ready for standard triage',
     ownershipPosture: 'Ownership appears clear',
     evidencePosture: 'Evidence appears sufficient for triage',
     stabilizationRisk: 'Low to moderate if tracked promptly',
+    triageMeaning:
+      'This signal can enter triage calmly without assuming case acceptance or downstream stabilization.',
     commandMeaning:
       'The signal can enter ordinary governance review without immediate escalation.',
   }
@@ -825,14 +925,8 @@ function resolveGovernanceVisibility(input: {
 }
 
 function resolveSeverityMeaning(severity: string) {
-  if (severity === 'CRITICAL') {
-    return 'Executive visibility recommended immediately.'
-  }
-
-  if (severity === 'HIGH') {
-    return 'Stabilization delay may increase continuity risk.'
-  }
-
+  if (severity === 'CRITICAL') return 'Executive visibility recommended immediately.'
+  if (severity === 'HIGH') return 'Stabilization delay may increase continuity risk.'
   if (severity === 'MODERATE') {
     return 'Governance review may be required before the issue becomes harder to stabilize.'
   }
@@ -840,542 +934,83 @@ function resolveSeverityMeaning(severity: string) {
   return 'Localized operational visibility; monitor for recurrence or spread.'
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <article style={styles.metricCard}>
-      <p style={styles.metricLabel}>{label}</p>
-      <p style={styles.metricValue}>{value}</p>
-    </article>
-  )
-}
-
-function IntelligenceItem({
+function Select({
   label,
   value,
+  setValue,
+  options,
+  helper,
 }: {
   label: string
   value: string
+  setValue: (value: string) => void
+  options: string[]
+  helper?: string
 }) {
   return (
-    <article style={styles.intelligenceItem}>
-      <p style={styles.intelligenceLabel}>{label}</p>
-      <p style={styles.intelligenceValue}>{value}</p>
+    <label className="block">
+      <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
+        {label}
+      </span>
+
+      <select
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
+      >
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+
+      {helper && (
+        <span className="mt-2 block text-sm leading-6 text-neutral-500">
+          {helper}
+        </span>
+      )}
+    </label>
+  )
+}
+
+function IntakePanel({ title, value }: { title: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
+      <p className="text-sm font-semibold text-white">{title}</p>
+      <p className="mt-3 text-sm leading-6 text-neutral-400">{value}</p>
+    </div>
+  )
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid gap-2 p-4 md:grid-cols-[0.42fr_1fr]">
+      <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+        {label}
+      </p>
+      <p className="text-sm leading-6 text-neutral-100">{value}</p>
+    </div>
+  )
+}
+
+function CreatedDetail({ label, value }: { label: string; value: string }) {
+  return (
+    <article className="rounded-2xl border border-emerald-500/30 bg-neutral-950 p-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">
+        {label}
+      </p>
+      <p className="mt-2 text-sm font-semibold leading-6 text-emerald-50">
+        {value}
+      </p>
     </article>
   )
 }
 
-function CreatedDetail({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
+function SignalBadge({ children }: { children: React.ReactNode }) {
   return (
-    <article style={styles.createdDetail}>
-      <p style={styles.createdLabel}>{label}</p>
-      <p style={styles.createdValue}>{value}</p>
-    </article>
+    <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-100">
+      {children}
+    </span>
   )
-}
-
-const styles: Record<string, CSSProperties> = {
-  page: {
-    minHeight: '100vh',
-    background:
-      'linear-gradient(135deg, #111827 0%, #0f172a 48%, #020617 100%)',
-    color: '#ffffff',
-    padding: '56px 22px 140px',
-    fontFamily:
-      'system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
-  },
-
-  wrap: {
-    width: '100%',
-    maxWidth: '1120px',
-    margin: '0 auto',
-  },
-
-  hero: {
-    marginBottom: '28px',
-  },
-
-  eyebrow: {
-    margin: '0 0 10px',
-    color: '#cbd5e1',
-    fontSize: '12px',
-    fontWeight: 900,
-    letterSpacing: '0.14em',
-    textTransform: 'uppercase',
-  },
-
-  h1: {
-    margin: 0,
-    color: '#ffffff',
-    fontSize: 'clamp(42px, 8vw, 72px)',
-    lineHeight: 0.94,
-    letterSpacing: '-0.07em',
-    fontWeight: 900,
-  },
-
-  h2: {
-    margin: 0,
-    color: '#ffffff',
-    fontSize: '28px',
-    letterSpacing: '-0.04em',
-    fontWeight: 900,
-    lineHeight: 1.1,
-  },
-
-  heroText: {
-    maxWidth: '820px',
-    color: '#cbd5e1',
-    fontSize: '18px',
-    lineHeight: 1.68,
-    marginTop: '18px',
-  },
-
-  metricsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
-    gap: '14px',
-    marginBottom: '28px',
-  },
-
-  metricCard: {
-    background: '#0f172a',
-    border: '1px solid rgba(148,163,184,0.24)',
-    borderRadius: '18px',
-    padding: '16px',
-  },
-
-  metricLabel: {
-    margin: 0,
-    color: '#94a3b8',
-    fontSize: '11px',
-    fontWeight: 900,
-    letterSpacing: '0.08em',
-    textTransform: 'uppercase',
-  },
-
-  metricValue: {
-    margin: '8px 0 0',
-    color: '#f8fafc',
-    fontSize: '14px',
-    fontWeight: 900,
-    lineHeight: 1.35,
-    wordBreak: 'break-word',
-  },
-
-  identityCard: {
-    background: '#020617',
-    color: '#ffffff',
-    border: '1px solid rgba(20,184,166,0.34)',
-    borderRadius: '26px',
-    boxShadow: '0 24px 70px rgba(0,0,0,0.3)',
-    padding: '30px',
-    marginBottom: '28px',
-  },
-
-  identityValue: {
-    color: '#a7f3d0',
-    fontSize: 'clamp(24px, 4vw, 38px)',
-    fontWeight: 900,
-    lineHeight: 1.12,
-    margin: 0,
-    wordBreak: 'break-word',
-  },
-
-  badgeRow: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '8px',
-    marginTop: '18px',
-  },
-
-  signalBadge: {
-    background: '#111827',
-    color: '#a7f3d0',
-    borderRadius: '999px',
-    padding: '7px 11px',
-    fontSize: '11px',
-    fontWeight: 900,
-    border: '1px solid rgba(167,243,208,0.22)',
-  },
-
-  intelligenceCard: {
-    background: '#0f172a',
-    color: '#ffffff',
-    border: '1px solid rgba(148,163,184,0.24)',
-    borderRadius: '26px',
-    boxShadow: '0 24px 70px rgba(0,0,0,0.3)',
-    padding: '30px',
-    marginBottom: '28px',
-  },
-
-  intelligenceGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
-    gap: '12px',
-    marginTop: '22px',
-  },
-
-  intelligenceItem: {
-    background: '#020617',
-    border: '1px solid rgba(148,163,184,0.24)',
-    borderRadius: '16px',
-    padding: '14px',
-  },
-
-  intelligenceLabel: {
-    margin: 0,
-    color: '#94a3b8',
-    fontSize: '11px',
-    fontWeight: 900,
-    letterSpacing: '0.08em',
-    textTransform: 'uppercase',
-  },
-
-  intelligenceValue: {
-    margin: '8px 0 0',
-    color: '#f8fafc',
-    fontSize: '13px',
-    fontWeight: 800,
-    lineHeight: 1.45,
-  },
-
-  guidanceGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '16px',
-    marginBottom: '28px',
-  },
-
-  guidanceCard: {
-    background: 'rgba(15,23,42,0.9)',
-    color: '#ffffff',
-    border: '1px solid rgba(148,163,184,0.24)',
-    borderRadius: '24px',
-    boxShadow: '0 24px 70px rgba(0,0,0,0.28)',
-    padding: '24px',
-  },
-
-  flowCard: {
-    background: 'rgba(15,23,42,0.92)',
-    color: '#ffffff',
-    border: '1px solid rgba(148,163,184,0.24)',
-    borderRadius: '26px',
-    boxShadow: '0 24px 70px rgba(0,0,0,0.28)',
-    padding: '30px',
-    marginBottom: '28px',
-  },
-
-  examplesCard: {
-    background: '#020617',
-    color: '#ffffff',
-    border: '1px solid rgba(148,163,184,0.24)',
-    borderRadius: '26px',
-    boxShadow: '0 24px 70px rgba(0,0,0,0.3)',
-    padding: '30px',
-    marginBottom: '28px',
-  },
-
-  classCard: {
-    background: '#111827',
-    color: '#ffffff',
-    border: '1px solid rgba(148,163,184,0.24)',
-    borderRadius: '26px',
-    boxShadow: '0 24px 70px rgba(0,0,0,0.3)',
-    padding: '30px',
-    marginBottom: '28px',
-  },
-
-  card: {
-    background: '#0f172a',
-    color: '#ffffff',
-    border: '1px solid rgba(148,163,184,0.24)',
-    borderRadius: '26px',
-    boxShadow: '0 24px 70px rgba(0,0,0,0.36)',
-    padding: '30px',
-    marginBottom: '28px',
-  },
-
-  successCard: {
-    background: '#0f172a',
-    color: '#ffffff',
-    border: '1px solid rgba(34,197,94,0.34)',
-    borderRadius: '26px',
-    boxShadow: '0 24px 70px rgba(0,0,0,0.36)',
-    padding: '30px',
-    marginBottom: '28px',
-  },
-
-  cardText: {
-    color: '#cbd5e1',
-    lineHeight: 1.65,
-    margin: '12px 0 0',
-    maxWidth: '780px',
-  },
-
-  pillGrid: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '10px',
-    marginTop: '18px',
-  },
-
-  pill: {
-    background: '#020617',
-    border: '1px solid rgba(148,163,184,0.28)',
-    borderRadius: '999px',
-    color: '#e2e8f0',
-    padding: '9px 12px',
-    fontSize: '13px',
-    fontWeight: 800,
-    textTransform: 'capitalize',
-  },
-
-  flowGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-    gap: '12px',
-    marginTop: '22px',
-  },
-
-  flowStep: {
-    background: '#020617',
-    border: '1px solid rgba(148,163,184,0.24)',
-    borderRadius: '18px',
-    padding: '16px',
-    minHeight: '160px',
-  },
-
-  stepNumber: {
-    margin: 0,
-    color: '#a7f3d0',
-    fontWeight: 900,
-    fontSize: '13px',
-    letterSpacing: '0.12em',
-  },
-
-  stepTitle: {
-    margin: '10px 0',
-    color: '#ffffff',
-    fontSize: '17px',
-    lineHeight: 1.15,
-  },
-
-  stepBody: {
-    margin: 0,
-    color: '#cbd5e1',
-    lineHeight: 1.55,
-    fontSize: '13px',
-  },
-
-  exampleGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-    gap: '12px',
-    marginTop: '22px',
-  },
-
-  exampleItem: {
-    background: '#111827',
-    border: '1px solid rgba(148,163,184,0.24)',
-    borderRadius: '16px',
-    color: '#e2e8f0',
-    padding: '14px',
-    minHeight: '100px',
-    fontSize: '14px',
-    lineHeight: 1.45,
-    fontWeight: 800,
-  },
-
-  classGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-    gap: '10px',
-    marginTop: '22px',
-  },
-
-  classItem: {
-    background: '#020617',
-    border: '1px solid rgba(148,163,184,0.24)',
-    borderRadius: '16px',
-    padding: '14px',
-    minHeight: '145px',
-  },
-
-  classTitle: {
-    color: '#a7f3d0',
-    fontSize: '14px',
-    fontWeight: 900,
-    letterSpacing: '0.08em',
-    margin: 0,
-  },
-
-  classText: {
-    color: '#cbd5e1',
-    fontSize: '13px',
-    lineHeight: 1.45,
-    margin: '10px 0 0',
-  },
-
-  form: {
-    display: 'grid',
-    gap: '16px',
-    marginTop: '24px',
-  },
-
-  label: {
-    display: 'grid',
-    gap: '8px',
-    color: '#f8fafc',
-    fontWeight: 900,
-    fontSize: '14px',
-  },
-
-  helperText: {
-    color: '#cbd5e1',
-    fontSize: '13px',
-    fontWeight: 700,
-    lineHeight: 1.45,
-  },
-
-  input: {
-    width: '100%',
-    boxSizing: 'border-box',
-    border: 'none',
-    borderRadius: '18px',
-    padding: '18px',
-    fontSize: '16px',
-    color: '#0f172a',
-    background: '#ffffff',
-    outline: 'none',
-  },
-
-  smallTextarea: {
-    width: '100%',
-    boxSizing: 'border-box',
-    border: 'none',
-    borderRadius: '18px',
-    padding: '18px',
-    fontSize: '16px',
-    color: '#0f172a',
-    background: '#ffffff',
-    outline: 'none',
-    minHeight: '120px',
-    resize: 'vertical',
-  },
-
-  primaryButton: {
-    width: '100%',
-    border: 'none',
-    borderRadius: '18px',
-    padding: '18px',
-    fontSize: '15px',
-    fontWeight: 900,
-    cursor: 'pointer',
-    background: '#e2e8f0',
-    color: '#020617',
-  },
-
-  secondaryButton: {
-    width: '100%',
-    border: 'none',
-    borderRadius: '18px',
-    padding: '18px',
-    fontSize: '15px',
-    fontWeight: 900,
-    cursor: 'pointer',
-    background: '#a7f3d0',
-    color: '#022c22',
-  },
-
-  message: {
-    marginTop: '18px',
-    background: 'rgba(148,163,184,0.14)',
-    color: '#e2e8f0',
-    padding: '16px 18px',
-    borderRadius: '18px',
-    fontWeight: 900,
-    border: '1px solid rgba(148,163,184,0.24)',
-  },
-
-  requestIdBox: {
-    marginTop: '18px',
-    background: '#1e293b',
-    color: '#ffffff',
-    borderRadius: '18px',
-    padding: '18px',
-    wordBreak: 'break-word',
-    fontWeight: 900,
-    lineHeight: 1.5,
-  },
-
-  smallText: {
-    color: '#cbd5e1',
-    lineHeight: 1.6,
-    marginTop: '16px',
-  },
-
-  createdGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: '12px',
-    marginTop: '18px',
-  },
-
-  createdDetail: {
-    background: '#020617',
-    border: '1px solid rgba(148,163,184,0.26)',
-    borderRadius: '16px',
-    padding: '14px',
-  },
-
-  createdLabel: {
-    margin: 0,
-    color: '#a7f3d0',
-    fontSize: '11px',
-    fontWeight: 900,
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
-  },
-
-  createdValue: {
-    margin: '8px 0 0',
-    color: '#f8fafc',
-    fontWeight: 900,
-    lineHeight: 1.35,
-    wordBreak: 'break-word',
-  },
-
-  buttonGrid: {
-    display: 'grid',
-    gap: '12px',
-    marginTop: '18px',
-  },
-
-  triageBridge: {
-    marginTop: '20px',
-    background: '#042f2e',
-    border: '1px solid #115e59',
-    borderRadius: '18px',
-    padding: '18px',
-  },
-
-  bridgeTitle: {
-    color: '#5eead4',
-    fontWeight: 900,
-    margin: 0,
-    fontSize: '13px',
-    letterSpacing: '0.08em',
-    textTransform: 'uppercase',
-  },
-
-  bridgeText: {
-    color: '#ccfbf1',
-    marginTop: '10px',
-    lineHeight: 1.6,
-  },
 }
