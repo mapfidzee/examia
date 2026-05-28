@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import type { ReactNode } from 'react'
+import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import { supabase } from '../../lib/supabase'
 
 type VisibleInstability = {
@@ -14,7 +14,10 @@ type VisibleInstability = {
   region: string | null
   institution_name: string | null
   safeguarding_flag: boolean
+  intervention_summary?: string | null
+  outcome_summary?: string | null
   created_at?: string | null
+  updated_at?: string | null
 }
 
 type AuditSeverity = 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL'
@@ -25,6 +28,32 @@ type TriageDecision =
   | 'ESCALATE_TO_COMMAND'
   | 'HOLD_FOR_CLARITY'
   | 'CLOSE_NO_CGI_ACTION'
+
+type InheritedIntakeContext = {
+  intakeIdentity: string
+  entryRoute: string
+  pressureType: string
+  pressureMeaning: string
+  severityMeaning: string
+  location: string
+  affectedArea: string
+  visibleSignal: string
+  ownershipState: string
+  evidenceLevel: string
+  reviewUrgency: string
+  governanceVisibility: string
+  visibilityClassification: string
+  intakeMaturity: string
+  intakeConfidence: string
+  governanceReadiness: string
+  ownershipPosture: string
+  evidencePosture: string
+  stabilizationRisk: string
+  triageMeaning: string
+  commandMeaning: string
+  lifecycleBoundary: string
+  briefNote: string
+}
 
 type TriageIntelligence = {
   gateStatus: string
@@ -158,10 +187,20 @@ export default function TriageContent() {
 
     if (!decision) return
 
+    const inheritedContext = buildInheritedIntakeContext(item)
+    const triageIntelligence = buildTriageIntelligence(item)
+    const triageSummary = buildTriageDecisionSummary({
+      item,
+      decision,
+      inheritedContext,
+      triageIntelligence,
+    })
+
     const { error: updateError } = await supabase
       .from('beneficiary_cases')
       .update({
         case_status: decision.status,
+        outcome_summary: triageSummary,
         updated_at: new Date().toISOString(),
       })
       .eq('id', item.id)
@@ -174,14 +213,16 @@ export default function TriageContent() {
     await preserveTriageEvidence({
       item,
       decision,
+      inheritedContext,
+      triageIntelligence,
       severity: resolveTriageSeverity(item, decision.status),
       summary: buildTriageSummary(item, decision.status),
     })
 
     setMessage(
       decision.status === 'ACCEPTED_FOR_GOVERNANCE'
-        ? 'Triage accepted visible instability into active CGI case governance. Eligibility, evidence threshold, and lifecycle traceability are preserved.'
-        : 'Triage decision preserved as continuity governance evidence.',
+        ? 'Triage accepted inherited intake instability into active CGI case governance. Intake context, eligibility meaning, evidence threshold, and lifecycle traceability are preserved.'
+        : 'Triage decision preserved as continuity governance evidence with inherited intake context.',
     )
 
     await loadData()
@@ -245,16 +286,16 @@ export default function TriageContent() {
           </h2>
 
           <p className="mt-3 max-w-5xl text-sm leading-6 text-neutral-300">
-            Decide whether visible instability should become an accepted CGI case,
-            require stronger evidence, receive command visibility, remain held for
-            clarity, or close without active CGI action.
+            Decide whether inherited visible instability from intake should become
+            an accepted CGI case, require stronger evidence, receive command
+            visibility, remain held for clarity, or close without active CGI action.
           </p>
 
           <p className="mt-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-4 text-sm leading-6 text-cyan-100">
             <span className="font-semibold">Boundary:</span> /triage governs
-            eligibility. It does not manage active case lifecycle movement, route
-            ownership, execute stabilization action, verify outcomes, or declare
-            recovery durability.
+            eligibility. It inherits intake context from /request, but does not
+            manage active case lifecycle movement, route ownership, execute
+            stabilization action, verify outcomes, or declare recovery durability.
           </p>
         </div>
 
@@ -292,8 +333,8 @@ export default function TriageContent() {
 
         <TriageSection
           title="Awaiting Triage Review"
-          description="Request opens visibility. Triage determines whether visible instability crosses the governance eligibility threshold before it becomes an accepted CGI case."
-          emptyText="No visible CGI instability is currently awaiting triage review. Eligibility intelligence will activate when visible instability enters triage."
+          description="Request opens visibility. Triage inherits intake context and determines whether visible instability crosses the governance eligibility threshold before it becomes an accepted CGI case."
+          emptyText="No visible CGI instability is currently awaiting triage review. Eligibility intelligence will activate when visible instability enters triage from governed intake."
           items={activeReviewItems}
           selectedDecisions={selectedDecisions}
           setSelectedDecisions={setSelectedDecisions}
@@ -302,7 +343,7 @@ export default function TriageContent() {
 
         <TriageSection
           title="Preserved Triage Decisions"
-          description="These signals have already been triaged. Their decisions remain visible for governance traceability, not repeated review."
+          description="These signals have already been triaged. Their inherited intake context and eligibility decisions remain visible for governance traceability, not repeated review."
           emptyText="No preserved triage decisions are currently visible."
           items={preservedReviewItems}
           selectedDecisions={selectedDecisions}
@@ -317,17 +358,18 @@ export default function TriageContent() {
 
           <p className="mt-4 text-sm leading-7 text-neutral-300">
             Triage is eligibility governance, not active case management. CGI
-            protects the lifecycle by preventing weak, unclear, or unsupported
-            signals from moving downstream before evidence, ownership, visibility,
-            and governance relevance are proportionally understood.
+            protects the lifecycle by inheriting intake evidence and preventing
+            weak, unclear, or unsupported signals from moving downstream before
+            evidence, ownership, visibility, and governance relevance are
+            proportionally understood.
           </p>
 
           <p className="mt-4 text-sm leading-7 text-neutral-300">
             Mature triage intelligence must preserve proportional interpretation.
             When visible instability meets the governance threshold, the system
-            should allow case acceptance without over-escalation. When evidence is
-            weak or ownership is unclear, the system should pause movement without
-            pretending stabilization has begun.
+            should allow case acceptance without over-escalation. When inherited
+            evidence is weak or ownership is unclear, the system should pause
+            movement without pretending stabilization has begun.
           </p>
         </section>
       </section>
@@ -349,9 +391,7 @@ function TriageSection({
   emptyText: string
   items: VisibleInstability[]
   selectedDecisions: Record<string, TriageDecision | ''>
-  setSelectedDecisions: React.Dispatch<
-    React.SetStateAction<Record<string, TriageDecision | ''>>
-  >
+  setSelectedDecisions: Dispatch<SetStateAction<Record<string, TriageDecision | ''>>>
   preserveTriageDecision: (item: VisibleInstability) => void
 }) {
   return (
@@ -391,11 +431,10 @@ function TriageCard({
 }: {
   item: VisibleInstability
   selectedDecision: TriageDecision | ''
-  setSelectedDecisions: React.Dispatch<
-    React.SetStateAction<Record<string, TriageDecision | ''>>
-  >
+  setSelectedDecisions: Dispatch<SetStateAction<Record<string, TriageDecision | ''>>>
   preserveTriageDecision: (item: VisibleInstability) => void
 }) {
+  const inheritedContext = buildInheritedIntakeContext(item)
   const intelligence = buildTriageIntelligence(item)
   const locked = isDecisionLocked(item)
 
@@ -404,15 +443,15 @@ function TriageCard({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-cyan-400">
-            {locked ? 'Decision Preserved' : 'Visible Instability'}
+            {locked ? 'Decision Preserved' : 'Inherited Intake Signal'}
           </p>
 
           <h4 className="mt-2 text-xl font-semibold text-white">
-            {buildSimplifiedIdentity(item)}
+            {inheritedContext.intakeIdentity}
           </h4>
 
           <p className="mt-2 text-xs leading-5 text-neutral-500">
-            Full identity: {item.beneficiary_name}
+            Source record: {item.beneficiary_name}
           </p>
         </div>
 
@@ -423,26 +462,56 @@ function TriageCard({
 
       <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         <Info label="Triage State" value={item.case_status} />
-        <Info label="Pressure Type" value={item.support_domain} />
+        <Info label="Inherited Pressure" value={inheritedContext.pressureType} />
+        <Info label="Inherited Signal" value={inheritedContext.visibleSignal} />
         <Info
-          label="Site / Institution"
-          value={item.institution_name || GOVERNANCE_INSTITUTION}
+          label="Inherited Ownership"
+          value={inheritedContext.ownershipPosture}
         />
-        <Info label="Region" value={item.region || 'Not provided'} />
         <Info
-          label="Visibility"
-          value={
-            item.safeguarding_flag || item.severity_level === 'CRITICAL'
-              ? 'Executive visibility'
-              : 'Governance visibility'
-          }
+          label="Inherited Evidence"
+          value={inheritedContext.evidencePosture}
         />
-        <Info label="Next Surface" value={intelligence.downstreamSurface} />
+        <Info
+          label="Inherited Command Meaning"
+          value={inheritedContext.commandMeaning}
+        />
       </div>
+
+      <section className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
+        <p className="text-sm font-semibold text-cyan-400">
+          Inherited Intake Context
+        </p>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <Info label="Entry Route" value={inheritedContext.entryRoute} />
+          <Info
+            label="Visibility Classification"
+            value={inheritedContext.visibilityClassification}
+          />
+          <Info label="Intake Maturity" value={inheritedContext.intakeMaturity} />
+          <Info
+            label="Intake Confidence"
+            value={inheritedContext.intakeConfidence}
+          />
+          <Info
+            label="Governance Readiness"
+            value={inheritedContext.governanceReadiness}
+          />
+          <Info
+            label="Governance Visibility"
+            value={inheritedContext.governanceVisibility}
+          />
+          <Info label="Review Urgency" value={inheritedContext.reviewUrgency} />
+          <Info label="Affected Area" value={inheritedContext.affectedArea} />
+          <Info label="Brief Note" value={inheritedContext.briefNote} />
+        </div>
+      </section>
 
       <div className="mt-5 flex flex-wrap gap-2">
         <SignalBadge>{item.support_domain}</SignalBadge>
         <SignalBadge>{item.severity_level}</SignalBadge>
+        <SignalBadge>{inheritedContext.governanceVisibility}</SignalBadge>
 
         {(item.safeguarding_flag || item.severity_level === 'CRITICAL') && (
           <SignalBadge>EXECUTIVE_VISIBILITY</SignalBadge>
@@ -552,6 +621,8 @@ async function preserveTriageEvidence(input: {
     status: string
     reason: string
   }
+  inheritedContext: InheritedIntakeContext
+  triageIntelligence: TriageIntelligence
   severity: AuditSeverity
   summary: string
 }) {
@@ -573,6 +644,15 @@ async function preserveTriageEvidence(input: {
     severity: input.severity,
     details: {
       evidence_type: 'CGI_TRIAGE_EVIDENCE',
+      inherited_intake_identity: input.inheritedContext.intakeIdentity,
+      inherited_entry_route: input.inheritedContext.entryRoute,
+      inherited_pressure_type: input.inheritedContext.pressureType,
+      inherited_visible_signal: input.inheritedContext.visibleSignal,
+      inherited_ownership_posture: input.inheritedContext.ownershipPosture,
+      inherited_evidence_posture: input.inheritedContext.evidencePosture,
+      inherited_command_meaning: input.inheritedContext.commandMeaning,
+      triage_gate_status: input.triageIntelligence.gateStatus,
+      triage_confidence: input.triageIntelligence.confidence,
       linked_case_id: input.item.id,
       pressure_type: input.item.support_domain,
       triage_status: input.decision.status,
@@ -586,7 +666,7 @@ async function preserveTriageEvidence(input: {
           ? 'EXECUTIVE'
           : 'GOVERNANCE',
       continuity_interpretation:
-        'Triage preserved the governance eligibility decision before instability entered downstream case movement.',
+        'Triage preserved the governance eligibility decision using inherited intake context before instability entered downstream case movement.',
       survivability_meaning:
         'CGI protected downstream routing and intervention from unreviewed or unclear instability.',
       governance_boundary: 'NON_PUNITIVE_CONTINUITY_GOVERNANCE',
@@ -598,6 +678,100 @@ async function preserveTriageEvidence(input: {
   if (error) console.error(error)
 }
 
+function buildInheritedIntakeContext(item: VisibleInstability): InheritedIntakeContext {
+  const source = item.outcome_summary || ''
+
+  return {
+    intakeIdentity:
+      extractIntakeField(source, 'Generated intake identity') ||
+      item.beneficiary_name ||
+      buildSimplifiedIdentity(item),
+    entryRoute: extractIntakeField(source, 'Entry route') || 'Entry route not recorded',
+    pressureType:
+      extractIntakeField(source, 'Operational pressure type') ||
+      item.support_domain ||
+      'Pressure type not recorded',
+    pressureMeaning:
+      extractIntakeField(source, 'Pressure meaning') ||
+      'Pressure meaning not inherited from intake.',
+    severityMeaning:
+      extractIntakeField(source, 'Severity meaning') ||
+      'Severity meaning not inherited from intake.',
+    location:
+      extractIntakeField(source, 'Location') ||
+      item.beneficiary_level ||
+      'Location not recorded',
+    affectedArea:
+      extractIntakeField(source, 'Affected area') ||
+      item.region ||
+      'Affected area not recorded',
+    visibleSignal:
+      extractIntakeField(source, 'Visible signal') ||
+      item.region ||
+      'Visible signal not recorded',
+    ownershipState:
+      extractIntakeField(source, 'Ownership state') ||
+      item.institution_name ||
+      'Ownership state not recorded',
+    evidenceLevel:
+      extractIntakeField(source, 'Evidence level') ||
+      'Evidence level not recorded',
+    reviewUrgency:
+      extractIntakeField(source, 'Review urgency') ||
+      'Review urgency not recorded',
+    governanceVisibility:
+      extractIntakeField(source, 'Governance visibility') ||
+      (item.safeguarding_flag ? 'EXECUTIVE_VISIBILITY' : 'GOVERNANCE_VISIBILITY'),
+    visibilityClassification:
+      extractIntakeField(source, 'Visibility classification') ||
+      'Visibility classification inherited from request is unavailable.',
+    intakeMaturity:
+      extractIntakeField(source, 'Intake maturity') ||
+      'Intake maturity inherited from request is unavailable.',
+    intakeConfidence:
+      extractIntakeField(source, 'Intake confidence') ||
+      'Intake confidence inherited from request is unavailable.',
+    governanceReadiness:
+      extractIntakeField(source, 'Governance readiness') ||
+      'Governance readiness inherited from request is unavailable.',
+    ownershipPosture:
+      extractIntakeField(source, 'Ownership posture') ||
+      'Ownership posture inherited from request is unavailable.',
+    evidencePosture:
+      extractIntakeField(source, 'Evidence posture') ||
+      'Evidence posture inherited from request is unavailable.',
+    stabilizationRisk:
+      extractIntakeField(source, 'Stabilization risk') ||
+      'Stabilization risk inherited from request is unavailable.',
+    triageMeaning:
+      extractIntakeField(source, 'Triage meaning') ||
+      'Triage meaning inherited from request is unavailable.',
+    commandMeaning:
+      extractIntakeField(source, 'Command meaning') ||
+      'Command meaning inherited from request is unavailable.',
+    lifecycleBoundary:
+      extractIntakeField(source, 'Lifecycle boundary') ||
+      'Request opens visibility. Triage determines eligibility.',
+    briefNote:
+      extractIntakeField(source, 'Brief note') ||
+      'No inherited intake note recorded.',
+  }
+}
+
+function extractIntakeField(source: string, label: string) {
+  if (!source) return ''
+
+  const prefix = `${label}:`
+  const line = source
+    .split('\n')
+    .map((item) => item.trim())
+    .find((item) => item.startsWith(prefix))
+
+  if (!line) return ''
+
+  return line.replace(prefix, '').trim()
+}
+
 function buildTriageClimate(input: {
   allItems: VisibleInstability[]
   activeItems: VisibleInstability[]
@@ -606,15 +780,15 @@ function buildTriageClimate(input: {
   if (input.allItems.length === 0) {
     return {
       stabilityClimate:
-        'Awaiting visible instability before triage climate interpretation activates.',
+        'Awaiting inherited intake instability before triage climate interpretation activates.',
       gatePosture:
-        'Eligibility gate posture will activate when visible instability enters triage.',
+        'Eligibility gate posture will activate when visible instability enters triage from /request.',
       evidenceVisibility:
-        'Evidence threshold visibility pending triage activity.',
+        'Inherited evidence threshold visibility pending triage activity.',
       caseReadiness:
         'Case governance readiness pending eligibility review.',
       pressureMeaning:
-        'Triage pressure interpretation will activate when visible instability enters the eligibility gate.',
+        'Triage pressure interpretation will activate when inherited intake evidence enters the eligibility gate.',
       commandSynthesis:
         'No active triage concentration currently requiring executive continuity synthesis.',
     }
@@ -641,27 +815,27 @@ function buildTriageClimate(input: {
   return {
     stabilityClimate:
       commandEscalation === 0
-        ? 'Visible instability remains proportionally manageable within the triage eligibility gate.'
-        : 'Some visible instability requires command visibility before ordinary lifecycle movement.',
+        ? 'Inherited intake instability remains proportionally manageable within the triage eligibility gate.'
+        : 'Some inherited intake instability requires command visibility before ordinary lifecycle movement.',
     gatePosture:
       active === 0
         ? 'All visible triage items currently have preserved eligibility decisions.'
-        : 'Eligibility gate remains active for visible instability awaiting triage judgment.',
+        : 'Eligibility gate remains active for inherited intake instability awaiting triage judgment.',
     evidenceVisibility:
       evidenceRequired === 0
-        ? 'No concentrated evidence threshold gap is currently blocking triage movement.'
-        : 'Evidence threshold gaps remain visible and should be resolved before downstream movement.',
+        ? 'No concentrated inherited evidence threshold gap is currently blocking triage movement.'
+        : 'Inherited evidence threshold gaps remain visible and should be resolved before downstream movement.',
     caseReadiness:
       accepted > 0
-        ? 'Some visible instability has become eligible for active case governance.'
+        ? 'Some inherited intake instability has become eligible for active case governance.'
         : 'Case governance readiness remains pending eligibility acceptance.',
     pressureMeaning:
       commandEscalation === 0 && evidenceRequired === 0 && clarityRequired === 0
-        ? 'Triage pressure remains calm and proportionate under current eligibility review conditions.'
-        : 'Triage pressure remains visible through command escalation, evidence gaps, or clarity constraints.',
+        ? 'Triage pressure remains calm and proportionate under current inherited intake eligibility conditions.'
+        : 'Triage pressure remains visible through command escalation, inherited evidence gaps, or clarity constraints.',
     commandSynthesis:
       commandEscalation > 0
-        ? 'Triage concentration may require executive continuity synthesis visibility.'
+        ? 'Inherited triage concentration may require executive continuity synthesis visibility.'
         : 'No concentrated triage deterioration currently requiring command escalation.',
   }
 }
@@ -709,7 +883,77 @@ function buildTriageSummary(item: VisibleInstability, status: string) {
   )}. Status: ${status}.`
 }
 
+function buildTriageDecisionSummary(input: {
+  item: VisibleInstability
+  decision: {
+    status: string
+    reason: string
+  }
+  inheritedContext: InheritedIntakeContext
+  triageIntelligence: TriageIntelligence
+}) {
+  return `
+INHERITED INTAKE IDENTITY
+${input.inheritedContext.intakeIdentity}
+
+INHERITED ENTRY ROUTE
+${input.inheritedContext.entryRoute}
+
+INHERITED PRESSURE TYPE
+${input.inheritedContext.pressureType}
+
+INHERITED VISIBLE SIGNAL
+${input.inheritedContext.visibleSignal}
+
+INHERITED OWNERSHIP POSTURE
+${input.inheritedContext.ownershipPosture}
+
+INHERITED EVIDENCE POSTURE
+${input.inheritedContext.evidencePosture}
+
+INHERITED GOVERNANCE READINESS
+${input.inheritedContext.governanceReadiness}
+
+INHERITED COMMAND MEANING
+${input.inheritedContext.commandMeaning}
+
+TRIAGE RESULT
+${input.decision.status}
+
+TRIAGE REASON
+${input.decision.reason}
+
+TRIAGE GATE STATUS
+${input.triageIntelligence.gateStatus}
+
+TRIAGE MATURITY
+${input.triageIntelligence.maturity}
+
+ELIGIBILITY CONFIDENCE
+${input.triageIntelligence.confidence}
+
+RECOMMENDED POSTURE
+${input.triageIntelligence.recommendedPosture}
+
+CASE READINESS
+${input.triageIntelligence.downstreamSurface}
+
+NEXT LIFECYCLE STATE
+${input.triageIntelligence.nextMovement}
+
+LIFECYCLE BOUNDARY
+Request is not triage.
+Triage is not case governance.
+Case governance is not routing.
+Routing is not action.
+Action is not outcome.
+Outcome is not recovery.
+  `.trim()
+}
+
 function buildTriageIntelligence(item: VisibleInstability): TriageIntelligence {
+  const inheritedContext = buildInheritedIntakeContext(item)
+
   if (item.case_status === 'ACCEPTED_FOR_GOVERNANCE') {
     return {
       gateStatus: 'Accepted into governance',
@@ -726,51 +970,65 @@ function buildTriageIntelligence(item: VisibleInstability): TriageIntelligence {
     }
   }
 
-  if (item.case_status.includes('EVIDENCE_REQUIRED')) {
+  if (
+    item.case_status.includes('EVIDENCE_REQUIRED') ||
+    inheritedContext.evidenceLevel === 'NONE' ||
+    inheritedContext.evidenceLevel === 'LIMITED'
+  ) {
     return {
       gateStatus: 'Evidence gate',
       maturity: 'EVIDENCE_ALIGNMENT_PENDING',
       confidence: 'LIMITED_ELIGIBILITY_CONFIDENCE',
       recommendedPosture: 'Do not accept until evidence improves',
-      evidenceMeaning: 'Evidence is not yet sufficient for credible governance',
-      ownershipMeaning: 'Ownership may remain secondary until evidence improves',
-      riskMeaning: 'Risk increases if weak evidence is accepted too early',
+      evidenceMeaning:
+        'Inherited evidence is not yet sufficient for confident downstream governance.',
+      ownershipMeaning:
+        'Ownership may remain secondary until evidence threshold strengthens.',
+      riskMeaning: 'Risk increases if weak inherited evidence is accepted too early',
       nextMovement: 'Request missing evidence before acceptance',
       downstreamSurface: '/triage',
       commandMeaning:
-        'Weak evidence can create false stabilization confidence if accepted too early.',
+        'Weak inherited evidence can create false stabilization confidence if accepted too early.',
     }
   }
 
-  if (item.case_status.includes('COMMAND_ESCALATION')) {
+  if (
+    item.case_status.includes('COMMAND_ESCALATION') ||
+    inheritedContext.governanceVisibility === 'COMMAND_VISIBILITY'
+  ) {
     return {
       gateStatus: 'Command visibility required',
       maturity: 'EXECUTIVE_TRIAGE_VISIBILITY',
       confidence: 'HIGH_ATTENTION_REQUIRED',
       recommendedPosture: 'Elevate before ordinary case movement',
-      evidenceMeaning: 'Evidence should be preserved for executive review',
+      evidenceMeaning: 'Inherited evidence should be preserved for executive review',
       ownershipMeaning: 'Ownership may require command-level clarification',
       riskMeaning: 'High visibility risk if handled routinely',
       nextMovement: 'Preserve command review before downstream movement',
       downstreamSurface: '/command',
       commandMeaning:
-        'This instability exceeds routine triage and requires executive awareness.',
+        'This inherited intake signal exceeds routine triage and requires executive awareness.',
     }
   }
 
-  if (item.case_status.includes('CLARITY_REQUIRED')) {
+  if (
+    item.case_status.includes('CLARITY_REQUIRED') ||
+    inheritedContext.ownershipState === 'UNCLEAR' ||
+    inheritedContext.ownershipState === 'MISSING' ||
+    inheritedContext.ownershipState === 'CONTESTED'
+  ) {
     return {
       gateStatus: 'Clarity gate',
       maturity: 'CLARITY_ALIGNMENT_PENDING',
       confidence: 'VARIABLE_ELIGIBILITY_CONFIDENCE',
       recommendedPosture: 'Hold until ownership, scope, or context is clearer',
-      evidenceMeaning: 'Evidence may exist but context is not yet actionable',
-      ownershipMeaning: 'Ownership or scope is not clear enough',
+      evidenceMeaning: 'Evidence may exist but inherited context is not yet actionable',
+      ownershipMeaning: 'Inherited ownership is not clear enough',
       riskMeaning: 'Risk of misrouting if accepted too early',
       nextMovement: 'Clarify ownership, scope, or institutional context',
       downstreamSurface: '/triage',
       commandMeaning:
-        'CGI is preventing unclear instability from entering the active chain prematurely.',
+        'CGI is preventing unclear inherited instability from entering the active chain prematurely.',
     }
   }
 
@@ -796,13 +1054,13 @@ function buildTriageIntelligence(item: VisibleInstability): TriageIntelligence {
       maturity: 'ELEVATED_ELIGIBILITY_REVIEW',
       confidence: 'EXECUTIVE_VISIBILITY_RECOMMENDED',
       recommendedPosture: 'Executive visibility recommended',
-      evidenceMeaning: 'Evidence must be preserved carefully',
+      evidenceMeaning: 'Inherited evidence must be preserved carefully',
       ownershipMeaning: 'Ownership must not remain unclear',
       riskMeaning: 'High if review is delayed',
       nextMovement: 'Escalate or accept with strong governance visibility',
       downstreamSurface: '/triage or /command',
       commandMeaning:
-        'This instability should not move silently into routine handling.',
+        'This inherited instability should not move silently into routine handling.',
     }
   }
 
@@ -812,13 +1070,13 @@ function buildTriageIntelligence(item: VisibleInstability): TriageIntelligence {
       maturity: 'HIGH_PRESSURE_ELIGIBILITY_REVIEW',
       confidence: 'GOVERNANCE_LIKELY_IF_EVIDENCE_SUPPORTS',
       recommendedPosture: 'Likely accept or escalate depending on evidence',
-      evidenceMeaning: 'Evidence should be strong enough to support movement',
+      evidenceMeaning: 'Inherited evidence should be strong enough to support movement',
       ownershipMeaning: 'Ownership should be identified quickly',
       riskMeaning: 'May expand if triage stalls',
       nextMovement: 'Decide acceptance, evidence request, or escalation',
       downstreamSurface: '/triage',
       commandMeaning:
-        'This signal may become broader continuity pressure if delayed.',
+        'This inherited signal may become broader continuity pressure if delayed.',
     }
   }
 
@@ -827,42 +1085,59 @@ function buildTriageIntelligence(item: VisibleInstability): TriageIntelligence {
     maturity: 'ELIGIBILITY_REVIEW_PENDING',
     confidence: 'ELIGIBILITY_CONFIDENCE_PENDING',
     recommendedPosture: 'Review for governance eligibility',
-    evidenceMeaning: 'Evidence should be checked before case acceptance',
-    ownershipMeaning: 'Ownership should be clear enough for routing',
+    evidenceMeaning: 'Inherited evidence should be checked before case acceptance',
+    ownershipMeaning: 'Inherited ownership should be clear enough for routing',
     riskMeaning: 'Moderate if not reviewed',
     nextMovement: 'Choose acceptance, clarity, evidence, escalation, or closure',
     downstreamSurface: '/triage',
     commandMeaning:
-      'The signal should remain visible until triage determines the correct path.',
+      'The inherited intake signal should remain visible until triage determines the correct path.',
   }
 }
 
 function buildTriageInterpretation(item: VisibleInstability) {
+  const inheritedContext = buildInheritedIntakeContext(item)
+
   if (item.case_status === 'ACCEPTED_FOR_GOVERNANCE') {
-    return 'This instability has already been accepted into CGI case governance and should continue through case lifecycle governance.'
+    return 'This inherited intake signal has already been accepted into CGI case governance and should continue through case lifecycle governance.'
   }
 
   if (item.case_status.includes('EVIDENCE_REQUIRED')) {
-    return 'This instability needs stronger evidence before it can safely become a governed case.'
+    return 'This inherited intake signal needs stronger evidence before it can safely become a governed case.'
   }
 
   if (item.case_status.includes('COMMAND_ESCALATION')) {
-    return 'This instability requires command visibility before ordinary case movement continues.'
+    return 'This inherited intake signal requires command visibility before ordinary case movement continues.'
   }
 
   if (item.case_status.includes('CLARITY_REQUIRED')) {
-    return 'This instability requires clearer ownership, scope, or context before acceptance.'
+    return 'This inherited intake signal requires clearer ownership, scope, or context before acceptance.'
   }
 
   if (item.case_status.includes('CLOSED_NO_CGI_ACTION')) {
-    return 'This instability was reviewed and did not require active CGI case governance.'
+    return 'This inherited intake signal was reviewed and did not require active CGI case governance.'
+  }
+
+  if (
+    inheritedContext.evidenceLevel === 'NONE' ||
+    inheritedContext.evidenceLevel === 'LIMITED'
+  ) {
+    return 'Inherited intake evidence remains limited. Triage should not treat downstream stabilization as credible until evidence threshold improves.'
+  }
+
+  if (
+    inheritedContext.ownershipState === 'UNCLEAR' ||
+    inheritedContext.ownershipState === 'MISSING' ||
+    inheritedContext.ownershipState === 'CONTESTED'
+  ) {
+    return 'Inherited ownership posture is unclear. Triage should clarify responsibility before accepting this signal into ordinary lifecycle movement.'
   }
 
   if (item.safeguarding_flag || item.severity_level === 'CRITICAL') {
-    return 'This instability carries elevated visibility and should not move silently into routine handling.'
+    return 'This inherited intake signal carries elevated visibility and should not move silently into routine handling.'
   }
 
-  return 'This visible instability is ready for triage review before it becomes an accepted CGI case.'
+  return 'This inherited intake signal is ready for triage review before it becomes an accepted CGI case.'
 }
 
 function resolveTriageSeverity(
