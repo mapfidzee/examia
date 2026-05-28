@@ -21,6 +21,14 @@ type InstabilityCase = {
   created_at?: string
 }
 
+type TimelineEntry = {
+  id?: string
+  case_id: string
+  event_type: string | null
+  event_summary: string | null
+  created_at?: string | null
+}
+
 type InheritedGovernanceContext = {
   inheritedIntakeIdentity: string
   inheritedEntryRoute: string
@@ -38,6 +46,7 @@ type InheritedGovernanceContext = {
   recommendedPosture: string
   caseReadiness: string
   nextLifecycleState: string
+  memorySource: string
 }
 
 type CaseIntelligence = {
@@ -121,6 +130,9 @@ export default function CasesPage() {
 
 function CasesContent() {
   const [cases, setCases] = useState<InstabilityCase[]>([])
+  const [timelineMemory, setTimelineMemory] = useState<
+    Record<string, TimelineEntry[]>
+  >({})
   const [message, setMessage] = useState('')
 
   useEffect(() => {
@@ -128,19 +140,30 @@ function CasesContent() {
   }, [])
 
   async function loadCases() {
-    const { data, error } = await supabase
-      .from('beneficiary_cases')
-      .select('*')
-      .in('support_domain', PRESSURE_TYPES)
-      .in('case_status', ACTIVE_CASE_STATUSES)
-      .order('created_at', { ascending: false })
+    const [casesResult, timelineResult] = await Promise.all([
+      supabase
+        .from('beneficiary_cases')
+        .select('*')
+        .in('support_domain', PRESSURE_TYPES)
+        .in('case_status', ACTIVE_CASE_STATUSES)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('case_timeline')
+        .select('*')
+        .order('created_at', { ascending: false }),
+    ])
 
-    if (error) {
-      console.error(error)
+    if (casesResult.error) {
+      console.error(casesResult.error)
       return
     }
 
-    setCases(data || [])
+    if (timelineResult.error) {
+      console.error(timelineResult.error)
+    }
+
+    setCases(casesResult.data || [])
+    setTimelineMemory(groupTimelineByCase(timelineResult.data || []))
   }
 
   async function changeCaseStatus(
@@ -148,6 +171,11 @@ function CasesContent() {
     nextStatus: string,
     movementType: 'FORWARD' | 'ESCALATION' | 'OVERRIDE',
   ) {
+    const inherited = buildInheritedGovernanceContext(
+      caseItem,
+      timelineMemory[caseItem.id] || [],
+    )
+
     const { error } = await supabase
       .from('beneficiary_cases')
       .update({
@@ -164,11 +192,16 @@ function CasesContent() {
     await supabase.from('case_timeline').insert({
       case_id: caseItem.id,
       event_type: `STATUS_${nextStatus}`,
-      event_summary: `${movementType} governance movement preserved. Case moved to ${nextStatus} without collapsing routing, action, outcome, or recovery boundaries.`,
+      event_summary: buildCaseTimelineSummary({
+        caseItem,
+        inherited,
+        movementType,
+        nextStatus,
+      }),
     })
 
     setMessage(
-      `${movementType} governance movement preserved. Continuity posture, command meaning, and lifecycle traceability remain visible.`,
+      `${movementType} governance movement preserved. Continuity posture, inherited memory, command meaning, and lifecycle traceability remain visible.`,
     )
 
     await loadCases()
@@ -212,9 +245,10 @@ function CasesContent() {
           <p className="mt-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-4 text-sm leading-6 text-cyan-100">
             <span className="font-semibold">Boundary:</span> /cases governs
             accepted instability lifecycle visibility. It inherits eligibility
-            meaning from /triage. It does not route ownership, execute
-            stabilization action, verify outcomes, declare recovery, or erase
-            structural continuity memory.
+            meaning from /triage and protects continuity memory through timeline
+            records. It does not route ownership, execute stabilization action,
+            verify outcomes, declare recovery, or erase structural continuity
+            memory.
           </p>
         </div>
 
@@ -265,7 +299,10 @@ function CasesContent() {
 
           <div className="mt-6 grid gap-5">
             {cases.map((caseItem) => {
-              const inherited = buildInheritedGovernanceContext(caseItem)
+              const inherited = buildInheritedGovernanceContext(
+                caseItem,
+                timelineMemory[caseItem.id] || [],
+              )
               const intelligence = buildCaseIntelligence(caseItem, inherited)
               const simplifiedIdentity = buildSimplifiedIdentity(caseItem, inherited)
 
@@ -312,10 +349,14 @@ function CasesContent() {
 
                   <section className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
                     <p className="text-sm font-semibold text-cyan-400">
-                      Inherited Triage Context
+                      Inherited Lifecycle Memory
                     </p>
 
                     <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                      <Info
+                        label="Memory Source"
+                        value={inherited.memorySource}
+                      />
                       <Info
                         label="Inherited Intake Identity"
                         value={inherited.inheritedIntakeIdentity}
@@ -461,7 +502,7 @@ function CasesContent() {
                   {caseItem.outcome_summary && (
                     <div className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-sm leading-6 text-neutral-300">
                       <span className="font-semibold text-white">
-                        Inherited triage / latest outcome evidence:{' '}
+                        Latest downstream evidence:{' '}
                       </span>
                       {truncateText(caseItem.outcome_summary)}
                     </div>
@@ -713,60 +754,96 @@ function buildCaseClimate(cases: InstabilityCase[]) {
   }
 }
 
+function groupTimelineByCase(entries: TimelineEntry[]) {
+  return entries.reduce<Record<string, TimelineEntry[]>>((grouped, entry) => {
+    if (!entry.case_id) return grouped
+
+    if (!grouped[entry.case_id]) grouped[entry.case_id] = []
+    grouped[entry.case_id].push(entry)
+
+    return grouped
+  }, {})
+}
+
 function buildInheritedGovernanceContext(
   caseItem: InstabilityCase,
+  timelineEntries: TimelineEntry[],
 ): InheritedGovernanceContext {
-  const source = caseItem.outcome_summary || ''
+  const timelineSource = buildLifecycleMemorySource(timelineEntries)
+  const currentSummary = caseItem.outcome_summary || ''
+  const joinedSource = [timelineSource, currentSummary].filter(Boolean).join('\n\n')
 
   return {
     inheritedIntakeIdentity:
-      extractBlockField(source, 'INHERITED INTAKE IDENTITY') ||
+      extractBlockField(joinedSource, 'INHERITED INTAKE IDENTITY') ||
+      extractInlineField(joinedSource, 'Generated intake identity') ||
       caseItem.beneficiary_name,
     inheritedEntryRoute:
-      extractBlockField(source, 'INHERITED ENTRY ROUTE') ||
+      extractBlockField(joinedSource, 'INHERITED ENTRY ROUTE') ||
+      extractInlineField(joinedSource, 'Entry route') ||
       'Inherited entry route not available',
     inheritedPressureType:
-      extractBlockField(source, 'INHERITED PRESSURE TYPE') ||
+      extractBlockField(joinedSource, 'INHERITED PRESSURE TYPE') ||
+      extractInlineField(joinedSource, 'Operational pressure type') ||
       caseItem.support_domain,
     inheritedVisibleSignal:
-      extractBlockField(source, 'INHERITED VISIBLE SIGNAL') ||
+      extractBlockField(joinedSource, 'INHERITED VISIBLE SIGNAL') ||
+      extractInlineField(joinedSource, 'Visible signal') ||
       caseItem.region ||
       'Inherited visible signal not available',
     inheritedOwnershipPosture:
-      extractBlockField(source, 'INHERITED OWNERSHIP POSTURE') ||
+      extractBlockField(joinedSource, 'INHERITED OWNERSHIP POSTURE') ||
+      extractInlineField(joinedSource, 'Ownership posture') ||
+      extractInlineField(joinedSource, 'Ownership state') ||
       'Inherited ownership posture not available',
     inheritedEvidencePosture:
-      extractBlockField(source, 'INHERITED EVIDENCE POSTURE') ||
+      extractBlockField(joinedSource, 'INHERITED EVIDENCE POSTURE') ||
+      extractInlineField(joinedSource, 'Evidence posture') ||
+      extractInlineField(joinedSource, 'Evidence level') ||
       'Inherited evidence posture not available',
     inheritedGovernanceReadiness:
-      extractBlockField(source, 'INHERITED GOVERNANCE READINESS') ||
+      extractBlockField(joinedSource, 'INHERITED GOVERNANCE READINESS') ||
+      extractInlineField(joinedSource, 'Governance readiness') ||
       'Inherited governance readiness not available',
     inheritedCommandMeaning:
-      extractBlockField(source, 'INHERITED COMMAND MEANING') ||
+      extractBlockField(joinedSource, 'INHERITED COMMAND MEANING') ||
+      extractInlineField(joinedSource, 'Command meaning') ||
       'Inherited command meaning not available',
     triageResult:
-      extractBlockField(source, 'TRIAGE RESULT') || caseItem.case_status,
+      extractBlockField(joinedSource, 'TRIAGE RESULT') || caseItem.case_status,
     triageReason:
-      extractBlockField(source, 'TRIAGE REASON') ||
+      extractBlockField(joinedSource, 'TRIAGE REASON') ||
       'Triage reason not available',
     triageGateStatus:
-      extractBlockField(source, 'TRIAGE GATE STATUS') ||
+      extractBlockField(joinedSource, 'TRIAGE GATE STATUS') ||
       'Triage gate status not available',
     triageMaturity:
-      extractBlockField(source, 'TRIAGE MATURITY') ||
+      extractBlockField(joinedSource, 'TRIAGE MATURITY') ||
       'Triage maturity not available',
     eligibilityConfidence:
-      extractBlockField(source, 'ELIGIBILITY CONFIDENCE') ||
+      extractBlockField(joinedSource, 'ELIGIBILITY CONFIDENCE') ||
       'Eligibility confidence not available',
     recommendedPosture:
-      extractBlockField(source, 'RECOMMENDED POSTURE') ||
+      extractBlockField(joinedSource, 'RECOMMENDED POSTURE') ||
       'Recommended posture not available',
     caseReadiness:
-      extractBlockField(source, 'CASE READINESS') || '/cases',
+      extractBlockField(joinedSource, 'CASE READINESS') || '/cases',
     nextLifecycleState:
-      extractBlockField(source, 'NEXT LIFECYCLE STATE') ||
+      extractBlockField(joinedSource, 'NEXT LIFECYCLE STATE') ||
       'Case lifecycle movement pending.',
+    memorySource: timelineSource
+      ? 'case_timeline + latest case summary'
+      : currentSummary
+        ? 'latest case summary only'
+        : 'fallback case fields only',
   }
+}
+
+function buildLifecycleMemorySource(timelineEntries: TimelineEntry[]) {
+  return timelineEntries
+    .map((entry) => entry.event_summary || '')
+    .filter(Boolean)
+    .join('\n\n')
 }
 
 function extractBlockField(source: string, label: string) {
@@ -782,6 +859,90 @@ function extractBlockField(source: string, label: string) {
   if (index === -1) return ''
 
   return lines[index + 1] || ''
+}
+
+function extractInlineField(source: string, label: string) {
+  if (!source) return ''
+
+  const prefix = `${label}:`
+
+  const line = source
+    .split('\n')
+    .map((item) => item.trim())
+    .find((item) => item.startsWith(prefix))
+
+  if (!line) return ''
+
+  return line.replace(prefix, '').trim()
+}
+
+function buildCaseTimelineSummary(input: {
+  caseItem: InstabilityCase
+  inherited: InheritedGovernanceContext
+  movementType: 'FORWARD' | 'ESCALATION' | 'OVERRIDE'
+  nextStatus: string
+}) {
+  return `
+INHERITED INTAKE IDENTITY
+${input.inherited.inheritedIntakeIdentity}
+
+INHERITED ENTRY ROUTE
+${input.inherited.inheritedEntryRoute}
+
+INHERITED PRESSURE TYPE
+${input.inherited.inheritedPressureType}
+
+INHERITED VISIBLE SIGNAL
+${input.inherited.inheritedVisibleSignal}
+
+INHERITED OWNERSHIP POSTURE
+${input.inherited.inheritedOwnershipPosture}
+
+INHERITED EVIDENCE POSTURE
+${input.inherited.inheritedEvidencePosture}
+
+INHERITED GOVERNANCE READINESS
+${input.inherited.inheritedGovernanceReadiness}
+
+INHERITED COMMAND MEANING
+${input.inherited.inheritedCommandMeaning}
+
+TRIAGE RESULT
+${input.inherited.triageResult}
+
+TRIAGE REASON
+${input.inherited.triageReason}
+
+TRIAGE GATE STATUS
+${input.inherited.triageGateStatus}
+
+TRIAGE MATURITY
+${input.inherited.triageMaturity}
+
+ELIGIBILITY CONFIDENCE
+${input.inherited.eligibilityConfidence}
+
+RECOMMENDED POSTURE
+${input.inherited.recommendedPosture}
+
+CASE READINESS
+${input.inherited.caseReadiness}
+
+CASE GOVERNANCE MOVEMENT
+${input.movementType}
+
+NEXT LIFECYCLE STATE
+${input.nextStatus}
+
+CASE SIGNAL
+${input.caseItem.beneficiary_name}
+
+LIFECYCLE BOUNDARY
+Case governance preserves lifecycle custody.
+Routing is not action.
+Action is not outcome.
+Outcome is not recovery.
+  `.trim()
 }
 
 function buildSimplifiedIdentity(
