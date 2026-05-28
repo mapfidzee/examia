@@ -21,6 +21,25 @@ type InstabilityCase = {
   created_at?: string
 }
 
+type InheritedGovernanceContext = {
+  inheritedIntakeIdentity: string
+  inheritedEntryRoute: string
+  inheritedPressureType: string
+  inheritedVisibleSignal: string
+  inheritedOwnershipPosture: string
+  inheritedEvidencePosture: string
+  inheritedGovernanceReadiness: string
+  inheritedCommandMeaning: string
+  triageResult: string
+  triageReason: string
+  triageGateStatus: string
+  triageMaturity: string
+  eligibilityConfidence: string
+  recommendedPosture: string
+  caseReadiness: string
+  nextLifecycleState: string
+}
+
 type CaseIntelligence = {
   phase: string
   maturity: string
@@ -183,17 +202,19 @@ function CasesContent() {
           </h2>
 
           <p className="mt-3 max-w-5xl text-sm leading-6 text-neutral-300">
-            Govern accepted instability after triage. Preserve lifecycle phase,
-            required next movement, evidence posture, stagnation risk, survivability
-            visibility, and executive command meaning without executing routing,
-            intervention, outcome, or recovery work.
+            Govern accepted instability after triage. Preserve inherited intake
+            meaning, inherited eligibility posture, lifecycle phase, required next
+            movement, evidence posture, stagnation risk, survivability visibility,
+            and executive command meaning without executing routing, intervention,
+            outcome, or recovery work.
           </p>
 
           <p className="mt-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-4 text-sm leading-6 text-cyan-100">
             <span className="font-semibold">Boundary:</span> /cases governs
-            accepted instability lifecycle visibility. It does not route ownership,
-            execute stabilization action, verify outcomes, declare recovery, or
-            erase structural continuity memory.
+            accepted instability lifecycle visibility. It inherits eligibility
+            meaning from /triage. It does not route ownership, execute
+            stabilization action, verify outcomes, declare recovery, or erase
+            structural continuity memory.
           </p>
         </div>
 
@@ -236,15 +257,17 @@ function CasesContent() {
 
           <p className="mt-3 text-sm leading-6 text-neutral-400">
             Triage decides whether visible instability enters governance. Case
-            governance preserves continuity status, lifecycle maturity, evidence
-            posture, and next movement until the case is routed, acted on, verified,
-            recovered, escalated, or archived.
+            governance inherits the intake and triage record, then preserves
+            continuity status, lifecycle maturity, evidence posture, and next
+            movement until the case is routed, acted on, verified, recovered,
+            escalated, or archived.
           </p>
 
           <div className="mt-6 grid gap-5">
             {cases.map((caseItem) => {
-              const intelligence = buildCaseIntelligence(caseItem)
-              const simplifiedIdentity = buildSimplifiedIdentity(caseItem)
+              const inherited = buildInheritedGovernanceContext(caseItem)
+              const intelligence = buildCaseIntelligence(caseItem, inherited)
+              const simplifiedIdentity = buildSimplifiedIdentity(caseItem, inherited)
 
               return (
                 <article
@@ -262,7 +285,7 @@ function CasesContent() {
                       </h4>
 
                       <p className="mt-2 text-xs leading-5 text-neutral-500">
-                        Full identity: {caseItem.beneficiary_name}
+                        Source identity: {caseItem.beneficiary_name}
                       </p>
                     </div>
 
@@ -274,22 +297,68 @@ function CasesContent() {
                   <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                     <Info label="Governance State" value={caseItem.case_status} />
                     <Info
-                      label="Location"
-                      value={caseItem.beneficiary_level || 'Not provided'}
+                      label="Inherited Pressure"
+                      value={inherited.inheritedPressureType}
                     />
                     <Info
-                      label="Source Area"
-                      value={caseItem.region || 'Not provided'}
+                      label="Inherited Signal"
+                      value={inherited.inheritedVisibleSignal}
                     />
                     <Info
-                      label="Institution"
-                      value={caseItem.institution_name || 'Not provided'}
+                      label="Eligibility Confidence"
+                      value={inherited.eligibilityConfidence}
                     />
                   </div>
+
+                  <section className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
+                    <p className="text-sm font-semibold text-cyan-400">
+                      Inherited Triage Context
+                    </p>
+
+                    <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                      <Info
+                        label="Inherited Intake Identity"
+                        value={inherited.inheritedIntakeIdentity}
+                      />
+                      <Info
+                        label="Inherited Ownership"
+                        value={inherited.inheritedOwnershipPosture}
+                      />
+                      <Info
+                        label="Inherited Evidence"
+                        value={inherited.inheritedEvidencePosture}
+                      />
+                      <Info
+                        label="Triage Result"
+                        value={inherited.triageResult}
+                      />
+                      <Info
+                        label="Triage Gate Status"
+                        value={inherited.triageGateStatus}
+                      />
+                      <Info
+                        label="Triage Maturity"
+                        value={inherited.triageMaturity}
+                      />
+                      <Info
+                        label="Recommended Posture"
+                        value={inherited.recommendedPosture}
+                      />
+                      <Info
+                        label="Triage Next Movement"
+                        value={inherited.nextLifecycleState}
+                      />
+                      <Info
+                        label="Inherited Command Meaning"
+                        value={inherited.inheritedCommandMeaning}
+                      />
+                    </div>
+                  </section>
 
                   <div className="mt-5 flex flex-wrap gap-2">
                     <SignalBadge>{caseItem.support_domain}</SignalBadge>
                     <SignalBadge>{caseItem.severity_level}</SignalBadge>
+                    <SignalBadge>{inherited.triageResult}</SignalBadge>
 
                     {(caseItem.instability_signals || []).map((signal, index) => (
                       <SignalBadge key={`${signal}-${index}`}>
@@ -371,7 +440,7 @@ function CasesContent() {
                       Governance Interpretation
                     </p>
                     <p className="mt-2 text-sm leading-6 text-cyan-50">
-                      {buildGovernanceInterpretation(caseItem)}
+                      {buildGovernanceInterpretation(caseItem, inherited)}
                     </p>
                   </div>
 
@@ -392,7 +461,7 @@ function CasesContent() {
                   {caseItem.outcome_summary && (
                     <div className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-sm leading-6 text-neutral-300">
                       <span className="font-semibold text-white">
-                        Latest linked outcome evidence:{' '}
+                        Inherited triage / latest outcome evidence:{' '}
                       </span>
                       {truncateText(caseItem.outcome_summary)}
                     </div>
@@ -418,16 +487,17 @@ function CasesContent() {
 
           <p className="mt-4 text-sm leading-7 text-neutral-300">
             Case governance is lifecycle custody, not task execution. CGI preserves
-            accepted instability visibility, movement readiness, evidence posture,
-            stagnation risk, command meaning, and structural memory before routing,
-            action, outcome verification, or recovery durability occurs.
+            accepted instability visibility, inherited intake meaning, inherited
+            triage eligibility, movement readiness, evidence posture, stagnation
+            risk, command meaning, and structural memory before routing, action,
+            outcome verification, or recovery durability occurs.
           </p>
 
           <p className="mt-4 text-sm leading-7 text-neutral-300">
             Mature case governance must preserve proportional continuity
             interpretation. When accepted instability is moving through the lifecycle
             without stall, recurrence, evidence loss, or structural deterioration,
-            the system should support measured confidence while preserving
+            the system should support measured confidence while preserving inherited
             traceability, executive synthesis readiness, and lifecycle discipline.
           </p>
         </section>
@@ -583,11 +653,17 @@ function buildCaseClimate(cases: InstabilityCase[]) {
   }
 
   const highPressure = cases.filter(
-    (item) => item.severity_level === 'HIGH' || item.severity_level === 'CRITICAL',
+    (item) =>
+      item.severity_level === 'HIGH' || item.severity_level === 'CRITICAL',
   ).length
 
-  const stalled = cases.filter((item) => item.case_status.includes('STALLED')).length
-  const escalated = cases.filter((item) => item.case_status.includes('ESCALATED')).length
+  const stalled = cases.filter((item) =>
+    item.case_status.includes('STALLED'),
+  ).length
+
+  const escalated = cases.filter((item) =>
+    item.case_status.includes('ESCALATED'),
+  ).length
 
   const recoveryMonitoring = cases.filter(
     (item) => item.case_status === 'RECOVERY_MONITORING',
@@ -608,31 +684,26 @@ function buildCaseClimate(cases: InstabilityCase[]) {
         : stalled === 0 && escalated === 0
           ? 'Accepted instability conditions remain proportionally manageable under current case governance visibility.'
           : 'Some accepted instability pathways show stalled movement or escalation concentration.',
-
     lifecyclePosture:
       allVisibleCasesInRecovery
         ? 'Lifecycle posture has moved beyond active stabilization and is now observing durability before trust restoration.'
         : highPressure === 0
           ? 'Lifecycle governance posture remains balanced without concentrated high-pressure exposure.'
           : 'High-pressure case concentration remains visible and may require executive continuity awareness.',
-
     evidenceVisibility:
       allVisibleCasesHaveEvidence
         ? 'Action and outcome evidence are visible across active governed cases.'
         : 'Some governed cases still require action evidence, outcome evidence, or recovery readiness clarification.',
-
     routingLandscape:
       recoveryMonitoring > 0
         ? 'Some governed cases have progressed into recovery durability observation.'
         : 'Routing readiness remains active for accepted instability that has not yet stabilized.',
-
     pressureMeaning:
       allVisibleCasesInRecovery && allVisibleCasesHaveEvidence
         ? 'Case governance pressure is calm and proportionate. Visible cases are under recovery durability observation with action and outcome evidence preserved.'
         : stalled === 0 && escalated === 0 && highPressure === 0
           ? 'Case governance pressure remains proportionally active under current continuity conditions.'
           : 'Case governance pressure remains visible through escalation, stalled movement, high-pressure exposure, or evidence incompleteness.',
-
     commandSynthesis:
       allVisibleCasesInRecovery && allVisibleCasesHaveEvidence
         ? 'No active case deterioration is visible. Command attention may remain focused on durability observation and memory preservation.'
@@ -642,18 +713,104 @@ function buildCaseClimate(cases: InstabilityCase[]) {
   }
 }
 
-function buildSimplifiedIdentity(caseItem: InstabilityCase) {
+function buildInheritedGovernanceContext(
+  caseItem: InstabilityCase,
+): InheritedGovernanceContext {
+  const source = caseItem.outcome_summary || ''
+
+  return {
+    inheritedIntakeIdentity:
+      extractBlockField(source, 'INHERITED INTAKE IDENTITY') ||
+      caseItem.beneficiary_name,
+    inheritedEntryRoute:
+      extractBlockField(source, 'INHERITED ENTRY ROUTE') ||
+      'Inherited entry route not available',
+    inheritedPressureType:
+      extractBlockField(source, 'INHERITED PRESSURE TYPE') ||
+      caseItem.support_domain,
+    inheritedVisibleSignal:
+      extractBlockField(source, 'INHERITED VISIBLE SIGNAL') ||
+      caseItem.region ||
+      'Inherited visible signal not available',
+    inheritedOwnershipPosture:
+      extractBlockField(source, 'INHERITED OWNERSHIP POSTURE') ||
+      'Inherited ownership posture not available',
+    inheritedEvidencePosture:
+      extractBlockField(source, 'INHERITED EVIDENCE POSTURE') ||
+      'Inherited evidence posture not available',
+    inheritedGovernanceReadiness:
+      extractBlockField(source, 'INHERITED GOVERNANCE READINESS') ||
+      'Inherited governance readiness not available',
+    inheritedCommandMeaning:
+      extractBlockField(source, 'INHERITED COMMAND MEANING') ||
+      'Inherited command meaning not available',
+    triageResult:
+      extractBlockField(source, 'TRIAGE RESULT') || caseItem.case_status,
+    triageReason:
+      extractBlockField(source, 'TRIAGE REASON') ||
+      'Triage reason not available',
+    triageGateStatus:
+      extractBlockField(source, 'TRIAGE GATE STATUS') ||
+      'Triage gate status not available',
+    triageMaturity:
+      extractBlockField(source, 'TRIAGE MATURITY') ||
+      'Triage maturity not available',
+    eligibilityConfidence:
+      extractBlockField(source, 'ELIGIBILITY CONFIDENCE') ||
+      'Eligibility confidence not available',
+    recommendedPosture:
+      extractBlockField(source, 'RECOMMENDED POSTURE') ||
+      'Recommended posture not available',
+    caseReadiness:
+      extractBlockField(source, 'CASE READINESS') || '/cases',
+    nextLifecycleState:
+      extractBlockField(source, 'NEXT LIFECYCLE STATE') ||
+      'Case lifecycle movement pending.',
+  }
+}
+
+function extractBlockField(source: string, label: string) {
+  if (!source) return ''
+
+  const lines = source
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+
+  const index = lines.findIndex((line) => line === label)
+
+  if (index === -1) return ''
+
+  return lines[index + 1] || ''
+}
+
+function buildSimplifiedIdentity(
+  caseItem: InstabilityCase,
+  inherited: InheritedGovernanceContext,
+) {
   const location =
-    caseItem.beneficiary_level || caseItem.region || 'Unspecified continuity zone'
+    caseItem.beneficiary_level ||
+    caseItem.region ||
+    'Unspecified continuity zone'
+
+  const inheritedIdentity = inherited.inheritedIntakeIdentity
+
+  if (inheritedIdentity && inheritedIdentity !== caseItem.beneficiary_name) {
+    return inheritedIdentity
+  }
 
   return `${caseItem.support_domain} instability • ${location}`
 }
 
-function buildCaseIntelligence(caseItem: InstabilityCase): CaseIntelligence {
+function buildCaseIntelligence(
+  caseItem: InstabilityCase,
+  inherited: InheritedGovernanceContext,
+): CaseIntelligence {
   const hasAction = Boolean(caseItem.intervention_summary)
   const hasOutcome = Boolean(caseItem.outcome_summary)
 
   const evidencePosture = [
+    `Triage: ${inherited.eligibilityConfidence}`,
     `Routing: ${hasRoutingEvidence(caseItem) ? 'visible' : 'pending'}`,
     `Action: ${hasAction ? 'visible' : 'pending'}`,
     `Outcome: ${hasOutcome ? 'visible' : 'pending'}`,
@@ -666,11 +823,12 @@ function buildCaseIntelligence(caseItem: InstabilityCase): CaseIntelligence {
     return {
       phase: 'Accepted into governance',
       maturity: 'CASE_GOVERNANCE_OPENED',
-      confidence: 'PENDING_ROUTING_CONFIDENCE',
+      confidence: inherited.eligibilityConfidence || 'PENDING_ROUTING_CONFIDENCE',
       nextMovement: 'Route to stabilization ownership in /routing',
       evidencePosture,
       stagnationRisk: 'Moderate if routing direction does not begin.',
       commandMeaning:
+        inherited.inheritedCommandMeaning ||
         'Visible instability has crossed into governance and awaits stabilization direction.',
     }
   }
@@ -839,7 +997,10 @@ function hasRoutingEvidence(caseItem: InstabilityCase) {
   )
 }
 
-function buildGovernanceInterpretation(caseItem: InstabilityCase) {
+function buildGovernanceInterpretation(
+  caseItem: InstabilityCase,
+  inherited: InheritedGovernanceContext,
+) {
   if (caseItem.case_status.includes('STALLED')) {
     return 'Governed lifecycle movement is stalled. CGI should preserve visibility until stabilization direction, ownership, or evidence movement resumes.'
   }
@@ -861,6 +1022,10 @@ function buildGovernanceInterpretation(caseItem: InstabilityCase) {
 
   if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
     return 'This case has direction visibility. CGI should preserve ownership traceability until governed action evidence appears.'
+  }
+
+  if (caseItem.case_status === 'ACCEPTED_FOR_GOVERNANCE') {
+    return `This inherited triage signal is accepted into case governance. ${inherited.nextLifecycleState}`
   }
 
   return 'This instability remains under active continuity governance and requires proportional operational oversight.'
