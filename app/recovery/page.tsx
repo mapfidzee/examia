@@ -223,6 +223,8 @@ export default function RecoveryPage() {
     [eligibleCases, selectedCaseId],
   )
 
+  const hasSelectedRecoveryCase = Boolean(selectedCase)
+
   const recoveryMaturity = useMemo(
     () =>
       deriveRecoveryMaturity(
@@ -274,6 +276,50 @@ export default function RecoveryPage() {
   const recoveryPressure = deriveRecoveryPressure(commandPosture)
   const memoryMeaning = deriveMemoryMeaning(memoryImpact)
 
+  const displayedDurabilityResult = hasSelectedRecoveryCase
+    ? durabilityResult
+    : 'Durability result pending recovery-eligible case selection'
+
+  const displayedRecoveryTrajectory = hasSelectedRecoveryCase
+    ? recoveryTrajectory
+    : 'Recovery trajectory pending recovery-eligible case selection'
+
+  const displayedReburnSignal = hasSelectedRecoveryCase
+    ? reburnSignal
+    : 'Reburn interpretation pending recovery-eligible case selection'
+
+  const displayedRecoveryConfidence = hasSelectedRecoveryCase
+    ? recoveryConfidence
+    : 'Recovery confidence pending recovery-eligible case selection'
+
+  const displayedMemoryImpact = hasSelectedRecoveryCase
+    ? memoryImpact
+    : 'Memory impact pending recovery-eligible case selection'
+
+  const displayedRecoveryMaturity = hasSelectedRecoveryCase
+    ? recoveryMaturity
+    : 'RECOVERY_MATURITY_PENDING'
+
+  const displayedCommandPosture = hasSelectedRecoveryCase
+    ? commandPosture
+    : 'PENDING_RECOVERY_SELECTION'
+
+  const displayedSurvivabilitySignal = hasSelectedRecoveryCase
+    ? survivabilitySignal
+    : 'SURVIVABILITY_INTERPRETATION_PENDING'
+
+  const displayedExecutiveMeaning = hasSelectedRecoveryCase
+    ? executiveMeaning
+    : 'Executive recovery meaning will activate after a recovery-eligible case is selected.'
+
+  const displayedRecoveryPressure = hasSelectedRecoveryCase
+    ? recoveryPressure
+    : 'Recovery pressure interpretation will activate after inherited outcome evidence is selected for durability review.'
+
+  const displayedMemoryMeaning = hasSelectedRecoveryCase
+    ? memoryMeaning
+    : 'Structural memory interpretation will activate after recovery durability review begins.'
+
   const inheritedSummary = selectedCase
     ? selectedCase.inheritedVerification
     : buildInheritedVerification(undefined)
@@ -291,18 +337,18 @@ export default function RecoveryPage() {
     ['INHERITED RECOVERY READINESS', inheritedSummary.recoveryReadiness],
     ['INHERITED CONTINUITY OUTLOOK', inheritedSummary.continuityOutlook],
     ['INHERITED STABILIZATION CONFIDENCE', inheritedSummary.stabilizationConfidence],
-    ['DURABILITY RESULT', durabilityResult],
-    ['RECOVERY TRAJECTORY', recoveryTrajectory],
-    ['REBURN SIGNAL', reburnSignal],
-    ['RECOVERY CONFIDENCE', recoveryConfidence],
-    ['DURABILITY WINDOW', durabilityWindow],
-    ['MEMORY IMPACT', memoryImpact],
-    ['RECOVERY MATURITY', recoveryMaturity],
-    ['COMMAND POSTURE', commandPosture],
-    ['RECOVERY SURVIVABILITY SIGNAL', survivabilitySignal],
-    ['EXECUTIVE MEANING', executiveMeaning],
-    ['RECOVERY PRESSURE', recoveryPressure],
-    ['MEMORY MEANING', memoryMeaning],
+    ['DURABILITY RESULT', displayedDurabilityResult],
+    ['RECOVERY TRAJECTORY', displayedRecoveryTrajectory],
+    ['REBURN SIGNAL', displayedReburnSignal],
+    ['RECOVERY CONFIDENCE', displayedRecoveryConfidence],
+    ['DURABILITY WINDOW', hasSelectedRecoveryCase ? durabilityWindow : 'Durability window pending recovery-eligible case selection'],
+    ['MEMORY IMPACT', displayedMemoryImpact],
+    ['RECOVERY MATURITY', displayedRecoveryMaturity],
+    ['COMMAND POSTURE', displayedCommandPosture],
+    ['RECOVERY SURVIVABILITY SIGNAL', displayedSurvivabilitySignal],
+    ['EXECUTIVE MEANING', displayedExecutiveMeaning],
+    ['RECOVERY PRESSURE', displayedRecoveryPressure],
+    ['MEMORY MEANING', displayedMemoryMeaning],
     [
       'NEXT LIFECYCLE STATE',
       selectedCase
@@ -457,7 +503,7 @@ export default function RecoveryPage() {
             Recovery Pressure Intelligence
           </h3>
           <p className="mt-3 text-sm leading-6 text-neutral-300">
-            {recoveryPressure}
+            {displayedRecoveryPressure}
           </p>
         </div>
 
@@ -683,15 +729,34 @@ function buildInheritedVerification(outcome?: OutcomeRecord) {
   const summary = outcome?.outcome_summary || ''
 
   return {
-    verificationResult: extractField(summary, 'VERIFICATION RESULT') || outcome?.outcome_status || 'Verification evidence pending',
-    verificationCredibility: extractField(summary, 'VERIFICATION CREDIBILITY') || 'Verification credibility pending',
-    verificationTrajectory: extractField(summary, 'VERIFICATION TRAJECTORY') || 'Verification trajectory pending',
-    recurrenceSignal: extractField(summary, 'RECURRENCE SIGNAL') || 'Recurrence visibility pending',
-    recoveryReadiness: extractField(summary, 'RECOVERY READINESS') || 'Recovery readiness pending',
-    continuityOutlook: extractField(summary, 'CONTINUITY OUTLOOK') || 'Continuity outlook pending',
-    stabilizationConfidence: extractField(summary, 'STABILIZATION CONFIDENCE') || 'Stabilization confidence pending',
-    survivabilitySignal: extractField(summary, 'SURVIVABILITY SIGNAL') || 'Survivability signal pending',
-    executiveMeaning: extractField(summary, 'EXECUTIVE MEANING') || 'Executive outcome meaning pending',
+    verificationResult:
+      extractField(summary, 'VERIFICATION RESULT') ||
+      outcome?.outcome_status ||
+      'Verification evidence pending',
+    verificationCredibility:
+      extractField(summary, 'VERIFICATION CREDIBILITY') ||
+      'Verification credibility pending',
+    verificationTrajectory:
+      extractField(summary, 'VERIFICATION TRAJECTORY') ||
+      'Verification trajectory pending',
+    recurrenceSignal:
+      extractField(summary, 'RECURRENCE SIGNAL') ||
+      'Recurrence visibility pending',
+    recoveryReadiness:
+      extractField(summary, 'RECOVERY READINESS') ||
+      'Recovery readiness pending',
+    continuityOutlook:
+      extractField(summary, 'CONTINUITY OUTLOOK') ||
+      'Continuity outlook pending',
+    stabilizationConfidence:
+      extractField(summary, 'STABILIZATION CONFIDENCE') ||
+      'Stabilization confidence pending',
+    survivabilitySignal:
+      extractField(summary, 'SURVIVABILITY SIGNAL') ||
+      'Survivability signal pending',
+    executiveMeaning:
+      extractField(summary, 'EXECUTIVE MEANING') ||
+      'Executive outcome meaning pending',
   }
 }
 
