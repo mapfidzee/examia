@@ -238,7 +238,7 @@ export default function RoutingContent() {
     const routingStatus =
       recurrenceCount > 0 ? `${decision.status}_RECURRENCE` : decision.status
 
-    const inherited = buildInheritedRoutingContext(caseItem)
+    const inherited = buildInheritedRoutingContext(caseItem, routingStatus)
     const routingReason = buildRoutingReason({
       decision,
       inherited,
@@ -427,13 +427,20 @@ export default function RoutingContent() {
                 (owner) => owner.id === latestRouting?.assigned_responder_id,
               )
 
-              const inherited = buildInheritedRoutingContext(caseItem)
+              const activeRoutingStatus =
+                latestRouting?.routing_status || caseItem.case_status
+
+              const inherited = buildInheritedRoutingContext(
+                caseItem,
+                activeRoutingStatus,
+              )
 
               const intelligence = buildRoutingIntelligence({
                 caseItem,
                 routingHistory,
                 latestOwner,
                 inherited,
+                activeRoutingStatus,
               })
 
               return (
@@ -442,16 +449,16 @@ export default function RoutingContent() {
                   className="rounded-3xl border border-neutral-800 bg-neutral-950 p-5"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-xs font-semibold uppercase tracking-[0.25em] text-cyan-400">
                         Accepted CGI Routing Case
                       </p>
 
-                      <h4 className="mt-2 text-xl font-semibold text-white">
+                      <h4 className="mt-2 break-words text-xl font-semibold text-white">
                         {buildSimplifiedIdentity(caseItem, inherited)}
                       </h4>
 
-                      <p className="mt-2 text-xs leading-5 text-neutral-500">
+                      <p className="mt-2 break-words text-xs leading-5 text-neutral-500">
                         Full identity: {inherited.intakeIdentity}
                       </p>
                     </div>
@@ -462,7 +469,7 @@ export default function RoutingContent() {
                   </div>
 
                   <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    <Info label="Case State" value={caseItem.case_status} />
+                    <Info label="Case State" value={activeRoutingStatus} />
                     <Info
                       label="Latest Routing"
                       value={latestRouting?.routing_status || 'Routing direction pending'}
@@ -638,7 +645,12 @@ export default function RoutingContent() {
                       Routing Interpretation
                     </p>
                     <p className="mt-2 text-sm leading-6 text-cyan-50">
-                      {buildRoutingInterpretation(caseItem, routingHistory, inherited)}
+                      {buildRoutingInterpretation({
+                        caseItem,
+                        routingHistory,
+                        inherited,
+                        activeRoutingStatus,
+                      })}
                     </p>
                   </div>
 
@@ -706,7 +718,10 @@ async function preserveRoutingEvidence(input: {
   } = await supabase.auth.getUser()
 
   const institution = input.caseItem.institution_name || GOVERNANCE_INSTITUTION
-  const inherited = buildInheritedRoutingContext(input.caseItem)
+  const inherited = buildInheritedRoutingContext(
+    input.caseItem,
+    input.routingStatus,
+  )
 
   const visibilityLevel =
     input.caseItem.safeguarding_flag ||
@@ -812,11 +827,11 @@ function buildRoutingClimate(input: {
   ).length
 
   const inheritedDrift = input.cases.filter((caseItem) =>
-    resolveCaseDriftSignal(caseItem).includes('DRIFT'),
+    resolveCaseDriftSignal(caseItem, latestCaseStatusForClimate(caseItem, input.routingActions)).includes('DRIFT'),
   ).length
 
   const inheritedConvergence = input.cases.filter((caseItem) =>
-    resolveConvergenceSignal(caseItem).includes('CONVERGENCE'),
+    resolveConvergenceSignal(caseItem, latestCaseStatusForClimate(caseItem, input.routingActions)).includes('CONVERGENCE'),
   ).length
 
   return {
@@ -853,19 +868,37 @@ function buildRoutingClimate(input: {
   }
 }
 
-function buildInheritedRoutingContext(caseItem: StabilityCase): InheritedRoutingContext {
+function latestCaseStatusForClimate(
+  caseItem: StabilityCase,
+  routingActions: RoutingAction[],
+) {
+  const latestRouting = routingActions.find(
+    (routingAction) => routingAction.case_id === caseItem.id,
+  )
+
+  return latestRouting?.routing_status || caseItem.case_status
+}
+
+function buildInheritedRoutingContext(
+  caseItem: StabilityCase,
+  activeRoutingStatus?: string,
+): InheritedRoutingContext {
   const source = buildCaseMemorySource(caseItem)
+  const activeStatus = activeRoutingStatus || caseItem.case_status
 
   return {
     intakeIdentity: resolveIntakeIdentity(caseItem, source),
-    triagePosture: resolveTriagePosture(caseItem, source),
-    caseMaturity: resolveCaseGovernanceMaturity(caseItem),
-    driftSignal: resolveCaseDriftSignal(caseItem),
-    convergenceSignal: resolveConvergenceSignal(caseItem),
-    routingReadiness: resolveRoutingReadiness(caseItem),
-    evidencePosture: resolveEvidencePosture(caseItem, source),
-    commandMeaning: resolveInheritedCommandMeaning(caseItem, source),
-    survivabilityInterpretation: resolveSurvivabilityInterpretation(caseItem),
+    triagePosture: resolveTriagePosture(caseItem, source, activeStatus),
+    caseMaturity: resolveCaseGovernanceMaturity(caseItem, activeStatus),
+    driftSignal: resolveCaseDriftSignal(caseItem, activeStatus),
+    convergenceSignal: resolveConvergenceSignal(caseItem, activeStatus),
+    routingReadiness: resolveRoutingReadiness(activeStatus),
+    evidencePosture: resolveEvidencePosture(caseItem, source, activeStatus),
+    commandMeaning: resolveInheritedCommandMeaning(caseItem, source, activeStatus),
+    survivabilityInterpretation: resolveSurvivabilityInterpretation(
+      caseItem,
+      activeStatus,
+    ),
     memorySource: resolveRoutingMemorySource(caseItem),
   }
 }
@@ -922,7 +955,11 @@ function resolveIntakeIdentity(caseItem: StabilityCase, source: string) {
   )
 }
 
-function resolveTriagePosture(caseItem: StabilityCase, source: string) {
+function resolveTriagePosture(
+  caseItem: StabilityCase,
+  source: string,
+  activeStatus: string,
+) {
   if (caseItem.triage_posture) return caseItem.triage_posture
 
   return (
@@ -930,259 +967,299 @@ function resolveTriagePosture(caseItem: StabilityCase, source: string) {
     extractBlockField(source, 'RECOMMENDED POSTURE') ||
     extractBlockField(source, 'TRIAGE REASON') ||
     caseItem.triage_decision ||
-    resolveFallbackTriagePosture(caseItem)
+    resolveFallbackTriagePosture(activeStatus)
   )
 }
 
-function resolveFallbackTriagePosture(caseItem: StabilityCase) {
-  if (caseItem.case_status.includes('GOVERNANCE_REVIEW')) {
+function resolveFallbackTriagePosture(activeStatus: string) {
+  if (activeStatus.includes('GOVERNANCE_REVIEW')) {
     return 'Accepted instability escalated into governance visibility review before routing progression.'
   }
 
-  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
+  if (activeStatus.includes('STABILIZATION_OWNER_ROUTED')) {
     return 'Accepted instability progressed into governed stabilization direction.'
   }
 
-  if (caseItem.case_status.includes('EVIDENCE_REQUIRED')) {
+  if (activeStatus.includes('EVIDENCE_REQUIRED')) {
     return 'Accepted instability constrained by insufficient routing evidence.'
   }
 
-  if (caseItem.case_status.includes('OWNERSHIP_CLARITY')) {
+  if (activeStatus.includes('OWNERSHIP_CLARITY')) {
     return 'Accepted instability awaiting stabilized ownership alignment.'
   }
 
-  if (caseItem.case_status.includes('STALLED')) {
+  if (activeStatus.includes('STALLED')) {
     return 'Accepted instability experiencing directional routing deterioration.'
   }
 
-  if (caseItem.case_status.includes('REOPENED')) {
+  if (activeStatus.includes('REOPENED')) {
     return 'Previously governed instability has re-entered continuity review.'
   }
 
-  if (caseItem.case_status === 'ACCEPTED_FOR_GOVERNANCE') {
+  if (activeStatus === 'ACCEPTED_FOR_GOVERNANCE') {
     return 'Accepted for governance routing.'
   }
 
   return 'Governed instability remains under active continuity interpretation.'
 }
 
-function resolveCaseGovernanceMaturity(caseItem: StabilityCase) {
-  if (caseItem.case_status.includes('RECURRENCE')) {
+function resolveCaseGovernanceMaturity(
+  caseItem: StabilityCase,
+  activeStatus: string,
+) {
+  if (activeStatus.includes('STABILIZATION_OWNER_ROUTED')) {
+    return activeStatus.includes('RECURRENCE')
+      ? 'CASE_DIRECTION_REPEATED'
+      : 'CASE_DIRECTION_STABILIZING'
+  }
+
+  if (activeStatus.includes('RECURRENCE')) {
     return 'CASE_RECURRENCE_VISIBLE'
   }
 
-  if (caseItem.case_status.includes('GOVERNANCE_REVIEW')) {
+  if (activeStatus.includes('GOVERNANCE_REVIEW')) {
     return 'CASE_UNDER_GOVERNANCE_DIRECTION_REVIEW'
   }
 
-  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
-    return 'CASE_DIRECTION_STABILIZING'
-  }
-
   if (
-    caseItem.case_status.includes('STALLED') ||
-    caseItem.case_status.includes('OWNERSHIP_CLARITY') ||
-    caseItem.case_status.includes('EVIDENCE_REQUIRED')
+    activeStatus.includes('STALLED') ||
+    activeStatus.includes('OWNERSHIP_CLARITY') ||
+    activeStatus.includes('EVIDENCE_REQUIRED')
   ) {
     return 'CASE_GOVERNANCE_CONSTRAINED'
   }
 
-  if (caseItem.case_status === 'ACCEPTED_FOR_GOVERNANCE') {
+  if (activeStatus === 'ACCEPTED_FOR_GOVERNANCE') {
     return 'CASE_ACCEPTED_ROUTING_READY'
   }
 
-  return 'CASE_GOVERNANCE_ACTIVE'
+  return caseItem.case_status.includes('RECURRENCE')
+    ? 'CASE_RECURRENCE_VISIBLE'
+    : 'CASE_GOVERNANCE_ACTIVE'
 }
 
-function resolveCaseDriftSignal(caseItem: StabilityCase) {
+function resolveCaseDriftSignal(
+  caseItem: StabilityCase,
+  activeStatus: string,
+) {
   if (caseItem.drift_signal) return caseItem.drift_signal
 
-  if (caseItem.case_status.includes('STALLED')) {
+  if (activeStatus.includes('STALLED')) {
     return 'ACTIVE_ROUTING_DRIFT_VISIBLE'
   }
 
-  if (caseItem.case_status.includes('RECURRENCE')) {
-    return 'REPEATED_ROUTING_DRIFT_VISIBLE'
+  if (activeStatus.includes('RECURRENCE')) {
+    return activeStatus.includes('STABILIZATION_OWNER_ROUTED')
+      ? 'ROUTING_RECURRENCE_AFTER_DIRECTION_VISIBLE'
+      : 'REPEATED_ROUTING_DRIFT_VISIBLE'
   }
 
   if (
-    caseItem.case_status.includes('EVIDENCE_REQUIRED') ||
-    caseItem.case_status.includes('OWNERSHIP_CLARITY')
+    activeStatus.includes('EVIDENCE_REQUIRED') ||
+    activeStatus.includes('OWNERSHIP_CLARITY')
   ) {
     return 'DRIFT_RISK_PRESENT'
   }
 
-  if (caseItem.case_status.includes('GOVERNANCE_REVIEW')) {
+  if (activeStatus.includes('GOVERNANCE_REVIEW')) {
     return 'GOVERNANCE_DIRECTION_REVIEW_ACTIVE'
   }
 
-  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
+  if (activeStatus.includes('STABILIZATION_OWNER_ROUTED')) {
     return 'NO_ACTIVE_DIRECTIONAL_DRIFT_VISIBLE'
   }
 
   return 'NO_ACTIVE_DRIFT_VISIBLE'
 }
 
-function resolveConvergenceSignal(caseItem: StabilityCase) {
+function resolveConvergenceSignal(
+  caseItem: StabilityCase,
+  activeStatus: string,
+) {
   if (caseItem.convergence_signal) return caseItem.convergence_signal
 
-  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
-    return 'CONVERGENCE_BUILDING'
+  if (activeStatus.includes('STABILIZATION_OWNER_ROUTED')) {
+    return activeStatus.includes('RECURRENCE')
+      ? 'CONVERGENCE_BUILDING_THROUGH_REPEATED_OWNER_DIRECTION'
+      : 'CONVERGENCE_BUILDING'
   }
 
-  if (caseItem.case_status.includes('GOVERNANCE_REVIEW')) {
+  if (activeStatus.includes('GOVERNANCE_REVIEW')) {
     return 'CONVERGENCE_DELAYED_PENDING_GOVERNANCE_REVIEW'
   }
 
   if (
-    caseItem.case_status.includes('STALLED') ||
-    caseItem.case_status.includes('EVIDENCE_REQUIRED') ||
-    caseItem.case_status.includes('OWNERSHIP_CLARITY')
+    activeStatus.includes('STALLED') ||
+    activeStatus.includes('EVIDENCE_REQUIRED') ||
+    activeStatus.includes('OWNERSHIP_CLARITY')
   ) {
     return 'CONVERGENCE_CONSTRAINED'
   }
 
-  if (caseItem.case_status === 'ACCEPTED_FOR_GOVERNANCE') {
+  if (activeStatus === 'ACCEPTED_FOR_GOVERNANCE') {
     return 'CONVERGENCE_PENDING_ROUTING_DIRECTION'
   }
 
   return 'CONVERGENCE_NOT_YET_ESTABLISHED'
 }
 
-function resolveRoutingReadiness(caseItem: StabilityCase) {
-  if (caseItem.case_status === 'ACCEPTED_FOR_GOVERNANCE') {
+function resolveRoutingReadiness(activeStatus: string) {
+  if (activeStatus === 'ACCEPTED_FOR_GOVERNANCE') {
     return 'ROUTING_READY'
   }
 
-  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
-    return 'ROUTING_DIRECTION_ACTIVE'
+  if (activeStatus.includes('STABILIZATION_OWNER_ROUTED')) {
+    return activeStatus.includes('RECURRENCE')
+      ? 'ROUTING_DIRECTION_REPEATED_ACTION_READY'
+      : 'ROUTING_DIRECTION_ACTIVE'
   }
 
-  if (caseItem.case_status.includes('GOVERNANCE_REVIEW')) {
+  if (activeStatus.includes('GOVERNANCE_REVIEW')) {
     return 'ROUTING_HELD_FOR_GOVERNANCE_VISIBILITY'
   }
 
-  if (caseItem.case_status.includes('EVIDENCE_REQUIRED')) {
+  if (activeStatus.includes('EVIDENCE_REQUIRED')) {
     return 'ROUTING_CONSTRAINED_BY_EVIDENCE'
   }
 
-  if (caseItem.case_status.includes('OWNERSHIP_CLARITY')) {
+  if (activeStatus.includes('OWNERSHIP_CLARITY')) {
     return 'ROUTING_CONSTRAINED_BY_OWNERSHIP'
   }
 
-  if (caseItem.case_status.includes('STALLED')) {
+  if (activeStatus.includes('STALLED')) {
     return 'ROUTING_DESTABILIZED'
   }
 
-  if (caseItem.case_status.includes('REOPENED')) {
+  if (activeStatus.includes('REOPENED')) {
     return 'ROUTING_REVIEW_REQUIRED'
   }
 
   return 'ROUTING_GOVERNANCE_ACTIVE'
 }
 
-function resolveEvidencePosture(caseItem: StabilityCase, source: string) {
+function resolveEvidencePosture(
+  caseItem: StabilityCase,
+  source: string,
+  activeStatus: string,
+) {
   if (caseItem.evidence_posture) return caseItem.evidence_posture
 
   return (
     extractBlockField(source, 'INHERITED EVIDENCE POSTURE') ||
     extractBlockField(source, 'EVIDENCE POSTURE') ||
     extractBlockField(source, 'EVIDENCE LEVEL') ||
-    resolveFallbackEvidencePosture(caseItem)
+    resolveFallbackEvidencePosture(caseItem, activeStatus)
   )
 }
 
-function resolveFallbackEvidencePosture(caseItem: StabilityCase) {
+function resolveFallbackEvidencePosture(
+  caseItem: StabilityCase,
+  activeStatus: string,
+) {
   if (caseItem.latest_downstream_evidence) {
     return caseItem.latest_downstream_evidence
   }
 
-  if (caseItem.case_status.includes('GOVERNANCE_REVIEW')) {
-    return 'Governance review evidence preserved pending routing progression.'
-  }
-
-  if (caseItem.case_status.includes('EVIDENCE_REQUIRED')) {
-    return 'Evidence gap visible before routing movement.'
-  }
-
-  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
+  if (activeStatus.includes('STABILIZATION_OWNER_ROUTED')) {
     return 'Routing evidence preserved; intervention evidence pending.'
   }
 
-  if (caseItem.case_status.includes('STALLED')) {
+  if (activeStatus.includes('GOVERNANCE_REVIEW')) {
+    return 'Governance review evidence preserved pending routing progression.'
+  }
+
+  if (activeStatus.includes('EVIDENCE_REQUIRED')) {
+    return 'Evidence gap visible before routing movement.'
+  }
+
+  if (activeStatus.includes('STALLED')) {
     return 'Directional deterioration evidence remains operationally visible.'
   }
 
-  if (caseItem.case_status.includes('OWNERSHIP_CLARITY')) {
+  if (activeStatus.includes('OWNERSHIP_CLARITY')) {
     return 'Ownership clarification evidence remains required before progression.'
   }
 
-  if (caseItem.case_status === 'ACCEPTED_FOR_GOVERNANCE') {
+  if (activeStatus === 'ACCEPTED_FOR_GOVERNANCE') {
     return 'Case acceptance evidence present; routing evidence pending.'
   }
 
   return 'Continuity evidence remains operationally preserved.'
 }
 
-function resolveInheritedCommandMeaning(caseItem: StabilityCase, source: string) {
+function resolveInheritedCommandMeaning(
+  caseItem: StabilityCase,
+  source: string,
+  activeStatus: string,
+) {
   if (caseItem.command_meaning) return caseItem.command_meaning
 
   return (
     extractBlockField(source, 'INHERITED COMMAND MEANING') ||
     extractBlockField(source, 'COMMAND MEANING') ||
-    resolveFallbackCommandMeaning(caseItem)
+    resolveFallbackCommandMeaning(caseItem, activeStatus)
   )
 }
 
-function resolveFallbackCommandMeaning(caseItem: StabilityCase) {
+function resolveFallbackCommandMeaning(
+  caseItem: StabilityCase,
+  activeStatus: string,
+) {
+  if (activeStatus.includes('STABILIZATION_OWNER_ROUTED')) {
+    return activeStatus.includes('RECURRENCE')
+      ? 'Repeated governed routing direction is visible; action evidence must now determine whether stabilization is becoming credible.'
+      : 'Governed routing direction is now operationally active.'
+  }
+
   if (caseItem.severity_level === 'CRITICAL') {
     return 'Critical accepted instability requires accelerated executive routing visibility.'
   }
 
   if (caseItem.safeguarding_flag) {
-    if (caseItem.case_status.includes('GOVERNANCE_REVIEW')) {
+    if (activeStatus.includes('GOVERNANCE_REVIEW')) {
       return 'Safeguarding-sensitive instability remains under governance visibility before directional progression.'
-    }
-
-    if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
-      return 'Safeguarding-sensitive instability has entered governed stabilization direction.'
     }
 
     return 'Safeguarding visibility requires protected, traceable routing movement.'
   }
 
-  if (caseItem.case_status.includes('STALLED')) {
+  if (activeStatus.includes('STALLED')) {
     return 'Stalled routing weakens continuity credibility until movement resumes.'
   }
 
-  if (caseItem.case_status.includes('RECURRENCE')) {
+  if (activeStatus.includes('RECURRENCE')) {
     return 'Repeated routing movement may indicate unresolved continuity instability.'
   }
 
-  if (caseItem.case_status.includes('GOVERNANCE_REVIEW')) {
+  if (activeStatus.includes('GOVERNANCE_REVIEW')) {
     return 'Governance review remains necessary before stabilization progression becomes directionally credible.'
   }
 
-  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
-    return 'Governed routing direction is now operationally active.'
-  }
-
-  if (caseItem.case_status === 'ACCEPTED_FOR_GOVERNANCE') {
+  if (activeStatus === 'ACCEPTED_FOR_GOVERNANCE') {
     return 'Accepted instability is eligible for governed stabilization direction.'
   }
 
   return 'Routing should preserve command meaning inherited from case governance.'
 }
 
-function resolveSurvivabilityInterpretation(caseItem: StabilityCase) {
+function resolveSurvivabilityInterpretation(
+  caseItem: StabilityCase,
+  activeStatus: string,
+) {
   if (caseItem.survivability_interpretation) {
     return caseItem.survivability_interpretation
+  }
+
+  if (activeStatus.includes('STABILIZATION_OWNER_ROUTED')) {
+    return activeStatus.includes('RECURRENCE')
+      ? 'Survivability credibility may begin strengthening through repeated owner direction, but action evidence is required before stabilization confidence improves.'
+      : 'Survivability credibility begins strengthening when ownership and next movement are visible.'
   }
 
   if (
     caseItem.severity_level === 'HIGH' &&
     caseItem.safeguarding_flag &&
-    caseItem.case_status.includes('GOVERNANCE_REVIEW')
+    activeStatus.includes('GOVERNANCE_REVIEW')
   ) {
     return 'High-pressure safeguarding instability remains survivability-sensitive until governance review resolves.'
   }
@@ -1191,26 +1268,19 @@ function resolveSurvivabilityInterpretation(caseItem: StabilityCase) {
     return 'Survivability pressure remains high until ownership and action movement are visible.'
   }
 
-  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
-    return 'Survivability credibility begins strengthening when ownership and next movement are visible.'
-  }
-
-  if (
-    caseItem.case_status.includes('STALLED') ||
-    caseItem.case_status.includes('RECURRENCE')
-  ) {
+  if (activeStatus.includes('STALLED') || activeStatus.includes('RECURRENCE')) {
     return 'Survivability credibility may weaken if repeated or stalled routing is not resolved.'
   }
 
-  if (caseItem.case_status.includes('GOVERNANCE_REVIEW')) {
+  if (activeStatus.includes('GOVERNANCE_REVIEW')) {
     return 'Governance review remains active before survivability confidence can strengthen.'
   }
 
-  if (caseItem.case_status.includes('EVIDENCE_REQUIRED')) {
+  if (activeStatus.includes('EVIDENCE_REQUIRED')) {
     return 'Survivability confidence remains constrained by insufficient routing evidence.'
   }
 
-  if (caseItem.case_status.includes('OWNERSHIP_CLARITY')) {
+  if (activeStatus.includes('OWNERSHIP_CLARITY')) {
     return 'Survivability stabilization depends on clarified routing ownership.'
   }
 
@@ -1317,7 +1387,7 @@ function buildRoutingSummary(input: {
   routingStatus: string
   recurrenceCount: number
 }) {
-  const inherited = buildInheritedRoutingContext(input.caseItem)
+  const inherited = buildInheritedRoutingContext(input.caseItem, input.routingStatus)
 
   if (input.recurrenceCount > 0) {
     return `Routing recurrence preserved for ${inherited.intakeIdentity}. Status: ${
@@ -1339,50 +1409,46 @@ function buildRoutingIntelligence(input: {
   routingHistory: RoutingAction[]
   latestOwner?: StabilizationOwner
   inherited: InheritedRoutingContext
+  activeRoutingStatus: string
 }) {
-  const { caseItem, routingHistory, latestOwner, inherited } = input
-  const latestRouting = routingHistory[0]
-  const hasOwner = Boolean(latestOwner)
+  const {
+    caseItem,
+    routingHistory,
+    latestOwner,
+    inherited,
+    activeRoutingStatus,
+  } = input
 
+  const hasOwner = Boolean(latestOwner)
   const recurrenceCount = routingHistory.filter((item) =>
     item.routing_status.includes('RECURRENCE'),
   ).length
 
-  if (!latestRouting) {
-    if (caseItem.case_status.includes('GOVERNANCE_REVIEW_REQUIRED_RECURRENCE')) {
-      return {
-        phase: 'Governance review recurrence',
-        maturity: 'ROUTING_RECURRENCE_HELD',
-        confidence: 'CONDITIONAL_DIRECTIONAL_CONFIDENCE',
-        nextMovement:
-          'Resolve governance review recurrence before stabilization routing advances.',
-        ownerPosture: 'Ownership should not advance until governance review resolves.',
-        evidenceRequirement: inherited.evidencePosture,
-        stallRisk:
-          'Elevated routing stall risk if recurrence continues without decision clarity.',
-        commandMeaning: inherited.commandMeaning,
-      }
-    }
-
+  if (activeRoutingStatus.includes('STABILIZATION_OWNER_ROUTED')) {
     return {
-      phase: 'Routing direction pending',
-      maturity: inherited.caseMaturity,
-      confidence:
-        inherited.routingReadiness === 'ROUTING_READY'
-          ? 'READY_FOR_DIRECTIONAL_CONFIDENCE'
-          : 'PENDING_DIRECTIONAL_CONFIDENCE',
-      nextMovement: 'Select governed routing direction and ownership posture.',
-      ownerPosture: 'Ownership direction pending',
+      phase: activeRoutingStatus.includes('RECURRENCE')
+        ? 'Repeated governed stabilization direction'
+        : 'Governed stabilization direction active',
+      maturity: activeRoutingStatus.includes('RECURRENCE')
+        ? 'DIRECTION_REPEATED_ACTION_READY'
+        : 'DIRECTION_STABILIZING',
+      confidence: hasOwner
+        ? 'BUILDING_DIRECTIONAL_CONFIDENCE'
+        : 'VARIABLE_DIRECTIONAL_CONFIDENCE',
+      nextMovement:
+        'Preserve governed stabilization action evidence within /interventions.',
+      ownerPosture: hasOwner
+        ? `Stabilization ownership aligned with ${latestOwner?.full_name}.`
+        : 'Ownership assignment remains incomplete.',
       evidenceRequirement: inherited.evidencePosture,
-      stallRisk:
-        inherited.driftSignal.includes('DRIFT')
-          ? 'Inherited drift requires timely routing movement.'
-          : 'Directional stall risk activates if routing movement is delayed.',
+      stallRisk: activeRoutingStatus.includes('RECURRENCE')
+        ? 'Moderate recurrence risk until action evidence confirms stabilization movement.'
+        : 'Low directional deterioration risk if action movement proceeds.',
       commandMeaning: inherited.commandMeaning,
     }
   }
 
-  if (latestRouting.routing_status.includes('STALLED')) {
+  if (activeRoutingStatus.includes('STALLED')) {
     return {
       phase: 'Routing stalled',
       maturity: 'ROUTING_DESTABILIZING',
@@ -1400,7 +1466,7 @@ function buildRoutingIntelligence(input: {
     }
   }
 
-  if (latestRouting.routing_status.includes('EVIDENCE_REQUIRED')) {
+  if (activeRoutingStatus.includes('EVIDENCE_REQUIRED')) {
     return {
       phase: 'Evidence gate active',
       maturity: 'EVIDENCE_ALIGNMENT_PENDING',
@@ -1419,7 +1485,7 @@ function buildRoutingIntelligence(input: {
     }
   }
 
-  if (latestRouting.routing_status.includes('OWNERSHIP_CLARITY')) {
+  if (activeRoutingStatus.includes('OWNERSHIP_CLARITY')) {
     return {
       phase: 'Ownership alignment review',
       maturity: 'OWNERSHIP_ALIGNMENT_UNSTABLE',
@@ -1436,10 +1502,10 @@ function buildRoutingIntelligence(input: {
     }
   }
 
-  if (latestRouting.routing_status.includes('GOVERNANCE_REVIEW')) {
+  if (activeRoutingStatus.includes('GOVERNANCE_REVIEW')) {
     return {
       phase: 'Governance visibility review',
-      maturity: latestRouting.routing_status.includes('RECURRENCE')
+      maturity: activeRoutingStatus.includes('RECURRENCE')
         ? 'DIRECTION_REVIEW_RECURRENCE'
         : 'DIRECTION_UNDER_REVIEW',
       confidence: 'CONDITIONAL_DIRECTIONAL_CONFIDENCE',
@@ -1449,14 +1515,14 @@ function buildRoutingIntelligence(input: {
         ? 'Ownership remains visible during governance review.'
         : 'Ownership pending governance review outcome.',
       evidenceRequirement: inherited.evidencePosture,
-      stallRisk: latestRouting.routing_status.includes('RECURRENCE')
+      stallRisk: activeRoutingStatus.includes('RECURRENCE')
         ? 'Elevated routing pressure until repeated governance review resolves.'
         : 'Moderate routing pressure until governance visibility resolves.',
       commandMeaning: inherited.commandMeaning,
     }
   }
 
-  if (latestRouting.routing_status.includes('RECURRENCE')) {
+  if (recurrenceCount > 0) {
     return {
       phase: 'Routing recurrence visibility',
       maturity: 'ROUTING_RECURRENCE_CONCENTRATION',
@@ -1474,26 +1540,6 @@ function buildRoutingIntelligence(input: {
         recurrenceCount > 1
           ? 'Repeated routing recurrence suggests continuity deterioration may be structurally accumulating.'
           : 'Routing recurrence suggests stabilization movement may not yet be durable.',
-    }
-  }
-
-  if (latestRouting.routing_status.includes('STABILIZATION_OWNER_ROUTED')) {
-    return {
-      phase: 'Governed stabilization direction active',
-      maturity: 'DIRECTION_STABILIZING',
-      confidence: hasOwner
-        ? 'BUILDING_DIRECTIONAL_CONFIDENCE'
-        : 'VARIABLE_DIRECTIONAL_CONFIDENCE',
-      nextMovement:
-        'Preserve governed stabilization action evidence within /interventions.',
-      ownerPosture: hasOwner
-        ? `Stabilization ownership aligned with ${latestOwner?.full_name}.`
-        : 'Ownership assignment remains incomplete.',
-      evidenceRequirement: inherited.evidencePosture,
-      stallRisk: hasOwner
-        ? 'Low directional deterioration risk if action movement proceeds.'
-        : 'Moderate risk until ownership becomes visible.',
-      commandMeaning: inherited.commandMeaning,
     }
   }
 
@@ -1516,31 +1562,43 @@ function buildRoutingIntelligence(input: {
   }
 
   return {
-    phase: 'Active continuity routing',
-    maturity: 'ROUTING_DIRECTION_BUILDING',
-    confidence: 'MEASURED_DIRECTIONAL_CONFIDENCE',
-    nextMovement:
-      'Continue governed stabilization routing with proportional continuity visibility.',
-    ownerPosture: hasOwner
-      ? 'Ownership remains operationally visible.'
-      : 'Ownership assignment pending.',
+    phase: 'Routing direction pending',
+    maturity: inherited.caseMaturity,
+    confidence:
+      inherited.routingReadiness === 'ROUTING_READY'
+        ? 'READY_FOR_DIRECTIONAL_CONFIDENCE'
+        : 'PENDING_DIRECTIONAL_CONFIDENCE',
+    nextMovement: 'Select governed routing direction and ownership posture.',
+    ownerPosture: 'Ownership direction pending',
     evidenceRequirement: inherited.evidencePosture,
-    stallRisk: 'Monitor for delayed directional movement or routing deterioration.',
+    stallRisk:
+      inherited.driftSignal.includes('DRIFT')
+        ? 'Inherited drift requires timely routing movement.'
+        : 'Directional stall risk activates if routing movement is delayed.',
     commandMeaning: inherited.commandMeaning,
   }
 }
 
-function buildRoutingInterpretation(
-  caseItem: StabilityCase,
-  routingHistory: RoutingAction[],
-  inherited: InheritedRoutingContext,
-) {
+function buildRoutingInterpretation(input: {
+  caseItem: StabilityCase
+  routingHistory: RoutingAction[]
+  inherited: InheritedRoutingContext
+  activeRoutingStatus: string
+}) {
+  const { caseItem, routingHistory, inherited, activeRoutingStatus } = input
+
   const recurrenceCount = routingHistory.filter((item) =>
     item.routing_status.includes('RECURRENCE'),
   ).length
 
-  if (caseItem.case_status.includes('GOVERNANCE_REVIEW_REQUIRED_RECURRENCE')) {
-    return 'Governance review recurrence is already visible from case custody. Routing should preserve review visibility and avoid false stabilization direction until governance interpretation resolves.'
+  if (activeRoutingStatus.includes('STABILIZATION_OWNER_ROUTED')) {
+    return activeRoutingStatus.includes('RECURRENCE')
+      ? 'Governed stabilization direction has repeated and ownership is visible. CGI should now move carefully toward /interventions while preserving recurrence awareness and requiring action evidence before stabilization confidence increases.'
+      : 'Governed stabilization direction is active. CGI should now preserve action evidence in /interventions before claiming stabilization credibility.'
+  }
+
+  if (activeRoutingStatus.includes('GOVERNANCE_REVIEW_REQUIRED_RECURRENCE')) {
+    return 'Governance review recurrence is visible from case custody. Routing should preserve review visibility and avoid false stabilization direction until governance interpretation resolves.'
   }
 
   if (routingHistory.some((item) => item.routing_status.includes('STALLED'))) {
@@ -1613,18 +1671,20 @@ function resolveRoutingSeverity(input: {
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-4">
+    <div className="min-w-0 rounded-2xl border border-neutral-800 bg-neutral-950 p-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
         {label}
       </p>
-      <p className="mt-2 text-sm leading-6 text-neutral-100">{value}</p>
+      <p className="mt-2 max-w-full break-words text-sm leading-6 text-neutral-100">
+        {value}
+      </p>
     </div>
   )
 }
 
 function SignalBadge({ children }: { children: ReactNode }) {
   return (
-    <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-100">
+    <span className="max-w-full break-words rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-100">
       {children}
     </span>
   )
@@ -1632,16 +1692,16 @@ function SignalBadge({ children }: { children: ReactNode }) {
 
 function severityBadgeClass(level: string) {
   if (level === 'CRITICAL') {
-    return 'rounded-full bg-red-900 px-3 py-2 text-xs font-semibold text-red-100'
+    return 'shrink-0 rounded-full bg-red-900 px-3 py-2 text-xs font-semibold text-red-100'
   }
 
   if (level === 'HIGH') {
-    return 'rounded-full bg-orange-900 px-3 py-2 text-xs font-semibold text-orange-100'
+    return 'shrink-0 rounded-full bg-orange-900 px-3 py-2 text-xs font-semibold text-orange-100'
   }
 
   if (level === 'MODERATE') {
-    return 'rounded-full bg-amber-900 px-3 py-2 text-xs font-semibold text-amber-100'
+    return 'shrink-0 rounded-full bg-amber-900 px-3 py-2 text-xs font-semibold text-amber-100'
   }
 
-  return 'rounded-full bg-emerald-900 px-3 py-2 text-xs font-semibold text-emerald-100'
+  return 'shrink-0 rounded-full bg-emerald-900 px-3 py-2 text-xs font-semibold text-emerald-100'
 }
