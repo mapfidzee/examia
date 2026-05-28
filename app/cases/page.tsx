@@ -47,6 +47,9 @@ type InheritedGovernanceContext = {
   caseReadiness: string
   nextLifecycleState: string
   memorySource: string
+  lifecycleNarrative: string
+  driftSignal: string
+  convergenceSignal: string
 }
 
 type CaseIntelligence = {
@@ -57,6 +60,17 @@ type CaseIntelligence = {
   evidencePosture: string
   stagnationRisk: string
   commandMeaning: string
+}
+
+type CaseClimate = {
+  stabilityClimate: string
+  lifecyclePosture: string
+  evidenceVisibility: string
+  routingLandscape: string
+  pressureMeaning: string
+  commandSynthesis: string
+  driftIntelligence: string
+  convergenceIntelligence: string
 }
 
 const ACTIVE_CASE_STATUSES = [
@@ -207,13 +221,25 @@ function CasesContent() {
     await loadCases()
   }
 
-  const caseClimate = useMemo(() => buildCaseClimate(cases), [cases])
+  const caseClimate = useMemo(
+    () => buildCaseClimate(cases, timelineMemory),
+    [cases, timelineMemory],
+  )
 
   const climatePanels = [
     { title: 'Case Stability Climate', value: caseClimate.stabilityClimate },
-    { title: 'Lifecycle Governance Posture', value: caseClimate.lifecyclePosture },
-    { title: 'Evidence Continuity Visibility', value: caseClimate.evidenceVisibility },
-    { title: 'Routing Readiness Landscape', value: caseClimate.routingLandscape },
+    {
+      title: 'Lifecycle Governance Posture',
+      value: caseClimate.lifecyclePosture,
+    },
+    {
+      title: 'Evidence Continuity Visibility',
+      value: caseClimate.evidenceVisibility,
+    },
+    {
+      title: 'Routing Readiness Landscape',
+      value: caseClimate.routingLandscape,
+    },
   ]
 
   return (
@@ -237,9 +263,10 @@ function CasesContent() {
           <p className="mt-3 max-w-5xl text-sm leading-6 text-neutral-300">
             Govern accepted instability after triage. Preserve inherited intake
             meaning, inherited eligibility posture, lifecycle phase, required next
-            movement, evidence posture, stagnation risk, survivability visibility,
-            and executive command meaning without executing routing, intervention,
-            outcome, or recovery work.
+            movement, evidence posture, stagnation risk, continuity drift,
+            convergence visibility, survivability awareness, and executive command
+            meaning without executing routing, intervention, outcome, or recovery
+            work.
           </p>
 
           <p className="mt-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-4 text-sm leading-6 text-cyan-100">
@@ -284,6 +311,26 @@ function CasesContent() {
           </p>
         </div>
 
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+            <h3 className="text-lg font-semibold text-white">
+              Continuity Drift Intelligence
+            </h3>
+            <p className="mt-3 text-sm leading-6 text-neutral-300">
+              {caseClimate.driftIntelligence}
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+            <h3 className="text-lg font-semibold text-white">
+              Cross-Case Convergence Intelligence
+            </h3>
+            <p className="mt-3 text-sm leading-6 text-neutral-300">
+              {caseClimate.convergenceIntelligence}
+            </p>
+          </div>
+        </div>
+
         <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
           <h3 className="text-xl font-semibold text-white">
             Governed Instability Cases
@@ -292,9 +339,9 @@ function CasesContent() {
           <p className="mt-3 text-sm leading-6 text-neutral-400">
             Triage decides whether visible instability enters governance. Case
             governance inherits the intake and triage record, then preserves
-            continuity status, lifecycle maturity, evidence posture, and next
-            movement until the case is routed, acted on, verified, recovered,
-            escalated, or archived.
+            continuity status, lifecycle maturity, evidence posture, drift
+            visibility, convergence patterns, and next movement until the case is
+            routed, acted on, verified, recovered, escalated, or archived.
           </p>
 
           <div className="mt-6 grid gap-5">
@@ -305,6 +352,8 @@ function CasesContent() {
               )
               const intelligence = buildCaseIntelligence(caseItem, inherited)
               const simplifiedIdentity = buildSimplifiedIdentity(caseItem, inherited)
+              const actionEvidenceVisible = hasActionEvidence(caseItem)
+              const outcomeEvidenceVisible = hasOutcomeEvidence(caseItem)
 
               return (
                 <article
@@ -353,10 +402,7 @@ function CasesContent() {
                     </p>
 
                     <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                      <Info
-                        label="Memory Source"
-                        value={inherited.memorySource}
-                      />
+                      <Info label="Memory Source" value={inherited.memorySource} />
                       <Info
                         label="Inherited Intake Identity"
                         value={inherited.inheritedIntakeIdentity}
@@ -369,10 +415,7 @@ function CasesContent() {
                         label="Inherited Evidence"
                         value={inherited.inheritedEvidencePosture}
                       />
-                      <Info
-                        label="Triage Result"
-                        value={inherited.triageResult}
-                      />
+                      <Info label="Triage Result" value={inherited.triageResult} />
                       <Info
                         label="Triage Gate Status"
                         value={inherited.triageGateStatus}
@@ -392,6 +435,24 @@ function CasesContent() {
                       <Info
                         label="Inherited Command Meaning"
                         value={inherited.inheritedCommandMeaning}
+                      />
+                    </div>
+                  </section>
+
+                  <section className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
+                    <p className="text-sm font-semibold text-cyan-400">
+                      Continuity Memory Intelligence
+                    </p>
+
+                    <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                      <Info
+                        label="Lifecycle Narrative"
+                        value={inherited.lifecycleNarrative}
+                      />
+                      <Info label="Drift Signal" value={inherited.driftSignal} />
+                      <Info
+                        label="Convergence Signal"
+                        value={inherited.convergenceSignal}
                       />
                     </div>
                   </section>
@@ -452,7 +513,7 @@ function CasesContent() {
                       <Info
                         label="Action Evidence"
                         value={
-                          caseItem.intervention_summary
+                          actionEvidenceVisible
                             ? 'Present in /interventions'
                             : 'Action evidence pending'
                         }
@@ -460,7 +521,7 @@ function CasesContent() {
                       <Info
                         label="Outcome Evidence"
                         value={
-                          caseItem.outcome_summary
+                          outcomeEvidenceVisible
                             ? 'Present in /outcomes'
                             : 'Outcome verification pending'
                         }
@@ -530,8 +591,9 @@ function CasesContent() {
             Case governance is lifecycle custody, not task execution. CGI preserves
             accepted instability visibility, inherited intake meaning, inherited
             triage eligibility, movement readiness, evidence posture, stagnation
-            risk, command meaning, and structural memory before routing, action,
-            outcome verification, or recovery durability occurs.
+            risk, command meaning, continuity drift, convergence visibility, and
+            structural memory before routing, action, outcome verification, or
+            recovery durability occurs.
           </p>
 
           <p className="mt-4 text-sm leading-7 text-neutral-300">
@@ -539,7 +601,8 @@ function CasesContent() {
             interpretation. When accepted instability is moving through the lifecycle
             without stall, recurrence, evidence loss, or structural deterioration,
             the system should support measured confidence while preserving inherited
-            traceability, executive synthesis readiness, and lifecycle discipline.
+            traceability, executive synthesis readiness, lifecycle discipline, and
+            institutional continuity memory.
           </p>
         </section>
       </section>
@@ -675,7 +738,10 @@ function MovementButton({
   )
 }
 
-function buildCaseClimate(cases: InstabilityCase[]) {
+function buildCaseClimate(
+  cases: InstabilityCase[],
+  timelineMemory: Record<string, TimelineEntry[]>,
+): CaseClimate {
   if (cases.length === 0) {
     return {
       stabilityClimate:
@@ -690,6 +756,10 @@ function buildCaseClimate(cases: InstabilityCase[]) {
         'Case pressure interpretation will activate when accepted instability enters the continuity lifecycle.',
       commandSynthesis:
         'No active case concentration currently requiring executive continuity synthesis.',
+      driftIntelligence:
+        'Continuity drift intelligence will activate after accepted cases begin lifecycle movement.',
+      convergenceIntelligence:
+        'Cross-case convergence intelligence will activate when multiple governed cases share pressure, signal, ownership, evidence, or recurrence patterns.',
     }
   }
 
@@ -711,8 +781,14 @@ function buildCaseClimate(cases: InstabilityCase[]) {
   ).length
 
   const incompleteEvidence = cases.filter(
-    (item) => !item.intervention_summary || !item.outcome_summary,
+    (item) => !hasActionEvidence(item) || !hasOutcomeEvidence(item),
   ).length
+
+  const driftCases = cases.filter((item) =>
+    buildDriftSignal(item, timelineMemory[item.id] || []).includes('visible'),
+  ).length
+
+  const convergence = buildCrossCaseConvergence(cases)
 
   const allVisibleCasesHaveEvidence = incompleteEvidence === 0
   const allVisibleCasesInRecovery =
@@ -748,9 +824,14 @@ function buildCaseClimate(cases: InstabilityCase[]) {
     commandSynthesis:
       allVisibleCasesInRecovery && allVisibleCasesHaveEvidence
         ? 'No active case deterioration is visible. Command attention may remain focused on durability observation and memory preservation.'
-        : stalled > 0 || escalated > 0 || highPressure > 1
+        : stalled > 0 || escalated > 0 || highPressure > 1 || driftCases > 1
           ? 'Case concentration may require executive continuity synthesis visibility.'
           : 'No concentrated case deterioration currently requiring command escalation.',
+    driftIntelligence:
+      driftCases === 0
+        ? 'No concentrated continuity drift pattern is currently visible across active governed cases.'
+        : `${driftCases} governed case pathway(s) show continuity drift visibility through stalled movement, recurrence, reopening, escalation, missing evidence, or repeated follow-up pressure.`,
+    convergenceIntelligence: convergence,
   }
 }
 
@@ -772,6 +853,11 @@ function buildInheritedGovernanceContext(
   const timelineSource = buildLifecycleMemorySource(timelineEntries)
   const currentSummary = caseItem.outcome_summary || ''
   const joinedSource = [timelineSource, currentSummary].filter(Boolean).join('\n\n')
+  const memorySource = timelineSource
+    ? 'case_timeline + latest case summary'
+    : currentSummary
+      ? 'latest case summary only'
+      : 'fallback case fields only'
 
   return {
     inheritedIntakeIdentity:
@@ -831,11 +917,10 @@ function buildInheritedGovernanceContext(
     nextLifecycleState:
       extractBlockField(joinedSource, 'NEXT LIFECYCLE STATE') ||
       'Case lifecycle movement pending.',
-    memorySource: timelineSource
-      ? 'case_timeline + latest case summary'
-      : currentSummary
-        ? 'latest case summary only'
-        : 'fallback case fields only',
+    memorySource,
+    lifecycleNarrative: buildLifecycleNarrative(caseItem, timelineEntries),
+    driftSignal: buildDriftSignal(caseItem, timelineEntries),
+    convergenceSignal: buildCaseConvergenceSignal(caseItem),
   }
 }
 
@@ -937,12 +1022,176 @@ ${input.nextStatus}
 CASE SIGNAL
 ${input.caseItem.beneficiary_name}
 
+CONTINUITY DRIFT SIGNAL
+${input.inherited.driftSignal}
+
+CONVERGENCE SIGNAL
+${input.inherited.convergenceSignal}
+
 LIFECYCLE BOUNDARY
 Case governance preserves lifecycle custody.
 Routing is not action.
 Action is not outcome.
 Outcome is not recovery.
   `.trim()
+}
+
+function buildLifecycleNarrative(
+  caseItem: InstabilityCase,
+  timelineEntries: TimelineEntry[],
+) {
+  const eventCount = timelineEntries.length
+  const hasRouting = hasRoutingEvidence(caseItem)
+  const hasAction = hasActionEvidence(caseItem)
+  const hasOutcome = hasOutcomeEvidence(caseItem)
+  const hasRecovery = caseItem.case_status === 'RECOVERY_MONITORING'
+
+  const phases = [
+    'intake and triage context preserved',
+    hasRouting ? 'routing visibility present' : 'routing visibility pending',
+    hasAction ? 'action evidence visible' : 'action evidence pending',
+    hasOutcome ? 'outcome verification visible' : 'outcome verification pending',
+    hasRecovery ? 'recovery durability observation active' : 'recovery not active',
+  ]
+
+  return `${phases.join(' • ')}. Timeline memory entries visible: ${eventCount}.`
+}
+
+function buildDriftSignal(
+  caseItem: InstabilityCase,
+  timelineEntries: TimelineEntry[],
+) {
+  const timelineText = timelineEntries
+    .map((entry) => `${entry.event_type || ''} ${entry.event_summary || ''}`)
+    .join(' ')
+    .toUpperCase()
+
+  const driftMarkers = [
+    caseItem.case_status.includes('STALLED'),
+    caseItem.case_status.includes('ESCALATED'),
+    caseItem.case_status === 'REOPENED',
+    caseItem.case_status === 'FOLLOW_UP_REQUIRED',
+    !hasActionEvidence(caseItem) &&
+      caseItem.case_status !== 'ACCEPTED_FOR_GOVERNANCE',
+    !hasOutcomeEvidence(caseItem) &&
+      !['ACCEPTED_FOR_GOVERNANCE', 'STABILIZATION_OWNER_ROUTED'].includes(
+        caseItem.case_status,
+      ),
+    timelineText.includes('STALLED'),
+    timelineText.includes('RECURRENCE'),
+    timelineText.includes('REOPENED'),
+    timelineText.includes('FOLLOW_UP_REQUIRED'),
+  ].filter(Boolean).length
+
+  if (driftMarkers >= 3) {
+    return 'continuity drift visible; repeated delay, recurrence, missing evidence, stalled movement, or follow-up pressure may be weakening lifecycle confidence.'
+  }
+
+  if (driftMarkers > 0) {
+    return 'limited continuity drift visibility; preserve observation until movement, evidence, or ownership stabilizes.'
+  }
+
+  return 'no material continuity drift currently visible in this case pathway.'
+}
+
+function buildCaseConvergenceSignal(caseItem: InstabilityCase) {
+  const signals = caseItem.instability_signals || []
+
+  if (
+    caseItem.support_domain === 'COORDINATION' ||
+    signals.includes('CROSS_SITE_OPERATIONS') ||
+    caseItem.beneficiary_level === 'CROSS_SITE'
+  ) {
+    return 'cross-site convergence watch; this case may connect to wider coordination, ownership, or routing patterns.'
+  }
+
+  if (
+    caseItem.support_domain === 'OWNERSHIP' ||
+    signals.includes('OWNERSHIP_UNCLEAR')
+  ) {
+    return 'ownership convergence watch; this case may connect to repeated responsibility or handoff ambiguity.'
+  }
+
+  if (
+    caseItem.support_domain === 'EVIDENCE' ||
+    signals.includes('EVIDENCE_MISSING')
+  ) {
+    return 'evidence convergence watch; this case may connect to repeated verification or completion-visibility gaps.'
+  }
+
+  return 'no obvious cross-case convergence signal visible from this case alone.'
+}
+
+function buildCrossCaseConvergence(cases: InstabilityCase[]) {
+  const pressureCounts = countValues(cases.map((item) => item.support_domain))
+  const signalCounts = countValues(
+    cases.flatMap((item) => item.instability_signals || []),
+  )
+  const locationCounts = countValues(
+    cases.map((item) => item.beneficiary_level || item.region || ''),
+  )
+
+  const pressure = findConcentratedValue(pressureCounts)
+  const signal = findConcentratedValue(signalCounts)
+  const location = findConcentratedValue(locationCounts)
+
+  const patterns = [
+    pressure ? `pressure concentration: ${pressure}` : '',
+    signal ? `signal concentration: ${signal}` : '',
+    location ? `location/site concentration: ${location}` : '',
+  ].filter(Boolean)
+
+  if (patterns.length === 0) {
+    return 'No concentrated cross-case convergence pattern is currently visible across active governed cases.'
+  }
+
+  return `Cross-case convergence is visible through ${patterns.join(
+    ' • ',
+  )}. Executive review may benefit from comparing these cases as a structural pattern rather than isolated events.`
+}
+
+function countValues(values: string[]) {
+  return values.reduce<Record<string, number>>((counts, rawValue) => {
+    const value = rawValue.trim()
+    if (!value) return counts
+
+    counts[value] = (counts[value] || 0) + 1
+    return counts
+  }, {})
+}
+
+function findConcentratedValue(counts: Record<string, number>) {
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1])
+  const top = entries[0]
+
+  if (!top || top[1] < 2) return ''
+
+  return `${top[0]} (${top[1]} active cases)`
+}
+
+function hasActionEvidence(caseItem: InstabilityCase) {
+  const summary = caseItem.intervention_summary || ''
+
+  return Boolean(
+    summary.includes('ACTION MOVEMENT') ||
+      summary.includes('ACTION TRAJECTORY') ||
+      summary.includes('EVIDENCE POSTURE') ||
+      summary.includes('OWNER VISIBILITY') ||
+      summary.includes('RESIDUAL RISK'),
+  )
+}
+
+function hasOutcomeEvidence(caseItem: InstabilityCase) {
+  const summary = caseItem.outcome_summary || ''
+
+  return Boolean(
+    summary.includes('VERIFICATION RESULT') ||
+      summary.includes('ACTION IMPACT') ||
+      summary.includes('VERIFICATION CREDIBILITY') ||
+      summary.includes('RECURRENCE SIGNAL') ||
+      summary.includes('RECOVERY READINESS') ||
+      summary.includes('CONTINUITY OUTLOOK'),
+  )
 }
 
 function buildSimplifiedIdentity(
@@ -967,14 +1216,14 @@ function buildCaseIntelligence(
   caseItem: InstabilityCase,
   inherited: InheritedGovernanceContext,
 ): CaseIntelligence {
-  const hasAction = Boolean(caseItem.intervention_summary)
-  const hasOutcome = Boolean(caseItem.outcome_summary)
+  const actionEvidenceVisible = hasActionEvidence(caseItem)
+  const outcomeEvidenceVisible = hasOutcomeEvidence(caseItem)
 
   const evidencePosture = [
     `Triage: ${inherited.eligibilityConfidence}`,
     `Routing: ${hasRoutingEvidence(caseItem) ? 'visible' : 'pending'}`,
-    `Action: ${hasAction ? 'visible' : 'pending'}`,
-    `Outcome: ${hasOutcome ? 'visible' : 'pending'}`,
+    `Action: ${actionEvidenceVisible ? 'visible' : 'pending'}`,
+    `Outcome: ${outcomeEvidenceVisible ? 'visible' : 'pending'}`,
     `Recovery: ${
       caseItem.case_status === 'RECOVERY_MONITORING' ? 'active' : 'not active'
     }`,
@@ -998,14 +1247,14 @@ function buildCaseIntelligence(
     return {
       phase: 'Routed for stabilization',
       maturity: 'DIRECTION_ESTABLISHED',
-      confidence: hasAction
+      confidence: actionEvidenceVisible
         ? 'ACTION_EVIDENCE_BUILDING'
         : 'PENDING_ACTION_EVIDENCE',
-      nextMovement: hasAction
+      nextMovement: actionEvidenceVisible
         ? 'Review action evidence in /interventions'
         : 'Preserve governed stabilization action in /interventions',
       evidencePosture,
-      stagnationRisk: hasAction
+      stagnationRisk: actionEvidenceVisible
         ? 'Low if outcome verification follows.'
         : 'High if action evidence remains missing.',
       commandMeaning:
@@ -1060,14 +1309,14 @@ function buildCaseIntelligence(
     return {
       phase: 'Stabilization action active',
       maturity: 'ACTION_EVIDENCE_VISIBLE',
-      confidence: hasOutcome
+      confidence: outcomeEvidenceVisible
         ? 'OUTCOME_VERIFICATION_BUILDING'
         : 'PENDING_OUTCOME_VERIFICATION',
-      nextMovement: hasOutcome
+      nextMovement: outcomeEvidenceVisible
         ? 'Review outcome verification in /outcomes'
         : 'Preserve verification evidence in /outcomes',
       evidencePosture,
-      stagnationRisk: hasOutcome
+      stagnationRisk: outcomeEvidenceVisible
         ? 'Moderate until recovery durability is confirmed.'
         : 'High if outcome verification remains missing.',
       commandMeaning:
@@ -1083,8 +1332,10 @@ function buildCaseIntelligence(
     return {
       phase: 'Stabilization movement visible',
       maturity: 'STABILITY_BUILDING',
-      confidence: hasOutcome ? 'VERIFICATION_EVIDENCE_VISIBLE' : 'BUILDING',
-      nextMovement: hasOutcome
+      confidence: outcomeEvidenceVisible
+        ? 'VERIFICATION_EVIDENCE_VISIBLE'
+        : 'BUILDING',
+      nextMovement: outcomeEvidenceVisible
         ? 'Evaluate recovery readiness through /outcomes'
         : 'Preserve outcome verification before recovery observation.',
       evidencePosture,
