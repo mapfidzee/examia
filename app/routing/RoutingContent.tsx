@@ -27,6 +27,8 @@ type StabilityCase = {
   intake_identity?: string | null
   case_memory?: string | null
   continuity_memory?: string | null
+  intervention_summary?: string | null
+  outcome_summary?: string | null
   evidence_posture?: string | null
   latest_downstream_evidence?: string | null
   drift_signal?: string | null
@@ -60,6 +62,19 @@ type RoutingDecision =
   | 'REQUEST_EVIDENCE_BEFORE_MOVEMENT'
   | 'HOLD_FOR_OWNERSHIP_CLARITY'
   | 'MARK_ROUTING_STALLED'
+
+type InheritedRoutingContext = {
+  intakeIdentity: string
+  triagePosture: string
+  caseMaturity: string
+  driftSignal: string
+  convergenceSignal: string
+  routingReadiness: string
+  evidencePosture: string
+  commandMeaning: string
+  survivabilityInterpretation: string
+  memorySource: string
+}
 
 const GOVERNANCE_INSTITUTION = 'TSINAXA CGI'
 
@@ -224,14 +239,12 @@ export default function RoutingContent() {
     const routingStatus =
       recurrenceCount > 0 ? `${decision.status}_RECURRENCE` : decision.status
 
-    const inheritedMemory = buildInheritedCaseMemory(caseItem)
-
-    const routingReason =
-      recurrenceCount > 0
-        ? `${decision.reason} Previous routing activity exists for this active CGI case. Recurrence count: ${
-            recurrenceCount + 1
-          }. ${inheritedMemory}`
-        : `${decision.reason} ${inheritedMemory}`
+    const inherited = buildInheritedRoutingContext(caseItem)
+    const routingReason = buildRoutingReason({
+      decision,
+      inherited,
+      recurrenceCount,
+    })
 
     const { data: routingAction, error } = await supabase
       .from('case_routing_actions')
@@ -249,10 +262,45 @@ export default function RoutingContent() {
       return
     }
 
+    const routingMemory = buildRoutingContinuityMemory({
+      caseItem,
+      owner,
+      inherited,
+      routingStatus,
+      routingReason,
+      recurrenceCount,
+    })
+
     const { error: updateError } = await supabase
       .from('beneficiary_cases')
       .update({
         case_status: routingStatus,
+        latest_downstream_evidence: routingMemory,
+        evidence_posture: resolvePersistedRoutingEvidencePosture({
+          routingStatus,
+          inherited,
+          owner,
+        }),
+        drift_signal: resolvePersistedRoutingDrift({
+          routingStatus,
+          recurrenceCount,
+          inherited,
+        }),
+        convergence_signal: resolvePersistedRoutingConvergence({
+          routingStatus,
+          owner,
+        }),
+        command_meaning: resolvePersistedRoutingCommandMeaning({
+          routingStatus,
+          inherited,
+          recurrenceCount,
+        }),
+        survivability_interpretation: resolvePersistedRoutingSurvivability({
+          routingStatus,
+          inherited,
+          recurrenceCount,
+        }),
+        continuity_memory: routingMemory,
         updated_at: new Date().toISOString(),
       })
       .eq('id', caseItem.id)
@@ -426,11 +474,11 @@ export default function RoutingContent() {
                       </p>
 
                       <h4 className="mt-2 text-xl font-semibold text-white">
-                        {buildSimplifiedIdentity(caseItem)}
+                        {buildSimplifiedIdentity(caseItem, inherited)}
                       </h4>
 
                       <p className="mt-2 text-xs leading-5 text-neutral-500">
-                        Full identity: {caseItem.beneficiary_name}
+                        Full identity: {inherited.intakeIdentity}
                       </p>
                     </div>
 
@@ -468,6 +516,10 @@ export default function RoutingContent() {
                     </p>
 
                     <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                      <Info
+                        label="Memory Source"
+                        value={inherited.memorySource}
+                      />
                       <Info
                         label="Inherited Intake Identity"
                         value={inherited.intakeIdentity}
@@ -830,37 +882,88 @@ function buildRoutingClimate(input: {
   }
 }
 
-function buildInheritedRoutingContext(caseItem: StabilityCase) {
+function buildInheritedRoutingContext(caseItem: StabilityCase): InheritedRoutingContext {
+  const source = buildCaseMemorySource(caseItem)
+
   return {
-    intakeIdentity: resolveIntakeIdentity(caseItem),
-    triagePosture: resolveTriagePosture(caseItem),
+    intakeIdentity: resolveIntakeIdentity(caseItem, source),
+    triagePosture: resolveTriagePosture(caseItem, source),
     caseMaturity: resolveCaseGovernanceMaturity(caseItem),
     driftSignal: resolveCaseDriftSignal(caseItem),
     convergenceSignal: resolveConvergenceSignal(caseItem),
     routingReadiness: resolveRoutingReadiness(caseItem),
-    evidencePosture: resolveEvidencePosture(caseItem),
-    commandMeaning: resolveInheritedCommandMeaning(caseItem),
+    evidencePosture: resolveEvidencePosture(caseItem, source),
+    commandMeaning: resolveInheritedCommandMeaning(caseItem, source),
     survivabilityInterpretation: resolveSurvivabilityInterpretation(caseItem),
+    memorySource: resolveRoutingMemorySource(caseItem),
   }
 }
 
-function resolveIntakeIdentity(caseItem: StabilityCase) {
+function buildCaseMemorySource(caseItem: StabilityCase) {
+  return [
+    caseItem.continuity_memory,
+    caseItem.latest_downstream_evidence,
+    caseItem.case_memory,
+    caseItem.outcome_summary,
+    caseItem.intervention_summary,
+  ]
+    .filter(Boolean)
+    .join('\n\n')
+}
+
+function resolveRoutingMemorySource(caseItem: StabilityCase) {
+  if (caseItem.continuity_memory) return 'active continuity memory'
+  if (caseItem.latest_downstream_evidence) return 'latest downstream evidence'
+  if (caseItem.case_memory) return 'case memory'
+  if (caseItem.outcome_summary) return 'triage / downstream lifecycle summary'
+  if (caseItem.intervention_summary) return 'intake lifecycle memory'
+  return 'fallback case fields'
+}
+
+function extractBlockField(source: string, label: string) {
+  if (!source) return ''
+
+  const lines = source
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+
+  const target = label.trim().toLowerCase()
+  const index = lines.findIndex((line) => line.toLowerCase() === target)
+
+  if (index === -1) return ''
+
+  return lines[index + 1] || ''
+}
+
+function resolveIntakeIdentity(caseItem: StabilityCase, source: string) {
   if (caseItem.intake_identity) return caseItem.intake_identity
 
-  const level = caseItem.beneficiary_level || 'continuity zone unspecified'
-  const institution = caseItem.institution_name || GOVERNANCE_INSTITUTION
-  const region = caseItem.region || 'region not provided'
-
-  return `${caseItem.support_domain} • ${level} • ${institution} • ${region}`
+  return (
+    extractBlockField(source, 'INHERITED INTAKE IDENTITY') ||
+    extractBlockField(source, 'INTAKE IDENTITY') ||
+    caseItem.beneficiary_name ||
+    `${caseItem.support_domain} • ${
+      caseItem.beneficiary_level || 'continuity zone unspecified'
+    } • ${caseItem.institution_name || GOVERNANCE_INSTITUTION} • ${
+      caseItem.region || 'region not provided'
+    }`
+  )
 }
 
-function resolveTriagePosture(caseItem: StabilityCase) {
+function resolveTriagePosture(caseItem: StabilityCase, source: string) {
   if (caseItem.triage_posture) return caseItem.triage_posture
 
-  if (caseItem.triage_decision) {
-    return caseItem.triage_decision
-  }
+  return (
+    extractBlockField(source, 'INHERITED GOVERNANCE READINESS') ||
+    extractBlockField(source, 'RECOMMENDED POSTURE') ||
+    extractBlockField(source, 'TRIAGE REASON') ||
+    caseItem.triage_decision ||
+    resolveFallbackTriagePosture(caseItem)
+  )
+}
 
+function resolveFallbackTriagePosture(caseItem: StabilityCase) {
   if (caseItem.case_status.includes('GOVERNANCE_REVIEW')) {
     return 'Accepted instability escalated into governance visibility review before routing progression.'
   }
@@ -1007,9 +1110,18 @@ function resolveRoutingReadiness(caseItem: StabilityCase) {
   return 'ROUTING_GOVERNANCE_ACTIVE'
 }
 
-function resolveEvidencePosture(caseItem: StabilityCase) {
+function resolveEvidencePosture(caseItem: StabilityCase, source: string) {
   if (caseItem.evidence_posture) return caseItem.evidence_posture
 
+  return (
+    extractBlockField(source, 'INHERITED EVIDENCE POSTURE') ||
+    extractBlockField(source, 'EVIDENCE POSTURE') ||
+    extractBlockField(source, 'EVIDENCE LEVEL') ||
+    resolveFallbackEvidencePosture(caseItem)
+  )
+}
+
+function resolveFallbackEvidencePosture(caseItem: StabilityCase) {
   if (caseItem.latest_downstream_evidence) {
     return caseItem.latest_downstream_evidence
   }
@@ -1041,9 +1153,17 @@ function resolveEvidencePosture(caseItem: StabilityCase) {
   return 'Continuity evidence remains operationally preserved.'
 }
 
-function resolveInheritedCommandMeaning(caseItem: StabilityCase) {
+function resolveInheritedCommandMeaning(caseItem: StabilityCase, source: string) {
   if (caseItem.command_meaning) return caseItem.command_meaning
 
+  return (
+    extractBlockField(source, 'INHERITED COMMAND MEANING') ||
+    extractBlockField(source, 'COMMAND MEANING') ||
+    resolveFallbackCommandMeaning(caseItem)
+  )
+}
+
+function resolveFallbackCommandMeaning(caseItem: StabilityCase) {
   if (caseItem.severity_level === 'CRITICAL') {
     return 'Critical accepted instability requires accelerated executive routing visibility.'
   }
@@ -1126,13 +1246,217 @@ function resolveSurvivabilityInterpretation(caseItem: StabilityCase) {
   return 'Survivability interpretation remains under active continuity governance.'
 }
 
-function buildInheritedCaseMemory(caseItem: StabilityCase) {
-  const inherited = buildInheritedRoutingContext(caseItem)
+function buildRoutingReason(input: {
+  decision: {
+    reason: string
+  }
+  inherited: InheritedRoutingContext
+  recurrenceCount: number
+}) {
+  const recurrence =
+    input.recurrenceCount > 0
+      ? ` Previous routing activity exists for this active CGI case. Recurrence count: ${
+          input.recurrenceCount + 1
+        }.`
+      : ''
 
-  return `Inherited case memory: intake identity ${inherited.intakeIdentity}; triage posture ${inherited.triagePosture}; case maturity ${inherited.caseMaturity}; drift ${inherited.driftSignal}; convergence ${inherited.convergenceSignal}; evidence posture ${inherited.evidencePosture}; survivability ${inherited.survivabilityInterpretation}.`
+  return `${input.decision.reason}${recurrence} Inherited case memory: intake identity ${input.inherited.intakeIdentity}; triage posture ${input.inherited.triagePosture}; case maturity ${input.inherited.caseMaturity}; drift ${input.inherited.driftSignal}; convergence ${input.inherited.convergenceSignal}; evidence posture ${input.inherited.evidencePosture}; survivability ${input.inherited.survivabilityInterpretation}.`
 }
 
-function buildSimplifiedIdentity(caseItem: StabilityCase) {
+function buildRoutingContinuityMemory(input: {
+  caseItem: StabilityCase
+  owner?: StabilizationOwner
+  inherited: InheritedRoutingContext
+  routingStatus: string
+  routingReason: string
+  recurrenceCount: number
+}) {
+  return `
+INHERITED INTAKE IDENTITY
+${input.inherited.intakeIdentity}
+
+INHERITED TRIAGE POSTURE
+${input.inherited.triagePosture}
+
+INHERITED CASE MATURITY
+${input.inherited.caseMaturity}
+
+INHERITED DRIFT SIGNAL
+${input.inherited.driftSignal}
+
+INHERITED CONVERGENCE SIGNAL
+${input.inherited.convergenceSignal}
+
+INHERITED ROUTING READINESS
+${input.inherited.routingReadiness}
+
+INHERITED EVIDENCE POSTURE
+${input.inherited.evidencePosture}
+
+INHERITED COMMAND MEANING
+${input.inherited.commandMeaning}
+
+INHERITED SURVIVABILITY INTERPRETATION
+${input.inherited.survivabilityInterpretation}
+
+ROUTING STATUS
+${input.routingStatus}
+
+ROUTING REASON
+${input.routingReason}
+
+STABILIZATION OWNER
+${input.owner?.full_name || 'Ownership direction pending'}
+
+OWNER STATUS
+${input.owner?.operational_status || 'Owner status pending'}
+
+ROUTING RECURRENCE COUNT
+${input.recurrenceCount + 1}
+
+ACTION READINESS
+${input.routingStatus.includes('STABILIZATION_OWNER_ROUTED') ? 'ACTION_READY_AFTER_ROUTING_DIRECTION' : 'ACTION_HELD_UNTIL_ROUTING_CONSTRAINT_RESOLVES'}
+
+LIFECYCLE BOUNDARY
+Routing is direction governance.
+Routing is not intervention action.
+Action evidence must be preserved in /interventions.
+  `.trim()
+}
+
+function resolvePersistedRoutingEvidencePosture(input: {
+  routingStatus: string
+  inherited: InheritedRoutingContext
+  owner?: StabilizationOwner
+}) {
+  if (input.routingStatus.includes('STABILIZATION_OWNER_ROUTED')) {
+    return `Routing evidence preserved; stabilization owner ${
+      input.owner?.full_name || 'not visible'
+    }; intervention evidence pending.`
+  }
+
+  if (input.routingStatus.includes('GOVERNANCE_REVIEW')) {
+    return 'Governance review evidence preserved pending routing progression.'
+  }
+
+  if (input.routingStatus.includes('EVIDENCE_REQUIRED')) {
+    return 'Routing evidence remains insufficient before stabilization movement.'
+  }
+
+  if (input.routingStatus.includes('OWNERSHIP_CLARITY')) {
+    return 'Ownership clarification evidence remains required before routing progression.'
+  }
+
+  if (input.routingStatus.includes('STALLED')) {
+    return 'Routing stall evidence preserved; directional movement requires review.'
+  }
+
+  return input.inherited.evidencePosture
+}
+
+function resolvePersistedRoutingDrift(input: {
+  routingStatus: string
+  recurrenceCount: number
+  inherited: InheritedRoutingContext
+}) {
+  if (input.routingStatus.includes('STALLED')) return 'ACTIVE_ROUTING_DRIFT_VISIBLE'
+  if (input.recurrenceCount > 0) return 'REPEATED_ROUTING_DRIFT_VISIBLE'
+  if (input.routingStatus.includes('EVIDENCE_REQUIRED')) return 'DRIFT_RISK_PRESENT'
+  if (input.routingStatus.includes('OWNERSHIP_CLARITY')) return 'DRIFT_RISK_PRESENT'
+  if (input.routingStatus.includes('GOVERNANCE_REVIEW')) {
+    return 'GOVERNANCE_DIRECTION_REVIEW_ACTIVE'
+  }
+  if (input.routingStatus.includes('STABILIZATION_OWNER_ROUTED')) {
+    return 'NO_ACTIVE_DIRECTIONAL_DRIFT_VISIBLE'
+  }
+
+  return input.inherited.driftSignal
+}
+
+function resolvePersistedRoutingConvergence(input: {
+  routingStatus: string
+  owner?: StabilizationOwner
+}) {
+  if (input.routingStatus.includes('STABILIZATION_OWNER_ROUTED') && input.owner) {
+    return 'CONVERGENCE_BUILDING_THROUGH_OWNER_DIRECTION'
+  }
+
+  if (input.routingStatus.includes('STABILIZATION_OWNER_ROUTED')) {
+    return 'CONVERGENCE_BUILDING_WITH_OWNER_VISIBILITY_GAP'
+  }
+
+  if (input.routingStatus.includes('GOVERNANCE_REVIEW')) {
+    return 'CONVERGENCE_DELAYED_PENDING_GOVERNANCE_REVIEW'
+  }
+
+  if (input.routingStatus.includes('STALLED')) {
+    return 'CONVERGENCE_CONSTRAINED_BY_ROUTING_STALL'
+  }
+
+  if (
+    input.routingStatus.includes('EVIDENCE_REQUIRED') ||
+    input.routingStatus.includes('OWNERSHIP_CLARITY')
+  ) {
+    return 'CONVERGENCE_CONSTRAINED'
+  }
+
+  return 'CONVERGENCE_NOT_YET_ESTABLISHED'
+}
+
+function resolvePersistedRoutingCommandMeaning(input: {
+  routingStatus: string
+  inherited: InheritedRoutingContext
+  recurrenceCount: number
+}) {
+  if (input.recurrenceCount > 0) {
+    return 'Repeated routing movement may indicate unresolved continuity instability and should remain visible before downstream action.'
+  }
+
+  if (input.routingStatus.includes('STABILIZATION_OWNER_ROUTED')) {
+    return 'Governed routing direction is now operationally active; action evidence must be preserved before stabilization credibility increases.'
+  }
+
+  if (input.routingStatus.includes('GOVERNANCE_REVIEW')) {
+    return 'Governance review remains necessary before stabilization progression becomes directionally credible.'
+  }
+
+  if (input.routingStatus.includes('STALLED')) {
+    return 'Stalled routing weakens continuity credibility until movement resumes.'
+  }
+
+  return input.inherited.commandMeaning
+}
+
+function resolvePersistedRoutingSurvivability(input: {
+  routingStatus: string
+  inherited: InheritedRoutingContext
+  recurrenceCount: number
+}) {
+  if (
+    input.recurrenceCount > 0 ||
+    input.routingStatus.includes('STALLED') ||
+    input.routingStatus.includes('GOVERNANCE_REVIEW')
+  ) {
+    return 'Survivability credibility may weaken if repeated, reviewed, or stalled routing is not resolved.'
+  }
+
+  if (input.routingStatus.includes('STABILIZATION_OWNER_ROUTED')) {
+    return 'Survivability credibility begins strengthening when ownership and next movement are visible.'
+  }
+
+  return input.inherited.survivabilityInterpretation
+}
+
+function buildSimplifiedIdentity(
+  caseItem: StabilityCase,
+  inherited: InheritedRoutingContext,
+) {
+  const identity = inherited.intakeIdentity || caseItem.beneficiary_name
+
+  if (identity && identity !== caseItem.beneficiary_name) {
+    return identity
+  }
+
   const location =
     caseItem.beneficiary_level || caseItem.region || 'Unspecified continuity zone'
 
@@ -1145,20 +1469,19 @@ function buildRoutingSummary(input: {
   routingStatus: string
   recurrenceCount: number
 }) {
-  const identity = buildSimplifiedIdentity(input.caseItem)
   const inherited = buildInheritedRoutingContext(input.caseItem)
 
   if (input.recurrenceCount > 0) {
-    return `Routing recurrence preserved for ${identity}. Status: ${
+    return `Routing recurrence preserved for ${inherited.intakeIdentity}. Status: ${
       input.routingStatus
     }. Recurrence visibility count: ${
       input.recurrenceCount + 1
     }. Inherited posture: ${inherited.caseMaturity}.`
   }
 
-  return `Governed stabilization routing preserved for ${identity}. Status: ${
-    input.routingStatus
-  }. Stabilization owner: ${
+  return `Governed stabilization routing preserved for ${
+    inherited.intakeIdentity
+  }. Status: ${input.routingStatus}. Stabilization owner: ${
     input.owner?.full_name || 'Not assigned'
   }. Inherited posture: ${inherited.routingReadiness}.`
 }
@@ -1167,7 +1490,7 @@ function buildRoutingIntelligence(input: {
   caseItem: StabilityCase
   routingHistory: RoutingAction[]
   latestOwner?: StabilizationOwner
-  inherited: ReturnType<typeof buildInheritedRoutingContext>
+  inherited: InheritedRoutingContext
 }) {
   const { caseItem, routingHistory, latestOwner, inherited } = input
   const latestRouting = routingHistory[0]
@@ -1178,6 +1501,21 @@ function buildRoutingIntelligence(input: {
   ).length
 
   if (!latestRouting) {
+    if (caseItem.case_status.includes('GOVERNANCE_REVIEW_REQUIRED_RECURRENCE')) {
+      return {
+        phase: 'Governance review recurrence',
+        maturity: 'ROUTING_RECURRENCE_HELD',
+        confidence: 'CONDITIONAL_DIRECTIONAL_CONFIDENCE',
+        nextMovement:
+          'Resolve governance review recurrence before stabilization routing advances.',
+        ownerPosture: 'Ownership should not advance until governance review resolves.',
+        evidenceRequirement: inherited.evidencePosture,
+        stallRisk:
+          'Elevated routing stall risk if recurrence continues without decision clarity.',
+        commandMeaning: inherited.commandMeaning,
+      }
+    }
+
     return {
       phase: 'Routing direction pending',
       maturity: inherited.caseMaturity,
@@ -1189,7 +1527,7 @@ function buildRoutingIntelligence(input: {
       ownerPosture: 'Ownership direction pending',
       evidenceRequirement: inherited.evidencePosture,
       stallRisk:
-        inherited.driftSignal === 'DRIFT_VISIBLE'
+        inherited.driftSignal.includes('DRIFT')
           ? 'Inherited drift requires timely routing movement.'
           : 'Directional stall risk activates if routing movement is delayed.',
       commandMeaning: inherited.commandMeaning,
@@ -1253,7 +1591,9 @@ function buildRoutingIntelligence(input: {
   if (latestRouting.routing_status.includes('GOVERNANCE_REVIEW')) {
     return {
       phase: 'Governance visibility review',
-      maturity: 'DIRECTION_UNDER_REVIEW',
+      maturity: latestRouting.routing_status.includes('RECURRENCE')
+        ? 'DIRECTION_REVIEW_RECURRENCE'
+        : 'DIRECTION_UNDER_REVIEW',
       confidence: 'CONDITIONAL_DIRECTIONAL_CONFIDENCE',
       nextMovement:
         'Resolve governance visibility before stabilization movement advances.',
@@ -1261,7 +1601,9 @@ function buildRoutingIntelligence(input: {
         ? 'Ownership remains visible during governance review.'
         : 'Ownership pending governance review outcome.',
       evidenceRequirement: inherited.evidencePosture,
-      stallRisk: 'Moderate routing pressure until governance visibility resolves.',
+      stallRisk: latestRouting.routing_status.includes('RECURRENCE')
+        ? 'Elevated routing pressure until repeated governance review resolves.'
+        : 'Moderate routing pressure until governance visibility resolves.',
       commandMeaning: inherited.commandMeaning,
     }
   }
@@ -1343,11 +1685,15 @@ function buildRoutingIntelligence(input: {
 function buildRoutingInterpretation(
   caseItem: StabilityCase,
   routingHistory: RoutingAction[],
-  inherited: ReturnType<typeof buildInheritedRoutingContext>,
+  inherited: InheritedRoutingContext,
 ) {
   const recurrenceCount = routingHistory.filter((item) =>
     item.routing_status.includes('RECURRENCE'),
   ).length
+
+  if (caseItem.case_status.includes('GOVERNANCE_REVIEW_REQUIRED_RECURRENCE')) {
+    return 'Governance review recurrence is already visible from case custody. Routing should preserve review visibility and avoid false stabilization direction until governance interpretation resolves.'
+  }
 
   if (routingHistory.some((item) => item.routing_status.includes('STALLED'))) {
     return 'Routing movement remains stalled. CGI should preserve visibility over ownership barriers, directional deterioration, and continuity weakening until stabilization movement resumes.'
