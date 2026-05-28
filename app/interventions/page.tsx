@@ -31,6 +31,8 @@ type StabilityCase = {
   command_meaning?: string | null
   survivability_interpretation?: string | null
   continuity_memory?: string | null
+  intervention_summary?: string | null
+  outcome_summary?: string | null
 }
 
 type InterventionRecord = {
@@ -50,6 +52,7 @@ type InheritedInterventionContext = {
   inheritedConvergenceSignal: string
   inheritedCommandMeaning: string
   inheritedSurvivability: string
+  memorySource: string
 }
 
 const GOVERNANCE_INSTITUTION = 'TSINAXA CGI'
@@ -58,6 +61,7 @@ const ACTION_READY_STATUSES = [
   'STABILIZATION_OWNER_ROUTED',
   'STABILIZATION_OWNER_ROUTED_RECURRENCE',
   'ROUTING_DIRECTION_ACTIVE',
+  'ROUTING_DIRECTION_REPEATED_ACTION_READY',
   'ROUTING_CONFIRMED',
   'INTERVENTION_READY',
   'INTERVENTION_ACTIVE',
@@ -287,7 +291,9 @@ function InterventionCompletionContent() {
   })
 
   function buildCaseLabel(caseItem: StabilityCase) {
-    return `${caseItem.beneficiary_name} • ${caseItem.support_domain} • ${caseItem.case_status}`
+    const inherited = buildInheritedInterventionContext(caseItem)
+
+    return `${inherited.intakeIdentity} • ${caseItem.support_domain} • ${caseItem.case_status}`
   }
 
   function actionSynthesis() {
@@ -426,42 +432,6 @@ Outcome is not recovery.
     setMessage('')
 
     const evidence = actionSynthesis()
-    const downstreamEvidence = buildDownstreamEvidencePosture({
-      actionStatus,
-      actionTrajectory,
-      evidencePosture,
-      ownerVisibility,
-      continuityOutlook,
-      continuityRisk,
-    })
-
-    const nextConvergenceSignal = buildInterventionConvergenceSignal({
-      actionStatus,
-      actionTrajectory,
-      continuityOutlook,
-      continuityRisk,
-    })
-
-    const nextDriftSignal = buildInterventionDriftSignal({
-      actionStatus,
-      actionTrajectory,
-      continuityOutlook,
-      continuityRisk,
-    })
-
-    const nextCommandMeaning = buildPersistedCommandMeaning({
-      executiveMeaning,
-      commandPosture,
-      inheritedContext,
-    })
-
-    const nextSurvivability = buildPersistedSurvivability({
-      survivabilitySignal,
-      continuityRisk,
-      actionTrajectory,
-      continuityOutlook,
-      inheritedContext,
-    })
 
     const { error: interventionError } = await supabase
       .from('case_interventions')
@@ -482,13 +452,6 @@ Outcome is not recovery.
       .update({
         case_status: lifecycleDecision.nextStatus,
         intervention_summary: evidence,
-        latest_downstream_evidence: downstreamEvidence,
-        evidence_posture: downstreamEvidence,
-        convergence_signal: nextConvergenceSignal,
-        drift_signal: nextDriftSignal,
-        command_meaning: nextCommandMeaning,
-        survivability_interpretation: nextSurvivability,
-        continuity_memory: evidence,
         updated_at: new Date().toISOString(),
       })
       .eq('id', selectedCaseId)
@@ -681,6 +644,10 @@ Outcome is not recovery.
 
                   <div className="mt-4 grid gap-3">
                     <Info
+                      label="Memory Source"
+                      value={inheritedContext.memorySource}
+                    />
+                    <Info
                       label="Inherited Intake Identity"
                       value={inheritedContext.intakeIdentity}
                     />
@@ -695,6 +662,14 @@ Outcome is not recovery.
                     <Info
                       label="Inherited Evidence Posture"
                       value={inheritedContext.inheritedEvidencePosture}
+                    />
+                    <Info
+                      label="Inherited Drift Signal"
+                      value={inheritedContext.inheritedDriftSignal}
+                    />
+                    <Info
+                      label="Inherited Convergence Signal"
+                      value={inheritedContext.inheritedConvergenceSignal}
                     />
                     <Info
                       label="Inherited Command Meaning"
@@ -845,7 +820,9 @@ Outcome is not recovery.
                   <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                     {label}
                   </p>
-                  <p className="text-sm leading-6 text-neutral-100">{value}</p>
+                  <p className="break-words text-sm leading-6 text-neutral-100">
+                    {value}
+                  </p>
                 </div>
               ))}
             </div>
@@ -906,37 +883,92 @@ function buildEmptyInheritedInterventionContext(): InheritedInterventionContext 
       'Inherited command meaning pending selected stabilization-stage case.',
     inheritedSurvivability:
       'Inherited survivability interpretation pending selected stabilization-stage case.',
+    memorySource:
+      'Inherited routing memory pending selected stabilization-stage case.',
   }
 }
 
 function buildInheritedInterventionContext(
   caseItem: StabilityCase,
 ): InheritedInterventionContext {
+  const source = buildInterventionMemorySource(caseItem)
+
   return {
-    intakeIdentity: resolveIntakeIdentity(caseItem),
-    routingPosture: resolveRoutingPosture(caseItem),
-    interventionReadiness: resolveInterventionReadiness(caseItem),
-    inheritedEvidencePosture: resolveInheritedEvidencePosture(caseItem),
-    inheritedDriftSignal: resolveInheritedDriftSignal(caseItem),
-    inheritedConvergenceSignal: resolveInheritedConvergenceSignal(caseItem),
-    inheritedCommandMeaning: resolveInheritedCommandMeaning(caseItem),
-    inheritedSurvivability: resolveInheritedSurvivability(caseItem),
+    intakeIdentity: resolveIntakeIdentity(caseItem, source),
+    routingPosture: resolveRoutingPosture(caseItem, source),
+    interventionReadiness: resolveInterventionReadiness(caseItem, source),
+    inheritedEvidencePosture: resolveInheritedEvidencePosture(caseItem, source),
+    inheritedDriftSignal: resolveInheritedDriftSignal(caseItem, source),
+    inheritedConvergenceSignal: resolveInheritedConvergenceSignal(caseItem, source),
+    inheritedCommandMeaning: resolveInheritedCommandMeaning(caseItem, source),
+    inheritedSurvivability: resolveInheritedSurvivability(caseItem, source),
+    memorySource: resolveInterventionMemorySource(caseItem),
   }
 }
 
-function resolveIntakeIdentity(caseItem: StabilityCase) {
-  if (caseItem.intake_identity) return caseItem.intake_identity
-
-  const level = caseItem.beneficiary_level || 'continuity zone unspecified'
-  const institution = caseItem.institution_name || GOVERNANCE_INSTITUTION
-  const region = caseItem.region || 'region not provided'
-
-  return `${caseItem.support_domain} • ${level} • ${institution} • ${region}`
+function buildInterventionMemorySource(caseItem: StabilityCase) {
+  return [
+    caseItem.continuity_memory,
+    caseItem.latest_downstream_evidence,
+    caseItem.outcome_summary,
+    caseItem.intervention_summary,
+  ]
+    .filter(Boolean)
+    .join('\n\n')
 }
 
-function resolveRoutingPosture(caseItem: StabilityCase) {
+function resolveInterventionMemorySource(caseItem: StabilityCase) {
+  if (caseItem.continuity_memory) return 'active continuity memory'
+  if (caseItem.latest_downstream_evidence) return 'latest downstream evidence'
+  if (caseItem.outcome_summary) return 'routing continuity memory'
+  if (caseItem.intervention_summary) return 'prior action memory'
+  return 'fallback routed case fields'
+}
+
+function extractBlockField(source: string, label: string) {
+  if (!source) return ''
+
+  const lines = source
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+
+  const target = label.trim().toLowerCase()
+  const index = lines.findIndex((line) => line.toLowerCase() === target)
+
+  if (index === -1) return ''
+
+  return lines[index + 1] || ''
+}
+
+function resolveIntakeIdentity(caseItem: StabilityCase, source: string) {
+  if (caseItem.intake_identity) return caseItem.intake_identity
+
+  return (
+    extractBlockField(source, 'INHERITED INTAKE IDENTITY') ||
+    extractBlockField(source, 'INTAKE IDENTITY') ||
+    caseItem.beneficiary_name ||
+    `${caseItem.support_domain} • ${
+      caseItem.beneficiary_level || 'continuity zone unspecified'
+    } • ${caseItem.institution_name || GOVERNANCE_INSTITUTION} • ${
+      caseItem.region || 'region not provided'
+    }`
+  )
+}
+
+function resolveRoutingPosture(caseItem: StabilityCase, source: string) {
+  return (
+    extractBlockField(source, 'ROUTING STATUS') ||
+    extractBlockField(source, 'INHERITED ROUTING READINESS') ||
+    resolveFallbackRoutingPosture(caseItem)
+  )
+}
+
+function resolveFallbackRoutingPosture(caseItem: StabilityCase) {
   if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
-    return 'Governed routing direction has been established for stabilization action.'
+    return caseItem.case_status.includes('RECURRENCE')
+      ? 'Repeated governed routing direction has been established for stabilization action.'
+      : 'Governed routing direction has been established for stabilization action.'
   }
 
   if (caseItem.case_status.includes('INTERVENTION_ACTIVE')) {
@@ -958,9 +990,18 @@ function resolveRoutingPosture(caseItem: StabilityCase) {
   return 'Routing posture requires governed stabilization action interpretation.'
 }
 
-function resolveInterventionReadiness(caseItem: StabilityCase) {
+function resolveInterventionReadiness(caseItem: StabilityCase, source: string) {
+  return (
+    extractBlockField(source, 'ACTION READINESS') ||
+    resolveFallbackInterventionReadiness(caseItem)
+  )
+}
+
+function resolveFallbackInterventionReadiness(caseItem: StabilityCase) {
   if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
-    return 'INTERVENTION_READY_FROM_ROUTING'
+    return caseItem.case_status.includes('RECURRENCE')
+      ? 'ACTION_READY_AFTER_REPEATED_ROUTING_DIRECTION'
+      : 'INTERVENTION_READY_FROM_ROUTING'
   }
 
   if (caseItem.case_status.includes('INTERVENTION_ACTIVE')) {
@@ -982,8 +1023,17 @@ function resolveInterventionReadiness(caseItem: StabilityCase) {
   return 'INTERVENTION_REQUIRES_ROUTING_DIRECTION'
 }
 
-function resolveInheritedEvidencePosture(caseItem: StabilityCase) {
+function resolveInheritedEvidencePosture(caseItem: StabilityCase, source: string) {
   if (caseItem.evidence_posture) return caseItem.evidence_posture
+
+  return (
+    extractBlockField(source, 'INHERITED EVIDENCE POSTURE') ||
+    extractBlockField(source, 'EVIDENCE POSTURE') ||
+    resolveFallbackEvidencePosture(caseItem)
+  )
+}
+
+function resolveFallbackEvidencePosture(caseItem: StabilityCase) {
   if (caseItem.latest_downstream_evidence) return caseItem.latest_downstream_evidence
 
   if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
@@ -1001,8 +1051,19 @@ function resolveInheritedEvidencePosture(caseItem: StabilityCase) {
   return 'Inherited routing evidence pending action governance.'
 }
 
-function resolveInheritedDriftSignal(caseItem: StabilityCase) {
+function resolveInheritedDriftSignal(caseItem: StabilityCase, source: string) {
   if (caseItem.drift_signal) return caseItem.drift_signal
+
+  return (
+    extractBlockField(source, 'INHERITED DRIFT SIGNAL') ||
+    resolveFallbackDriftSignal(caseItem)
+  )
+}
+
+function resolveFallbackDriftSignal(caseItem: StabilityCase) {
+  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED_RECURRENCE')) {
+    return 'ROUTING_RECURRENCE_AFTER_DIRECTION_VISIBLE'
+  }
 
   if (caseItem.case_status.includes('ESCALATED')) {
     return 'ACTION_ESCALATION_DRIFT_VISIBLE'
@@ -1019,8 +1080,19 @@ function resolveInheritedDriftSignal(caseItem: StabilityCase) {
   return 'NO_ACTIVE_ACTION_DRIFT_VISIBLE'
 }
 
-function resolveInheritedConvergenceSignal(caseItem: StabilityCase) {
+function resolveInheritedConvergenceSignal(caseItem: StabilityCase, source: string) {
   if (caseItem.convergence_signal) return caseItem.convergence_signal
+
+  return (
+    extractBlockField(source, 'INHERITED CONVERGENCE SIGNAL') ||
+    resolveFallbackConvergenceSignal(caseItem)
+  )
+}
+
+function resolveFallbackConvergenceSignal(caseItem: StabilityCase) {
+  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED_RECURRENCE')) {
+    return 'CONVERGENCE_BUILDING_THROUGH_REPEATED_OWNER_DIRECTION'
+  }
 
   if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
     return 'CONVERGENCE_READY_FOR_ACTION'
@@ -1037,8 +1109,20 @@ function resolveInheritedConvergenceSignal(caseItem: StabilityCase) {
   return 'CONVERGENCE_PENDING_ACTION_EVIDENCE'
 }
 
-function resolveInheritedCommandMeaning(caseItem: StabilityCase) {
+function resolveInheritedCommandMeaning(caseItem: StabilityCase, source: string) {
   if (caseItem.command_meaning) return caseItem.command_meaning
+
+  return (
+    extractBlockField(source, 'INHERITED COMMAND MEANING') ||
+    extractBlockField(source, 'COMMAND MEANING') ||
+    resolveFallbackCommandMeaning(caseItem)
+  )
+}
+
+function resolveFallbackCommandMeaning(caseItem: StabilityCase) {
+  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED_RECURRENCE')) {
+    return 'Repeated governed routing direction is visible; action evidence must now determine whether stabilization is becoming credible.'
+  }
 
   if (caseItem.severity_level === 'CRITICAL') {
     return 'Critical routed instability requires accelerated stabilization action visibility.'
@@ -1055,9 +1139,20 @@ function resolveInheritedCommandMeaning(caseItem: StabilityCase) {
   return 'Action governance should preserve command meaning inherited from routing.'
 }
 
-function resolveInheritedSurvivability(caseItem: StabilityCase) {
+function resolveInheritedSurvivability(caseItem: StabilityCase, source: string) {
   if (caseItem.survivability_interpretation) {
     return caseItem.survivability_interpretation
+  }
+
+  return (
+    extractBlockField(source, 'INHERITED SURVIVABILITY INTERPRETATION') ||
+    resolveFallbackSurvivability(caseItem)
+  )
+}
+
+function resolveFallbackSurvivability(caseItem: StabilityCase) {
+  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED_RECURRENCE')) {
+    return 'Survivability credibility may begin strengthening through repeated owner direction, but action evidence is required before stabilization confidence improves.'
   }
 
   if (caseItem.severity_level === 'CRITICAL') {
@@ -1167,8 +1262,7 @@ function buildActionConfidence(input: {
   inheritedContext: InheritedInterventionContext
 }) {
   if (!input.hasActionEvidence) {
-    return input.inheritedContext.interventionReadiness ===
-      'INTERVENTION_READY_FROM_ROUTING'
+    return input.inheritedContext.interventionReadiness.includes('READY')
       ? 'ACTION_CONFIDENCE_READY'
       : 'ACTION_CONFIDENCE_PENDING'
   }
@@ -1280,98 +1374,13 @@ function buildPressureMeaning(input: {
   return 'Continuity action observation remains proportionally active under current governance conditions.'
 }
 
-function buildDownstreamEvidencePosture(input: {
-  actionStatus: string
-  actionTrajectory: string
-  evidencePosture: string
-  ownerVisibility: string
-  continuityOutlook: string
-  continuityRisk: ContinuityRisk | ''
-}) {
-  return `Action evidence preserved: ${input.evidencePosture}. Movement: ${input.actionStatus}. Trajectory: ${input.actionTrajectory}. Owner visibility: ${input.ownerVisibility}. Continuity outlook: ${input.continuityOutlook}. Continuity risk: ${input.continuityRisk}.`
-}
-
-function buildInterventionConvergenceSignal(input: {
-  actionStatus: string
-  actionTrajectory: string
-  continuityOutlook: string
-  continuityRisk: ContinuityRisk | ''
-}) {
-  if (
-    input.actionStatus === 'COMPLETED' &&
-    input.actionTrajectory === 'STABILIZATION_BUILDING' &&
-    input.continuityOutlook === 'STABILITY_BUILDING'
-  ) {
-    return 'CONVERGENCE_BUILDING_THROUGH_ACTION'
-  }
-
-  if (
-    input.actionStatus === 'ESCALATION_REQUIRED' ||
-    input.actionTrajectory === 'DESTABILIZING'
-  ) {
-    return 'CONVERGENCE_CONSTRAINED_BY_ACTION_PRESSURE'
-  }
-
-  if (input.actionTrajectory === 'ACTION_STALLED') {
-    return 'CONVERGENCE_DELAYED_BY_ACTION_STALL'
-  }
-
-  return 'CONVERGENCE_VARIABLE_UNDER_ACTION_GOVERNANCE'
-}
-
-function buildInterventionDriftSignal(input: {
-  actionStatus: string
-  actionTrajectory: string
-  continuityOutlook: string
-  continuityRisk: ContinuityRisk | ''
-}) {
-  if (
-    input.actionStatus === 'ESCALATION_REQUIRED' ||
-    input.actionTrajectory === 'DESTABILIZING' ||
-    input.continuityRisk === 'CRITICAL'
-  ) {
-    return 'ACTION_DRIFT_VISIBLE'
-  }
-
-  if (
-    input.actionTrajectory === 'ACTION_STALLED' ||
-    input.continuityOutlook === 'AT_RISK'
-  ) {
-    return 'ACTION_DRIFT_RISK_PRESENT'
-  }
-
-  if (input.actionTrajectory === 'STABILIZATION_BUILDING') {
-    return 'NO_ACTIVE_ACTION_DRIFT_VISIBLE'
-  }
-
-  return 'ACTION_DRIFT_MONITORING_ACTIVE'
-}
-
-function buildPersistedCommandMeaning(input: {
-  executiveMeaning: string
-  commandPosture: string
-  inheritedContext: InheritedInterventionContext
-}) {
-  return `${input.executiveMeaning} Command posture: ${input.commandPosture}. Inherited routing meaning preserved: ${input.inheritedContext.inheritedCommandMeaning}`
-}
-
-function buildPersistedSurvivability(input: {
-  survivabilitySignal: string
-  continuityRisk: ContinuityRisk | ''
-  actionTrajectory: string
-  continuityOutlook: string
-  inheritedContext: InheritedInterventionContext
-}) {
-  return `${input.survivabilitySignal}. Continuity risk: ${input.continuityRisk}. Action trajectory: ${input.actionTrajectory}. Outlook: ${input.continuityOutlook}. Inherited survivability: ${input.inheritedContext.inheritedSurvivability}`
-}
-
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-4">
+    <div className="min-w-0 rounded-2xl border border-neutral-800 bg-neutral-950 p-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
         {label}
       </p>
-      <p className="mt-2 text-sm leading-6 text-neutral-100">{value}</p>
+      <p className="mt-2 break-words text-sm leading-6 text-neutral-100">{value}</p>
     </div>
   )
 }
