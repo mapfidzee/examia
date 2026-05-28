@@ -780,6 +780,10 @@ function buildCaseClimate(
     (item) => item.case_status === 'RECOVERY_MONITORING',
   ).length
 
+  const governanceReviewRecurrence = cases.filter((item) =>
+    item.case_status.includes('GOVERNANCE_REVIEW_REQUIRED_RECURRENCE'),
+  ).length
+
   const incompleteEvidence = cases.filter(
     (item) => !hasActionEvidence(item) || !hasOutcomeEvidence(item),
   ).length
@@ -798,15 +802,17 @@ function buildCaseClimate(
     stabilityClimate:
       allVisibleCasesInRecovery
         ? 'Visible governed cases are currently under recovery durability observation.'
-        : stalled === 0 && escalated === 0
+        : stalled === 0 && escalated === 0 && governanceReviewRecurrence === 0
           ? 'Accepted instability conditions remain proportionally manageable under current case governance visibility.'
-          : 'Some accepted instability pathways show stalled movement or escalation concentration.',
+          : 'Some accepted instability pathways show stalled movement, governance-review recurrence, or escalation concentration.',
     lifecyclePosture:
       allVisibleCasesInRecovery
         ? 'Lifecycle posture has moved beyond active stabilization and is now observing durability before trust restoration.'
-        : highPressure === 0
-          ? 'Lifecycle governance posture remains balanced without concentrated high-pressure exposure.'
-          : 'High-pressure case concentration remains visible and may require executive continuity awareness.',
+        : governanceReviewRecurrence > 0
+          ? 'Governance-review recurrence is visible and should resolve before downstream routing credibility strengthens.'
+          : highPressure === 0
+            ? 'Lifecycle governance posture remains balanced without concentrated high-pressure exposure.'
+            : 'High-pressure case concentration remains visible and may require executive continuity awareness.',
     evidenceVisibility:
       allVisibleCasesHaveEvidence
         ? 'Action and outcome evidence are visible across active governed cases.'
@@ -814,19 +820,25 @@ function buildCaseClimate(
     routingLandscape:
       recoveryMonitoring > 0
         ? 'Some governed cases have progressed into recovery durability observation.'
-        : 'Routing readiness remains active for accepted instability that has not yet stabilized.',
+        : governanceReviewRecurrence > 0
+          ? 'Routing readiness is constrained where governance review recurrence remains unresolved.'
+          : 'Routing readiness remains active for accepted instability that has not yet stabilized.',
     pressureMeaning:
       allVisibleCasesInRecovery && allVisibleCasesHaveEvidence
         ? 'Case governance pressure is calm and proportionate. Visible cases are under recovery durability observation with action and outcome evidence preserved.'
-        : stalled === 0 && escalated === 0 && highPressure === 0
-          ? 'Case governance pressure remains proportionally active under current continuity conditions.'
-          : 'Case governance pressure remains visible through escalation, stalled movement, high-pressure exposure, or evidence incompleteness.',
+        : governanceReviewRecurrence > 0
+          ? 'Case governance pressure remains visible through repeated governance review, delayed routing credibility, and unresolved continuity interpretation.'
+          : stalled === 0 && escalated === 0 && highPressure === 0
+            ? 'Case governance pressure remains proportionally active under current continuity conditions.'
+            : 'Case governance pressure remains visible through escalation, stalled movement, high-pressure exposure, or evidence incompleteness.',
     commandSynthesis:
       allVisibleCasesInRecovery && allVisibleCasesHaveEvidence
         ? 'No active case deterioration is visible. Command attention may remain focused on durability observation and memory preservation.'
-        : stalled > 0 || escalated > 0 || highPressure > 1 || driftCases > 1
-          ? 'Case concentration may require executive continuity synthesis visibility.'
-          : 'No concentrated case deterioration currently requiring command escalation.',
+        : governanceReviewRecurrence > 0
+          ? 'Repeated governance review may require executive continuity synthesis before downstream stabilization direction becomes credible.'
+          : stalled > 0 || escalated > 0 || highPressure > 1 || driftCases > 1
+            ? 'Case concentration may require executive continuity synthesis visibility.'
+            : 'No concentrated case deterioration currently requiring command escalation.',
     driftIntelligence:
       driftCases === 0
         ? 'No concentrated continuity drift pattern is currently visible across active governed cases.'
@@ -1109,6 +1121,8 @@ function buildDriftSignal(
     .toUpperCase()
 
   const driftMarkers = [
+    caseItem.case_status.includes('RECURRENCE'),
+    caseItem.case_status.includes('GOVERNANCE_REVIEW_REQUIRED'),
     caseItem.case_status.includes('STALLED'),
     caseItem.case_status.includes('ESCALATED'),
     caseItem.case_status === 'REOPENED',
@@ -1126,11 +1140,11 @@ function buildDriftSignal(
   ].filter(Boolean).length
 
   if (driftMarkers >= 3) {
-    return 'continuity drift visible; repeated delay, recurrence, missing evidence, stalled movement, or follow-up pressure may be weakening lifecycle confidence.'
+    return 'continuity drift visible; repeated delay, recurrence, missing evidence, governance-review recurrence, stalled movement, or follow-up pressure may be weakening lifecycle confidence.'
   }
 
   if (driftMarkers > 0) {
-    return 'limited continuity drift visibility; preserve observation until movement, evidence, or ownership stabilizes.'
+    return 'limited continuity drift visibility; preserve observation until movement, evidence, governance review, or ownership stabilizes.'
   }
 
   return 'no material continuity drift currently visible in this case pathway.'
@@ -1271,6 +1285,81 @@ function buildCaseIntelligence(
     }`,
   ].join(' • ')
 
+  if (caseItem.case_status.includes('GOVERNANCE_REVIEW_REQUIRED_RECURRENCE')) {
+    return {
+      phase: 'Governance review recurrence',
+      maturity: 'CASE_RECURRENCE_VISIBLE',
+      confidence: 'CONDITIONAL_GOVERNANCE_CONFIDENCE',
+      nextMovement:
+        'Resolve governance review recurrence before routing progression becomes credible.',
+      evidencePosture,
+      stagnationRisk:
+        'Elevated if repeated review continues without ownership, evidence, or routing movement.',
+      commandMeaning:
+        'Repeated governance review may indicate unresolved continuity strain and should remain visible before downstream movement resumes.',
+    }
+  }
+
+  if (caseItem.case_status.includes('GOVERNANCE_REVIEW_REQUIRED')) {
+    return {
+      phase: 'Governance review active',
+      maturity: 'GOVERNANCE_VISIBILITY_REVIEW',
+      confidence: 'CONDITIONAL_GOVERNANCE_CONFIDENCE',
+      nextMovement:
+        'Resolve governance visibility before stabilization direction advances.',
+      evidencePosture,
+      stagnationRisk:
+        'Moderate if governance review delays routing direction.',
+      commandMeaning:
+        'Governance review is active and should protect downstream movement from premature stabilization claims.',
+    }
+  }
+
+  if (caseItem.case_status.includes('EVIDENCE_REQUIRED_BEFORE_ROUTING')) {
+    return {
+      phase: 'Evidence gate before routing',
+      maturity: 'ROUTING_EVIDENCE_ALIGNMENT_PENDING',
+      confidence: 'LIMITED_GOVERNANCE_CONFIDENCE',
+      nextMovement:
+        'Strengthen routing evidence before stabilization ownership is directed.',
+      evidencePosture,
+      stagnationRisk:
+        'High if evidence remains weak and routing is delayed.',
+      commandMeaning:
+        'Evidence insufficiency must remain visible so CGI does not create false routing confidence.',
+    }
+  }
+
+  if (caseItem.case_status.includes('OWNERSHIP_CLARITY_REQUIRED')) {
+    return {
+      phase: 'Ownership clarity before routing',
+      maturity: 'OWNERSHIP_ALIGNMENT_UNSTABLE',
+      confidence: 'VARIABLE_GOVERNANCE_CONFIDENCE',
+      nextMovement:
+        'Clarify responsible stabilization ownership before routing direction proceeds.',
+      evidencePosture,
+      stagnationRisk:
+        'High if ownership remains unclear across the continuity pathway.',
+      commandMeaning:
+        'Unclear ownership may weaken stabilization continuity and must be resolved before action movement begins.',
+    }
+  }
+
+  if (caseItem.case_status.includes('ROUTING_STALLED')) {
+    return {
+      phase: 'Routing movement stalled',
+      maturity: 'CASE_MOVEMENT_DESTABILIZING',
+      confidence: 'FRAGILE_GOVERNANCE_CONFIDENCE',
+      nextMovement:
+        'Restore routing movement or escalate continuity visibility.',
+      evidencePosture,
+      stagnationRisk:
+        'Critical until routing movement resumes or a governance decision redirects the pathway.',
+      commandMeaning:
+        'Stalled routing weakens stabilization credibility and should remain visible to command governance.',
+    }
+  }
+
   if (caseItem.case_status === 'ACCEPTED_FOR_GOVERNANCE') {
     return {
       phase: 'Accepted into governance',
@@ -1288,7 +1377,9 @@ function buildCaseIntelligence(
   if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
     return {
       phase: 'Routed for stabilization',
-      maturity: 'DIRECTION_ESTABLISHED',
+      maturity: caseItem.case_status.includes('RECURRENCE')
+        ? 'DIRECTION_REPEATED'
+        : 'DIRECTION_ESTABLISHED',
       confidence: actionEvidenceVisible
         ? 'ACTION_EVIDENCE_BUILDING'
         : 'PENDING_ACTION_EVIDENCE',
@@ -1304,47 +1395,23 @@ function buildCaseIntelligence(
     }
   }
 
-  if (caseItem.case_status.includes('EVIDENCE_REQUIRED')) {
+  if (caseItem.case_status === 'ACTION_ACTIVE') {
     return {
-      phase: 'Evidence gate',
-      maturity: 'EVIDENCE_ALIGNMENT_PENDING',
-      confidence: 'LIMITED_GOVERNANCE_CONFIDENCE',
-      nextMovement: 'Preserve missing evidence before further lifecycle movement.',
+      phase: 'Action active',
+      maturity: 'ACTION_GOVERNANCE_STARTED',
+      confidence: actionEvidenceVisible
+        ? 'ACTION_EVIDENCE_BUILDING'
+        : 'ACTION_EVIDENCE_PENDING',
+      nextMovement: 'Preserve stabilization action evidence in /interventions.',
       evidencePosture,
-      stagnationRisk: 'High if evidence remains missing.',
+      stagnationRisk:
+        'Moderate until action evidence is preserved and outcome verification begins.',
       commandMeaning:
-        'The case cannot be treated as stabilizing until evidence quality improves.',
-    }
-  }
-
-  if (caseItem.case_status.includes('OWNERSHIP_CLARITY')) {
-    return {
-      phase: 'Ownership clarity gate',
-      maturity: 'OWNERSHIP_ALIGNMENT_UNSTABLE',
-      confidence: 'VARIABLE_GOVERNANCE_CONFIDENCE',
-      nextMovement: 'Clarify responsible stabilization owner.',
-      evidencePosture,
-      stagnationRisk: 'High if ownership remains unclear.',
-      commandMeaning:
-        'Unclear ownership may weaken continuity and require executive visibility.',
-    }
-  }
-
-  if (caseItem.case_status.includes('STALLED')) {
-    return {
-      phase: 'Stalled movement',
-      maturity: 'CASE_MOVEMENT_DESTABILIZING',
-      confidence: 'FRAGILE_GOVERNANCE_CONFIDENCE',
-      nextMovement: 'Restore movement or escalate continuity visibility.',
-      evidencePosture,
-      stagnationRisk: 'Critical until lifecycle movement resumes.',
-      commandMeaning:
-        'Stalled governance threatens stabilization credibility and should remain visible.',
+        'Action has started, but credibility depends on preserved evidence and later verification.',
     }
   }
 
   if (
-    caseItem.case_status === 'ACTION_ACTIVE' ||
     caseItem.case_status === 'INTERVENTION_ACTIVE' ||
     caseItem.case_status === 'INTERVENTION_RECORDED'
   ) {
@@ -1455,8 +1522,24 @@ function buildGovernanceInterpretation(
   caseItem: InstabilityCase,
   inherited: InheritedGovernanceContext,
 ) {
-  if (caseItem.case_status.includes('STALLED')) {
-    return 'Governed lifecycle movement is stalled. CGI should preserve visibility until stabilization direction, ownership, or evidence movement resumes.'
+  if (caseItem.case_status.includes('GOVERNANCE_REVIEW_REQUIRED_RECURRENCE')) {
+    return 'Governance review has repeated. CGI should preserve recurrence visibility, prevent false routing confidence, and resolve governance interpretation before downstream stabilization movement continues.'
+  }
+
+  if (caseItem.case_status.includes('GOVERNANCE_REVIEW_REQUIRED')) {
+    return 'Governance review is active. CGI should preserve inherited triage meaning, evidence posture, command meaning, and lifecycle visibility before routing progression resumes.'
+  }
+
+  if (caseItem.case_status.includes('EVIDENCE_REQUIRED_BEFORE_ROUTING')) {
+    return 'Routing evidence remains insufficient. CGI should strengthen evidence before allowing stabilization direction to appear credible.'
+  }
+
+  if (caseItem.case_status.includes('OWNERSHIP_CLARITY_REQUIRED')) {
+    return 'Ownership clarity remains unresolved. CGI should not treat the case as directionally stable until responsible stabilization ownership is visible.'
+  }
+
+  if (caseItem.case_status.includes('ROUTING_STALLED')) {
+    return 'Governed routing movement is stalled. CGI should preserve visibility until stabilization direction, ownership, or evidence movement resumes.'
   }
 
   if (caseItem.case_status.includes('ESCALATED')) {
