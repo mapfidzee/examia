@@ -851,75 +851,116 @@ function buildInheritedGovernanceContext(
   timelineEntries: TimelineEntry[],
 ): InheritedGovernanceContext {
   const timelineSource = buildLifecycleMemorySource(timelineEntries)
-  const currentSummary = caseItem.outcome_summary || ''
-  const joinedSource = [timelineSource, currentSummary].filter(Boolean).join('\n\n')
-  const memorySource = timelineSource
-    ? 'case_timeline + latest case summary'
-    : currentSummary
-      ? 'latest case summary only'
-      : 'fallback case fields only'
+
+  const currentSummary =
+    caseItem.intervention_summary ||
+    caseItem.outcome_summary ||
+    ''
+
+  const joinedSource = [currentSummary, timelineSource]
+    .filter(Boolean)
+    .join('\n\n')
+
+  const memorySource = caseItem.intervention_summary
+    ? 'active lifecycle memory + timeline history'
+    : caseItem.outcome_summary
+      ? 'downstream lifecycle memory + timeline history'
+      : timelineSource
+        ? 'timeline history only'
+        : 'fallback case fields only'
 
   return {
     inheritedIntakeIdentity:
       extractBlockField(joinedSource, 'INHERITED INTAKE IDENTITY') ||
+      extractBlockField(joinedSource, 'INTAKE IDENTITY') ||
       extractInlineField(joinedSource, 'Generated intake identity') ||
       caseItem.beneficiary_name,
+
     inheritedEntryRoute:
       extractBlockField(joinedSource, 'INHERITED ENTRY ROUTE') ||
+      extractBlockField(joinedSource, 'ENTRY ROUTE') ||
       extractInlineField(joinedSource, 'Entry route') ||
       'Inherited entry route not available',
+
     inheritedPressureType:
       extractBlockField(joinedSource, 'INHERITED PRESSURE TYPE') ||
+      extractBlockField(joinedSource, 'OPERATIONAL PRESSURE TYPE') ||
       extractInlineField(joinedSource, 'Operational pressure type') ||
       caseItem.support_domain,
+
     inheritedVisibleSignal:
       extractBlockField(joinedSource, 'INHERITED VISIBLE SIGNAL') ||
+      extractBlockField(joinedSource, 'VISIBLE SIGNAL') ||
       extractInlineField(joinedSource, 'Visible signal') ||
       caseItem.region ||
       'Inherited visible signal not available',
+
     inheritedOwnershipPosture:
       extractBlockField(joinedSource, 'INHERITED OWNERSHIP POSTURE') ||
+      extractBlockField(joinedSource, 'OWNERSHIP POSTURE') ||
+      extractBlockField(joinedSource, 'OWNERSHIP STATE') ||
       extractInlineField(joinedSource, 'Ownership posture') ||
       extractInlineField(joinedSource, 'Ownership state') ||
       'Inherited ownership posture not available',
+
     inheritedEvidencePosture:
       extractBlockField(joinedSource, 'INHERITED EVIDENCE POSTURE') ||
+      extractBlockField(joinedSource, 'EVIDENCE POSTURE') ||
+      extractBlockField(joinedSource, 'EVIDENCE LEVEL') ||
       extractInlineField(joinedSource, 'Evidence posture') ||
       extractInlineField(joinedSource, 'Evidence level') ||
       'Inherited evidence posture not available',
+
     inheritedGovernanceReadiness:
       extractBlockField(joinedSource, 'INHERITED GOVERNANCE READINESS') ||
+      extractBlockField(joinedSource, 'GOVERNANCE READINESS') ||
       extractInlineField(joinedSource, 'Governance readiness') ||
       'Inherited governance readiness not available',
+
     inheritedCommandMeaning:
       extractBlockField(joinedSource, 'INHERITED COMMAND MEANING') ||
+      extractBlockField(joinedSource, 'COMMAND MEANING') ||
       extractInlineField(joinedSource, 'Command meaning') ||
       'Inherited command meaning not available',
+
     triageResult:
-      extractBlockField(joinedSource, 'TRIAGE RESULT') || caseItem.case_status,
+      extractBlockField(joinedSource, 'TRIAGE RESULT') ||
+      caseItem.case_status,
+
     triageReason:
       extractBlockField(joinedSource, 'TRIAGE REASON') ||
       'Triage reason not available',
+
     triageGateStatus:
       extractBlockField(joinedSource, 'TRIAGE GATE STATUS') ||
       'Triage gate status not available',
+
     triageMaturity:
       extractBlockField(joinedSource, 'TRIAGE MATURITY') ||
       'Triage maturity not available',
+
     eligibilityConfidence:
       extractBlockField(joinedSource, 'ELIGIBILITY CONFIDENCE') ||
       'Eligibility confidence not available',
+
     recommendedPosture:
       extractBlockField(joinedSource, 'RECOMMENDED POSTURE') ||
       'Recommended posture not available',
+
     caseReadiness:
-      extractBlockField(joinedSource, 'CASE READINESS') || '/cases',
+      extractBlockField(joinedSource, 'CASE READINESS') ||
+      '/cases',
+
     nextLifecycleState:
       extractBlockField(joinedSource, 'NEXT LIFECYCLE STATE') ||
       'Case lifecycle movement pending.',
+
     memorySource,
+
     lifecycleNarrative: buildLifecycleNarrative(caseItem, timelineEntries),
+
     driftSignal: buildDriftSignal(caseItem, timelineEntries),
+
     convergenceSignal: buildCaseConvergenceSignal(caseItem),
   }
 }
@@ -939,7 +980,8 @@ function extractBlockField(source: string, label: string) {
     .map((line) => line.trim())
     .filter(Boolean)
 
-  const index = lines.findIndex((line) => line === label)
+  const target = label.trim().toLowerCase()
+  const index = lines.findIndex((line) => line.toLowerCase() === target)
 
   if (index === -1) return ''
 
