@@ -199,8 +199,10 @@ function OutcomesContent() {
     continuityOutlook,
   })
 
-  const continuityClimate =
-    buildContinuityClimate(outcomes)
+  const continuityClimate = buildContinuityClimate({
+    outcomes,
+    hasSelectedCase: Boolean(selectedCaseId),
+  })
 
   const commandPosture = buildCommandPosture({
     verificationResult,
@@ -249,6 +251,7 @@ function OutcomesContent() {
       continuityClimate,
       recoveryReadiness,
       verificationTrajectory,
+      hasSelectedCase: Boolean(selectedCaseId),
     })
 
   function buildCaseLabel(caseItem: StabilityCase) {
@@ -765,9 +768,29 @@ but durable recovery must be confirmed separately.
   )
 }
 
-function buildContinuityClimate(
-  outcomes: OutcomeRecord[],
-) {
+function buildContinuityClimate({
+  outcomes,
+  hasSelectedCase,
+}: {
+  outcomes: OutcomeRecord[]
+  hasSelectedCase: boolean
+}) {
+  if (!hasSelectedCase) {
+    return {
+      stabilityClimate:
+        'Awaiting stabilization verification evidence before continuity climate interpretation activates.',
+
+      posture:
+        'Continuity verification posture will activate after stabilization evidence becomes operationally visible.',
+
+      recurrence:
+        'Recurrence visibility interpretation pending stabilization verification evidence.',
+
+      recoveryLandscape:
+        'Recovery durability eligibility visibility pending stabilization verification progression.',
+    }
+  }
+
   const recurrenceCount = outcomes.filter(
     (item) =>
       item.outcome_summary?.includes(
@@ -1065,7 +1088,12 @@ function buildVerificationPressureMeaning(input: {
   }
   recoveryReadiness: string
   verificationTrajectory: string
+  hasSelectedCase: boolean
 }) {
+  if (!input.hasSelectedCase) {
+    return 'Verification continuity interpretation will activate after stabilization evidence becomes operationally visible.'
+  }
+
   if (
     input.verificationTrajectory ===
       'STABILITY_BUILDING' ||
@@ -1091,7 +1119,7 @@ function Select({
   label,
   placeholder,
   value,
- setValue,
+  setValue,
   options,
 }: {
   label: string
