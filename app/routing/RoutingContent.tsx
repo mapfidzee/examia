@@ -16,7 +16,6 @@ type StabilityCase = {
   safeguarding_flag: boolean
   created_at?: string | null
   updated_at?: string | null
-
   triage_status?: string | null
   triage_decision?: string | null
   triage_reason?: string | null
@@ -275,32 +274,7 @@ export default function RoutingContent() {
       .from('beneficiary_cases')
       .update({
         case_status: routingStatus,
-        latest_downstream_evidence: routingMemory,
-        evidence_posture: resolvePersistedRoutingEvidencePosture({
-          routingStatus,
-          inherited,
-          owner,
-        }),
-        drift_signal: resolvePersistedRoutingDrift({
-          routingStatus,
-          recurrenceCount,
-          inherited,
-        }),
-        convergence_signal: resolvePersistedRoutingConvergence({
-          routingStatus,
-          owner,
-        }),
-        command_meaning: resolvePersistedRoutingCommandMeaning({
-          routingStatus,
-          inherited,
-          recurrenceCount,
-        }),
-        survivability_interpretation: resolvePersistedRoutingSurvivability({
-          routingStatus,
-          inherited,
-          recurrenceCount,
-        }),
-        continuity_memory: routingMemory,
+        outcome_summary: routingMemory,
         updated_at: new Date().toISOString(),
       })
       .eq('id', caseItem.id)
@@ -516,10 +490,7 @@ export default function RoutingContent() {
                     </p>
 
                     <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                      <Info
-                        label="Memory Source"
-                        value={inherited.memorySource}
-                      />
+                      <Info label="Memory Source" value={inherited.memorySource} />
                       <Info
                         label="Inherited Intake Identity"
                         value={inherited.intakeIdentity}
@@ -1322,129 +1293,6 @@ Routing is direction governance.
 Routing is not intervention action.
 Action evidence must be preserved in /interventions.
   `.trim()
-}
-
-function resolvePersistedRoutingEvidencePosture(input: {
-  routingStatus: string
-  inherited: InheritedRoutingContext
-  owner?: StabilizationOwner
-}) {
-  if (input.routingStatus.includes('STABILIZATION_OWNER_ROUTED')) {
-    return `Routing evidence preserved; stabilization owner ${
-      input.owner?.full_name || 'not visible'
-    }; intervention evidence pending.`
-  }
-
-  if (input.routingStatus.includes('GOVERNANCE_REVIEW')) {
-    return 'Governance review evidence preserved pending routing progression.'
-  }
-
-  if (input.routingStatus.includes('EVIDENCE_REQUIRED')) {
-    return 'Routing evidence remains insufficient before stabilization movement.'
-  }
-
-  if (input.routingStatus.includes('OWNERSHIP_CLARITY')) {
-    return 'Ownership clarification evidence remains required before routing progression.'
-  }
-
-  if (input.routingStatus.includes('STALLED')) {
-    return 'Routing stall evidence preserved; directional movement requires review.'
-  }
-
-  return input.inherited.evidencePosture
-}
-
-function resolvePersistedRoutingDrift(input: {
-  routingStatus: string
-  recurrenceCount: number
-  inherited: InheritedRoutingContext
-}) {
-  if (input.routingStatus.includes('STALLED')) return 'ACTIVE_ROUTING_DRIFT_VISIBLE'
-  if (input.recurrenceCount > 0) return 'REPEATED_ROUTING_DRIFT_VISIBLE'
-  if (input.routingStatus.includes('EVIDENCE_REQUIRED')) return 'DRIFT_RISK_PRESENT'
-  if (input.routingStatus.includes('OWNERSHIP_CLARITY')) return 'DRIFT_RISK_PRESENT'
-  if (input.routingStatus.includes('GOVERNANCE_REVIEW')) {
-    return 'GOVERNANCE_DIRECTION_REVIEW_ACTIVE'
-  }
-  if (input.routingStatus.includes('STABILIZATION_OWNER_ROUTED')) {
-    return 'NO_ACTIVE_DIRECTIONAL_DRIFT_VISIBLE'
-  }
-
-  return input.inherited.driftSignal
-}
-
-function resolvePersistedRoutingConvergence(input: {
-  routingStatus: string
-  owner?: StabilizationOwner
-}) {
-  if (input.routingStatus.includes('STABILIZATION_OWNER_ROUTED') && input.owner) {
-    return 'CONVERGENCE_BUILDING_THROUGH_OWNER_DIRECTION'
-  }
-
-  if (input.routingStatus.includes('STABILIZATION_OWNER_ROUTED')) {
-    return 'CONVERGENCE_BUILDING_WITH_OWNER_VISIBILITY_GAP'
-  }
-
-  if (input.routingStatus.includes('GOVERNANCE_REVIEW')) {
-    return 'CONVERGENCE_DELAYED_PENDING_GOVERNANCE_REVIEW'
-  }
-
-  if (input.routingStatus.includes('STALLED')) {
-    return 'CONVERGENCE_CONSTRAINED_BY_ROUTING_STALL'
-  }
-
-  if (
-    input.routingStatus.includes('EVIDENCE_REQUIRED') ||
-    input.routingStatus.includes('OWNERSHIP_CLARITY')
-  ) {
-    return 'CONVERGENCE_CONSTRAINED'
-  }
-
-  return 'CONVERGENCE_NOT_YET_ESTABLISHED'
-}
-
-function resolvePersistedRoutingCommandMeaning(input: {
-  routingStatus: string
-  inherited: InheritedRoutingContext
-  recurrenceCount: number
-}) {
-  if (input.recurrenceCount > 0) {
-    return 'Repeated routing movement may indicate unresolved continuity instability and should remain visible before downstream action.'
-  }
-
-  if (input.routingStatus.includes('STABILIZATION_OWNER_ROUTED')) {
-    return 'Governed routing direction is now operationally active; action evidence must be preserved before stabilization credibility increases.'
-  }
-
-  if (input.routingStatus.includes('GOVERNANCE_REVIEW')) {
-    return 'Governance review remains necessary before stabilization progression becomes directionally credible.'
-  }
-
-  if (input.routingStatus.includes('STALLED')) {
-    return 'Stalled routing weakens continuity credibility until movement resumes.'
-  }
-
-  return input.inherited.commandMeaning
-}
-
-function resolvePersistedRoutingSurvivability(input: {
-  routingStatus: string
-  inherited: InheritedRoutingContext
-  recurrenceCount: number
-}) {
-  if (
-    input.recurrenceCount > 0 ||
-    input.routingStatus.includes('STALLED') ||
-    input.routingStatus.includes('GOVERNANCE_REVIEW')
-  ) {
-    return 'Survivability credibility may weaken if repeated, reviewed, or stalled routing is not resolved.'
-  }
-
-  if (input.routingStatus.includes('STABILIZATION_OWNER_ROUTED')) {
-    return 'Survivability credibility begins strengthening when ownership and next movement are visible.'
-  }
-
-  return input.inherited.survivabilityInterpretation
 }
 
 function buildSimplifiedIdentity(
