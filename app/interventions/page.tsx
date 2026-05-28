@@ -22,6 +22,15 @@ type StabilityCase = {
   assigned_responder_id?: string | null
   updated_at?: string | null
   created_at?: string | null
+  intake_identity?: string | null
+  triage_posture?: string | null
+  evidence_posture?: string | null
+  latest_downstream_evidence?: string | null
+  drift_signal?: string | null
+  convergence_signal?: string | null
+  command_meaning?: string | null
+  survivability_interpretation?: string | null
+  continuity_memory?: string | null
 }
 
 type InterventionRecord = {
@@ -32,16 +41,24 @@ type InterventionRecord = {
   created_at?: string | null
 }
 
+type InheritedInterventionContext = {
+  intakeIdentity: string
+  routingPosture: string
+  interventionReadiness: string
+  inheritedEvidencePosture: string
+  inheritedDriftSignal: string
+  inheritedConvergenceSignal: string
+  inheritedCommandMeaning: string
+  inheritedSurvivability: string
+}
+
+const GOVERNANCE_INSTITUTION = 'TSINAXA CGI'
+
 const ACTION_READY_STATUSES = [
-  'ACCEPTED_FOR_GOVERNANCE',
-  'ROUTED',
-  'ASSIGNED',
-  'RESPONDER_ASSIGNED',
-  'ROUTING_CONFIRMED',
-  'STABILIZATION_ROUTED',
   'STABILIZATION_OWNER_ROUTED',
-  'ROUTED_TO_RESPONDER',
-  'ROUTING_RECURRENCE',
+  'STABILIZATION_OWNER_ROUTED_RECURRENCE',
+  'ROUTING_DIRECTION_ACTIVE',
+  'ROUTING_CONFIRMED',
   'INTERVENTION_READY',
   'INTERVENTION_ACTIVE',
   'INTERVENTION_RECORDED',
@@ -204,6 +221,14 @@ function InterventionCompletionContent() {
     [cases, selectedCaseId],
   )
 
+  const inheritedContext = useMemo(
+    () =>
+      selectedCase
+        ? buildInheritedInterventionContext(selectedCase)
+        : buildEmptyInheritedInterventionContext(),
+    [selectedCase],
+  )
+
   const hasActionEvidence = Boolean(selectedCaseId && actionStatus)
 
   const lifecycleDecision = evaluateInterventionLifecycle({
@@ -214,6 +239,7 @@ function InterventionCompletionContent() {
   const actionClimate = buildActionClimate({
     interventions,
     hasSelectedCase: Boolean(selectedCaseId),
+    inheritedContext,
   })
 
   const commandPosture = buildCommandPosture({
@@ -222,6 +248,7 @@ function InterventionCompletionContent() {
     continuityRisk,
     actionTrajectory,
     continuityOutlook,
+    inheritedContext,
   })
 
   const actionConfidence = buildActionConfidence({
@@ -230,6 +257,7 @@ function InterventionCompletionContent() {
     continuityRisk,
     actionTrajectory,
     continuityOutlook,
+    inheritedContext,
   })
 
   const survivabilitySignal = buildSurvivabilitySignal({
@@ -238,6 +266,7 @@ function InterventionCompletionContent() {
     actionTrajectory,
     continuityOutlook,
     actionStatus,
+    inheritedContext,
   })
 
   const executiveMeaning = buildExecutiveMeaning({
@@ -246,6 +275,7 @@ function InterventionCompletionContent() {
     continuityRisk,
     actionTrajectory,
     continuityOutlook,
+    inheritedContext,
   })
 
   const pressureMeaning = buildPressureMeaning({
@@ -253,6 +283,7 @@ function InterventionCompletionContent() {
     actionTrajectory,
     continuityOutlook,
     continuityRisk,
+    inheritedContext,
   })
 
   function buildCaseLabel(caseItem: StabilityCase) {
@@ -261,13 +292,37 @@ function InterventionCompletionContent() {
 
   function actionSynthesis() {
     return `
+INHERITED INTAKE IDENTITY
+${inheritedContext.intakeIdentity}
+
+INHERITED ROUTING POSTURE
+${inheritedContext.routingPosture}
+
+INTERVENTION READINESS
+${inheritedContext.interventionReadiness}
+
+INHERITED EVIDENCE POSTURE
+${inheritedContext.inheritedEvidencePosture}
+
+INHERITED DRIFT SIGNAL
+${inheritedContext.inheritedDriftSignal}
+
+INHERITED CONVERGENCE SIGNAL
+${inheritedContext.inheritedConvergenceSignal}
+
+INHERITED COMMAND MEANING
+${inheritedContext.inheritedCommandMeaning}
+
+INHERITED SURVIVABILITY INTERPRETATION
+${inheritedContext.inheritedSurvivability}
+
 ACTION MOVEMENT
 ${actionStatus || 'Awaiting action movement selection'}
 
 ACTION TRAJECTORY
 ${actionTrajectory || 'Action trajectory pending'}
 
-EVIDENCE POSTURE
+ACTION EVIDENCE POSTURE
 ${evidencePosture || 'Awaiting evidence posture selection'}
 
 OWNER VISIBILITY
@@ -371,6 +426,42 @@ Outcome is not recovery.
     setMessage('')
 
     const evidence = actionSynthesis()
+    const downstreamEvidence = buildDownstreamEvidencePosture({
+      actionStatus,
+      actionTrajectory,
+      evidencePosture,
+      ownerVisibility,
+      continuityOutlook,
+      continuityRisk,
+    })
+
+    const nextConvergenceSignal = buildInterventionConvergenceSignal({
+      actionStatus,
+      actionTrajectory,
+      continuityOutlook,
+      continuityRisk,
+    })
+
+    const nextDriftSignal = buildInterventionDriftSignal({
+      actionStatus,
+      actionTrajectory,
+      continuityOutlook,
+      continuityRisk,
+    })
+
+    const nextCommandMeaning = buildPersistedCommandMeaning({
+      executiveMeaning,
+      commandPosture,
+      inheritedContext,
+    })
+
+    const nextSurvivability = buildPersistedSurvivability({
+      survivabilitySignal,
+      continuityRisk,
+      actionTrajectory,
+      continuityOutlook,
+      inheritedContext,
+    })
 
     const { error: interventionError } = await supabase
       .from('case_interventions')
@@ -391,6 +482,13 @@ Outcome is not recovery.
       .update({
         case_status: lifecycleDecision.nextStatus,
         intervention_summary: evidence,
+        latest_downstream_evidence: downstreamEvidence,
+        evidence_posture: downstreamEvidence,
+        convergence_signal: nextConvergenceSignal,
+        drift_signal: nextDriftSignal,
+        command_meaning: nextCommandMeaning,
+        survivability_interpretation: nextSurvivability,
+        continuity_memory: evidence,
         updated_at: new Date().toISOString(),
       })
       .eq('id', selectedCaseId)
@@ -414,7 +512,7 @@ Outcome is not recovery.
     setGovernanceInterpretation('')
 
     setMessage(
-      'Stabilization action evidence preserved. Continuity movement, executive meaning, lifecycle posture, survivability visibility, and structural traceability remain operationally visible.',
+      'Stabilization action evidence preserved. Routing memory, action movement, executive meaning, lifecycle posture, survivability visibility, and structural traceability remain operationally visible.',
     )
 
     setLoading(false)
@@ -443,9 +541,17 @@ Outcome is not recovery.
   ]
 
   const synthesisRows = [
+    ['INHERITED INTAKE IDENTITY', inheritedContext.intakeIdentity],
+    ['INHERITED ROUTING POSTURE', inheritedContext.routingPosture],
+    ['INTERVENTION READINESS', inheritedContext.interventionReadiness],
+    ['INHERITED EVIDENCE POSTURE', inheritedContext.inheritedEvidencePosture],
+    ['INHERITED DRIFT SIGNAL', inheritedContext.inheritedDriftSignal],
+    ['INHERITED CONVERGENCE SIGNAL', inheritedContext.inheritedConvergenceSignal],
+    ['INHERITED COMMAND MEANING', inheritedContext.inheritedCommandMeaning],
+    ['INHERITED SURVIVABILITY', inheritedContext.inheritedSurvivability],
     ['ACTION MOVEMENT', actionStatus || 'Awaiting action movement selection'],
     ['ACTION TRAJECTORY', actionTrajectory || 'Action trajectory pending'],
-    ['EVIDENCE POSTURE', evidencePosture || 'Awaiting evidence posture selection'],
+    ['ACTION EVIDENCE POSTURE', evidencePosture || 'Awaiting evidence posture selection'],
     ['OWNER VISIBILITY', ownerVisibility || 'Awaiting owner visibility selection'],
     ['CONTINUITY OUTLOOK', continuityOutlook || 'Continuity outlook pending'],
     ['CONTINUITY RISK', continuityRisk || 'Continuity risk pending'],
@@ -467,7 +573,8 @@ Outcome is not recovery.
     ],
     [
       'STABILITY DOMAIN',
-      selectedCase?.support_domain || 'Continuity domain visibility pending action assignment.',
+      selectedCase?.support_domain ||
+        'Continuity domain visibility pending action assignment.',
     ],
     [
       'CURRENT CONTINUITY STATUS',
@@ -501,17 +608,17 @@ Outcome is not recovery.
           </h2>
 
           <p className="mt-3 max-w-5xl text-sm leading-6 text-neutral-300">
-            Convert routed instability into governed action evidence, preserve
-            continuity movement, expose stalled stabilization conditions, maintain
-            survivability visibility, and protect the lifecycle boundary between
-            action, outcome, and recovery.
+            Convert routed instability into governed action evidence while
+            preserving inherited intake identity, routing posture, convergence
+            visibility, survivability meaning, command interpretation, and
+            structural continuity memory before outcome verification begins.
           </p>
 
           <p className="mt-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-4 text-sm leading-6 text-cyan-100">
             <span className="font-semibold">Boundary:</span> /interventions
             governs stabilization action evidence. It does not verify outcomes,
-            declare recovery durability, or erase structural continuity memory
-            automatically.
+            declare recovery durability, or erase routing memory inherited from
+            upstream continuity governance.
           </p>
         </div>
 
@@ -546,9 +653,8 @@ Outcome is not recovery.
 
             <p className="mt-3 text-sm leading-6 text-neutral-400">
               Use this after routed instability receives governed stabilization
-              action. Preserve continuity movement, action trajectory,
-              survivability visibility, owner posture, and executive continuity
-              interpretation.
+              action. Preserve routing memory, action trajectory, survivability
+              visibility, owner posture, and executive continuity interpretation.
             </p>
 
             <div className="mt-6 space-y-5">
@@ -566,6 +672,41 @@ Outcome is not recovery.
                   value: item.id,
                 }))}
               />
+
+              {selectedCase && (
+                <section className="rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-5">
+                  <p className="text-sm font-semibold text-cyan-100">
+                    Inherited Routing Memory
+                  </p>
+
+                  <div className="mt-4 grid gap-3">
+                    <Info
+                      label="Inherited Intake Identity"
+                      value={inheritedContext.intakeIdentity}
+                    />
+                    <Info
+                      label="Inherited Routing Posture"
+                      value={inheritedContext.routingPosture}
+                    />
+                    <Info
+                      label="Intervention Readiness"
+                      value={inheritedContext.interventionReadiness}
+                    />
+                    <Info
+                      label="Inherited Evidence Posture"
+                      value={inheritedContext.inheritedEvidencePosture}
+                    />
+                    <Info
+                      label="Inherited Command Meaning"
+                      value={inheritedContext.inheritedCommandMeaning}
+                    />
+                    <Info
+                      label="Inherited Survivability"
+                      value={inheritedContext.inheritedSurvivability}
+                    />
+                  </div>
+                </section>
+              )}
 
               <Select
                 label="Action Type"
@@ -666,7 +807,7 @@ Outcome is not recovery.
                   value={governanceInterpretation}
                   onChange={(event) => setGovernanceInterpretation(event.target.value)}
                   rows={5}
-                  placeholder="Use operational facts only. Preserve continuity movement, survivability visibility, structural traceability, and executive continuity interpretation."
+                  placeholder="Use operational facts only. Preserve routing memory, continuity movement, survivability visibility, structural traceability, and executive continuity interpretation."
                   className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
                 />
               </label>
@@ -689,9 +830,10 @@ Outcome is not recovery.
             </h3>
 
             <p className="mt-3 text-sm leading-6 text-neutral-400">
-              This synthesis evaluates whether stabilization movement is
-              strengthening, remaining variable, stalling, recurring, escalating,
-              or becoming eligible for verification governance.
+              This synthesis evaluates whether inherited routing direction is
+              converting into credible stabilization action, remaining variable,
+              stalling, recurring, escalating, or becoming eligible for outcome
+              verification governance.
             </p>
 
             <div className="mt-6 divide-y divide-neutral-800 rounded-2xl border border-neutral-800">
@@ -727,9 +869,9 @@ Outcome is not recovery.
 
           <p className="mt-4 text-sm leading-7 text-neutral-300">
             Stabilization action governance is not task completion tracking. CGI
-            preserves continuity movement credibility, owner visibility, residual
-            pressure, survivability relevance, and operational traceability before
-            verification governance begins.
+            preserves inherited routing memory, continuity movement credibility,
+            owner visibility, residual pressure, survivability relevance, and
+            operational traceability before verification governance begins.
           </p>
 
           <p className="mt-4 text-sm leading-7 text-neutral-300">
@@ -746,12 +888,201 @@ Outcome is not recovery.
   )
 }
 
+function buildEmptyInheritedInterventionContext(): InheritedInterventionContext {
+  return {
+    intakeIdentity:
+      'Inherited intake identity will activate after a routed continuity case is selected.',
+    routingPosture:
+      'Inherited routing posture pending selected stabilization-stage case.',
+    interventionReadiness:
+      'Intervention readiness pending selected stabilization-stage case.',
+    inheritedEvidencePosture:
+      'Inherited evidence posture pending selected stabilization-stage case.',
+    inheritedDriftSignal:
+      'Inherited drift visibility pending selected stabilization-stage case.',
+    inheritedConvergenceSignal:
+      'Inherited convergence visibility pending selected stabilization-stage case.',
+    inheritedCommandMeaning:
+      'Inherited command meaning pending selected stabilization-stage case.',
+    inheritedSurvivability:
+      'Inherited survivability interpretation pending selected stabilization-stage case.',
+  }
+}
+
+function buildInheritedInterventionContext(
+  caseItem: StabilityCase,
+): InheritedInterventionContext {
+  return {
+    intakeIdentity: resolveIntakeIdentity(caseItem),
+    routingPosture: resolveRoutingPosture(caseItem),
+    interventionReadiness: resolveInterventionReadiness(caseItem),
+    inheritedEvidencePosture: resolveInheritedEvidencePosture(caseItem),
+    inheritedDriftSignal: resolveInheritedDriftSignal(caseItem),
+    inheritedConvergenceSignal: resolveInheritedConvergenceSignal(caseItem),
+    inheritedCommandMeaning: resolveInheritedCommandMeaning(caseItem),
+    inheritedSurvivability: resolveInheritedSurvivability(caseItem),
+  }
+}
+
+function resolveIntakeIdentity(caseItem: StabilityCase) {
+  if (caseItem.intake_identity) return caseItem.intake_identity
+
+  const level = caseItem.beneficiary_level || 'continuity zone unspecified'
+  const institution = caseItem.institution_name || GOVERNANCE_INSTITUTION
+  const region = caseItem.region || 'region not provided'
+
+  return `${caseItem.support_domain} • ${level} • ${institution} • ${region}`
+}
+
+function resolveRoutingPosture(caseItem: StabilityCase) {
+  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
+    return 'Governed routing direction has been established for stabilization action.'
+  }
+
+  if (caseItem.case_status.includes('INTERVENTION_ACTIVE')) {
+    return 'Routing has progressed into active stabilization action governance.'
+  }
+
+  if (caseItem.case_status.includes('INTERVENTION_RECORDED')) {
+    return 'Routing memory has already produced preserved stabilization action evidence.'
+  }
+
+  if (caseItem.case_status.includes('STABILIZING')) {
+    return 'Routing direction is converting into stabilization movement.'
+  }
+
+  if (caseItem.case_status.includes('ESCALATED')) {
+    return 'Routing has escalated into executive stabilization visibility.'
+  }
+
+  return 'Routing posture requires governed stabilization action interpretation.'
+}
+
+function resolveInterventionReadiness(caseItem: StabilityCase) {
+  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
+    return 'INTERVENTION_READY_FROM_ROUTING'
+  }
+
+  if (caseItem.case_status.includes('INTERVENTION_ACTIVE')) {
+    return 'INTERVENTION_ALREADY_ACTIVE'
+  }
+
+  if (caseItem.case_status.includes('INTERVENTION_RECORDED')) {
+    return 'INTERVENTION_EVIDENCE_ALREADY_PRESERVED'
+  }
+
+  if (caseItem.case_status.includes('STABILIZING')) {
+    return 'STABILIZATION_MOVEMENT_ALREADY_VISIBLE'
+  }
+
+  if (caseItem.case_status.includes('ESCALATED')) {
+    return 'INTERVENTION_REQUIRES_EXECUTIVE_VISIBILITY'
+  }
+
+  return 'INTERVENTION_REQUIRES_ROUTING_DIRECTION'
+}
+
+function resolveInheritedEvidencePosture(caseItem: StabilityCase) {
+  if (caseItem.evidence_posture) return caseItem.evidence_posture
+  if (caseItem.latest_downstream_evidence) return caseItem.latest_downstream_evidence
+
+  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
+    return 'Routing evidence preserved; stabilization action evidence pending.'
+  }
+
+  if (caseItem.case_status.includes('INTERVENTION_ACTIVE')) {
+    return 'Action evidence is being governed; outcome evidence pending.'
+  }
+
+  if (caseItem.case_status.includes('ESCALATED')) {
+    return 'Escalation evidence remains visible before outcome verification.'
+  }
+
+  return 'Inherited routing evidence pending action governance.'
+}
+
+function resolveInheritedDriftSignal(caseItem: StabilityCase) {
+  if (caseItem.drift_signal) return caseItem.drift_signal
+
+  if (caseItem.case_status.includes('ESCALATED')) {
+    return 'ACTION_ESCALATION_DRIFT_VISIBLE'
+  }
+
+  if (caseItem.case_status.includes('INTERVENTION_ACTIVE')) {
+    return 'ACTION_DRIFT_MONITORING_ACTIVE'
+  }
+
+  if (caseItem.case_status.includes('STABILIZING')) {
+    return 'NO_ACTIVE_ACTION_DRIFT_VISIBLE'
+  }
+
+  return 'NO_ACTIVE_ACTION_DRIFT_VISIBLE'
+}
+
+function resolveInheritedConvergenceSignal(caseItem: StabilityCase) {
+  if (caseItem.convergence_signal) return caseItem.convergence_signal
+
+  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
+    return 'CONVERGENCE_READY_FOR_ACTION'
+  }
+
+  if (caseItem.case_status.includes('STABILIZING')) {
+    return 'CONVERGENCE_BUILDING_THROUGH_ACTION'
+  }
+
+  if (caseItem.case_status.includes('ESCALATED')) {
+    return 'CONVERGENCE_CONSTRAINED_BY_ESCALATION'
+  }
+
+  return 'CONVERGENCE_PENDING_ACTION_EVIDENCE'
+}
+
+function resolveInheritedCommandMeaning(caseItem: StabilityCase) {
+  if (caseItem.command_meaning) return caseItem.command_meaning
+
+  if (caseItem.severity_level === 'CRITICAL') {
+    return 'Critical routed instability requires accelerated stabilization action visibility.'
+  }
+
+  if (caseItem.safeguarding_flag) {
+    return 'Safeguarding-sensitive routed instability requires protected action evidence and traceable owner movement.'
+  }
+
+  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
+    return 'Routing direction is ready to become governed stabilization action.'
+  }
+
+  return 'Action governance should preserve command meaning inherited from routing.'
+}
+
+function resolveInheritedSurvivability(caseItem: StabilityCase) {
+  if (caseItem.survivability_interpretation) {
+    return caseItem.survivability_interpretation
+  }
+
+  if (caseItem.severity_level === 'CRITICAL') {
+    return 'Survivability pressure remains high until action movement is preserved.'
+  }
+
+  if (caseItem.severity_level === 'HIGH' && caseItem.safeguarding_flag) {
+    return 'High-pressure safeguarding pathway remains survivability-sensitive until action evidence strengthens.'
+  }
+
+  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
+    return 'Survivability credibility can strengthen if routed ownership converts into action movement.'
+  }
+
+  return 'Survivability interpretation awaits governed stabilization action evidence.'
+}
+
 function buildActionClimate({
   interventions,
   hasSelectedCase,
+  inheritedContext,
 }: {
   interventions: InterventionRecord[]
   hasSelectedCase: boolean
+  inheritedContext: InheritedInterventionContext
 }) {
   if (!hasSelectedCase) {
     return {
@@ -777,7 +1108,7 @@ function buildActionClimate({
   return {
     stabilityClimate:
       escalationCount === 0
-        ? 'Continuity action conditions remain proportionally balanced under current governance visibility.'
+        ? 'Continuity action conditions remain proportionally balanced under inherited routing memory and current governance visibility.'
         : 'Some stabilization pathways remain operationally variable under current governance conditions.',
     actionPosture:
       stalledCount === 0
@@ -787,10 +1118,9 @@ function buildActionClimate({
       stalledCount === 0
         ? 'No concentrated dependency barriers currently weakening stabilization movement.'
         : 'Dependency visibility remains operationally active across some stabilization pathways.',
-    outcomeLandscape:
-      escalationCount === 0
-        ? 'Some stabilization pathways may become eligible for verification governance after continuity movement strengthens.'
-        : 'Verification readiness remains limited under current stabilization pressure conditions.',
+    outcomeLandscape: inheritedContext.inheritedConvergenceSignal.includes('CONVERGENCE')
+      ? 'Some stabilization pathways may become eligible for verification governance after continuity movement strengthens.'
+      : 'Verification readiness remains limited until stabilization action evidence becomes credible.',
   }
 }
 
@@ -800,8 +1130,11 @@ function buildCommandPosture(input: {
   continuityRisk: ContinuityRisk | ''
   actionTrajectory: string
   continuityOutlook: string
+  inheritedContext: InheritedInterventionContext
 }) {
-  if (!input.hasActionEvidence) return 'PENDING_ACTION_EVIDENCE'
+  if (!input.hasActionEvidence) {
+    return input.inheritedContext.interventionReadiness
+  }
 
   if (
     input.continuityRisk === 'CRITICAL' ||
@@ -831,8 +1164,14 @@ function buildActionConfidence(input: {
   continuityRisk: ContinuityRisk | ''
   actionTrajectory: string
   continuityOutlook: string
+  inheritedContext: InheritedInterventionContext
 }) {
-  if (!input.hasActionEvidence) return 'ACTION_CONFIDENCE_PENDING'
+  if (!input.hasActionEvidence) {
+    return input.inheritedContext.interventionReadiness ===
+      'INTERVENTION_READY_FROM_ROUTING'
+      ? 'ACTION_CONFIDENCE_READY'
+      : 'ACTION_CONFIDENCE_PENDING'
+  }
 
   if (
     input.actionStatus === 'ESCALATION_REQUIRED' ||
@@ -858,8 +1197,11 @@ function buildSurvivabilitySignal(input: {
   actionTrajectory: string
   continuityOutlook: string
   actionStatus: string
+  inheritedContext: InheritedInterventionContext
 }) {
-  if (!input.hasActionEvidence) return 'SURVIVABILITY_INTERPRETATION_PENDING'
+  if (!input.hasActionEvidence) {
+    return input.inheritedContext.inheritedSurvivability
+  }
 
   if (
     input.continuityRisk === 'CRITICAL' ||
@@ -888,9 +1230,10 @@ function buildExecutiveMeaning(input: {
   continuityRisk: ContinuityRisk | ''
   actionTrajectory: string
   continuityOutlook: string
+  inheritedContext: InheritedInterventionContext
 }) {
   if (!input.hasActionEvidence) {
-    return 'Executive continuity interpretation will activate after stabilization action evidence is preserved.'
+    return input.inheritedContext.inheritedCommandMeaning
   }
 
   if (
@@ -916,9 +1259,10 @@ function buildPressureMeaning(input: {
   actionTrajectory: string
   continuityOutlook: string
   continuityRisk: ContinuityRisk | ''
+  inheritedContext: InheritedInterventionContext
 }) {
   if (!input.hasActionEvidence) {
-    return 'Continuity action interpretation will activate after stabilization action evidence becomes operationally visible.'
+    return `Continuity action interpretation is inheriting routing memory: ${input.inheritedContext.routingPosture}`
   }
 
   if (input.actionTrajectory === 'STABILIZATION_BUILDING' && input.continuityRisk === 'LOW') {
@@ -934,6 +1278,102 @@ function buildPressureMeaning(input: {
   }
 
   return 'Continuity action observation remains proportionally active under current governance conditions.'
+}
+
+function buildDownstreamEvidencePosture(input: {
+  actionStatus: string
+  actionTrajectory: string
+  evidencePosture: string
+  ownerVisibility: string
+  continuityOutlook: string
+  continuityRisk: ContinuityRisk | ''
+}) {
+  return `Action evidence preserved: ${input.evidencePosture}. Movement: ${input.actionStatus}. Trajectory: ${input.actionTrajectory}. Owner visibility: ${input.ownerVisibility}. Continuity outlook: ${input.continuityOutlook}. Continuity risk: ${input.continuityRisk}.`
+}
+
+function buildInterventionConvergenceSignal(input: {
+  actionStatus: string
+  actionTrajectory: string
+  continuityOutlook: string
+  continuityRisk: ContinuityRisk | ''
+}) {
+  if (
+    input.actionStatus === 'COMPLETED' &&
+    input.actionTrajectory === 'STABILIZATION_BUILDING' &&
+    input.continuityOutlook === 'STABILITY_BUILDING'
+  ) {
+    return 'CONVERGENCE_BUILDING_THROUGH_ACTION'
+  }
+
+  if (
+    input.actionStatus === 'ESCALATION_REQUIRED' ||
+    input.actionTrajectory === 'DESTABILIZING'
+  ) {
+    return 'CONVERGENCE_CONSTRAINED_BY_ACTION_PRESSURE'
+  }
+
+  if (input.actionTrajectory === 'ACTION_STALLED') {
+    return 'CONVERGENCE_DELAYED_BY_ACTION_STALL'
+  }
+
+  return 'CONVERGENCE_VARIABLE_UNDER_ACTION_GOVERNANCE'
+}
+
+function buildInterventionDriftSignal(input: {
+  actionStatus: string
+  actionTrajectory: string
+  continuityOutlook: string
+  continuityRisk: ContinuityRisk | ''
+}) {
+  if (
+    input.actionStatus === 'ESCALATION_REQUIRED' ||
+    input.actionTrajectory === 'DESTABILIZING' ||
+    input.continuityRisk === 'CRITICAL'
+  ) {
+    return 'ACTION_DRIFT_VISIBLE'
+  }
+
+  if (
+    input.actionTrajectory === 'ACTION_STALLED' ||
+    input.continuityOutlook === 'AT_RISK'
+  ) {
+    return 'ACTION_DRIFT_RISK_PRESENT'
+  }
+
+  if (input.actionTrajectory === 'STABILIZATION_BUILDING') {
+    return 'NO_ACTIVE_ACTION_DRIFT_VISIBLE'
+  }
+
+  return 'ACTION_DRIFT_MONITORING_ACTIVE'
+}
+
+function buildPersistedCommandMeaning(input: {
+  executiveMeaning: string
+  commandPosture: string
+  inheritedContext: InheritedInterventionContext
+}) {
+  return `${input.executiveMeaning} Command posture: ${input.commandPosture}. Inherited routing meaning preserved: ${input.inheritedContext.inheritedCommandMeaning}`
+}
+
+function buildPersistedSurvivability(input: {
+  survivabilitySignal: string
+  continuityRisk: ContinuityRisk | ''
+  actionTrajectory: string
+  continuityOutlook: string
+  inheritedContext: InheritedInterventionContext
+}) {
+  return `${input.survivabilitySignal}. Continuity risk: ${input.continuityRisk}. Action trajectory: ${input.actionTrajectory}. Outlook: ${input.continuityOutlook}. Inherited survivability: ${input.inheritedContext.inheritedSurvivability}`
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+        {label}
+      </p>
+      <p className="mt-2 text-sm leading-6 text-neutral-100">{value}</p>
+    </div>
+  )
 }
 
 function Select({
