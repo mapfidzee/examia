@@ -260,32 +260,22 @@ export default function RequestPage() {
     setMessage('Preserving visible instability for CGI triage review...')
     setCreatedRequest(null)
 
-    const problemSummary = [
-      `Generated intake identity: ${generatedIntakeIdentity}`,
-      `Entry route: ${entryRoute}`,
-      `Operational pressure type: ${instabilityClass}`,
-      `Pressure meaning: ${selectedClassDescription}`,
-      `Difficulty level: ${severity}`,
-      `Severity meaning: ${resolveSeverityMeaning(severity)}`,
-      `Location: ${location}`,
-      `Affected area: ${affectedArea}`,
-      `Visible signal: ${visibleSignal}`,
-      `Ownership state: ${ownershipState}`,
-      `Evidence level: ${evidenceLevel}`,
-      `Review urgency: ${reviewUrgency}`,
-      `Governance visibility: ${governanceVisibility}`,
-      `Visibility classification: ${intakeIntelligence.visibilityClassification}`,
-      `Intake maturity: ${intakeIntelligence.intakeMaturity}`,
-      `Intake confidence: ${intakeIntelligence.intakeConfidence}`,
-      `Governance readiness: ${intakeIntelligence.governanceReadiness}`,
-      `Ownership posture: ${intakeIntelligence.ownershipPosture}`,
-      `Evidence posture: ${intakeIntelligence.evidencePosture}`,
-      `Stabilization risk: ${intakeIntelligence.stabilizationRisk}`,
-      `Triage meaning: ${intakeIntelligence.triageMeaning}`,
-      `Command meaning: ${intakeIntelligence.commandMeaning}`,
-      `Lifecycle boundary: Request opens visibility. Triage determines eligibility. A request is not yet a governed case.`,
-      `Brief note: ${briefNote.trim() || 'No additional note provided'}`,
-    ].join('\n')
+    const intakeMemory = buildPersistedIntakeMemory({
+      generatedIntakeIdentity,
+      entryRoute,
+      instabilityClass,
+      selectedClassDescription,
+      severity,
+      location,
+      affectedArea,
+      visibleSignal,
+      ownershipState,
+      evidenceLevel,
+      reviewUrgency,
+      governanceVisibility,
+      intakeIntelligence,
+      briefNote,
+    })
 
     const { data, error } = await supabase
       .from('beneficiary_cases')
@@ -295,15 +285,32 @@ export default function RequestPage() {
         support_domain: instabilityClass,
         case_status: 'PENDING_TRIAGE',
         severity_level: severity,
-        instability_signals: [visibleSignal, affectedArea],
+        instability_signals: [
+          visibleSignal,
+          affectedArea,
+          `ENTRY_ROUTE:${entryRoute}`,
+          `OWNERSHIP_STATE:${ownershipState}`,
+          `EVIDENCE_LEVEL:${evidenceLevel}`,
+          `REVIEW_URGENCY:${reviewUrgency}`,
+          `GOVERNANCE_VISIBILITY:${governanceVisibility}`,
+          `VISIBILITY_CLASSIFICATION:${intakeIntelligence.visibilityClassification}`,
+          `INTAKE_MATURITY:${intakeIntelligence.intakeMaturity}`,
+          `INTAKE_CONFIDENCE:${intakeIntelligence.intakeConfidence}`,
+          `GOVERNANCE_READINESS:${intakeIntelligence.governanceReadiness}`,
+          `OWNERSHIP_POSTURE:${intakeIntelligence.ownershipPosture}`,
+          `EVIDENCE_POSTURE:${intakeIntelligence.evidencePosture}`,
+          `STABILIZATION_RISK:${intakeIntelligence.stabilizationRisk}`,
+          `TRIAGE_MEANING:${intakeIntelligence.triageMeaning}`,
+          `COMMAND_MEANING:${intakeIntelligence.commandMeaning}`,
+        ],
         region: affectedArea,
         institution_name: ownershipState,
         safeguarding_flag:
           severity === 'CRITICAL' ||
           governanceVisibility === 'COMMAND_VISIBILITY' ||
           governanceVisibility === 'EXECUTIVE_VISIBILITY',
-        intervention_summary: null,
-        outcome_summary: problemSummary,
+        intervention_summary: intakeMemory,
+        outcome_summary: intakeMemory,
       })
       .select()
       .single()
@@ -795,6 +802,97 @@ export default function RequestPage() {
       </section>
     </main>
   )
+}
+
+function buildPersistedIntakeMemory(input: {
+  generatedIntakeIdentity: string
+  entryRoute: string
+  instabilityClass: string
+  selectedClassDescription: string
+  severity: string
+  location: string
+  affectedArea: string
+  visibleSignal: string
+  ownershipState: string
+  evidenceLevel: string
+  reviewUrgency: string
+  governanceVisibility: string
+  intakeIntelligence: IntakeIntelligence
+  briefNote: string
+}) {
+  return `
+INTAKE IDENTITY
+${input.generatedIntakeIdentity}
+
+ENTRY ROUTE
+${input.entryRoute}
+
+OPERATIONAL PRESSURE TYPE
+${input.instabilityClass}
+
+PRESSURE MEANING
+${input.selectedClassDescription}
+
+DIFFICULTY LEVEL
+${input.severity}
+
+SEVERITY MEANING
+${resolveSeverityMeaning(input.severity)}
+
+LOCATION
+${input.location}
+
+AFFECTED AREA
+${input.affectedArea}
+
+VISIBLE SIGNAL
+${input.visibleSignal}
+
+OWNERSHIP STATE
+${input.ownershipState}
+
+EVIDENCE LEVEL
+${input.evidenceLevel}
+
+REVIEW URGENCY
+${input.reviewUrgency}
+
+GOVERNANCE VISIBILITY
+${input.governanceVisibility}
+
+VISIBILITY CLASSIFICATION
+${input.intakeIntelligence.visibilityClassification}
+
+INTAKE MATURITY
+${input.intakeIntelligence.intakeMaturity}
+
+INTAKE CONFIDENCE
+${input.intakeIntelligence.intakeConfidence}
+
+GOVERNANCE READINESS
+${input.intakeIntelligence.governanceReadiness}
+
+OWNERSHIP POSTURE
+${input.intakeIntelligence.ownershipPosture}
+
+EVIDENCE POSTURE
+${input.intakeIntelligence.evidencePosture}
+
+STABILIZATION RISK
+${input.intakeIntelligence.stabilizationRisk}
+
+TRIAGE MEANING
+${input.intakeIntelligence.triageMeaning}
+
+COMMAND MEANING
+${input.intakeIntelligence.commandMeaning}
+
+BRIEF NOTE
+${input.briefNote.trim() || 'No additional note provided'}
+
+LIFECYCLE BOUNDARY
+Request opens visibility. Triage determines eligibility. A request is not yet a governed case.
+  `.trim()
 }
 
 function buildIntakeIntelligence(input: {
