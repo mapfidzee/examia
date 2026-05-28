@@ -1,8 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
-import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
+import type { ReactNode } from 'react'
 import { supabase } from '../../lib/supabase'
 
 type StabilityCase = {
@@ -114,24 +113,7 @@ const ROUTING_DECISIONS: {
   },
 ]
 
-export default function RoutingPage() {
-  return (
-    <GovernanceRouteGuard
-      allowedRoles={[
-        'SUPER_ADMIN',
-        'COMMAND_ADMIN',
-        'GOVERNANCE_OFFICER',
-        'INSTITUTION_COORDINATOR',
-      ]}
-    >
-      <CGIGovernanceShell>
-        <RoutingContent />
-      </CGIGovernanceShell>
-    </GovernanceRouteGuard>
-  )
-}
-
-function RoutingContent() {
+export default function RoutingContent() {
   const [cases, setCases] = useState<StabilityCase[]>([])
   const [owners, setOwners] = useState<StabilizationOwner[]>([])
   const [routingActions, setRoutingActions] = useState<RoutingAction[]>([])
@@ -334,8 +316,8 @@ function RoutingContent() {
           <p className="mt-3 max-w-5xl text-sm leading-6 text-neutral-300">
             Direct accepted instability toward the next credible stabilization
             movement. Preserve ownership direction, evidence requirements, routing
-            stall visibility, recurrence awareness, and command meaning before
-            intervention action begins.
+            stall visibility, recurrence awareness, directional confidence, and
+            command meaning before intervention action begins.
           </p>
 
           <p className="mt-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-4 text-sm leading-6 text-cyan-100">
@@ -369,6 +351,15 @@ function RoutingContent() {
           </p>
         </div>
 
+        <div className="mt-6 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+          <h3 className="text-lg font-semibold text-white">
+            Executive Routing Synthesis
+          </h3>
+          <p className="mt-3 text-sm leading-6 text-neutral-300">
+            {routingClimate.commandInheritance}
+          </p>
+        </div>
+
         <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
           <h3 className="text-xl font-semibold text-white">
             Active Stabilization Routing Queue
@@ -376,9 +367,9 @@ function RoutingContent() {
 
           <p className="mt-3 text-sm leading-6 text-neutral-400">
             Triage accepts visible instability. Case governance preserves lifecycle
-            context. Routing determines the next stabilization direction, ownership
-            posture, evidence gate, and action readiness without performing the
-            intervention itself.
+            context. Routing determines stabilization direction, ownership posture,
+            evidence gate, directional maturity, and action readiness without
+            performing the intervention itself.
           </p>
 
           <div className="mt-6 grid gap-5">
@@ -461,6 +452,11 @@ function RoutingContent() {
 
                     <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                       <Info label="Routing Phase" value={intelligence.phase} />
+                      <Info label="Directional Maturity" value={intelligence.maturity} />
+                      <Info
+                        label="Directional Confidence"
+                        value={intelligence.confidence}
+                      />
                       <Info
                         label="Required Next Movement"
                         value={intelligence.nextMovement}
@@ -580,8 +576,9 @@ function RoutingContent() {
 
           <p className="mt-4 text-sm leading-7 text-neutral-300">
             Routing is direction governance, not action execution. CGI preserves
-            ownership direction, evidence gates, recurrence visibility, stall risk,
-            and command meaning before stabilization action begins.
+            ownership direction, evidence gates, recurrence visibility, directional
+            confidence, stall risk, and command meaning before stabilization action
+            begins.
           </p>
 
           <p className="mt-4 text-sm leading-7 text-neutral-300">
@@ -589,8 +586,8 @@ function RoutingContent() {
             interpretation. When accepted instability is directed toward credible
             stabilization ownership without recurrence, evidence gaps, stalled
             movement, or structural deterioration, the system should support measured
-            continuity confidence while preserving traceability and lifecycle
-            discipline.
+            continuity confidence while preserving traceability, executive synthesis
+            readiness, and lifecycle discipline.
           </p>
         </section>
       </section>
@@ -685,6 +682,8 @@ function buildRoutingClimate(input: {
         'Action readiness visibility pending governed routing direction.',
       pressureMeaning:
         'Routing direction interpretation will activate when accepted instability enters the routing lifecycle.',
+      commandInheritance:
+        'No active routing concentration currently requiring executive continuity synthesis.',
     }
   }
 
@@ -704,32 +703,45 @@ function buildRoutingClimate(input: {
     item.routing_status.includes('RECURRENCE'),
   ).length
 
+  const routed = input.routingActions.filter((item) =>
+    item.routing_status.includes('STABILIZATION_OWNER_ROUTED'),
+  ).length
+
   return {
     stabilityClimate:
       recurrence === 0
         ? 'Routing conditions remain proportionally balanced under current continuity direction visibility.'
-        : 'Routing recurrence remains visible across some accepted instability pathways.',
+        : 'Routing recurrence remains operationally visible across some continuity pathways.',
     ownerPosture:
       ownershipRequired === 0
-        ? 'Ownership direction remains manageable without concentrated clarity gaps.'
-        : 'Ownership clarity gaps remain operationally visible and may slow stabilization direction.',
+        ? 'Ownership direction remains operationally manageable without concentrated alignment deterioration.'
+        : 'Ownership alignment gaps remain visible across some stabilization pathways.',
     evidenceVisibility:
       evidenceRequired === 0
-        ? 'No concentrated evidence gate is currently blocking stabilization direction.'
-        : 'Evidence gate visibility remains active across some routing pathways.',
+        ? 'No concentrated evidence gate is currently weakening stabilization direction.'
+        : 'Evidence gate concentration remains operationally visible across some routing pathways.',
     actionLandscape:
-      stalled === 0
-        ? 'Some accepted instability pathways may move into stabilization action after governed routing direction.'
-        : 'Action readiness remains limited where routing movement is stalled.',
+      routed > 0
+        ? 'Some continuity pathways are becoming eligible for governed stabilization action progression.'
+        : 'Action readiness visibility pending governed routing direction.',
     pressureMeaning:
-      stalled === 0 && evidenceRequired === 0 && ownershipRequired === 0
+      stalled === 0 &&
+      evidenceRequired === 0 &&
+      ownershipRequired === 0 &&
+      recurrence === 0
         ? 'Routing direction remains proportionally active under current continuity governance conditions.'
-        : 'Routing pressure remains visible through stalled movement, evidence gates, ownership clarity gaps, or recurrence concentration.',
+        : 'Routing pressure remains visible through stalled movement, ownership deterioration, evidence concentration, or routing recurrence.',
+    commandInheritance:
+      stalled > 1 || recurrence > 1
+        ? 'Routing instability concentration may require executive continuity synthesis visibility.'
+        : 'No concentrated routing deterioration currently requiring command escalation.',
   }
 }
 
 function buildSimplifiedIdentity(caseItem: StabilityCase) {
-  const location = caseItem.beneficiary_level || caseItem.region || 'Unspecified site'
+  const location =
+    caseItem.beneficiary_level || caseItem.region || 'Unspecified continuity zone'
+
   return `${caseItem.support_domain} routing • ${location}`
 }
 
@@ -742,14 +754,14 @@ function buildRoutingSummary(input: {
   const identity = buildSimplifiedIdentity(input.caseItem)
 
   if (input.recurrenceCount > 0) {
-    return `Routing recurrence preserved for ${identity}. Status: ${input.routingStatus}. Recurrence count: ${
-      input.recurrenceCount + 1
-    }.`
+    return `Routing recurrence preserved for ${identity}. Status: ${
+      input.routingStatus
+    }. Recurrence visibility count: ${input.recurrenceCount + 1}.`
   }
 
   return `Governed stabilization routing preserved for ${identity}. Status: ${
     input.routingStatus
-  }. Owner: ${input.owner?.full_name || 'Not assigned'}.`
+  }. Stabilization owner: ${input.owner?.full_name || 'Not assigned'}.`
 }
 
 function buildRoutingIntelligence(input: {
@@ -761,110 +773,171 @@ function buildRoutingIntelligence(input: {
   const latestRouting = routingHistory[0]
   const hasOwner = Boolean(latestOwner)
 
+  const recurrenceCount = routingHistory.filter((item) =>
+    item.routing_status.includes('RECURRENCE'),
+  ).length
+
   if (!latestRouting) {
     return {
       phase: 'Routing direction pending',
-      nextMovement: 'Select governed routing decision and owner posture',
+      maturity: 'DIRECTION_NOT_YET_ESTABLISHED',
+      confidence: 'PENDING_DIRECTIONAL_CONFIDENCE',
+      nextMovement: 'Select governed routing direction and ownership posture.',
       ownerPosture: 'Ownership direction pending',
       evidenceRequirement: 'Routing evidence pending',
-      stallRisk: 'Stall risk activates if routing direction is delayed',
+      stallRisk: 'Directional stall risk activates if routing movement is delayed.',
       commandMeaning:
-        'Accepted instability has not yet been directed toward stabilization action.',
+        'Accepted instability has not yet been directed toward stabilization movement.',
     }
   }
 
   if (latestRouting.routing_status.includes('STALLED')) {
     return {
       phase: 'Routing stalled',
-      nextMovement: 'Restore movement or escalate',
-      ownerPosture: hasOwner ? 'Owner known but movement stalled' : 'Owner unclear',
-      evidenceRequirement: 'Stall evidence must remain visible',
-      stallRisk: 'High until routing resumes',
+      maturity: 'ROUTING_DESTABILIZING',
+      confidence: 'FRAGILE_DIRECTIONAL_CONFIDENCE',
+      nextMovement: 'Restore movement or escalate continuity visibility.',
+      ownerPosture: hasOwner
+        ? 'Owner identified but routing movement remains stalled.'
+        : 'Ownership clarity remains unstable.',
+      evidenceRequirement:
+        'Stall evidence and continuity barriers must remain visible.',
+      stallRisk:
+        'High stall concentration risk until directional movement resumes.',
       commandMeaning:
-        'Stalled routing weakens stabilization credibility and may require executive visibility.',
+        'Stalled routing weakens stabilization credibility and may require executive continuity escalation.',
     }
   }
 
   if (latestRouting.routing_status.includes('EVIDENCE_REQUIRED')) {
     return {
-      phase: 'Evidence gate',
-      nextMovement: 'Preserve required evidence before movement',
-      ownerPosture: hasOwner ? 'Owner available' : 'Owner may wait until evidence is clear',
-      evidenceRequirement: 'Evidence required before credible routing',
-      stallRisk: 'High if evidence remains missing',
+      phase: 'Evidence gate active',
+      maturity: 'EVIDENCE_ALIGNMENT_PENDING',
+      confidence: 'LIMITED_DIRECTIONAL_CONFIDENCE',
+      nextMovement:
+        'Preserve stronger operational evidence before movement proceeds.',
+      ownerPosture: hasOwner
+        ? 'Owner remains available pending evidence alignment.'
+        : 'Ownership movement limited until evidence strengthens.',
+      evidenceRequirement:
+        'Evidence credibility must strengthen before routing becomes reliable.',
+      stallRisk:
+        'Moderate-to-high routing deterioration risk if evidence remains insufficient.',
       commandMeaning:
-        'The case cannot move credibly until evidence is strong enough.',
+        'Routing movement remains constrained by insufficient continuity evidence.',
     }
   }
 
   if (latestRouting.routing_status.includes('OWNERSHIP_CLARITY')) {
     return {
-      phase: 'Ownership clarity gate',
-      nextMovement: 'Clarify responsible stabilization owner',
-      ownerPosture: 'Ownership unclear',
-      evidenceRequirement: 'Ownership rationale required',
-      stallRisk: 'High if no owner becomes clear',
+      phase: 'Ownership alignment review',
+      maturity: 'OWNERSHIP_ALIGNMENT_UNSTABLE',
+      confidence: 'VARIABLE_DIRECTIONAL_CONFIDENCE',
+      nextMovement:
+        'Clarify responsible stabilization ownership before progression.',
+      ownerPosture: 'Ownership alignment remains unstable.',
+      evidenceRequirement:
+        'Ownership rationale and continuity accountability must remain visible.',
+      stallRisk:
+        'High continuity drift risk until ownership alignment stabilizes.',
       commandMeaning:
-        'Unclear ownership can turn visible instability into unresolved continuity risk.',
+        'Unclear ownership may weaken stabilization continuity and lifecycle reliability.',
     }
   }
 
   if (latestRouting.routing_status.includes('GOVERNANCE_REVIEW')) {
     return {
-      phase: 'Governance review required',
-      nextMovement: 'Resolve governance concern before downstream movement',
-      ownerPosture: hasOwner ? 'Owner identified' : 'Owner pending review',
-      evidenceRequirement: 'Governance review evidence required',
-      stallRisk: 'Moderate to high until review clears',
+      phase: 'Governance visibility review',
+      maturity: 'DIRECTION_UNDER_REVIEW',
+      confidence: 'CONDITIONAL_DIRECTIONAL_CONFIDENCE',
+      nextMovement:
+        'Resolve governance visibility before stabilization movement advances.',
+      ownerPosture: hasOwner
+        ? 'Ownership remains visible during governance review.'
+        : 'Ownership pending governance review outcome.',
+      evidenceRequirement:
+        'Governance review evidence must remain operationally visible.',
+      stallRisk:
+        'Moderate routing pressure until governance visibility resolves.',
       commandMeaning:
-        'Routing is paused for governance judgment before stabilization proceeds.',
+        'Routing movement remains under governance interpretation before stabilization progression.',
     }
   }
 
   if (latestRouting.routing_status.includes('RECURRENCE')) {
     return {
-      phase: 'Routing recurrence',
-      nextMovement: 'Review why routing repeated before stabilization held',
-      ownerPosture: hasOwner ? 'Owner repeatedly engaged' : 'Owner still unclear',
-      evidenceRequirement: 'Recurrence evidence preserved',
-      stallRisk: 'High because repeated movement suggests unresolved instability',
+      phase: 'Routing recurrence visibility',
+      maturity: 'ROUTING_RECURRENCE_CONCENTRATION',
+      confidence: 'WEAKENING_DIRECTIONAL_CONFIDENCE',
+      nextMovement:
+        'Review why routing movement is repeating without durable stabilization.',
+      ownerPosture: hasOwner
+        ? 'Ownership remains repeatedly engaged.'
+        : 'Ownership instability remains operationally visible.',
+      evidenceRequirement:
+        'Recurrence evidence and continuity deterioration must remain visible.',
+      stallRisk:
+        'Elevated recurrence concentration may weaken continuity reliability.',
       commandMeaning:
-        'Repeated routing may signal that stabilization has not become reliable.',
+        recurrenceCount > 1
+          ? 'Repeated routing recurrence suggests continuity deterioration may be structurally accumulating.'
+          : 'Routing recurrence suggests stabilization movement may not yet be durable.',
     }
   }
 
   if (latestRouting.routing_status.includes('STABILIZATION_OWNER_ROUTED')) {
     return {
-      phase: 'Routed to stabilization ownership',
-      nextMovement: 'Begin or confirm action evidence in /interventions',
-      ownerPosture: hasOwner ? `Assigned to ${latestOwner?.full_name}` : 'Owner missing',
-      evidenceRequirement: 'Intervention action evidence required next',
-      stallRisk: hasOwner ? 'Low if action follows' : 'High if owner remains missing',
+      phase: 'Governed stabilization direction active',
+      maturity: 'DIRECTION_STABILIZING',
+      confidence: hasOwner
+        ? 'BUILDING_DIRECTIONAL_CONFIDENCE'
+        : 'VARIABLE_DIRECTIONAL_CONFIDENCE',
+      nextMovement:
+        'Preserve governed stabilization action evidence within /interventions.',
+      ownerPosture: hasOwner
+        ? `Stabilization ownership aligned with ${latestOwner?.full_name}.`
+        : 'Ownership assignment remains incomplete.',
+      evidenceRequirement:
+        'Intervention evidence should now strengthen stabilization credibility.',
+      stallRisk: hasOwner
+        ? 'Low directional deterioration risk if action movement proceeds.'
+        : 'Moderate risk until ownership becomes visible.',
       commandMeaning:
-        'Routing direction exists; stabilization credibility now depends on action evidence.',
+        'Routing direction has stabilized sufficiently for governed intervention progression.',
     }
   }
 
   if (caseItem.severity_level === 'CRITICAL') {
     return {
-      phase: 'Critical routing visibility',
-      nextMovement: 'Preserve immediate routing decision and escalation logic',
-      ownerPosture: hasOwner ? 'Owner identified' : 'Owner required urgently',
-      evidenceRequirement: 'Immediate routing evidence required',
-      stallRisk: 'High until direction is confirmed',
+      phase: 'Critical continuity routing',
+      maturity: 'CRITICAL_DIRECTIONAL_VISIBILITY',
+      confidence: 'HIGH_ATTENTION_REQUIRED',
+      nextMovement:
+        'Preserve immediate routing direction and executive continuity visibility.',
+      ownerPosture: hasOwner
+        ? 'Critical stabilization ownership visible.'
+        : 'Critical ownership assignment required.',
+      evidenceRequirement:
+        'Immediate routing evidence required for survivability preservation.',
+      stallRisk: 'Critical continuity deterioration risk until routing stabilizes.',
       commandMeaning:
-        'Critical instability requires fast direction and executive awareness.',
+        'Critical instability requires accelerated routing visibility and executive continuity oversight.',
     }
   }
 
   return {
-    phase: 'Active routing governance',
-    nextMovement: 'Continue governed stabilization direction',
-    ownerPosture: hasOwner ? 'Owner identified' : 'Owner not assigned',
-    evidenceRequirement: 'Routing evidence must remain traceable',
-    stallRisk: 'Watch for delayed movement',
+    phase: 'Active continuity routing',
+    maturity: 'ROUTING_DIRECTION_BUILDING',
+    confidence: 'MEASURED_DIRECTIONAL_CONFIDENCE',
+    nextMovement:
+      'Continue governed stabilization routing with proportional continuity visibility.',
+    ownerPosture: hasOwner
+      ? 'Ownership remains operationally visible.'
+      : 'Ownership assignment pending.',
+    evidenceRequirement: 'Routing evidence should remain structurally traceable.',
+    stallRisk: 'Monitor for delayed directional movement or routing deterioration.',
     commandMeaning:
-      'Routing remains visible until the case can move credibly into stabilization action.',
+      'Routing remains proportionally stable under current continuity governance conditions.',
   }
 }
 
@@ -872,8 +945,12 @@ function buildRoutingInterpretation(
   caseItem: StabilityCase,
   routingHistory: RoutingAction[],
 ) {
+  const recurrenceCount = routingHistory.filter((item) =>
+    item.routing_status.includes('RECURRENCE'),
+  ).length
+
   if (routingHistory.some((item) => item.routing_status.includes('STALLED'))) {
-    return 'This case has stalled routing visibility. CGI should keep it visible until ownership, evidence, or next movement is restored.'
+    return 'Routing movement remains stalled. CGI should preserve visibility over ownership barriers, directional deterioration, and continuity weakening until stabilization movement resumes.'
   }
 
   if (
@@ -881,7 +958,7 @@ function buildRoutingInterpretation(
       item.routing_status.includes('EVIDENCE_REQUIRED'),
     )
   ) {
-    return 'This case requires stronger evidence before stabilization movement can be treated as credible.'
+    return 'Operational evidence remains insufficient for credible stabilization routing. Continuity movement should remain proportionally constrained until evidence strengthens.'
   }
 
   if (
@@ -889,18 +966,22 @@ function buildRoutingInterpretation(
       item.routing_status.includes('OWNERSHIP_CLARITY'),
     )
   ) {
-    return 'This case has ownership uncertainty. Routing should not be treated as stable until responsibility is clear.'
+    return 'Ownership alignment remains unstable. Routing should not be treated as directionally credible until continuity ownership stabilizes.'
+  }
+
+  if (recurrenceCount > 1) {
+    return 'Repeated routing recurrence concentration is becoming operationally visible. CGI should preserve continuity deterioration visibility and monitor for structural instability accumulation.'
   }
 
   if (routingHistory.length > 1) {
-    return 'Repeated routing activity is present. CGI should preserve recurrence visibility and watch for unresolved instability.'
+    return 'Routing recurrence visibility remains active. CGI should continue monitoring whether stabilization direction is becoming durable or repeatedly weakening.'
   }
 
   if (caseItem.severity_level === 'CRITICAL') {
-    return 'Critical instability requires fast stabilization direction, evidence visibility, and executive awareness.'
+    return 'Critical continuity instability requires accelerated routing visibility, survivability awareness, ownership stabilization, and executive continuity oversight.'
   }
 
-  return 'This case is ready for governed routing direction into stabilization action, evidence review, or ownership clarification.'
+  return 'This continuity pathway remains eligible for governed stabilization direction under proportional continuity observation conditions.'
 }
 
 function resolveRoutingSeverity(input: {
@@ -912,14 +993,18 @@ function resolveRoutingSeverity(input: {
 
   if (
     input.routingStatus.includes('STALLED') ||
-    input.recurrenceCount > 0 ||
+    input.recurrenceCount > 1 ||
     input.caseItem.safeguarding_flag
   ) {
     return 'HIGH'
   }
 
-  if (input.caseItem.severity_level === 'HIGH') return 'HIGH'
-  if (input.caseItem.severity_level === 'MODERATE') return 'MODERATE'
+  if (
+    input.routingStatus.includes('RECURRENCE') ||
+    input.routingStatus.includes('GOVERNANCE_REVIEW')
+  ) {
+    return 'MODERATE'
+  }
 
   return 'LOW'
 }
@@ -935,7 +1020,7 @@ function Info({ label, value }: { label: string; value: string }) {
   )
 }
 
-function SignalBadge({ children }: { children: React.ReactNode }) {
+function SignalBadge({ children }: { children: ReactNode }) {
   return (
     <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-100">
       {children}
