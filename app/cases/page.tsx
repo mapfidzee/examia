@@ -54,23 +54,6 @@ const ACTIVE_CASE_STATUSES = [
   'REOPENED',
 ]
 
-const CASE_TRANSITIONS = [
-  'STABILIZATION_OWNER_ROUTED',
-  'GOVERNANCE_REVIEW_REQUIRED',
-  'EVIDENCE_REQUIRED_BEFORE_ROUTING',
-  'OWNERSHIP_CLARITY_REQUIRED',
-  'ROUTING_STALLED',
-  'ACTION_ACTIVE',
-  'PARTIAL_STABILIZATION',
-  'FOLLOW_UP_REQUIRED',
-  'IMPROVING',
-  'RECOVERY_MONITORING',
-  'ESCALATED',
-  'REOPENED',
-  'STABILIZED',
-  'ARCHIVED',
-]
-
 const PRESSURE_TYPES = [
   'FLOW',
   'COVERAGE',
@@ -79,6 +62,34 @@ const PRESSURE_TYPES = [
   'EVIDENCE',
   'RECOVERY',
   'RELIABILITY',
+]
+
+const FORWARD_MOVEMENTS = [
+  'STABILIZATION_OWNER_ROUTED',
+  'ACTION_ACTIVE',
+  'PARTIAL_STABILIZATION',
+  'FOLLOW_UP_REQUIRED',
+  'IMPROVING',
+  'RECOVERY_MONITORING',
+  'STABILIZED',
+  'ARCHIVED',
+]
+
+const ESCALATION_MOVEMENTS = [
+  'GOVERNANCE_REVIEW_REQUIRED',
+  'EVIDENCE_REQUIRED_BEFORE_ROUTING',
+  'OWNERSHIP_CLARITY_REQUIRED',
+  'ROUTING_STALLED',
+  'ESCALATED',
+  'REOPENED',
+]
+
+const OVERRIDE_MOVEMENTS = [
+  'ACCEPTED_FOR_GOVERNANCE',
+  'STABILIZATION_OWNER_ROUTED',
+  'ACTION_ACTIVE',
+  'PARTIAL_STABILIZATION',
+  'RECOVERY_MONITORING',
 ]
 
 export default function CasesPage() {
@@ -113,7 +124,11 @@ function CasesContent() {
     setCases(data || [])
   }
 
-  async function changeCaseStatus(caseItem: InstabilityCase, nextStatus: string) {
+  async function changeCaseStatus(
+    caseItem: InstabilityCase,
+    nextStatus: string,
+    movementType: 'FORWARD' | 'ESCALATION' | 'OVERRIDE',
+  ) {
     const { error } = await supabase
       .from('beneficiary_cases')
       .update({
@@ -130,11 +145,11 @@ function CasesContent() {
     await supabase.from('case_timeline').insert({
       case_id: caseItem.id,
       event_type: `STATUS_${nextStatus}`,
-      event_summary: `Governed instability moved to ${nextStatus}. Case governance preserved lifecycle movement without collapsing routing, action, outcome, or recovery boundaries.`,
+      event_summary: `${movementType} governance movement preserved. Case moved to ${nextStatus} without collapsing routing, action, outcome, or recovery boundaries.`,
     })
 
     setMessage(
-      'Governed lifecycle movement preserved. Continuity posture, command meaning, and lifecycle traceability remain visible.',
+      `${movementType} governance movement preserved. Continuity posture, command meaning, and lifecycle traceability remain visible.`,
     )
 
     await loadCases()
@@ -143,22 +158,10 @@ function CasesContent() {
   const caseClimate = useMemo(() => buildCaseClimate(cases), [cases])
 
   const climatePanels = [
-    {
-      title: 'Case Stability Climate',
-      value: caseClimate.stabilityClimate,
-    },
-    {
-      title: 'Lifecycle Governance Posture',
-      value: caseClimate.lifecyclePosture,
-    },
-    {
-      title: 'Evidence Continuity Visibility',
-      value: caseClimate.evidenceVisibility,
-    },
-    {
-      title: 'Routing Readiness Landscape',
-      value: caseClimate.routingLandscape,
-    },
+    { title: 'Case Stability Climate', value: caseClimate.stabilityClimate },
+    { title: 'Lifecycle Governance Posture', value: caseClimate.lifecyclePosture },
+    { title: 'Evidence Continuity Visibility', value: caseClimate.evidenceVisibility },
+    { title: 'Routing Readiness Landscape', value: caseClimate.routingLandscape },
   ]
 
   return (
@@ -289,7 +292,9 @@ function CasesContent() {
                     <SignalBadge>{caseItem.severity_level}</SignalBadge>
 
                     {(caseItem.instability_signals || []).map((signal, index) => (
-                      <SignalBadge key={`${signal}-${index}`}>{signal}</SignalBadge>
+                      <SignalBadge key={`${signal}-${index}`}>
+                        {signal}
+                      </SignalBadge>
                     ))}
 
                     {caseItem.safeguarding_flag && (
@@ -365,24 +370,15 @@ function CasesContent() {
                     <p className="text-sm font-semibold text-cyan-100">
                       Governance Interpretation
                     </p>
-
                     <p className="mt-2 text-sm leading-6 text-cyan-50">
                       {buildGovernanceInterpretation(caseItem)}
                     </p>
                   </div>
 
-                  <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    {CASE_TRANSITIONS.map((status) => (
-                      <button
-                        key={status}
-                        type="button"
-                        onClick={() => changeCaseStatus(caseItem, status)}
-                        className="rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-xs font-semibold text-neutral-100 transition hover:border-cyan-400 hover:text-cyan-100"
-                      >
-                        {status}
-                      </button>
-                    ))}
-                  </div>
+                  <GovernanceMovementControls
+                    caseItem={caseItem}
+                    onMove={changeCaseStatus}
+                  />
 
                   {caseItem.intervention_summary && (
                     <div className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-sm leading-6 text-neutral-300">
@@ -440,6 +436,134 @@ function CasesContent() {
   )
 }
 
+function GovernanceMovementControls({
+  caseItem,
+  onMove,
+}: {
+  caseItem: InstabilityCase
+  onMove: (
+    caseItem: InstabilityCase,
+    nextStatus: string,
+    movementType: 'FORWARD' | 'ESCALATION' | 'OVERRIDE',
+  ) => void
+}) {
+  const forwardMovements = getForwardMovements(caseItem)
+
+  return (
+    <section className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
+      <p className="text-sm font-semibold text-cyan-400">
+        Governance Movement Controls
+      </p>
+
+      <p className="mt-2 text-sm leading-6 text-neutral-400">
+        Use forward movement for normal lifecycle progression. Use escalation or
+        reopening only when evidence supports it. Governance override preserves
+        controlled correction without treating regression as ordinary flow.
+      </p>
+
+      <div className="mt-5">
+        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+          Forward Movement
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {forwardMovements.map((status) => (
+            <MovementButton
+              key={status}
+              label={status}
+              onClick={() => onMove(caseItem, status, 'FORWARD')}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-5">
+        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+          Escalation / Reopening
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {ESCALATION_MOVEMENTS.map((status) => (
+            <MovementButton
+              key={status}
+              label={status}
+              onClick={() => onMove(caseItem, status, 'ESCALATION')}
+            />
+          ))}
+        </div>
+      </div>
+
+      <details className="mt-5 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
+        <summary className="cursor-pointer text-sm font-semibold text-amber-100">
+          Governance Override
+        </summary>
+
+        <p className="mt-3 text-sm leading-6 text-amber-100/80">
+          Use only when correcting lifecycle drift, reopening earlier governance
+          posture, or preserving a controlled administrative correction.
+        </p>
+
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {OVERRIDE_MOVEMENTS.map((status) => (
+            <MovementButton
+              key={status}
+              label={status}
+              onClick={() => onMove(caseItem, status, 'OVERRIDE')}
+            />
+          ))}
+        </div>
+      </details>
+    </section>
+  )
+}
+
+function getForwardMovements(caseItem: InstabilityCase) {
+  if (caseItem.case_status === 'RECOVERY_MONITORING') {
+    return ['STABILIZED', 'ARCHIVED']
+  }
+
+  if (
+    caseItem.case_status === 'IMPROVING' ||
+    caseItem.case_status === 'PARTIAL_STABILIZATION'
+  ) {
+    return ['RECOVERY_MONITORING', 'FOLLOW_UP_REQUIRED', 'STABILIZED']
+  }
+
+  if (
+    caseItem.case_status === 'ACTION_ACTIVE' ||
+    caseItem.case_status === 'INTERVENTION_ACTIVE' ||
+    caseItem.case_status === 'INTERVENTION_RECORDED'
+  ) {
+    return ['PARTIAL_STABILIZATION', 'FOLLOW_UP_REQUIRED', 'IMPROVING']
+  }
+
+  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
+    return ['ACTION_ACTIVE']
+  }
+
+  if (caseItem.case_status === 'ACCEPTED_FOR_GOVERNANCE') {
+    return ['STABILIZATION_OWNER_ROUTED']
+  }
+
+  return FORWARD_MOVEMENTS
+}
+
+function MovementButton({
+  label,
+  onClick,
+}: {
+  label: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-xs font-semibold text-neutral-100 transition hover:border-cyan-400 hover:text-cyan-100"
+    >
+      {label}
+    </button>
+  )
+}
+
 function buildCaseClimate(cases: InstabilityCase[]) {
   if (cases.length === 0) {
     return {
@@ -463,10 +587,7 @@ function buildCaseClimate(cases: InstabilityCase[]) {
   ).length
 
   const stalled = cases.filter((item) => item.case_status.includes('STALLED')).length
-
-  const escalated = cases.filter((item) =>
-    item.case_status.includes('ESCALATED'),
-  ).length
+  const escalated = cases.filter((item) => item.case_status.includes('ESCALATED')).length
 
   const recoveryMonitoring = cases.filter(
     (item) => item.case_status === 'RECOVERY_MONITORING',
@@ -476,31 +597,48 @@ function buildCaseClimate(cases: InstabilityCase[]) {
     (item) => !item.intervention_summary || !item.outcome_summary,
   ).length
 
+  const allVisibleCasesHaveEvidence = incompleteEvidence === 0
+  const allVisibleCasesInRecovery =
+    cases.length > 0 && recoveryMonitoring === cases.length
+
   return {
     stabilityClimate:
-      stalled === 0 && escalated === 0
-        ? 'Accepted instability conditions remain proportionally manageable under current case governance visibility.'
-        : 'Some accepted instability pathways show stalled movement or escalation concentration.',
+      allVisibleCasesInRecovery
+        ? 'Visible governed cases are currently under recovery durability observation.'
+        : stalled === 0 && escalated === 0
+          ? 'Accepted instability conditions remain proportionally manageable under current case governance visibility.'
+          : 'Some accepted instability pathways show stalled movement or escalation concentration.',
+
     lifecyclePosture:
-      highPressure === 0
-        ? 'Lifecycle governance posture remains balanced without concentrated high-pressure exposure.'
-        : 'High-pressure case concentration remains visible and may require executive continuity awareness.',
+      allVisibleCasesInRecovery
+        ? 'Lifecycle posture has moved beyond active stabilization and is now observing durability before trust restoration.'
+        : highPressure === 0
+          ? 'Lifecycle governance posture remains balanced without concentrated high-pressure exposure.'
+          : 'High-pressure case concentration remains visible and may require executive continuity awareness.',
+
     evidenceVisibility:
-      incompleteEvidence === 0
+      allVisibleCasesHaveEvidence
         ? 'Action and outcome evidence are visible across active governed cases.'
         : 'Some governed cases still require action evidence, outcome evidence, or recovery readiness clarification.',
+
     routingLandscape:
       recoveryMonitoring > 0
         ? 'Some governed cases have progressed into recovery durability observation.'
         : 'Routing readiness remains active for accepted instability that has not yet stabilized.',
+
     pressureMeaning:
-      stalled === 0 && escalated === 0 && highPressure === 0
-        ? 'Case governance pressure remains proportionally active under current continuity conditions.'
-        : 'Case governance pressure remains visible through escalation, stalled movement, high-pressure exposure, or evidence incompleteness.',
+      allVisibleCasesInRecovery && allVisibleCasesHaveEvidence
+        ? 'Case governance pressure is calm and proportionate. Visible cases are under recovery durability observation with action and outcome evidence preserved.'
+        : stalled === 0 && escalated === 0 && highPressure === 0
+          ? 'Case governance pressure remains proportionally active under current continuity conditions.'
+          : 'Case governance pressure remains visible through escalation, stalled movement, high-pressure exposure, or evidence incompleteness.',
+
     commandSynthesis:
-      stalled > 0 || escalated > 0 || highPressure > 1
-        ? 'Case concentration may require executive continuity synthesis visibility.'
-        : 'No concentrated case deterioration currently requiring command escalation.',
+      allVisibleCasesInRecovery && allVisibleCasesHaveEvidence
+        ? 'No active case deterioration is visible. Command attention may remain focused on durability observation and memory preservation.'
+        : stalled > 0 || escalated > 0 || highPressure > 1
+          ? 'Case concentration may require executive continuity synthesis visibility.'
+          : 'No concentrated case deterioration currently requiring command escalation.',
   }
 }
 
