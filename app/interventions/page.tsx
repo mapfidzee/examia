@@ -43,6 +43,15 @@ type InterventionRecord = {
   created_at?: string | null
 }
 
+type RoutingAction = {
+  id: string
+  case_id: string
+  assigned_responder_id: string | null
+  routing_status: string
+  routing_reason: string | null
+  created_at?: string | null
+}
+
 type InheritedInterventionContext = {
   intakeIdentity: string
   routingPosture: string
@@ -171,6 +180,7 @@ export default function InterventionCompletionPage() {
 
 function InterventionCompletionContent() {
   const [cases, setCases] = useState<StabilityCase[]>([])
+  const [routingActions, setRoutingActions] = useState<RoutingAction[]>([])
   const [interventions, setInterventions] = useState<InterventionRecord[]>([])
   const [selectedCaseId, setSelectedCaseId] = useState('')
   const [actionType, setActionType] = useState('')
@@ -192,18 +202,58 @@ function InterventionCompletionContent() {
   }, [])
 
   async function loadCases() {
-    const { data, error } = await supabase
+    const { data: routingData, error: routingError } = await supabase
+      .from('case_routing_actions')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (routingError) {
+      console.error(routingError)
+    }
+
+    const routedActions = (routingData || []).filter((item: RoutingAction) =>
+      ACTION_READY_STATUSES.includes(item.routing_status),
+    )
+
+    const routedCaseIds = Array.from(
+      new Set(routedActions.map((item: RoutingAction) => item.case_id)),
+    )
+
+    const directCasesQuery = supabase
       .from('beneficiary_cases')
       .select('*')
       .in('case_status', ACTION_READY_STATUSES)
       .order('created_at', { ascending: false })
 
-    if (error) {
-      console.error(error)
-      return
+    const routedCasesQuery =
+      routedCaseIds.length > 0
+        ? supabase
+            .from('beneficiary_cases')
+            .select('*')
+            .in('id', routedCaseIds)
+            .order('created_at', { ascending: false })
+        : null
+
+    const [directCasesResult, routedCasesResult] = await Promise.all([
+      directCasesQuery,
+      routedCasesQuery || Promise.resolve({ data: [], error: null }),
+    ])
+
+    if (directCasesResult.error) {
+      console.error(directCasesResult.error)
     }
 
-    setCases(data || [])
+    if (routedCasesResult.error) {
+      console.error(routedCasesResult.error)
+    }
+
+    const mergedCases = mergeCases([
+      ...(directCasesResult.data || []),
+      ...(routedCasesResult.data || []),
+    ])
+
+    setRoutingActions(routingData || [])
+    setCases(mergedCases)
   }
 
   async function loadInterventions() {
@@ -225,12 +275,20 @@ function InterventionCompletionContent() {
     [cases, selectedCaseId],
   )
 
+  const selectedRoutingAction = useMemo(
+    () =>
+      selectedCase
+        ? findLatestRoutingAction(selectedCase.id, routingActions)
+        : undefined,
+    [selectedCase, routingActions],
+  )
+
   const inheritedContext = useMemo(
     () =>
       selectedCase
-        ? buildInheritedInterventionContext(selectedCase)
+        ? buildInheritedInterventionContext(selectedCase, selectedRoutingAction)
         : buildEmptyInheritedInterventionContext(),
-    [selectedCase],
+    [selectedCase, selectedRoutingAction],
   )
 
   const hasActionEvidence = Boolean(selectedCaseId && actionStatus)
@@ -291,9 +349,11 @@ function InterventionCompletionContent() {
   })
 
   function buildCaseLabel(caseItem: StabilityCase) {
-    const inherited = buildInheritedInterventionContext(caseItem)
+    const latestRouting = findLatestRoutingAction(caseItem.id, routingActions)
+    const inherited = buildInheritedInterventionContext(caseItem, latestRouting)
+    const activeStatus = latestRouting?.routing_status || caseItem.case_status
 
-    return `${inherited.intakeIdentity} • ${caseItem.support_domain} • ${caseItem.case_status}`
+    return `${inherited.intakeIdentity} • ${caseItem.support_domain} • ${activeStatus}`
   }
 
   function actionSynthesis() {
@@ -379,6 +439,7 @@ ${
 
 CURRENT CONTINUITY STATUS
 ${
+  selectedRoutingAction?.routing_status ||
   selectedCase?.case_status ||
   'Continuity posture pending action governance.'
 }
@@ -541,7 +602,9 @@ Outcome is not recovery.
     ],
     [
       'CURRENT CONTINUITY STATUS',
-      selectedCase?.case_status || 'Continuity posture pending action governance.',
+      selectedRoutingAction?.routing_status ||
+        selectedCase?.case_status ||
+        'Continuity posture pending action governance.',
     ],
     ['ACTION TYPE', actionType || 'Awaiting action type selection'],
     ['ACTION CHANNEL', actionChannel || 'Awaiting action channel selection'],
@@ -643,10 +706,7 @@ Outcome is not recovery.
                   </p>
 
                   <div className="mt-4 grid gap-3">
-                    <Info
-                      label="Memory Source"
-                      value={inheritedContext.memorySource}
-                    />
+                    <Info label="Memory Source" value={inheritedContext.memorySource} />
                     <Info
                       label="Inherited Intake Identity"
                       value={inheritedContext.intakeIdentity}
@@ -865,6 +925,14 @@ Outcome is not recovery.
   )
 }
 
+function mergeCases(items: StabilityCase[]) {
+  return Array.from(new Map(items.map((item) => [item.id, item])).values())
+}
+
+function findLatestRoutingAction(caseId: string, routingActions: RoutingAction[]) {
+  return routingActions.find((item) => item.case_id === caseId)
+}
+
 function buildEmptyInheritedInterventionContext(): InheritedInterventionContext {
   return {
     intakeIdentity:
@@ -890,24 +958,55 @@ function buildEmptyInheritedInterventionContext(): InheritedInterventionContext 
 
 function buildInheritedInterventionContext(
   caseItem: StabilityCase,
+  latestRouting?: RoutingAction,
 ): InheritedInterventionContext {
-  const source = buildInterventionMemorySource(caseItem)
+  const source = buildInterventionMemorySource(caseItem, latestRouting)
+  const activeRoutingStatus = latestRouting?.routing_status || caseItem.case_status
 
   return {
     intakeIdentity: resolveIntakeIdentity(caseItem, source),
-    routingPosture: resolveRoutingPosture(caseItem, source),
-    interventionReadiness: resolveInterventionReadiness(caseItem, source),
-    inheritedEvidencePosture: resolveInheritedEvidencePosture(caseItem, source),
-    inheritedDriftSignal: resolveInheritedDriftSignal(caseItem, source),
-    inheritedConvergenceSignal: resolveInheritedConvergenceSignal(caseItem, source),
-    inheritedCommandMeaning: resolveInheritedCommandMeaning(caseItem, source),
-    inheritedSurvivability: resolveInheritedSurvivability(caseItem, source),
-    memorySource: resolveInterventionMemorySource(caseItem),
+    routingPosture: resolveRoutingPosture(caseItem, source, latestRouting),
+    interventionReadiness: resolveInterventionReadiness(
+      caseItem,
+      source,
+      activeRoutingStatus,
+    ),
+    inheritedEvidencePosture: resolveInheritedEvidencePosture(
+      caseItem,
+      source,
+      activeRoutingStatus,
+    ),
+    inheritedDriftSignal: resolveInheritedDriftSignal(
+      caseItem,
+      source,
+      activeRoutingStatus,
+    ),
+    inheritedConvergenceSignal: resolveInheritedConvergenceSignal(
+      caseItem,
+      source,
+      activeRoutingStatus,
+    ),
+    inheritedCommandMeaning: resolveInheritedCommandMeaning(
+      caseItem,
+      source,
+      activeRoutingStatus,
+    ),
+    inheritedSurvivability: resolveInheritedSurvivability(
+      caseItem,
+      source,
+      activeRoutingStatus,
+    ),
+    memorySource: resolveInterventionMemorySource(caseItem, latestRouting),
   }
 }
 
-function buildInterventionMemorySource(caseItem: StabilityCase) {
+function buildInterventionMemorySource(
+  caseItem: StabilityCase,
+  latestRouting?: RoutingAction,
+) {
   return [
+    latestRouting?.routing_reason,
+    latestRouting?.routing_status,
     caseItem.continuity_memory,
     caseItem.latest_downstream_evidence,
     caseItem.outcome_summary,
@@ -917,7 +1016,11 @@ function buildInterventionMemorySource(caseItem: StabilityCase) {
     .join('\n\n')
 }
 
-function resolveInterventionMemorySource(caseItem: StabilityCase) {
+function resolveInterventionMemorySource(
+  caseItem: StabilityCase,
+  latestRouting?: RoutingAction,
+) {
+  if (latestRouting) return 'routing action ledger + routed case memory'
   if (caseItem.continuity_memory) return 'active continuity memory'
   if (caseItem.latest_downstream_evidence) return 'latest downstream evidence'
   if (caseItem.outcome_summary) return 'routing continuity memory'
@@ -956,171 +1059,206 @@ function resolveIntakeIdentity(caseItem: StabilityCase, source: string) {
   )
 }
 
-function resolveRoutingPosture(caseItem: StabilityCase, source: string) {
+function resolveRoutingPosture(
+  caseItem: StabilityCase,
+  source: string,
+  latestRouting?: RoutingAction,
+) {
+  if (latestRouting?.routing_status) return latestRouting.routing_status
+
   return (
     extractBlockField(source, 'ROUTING STATUS') ||
     extractBlockField(source, 'INHERITED ROUTING READINESS') ||
-    resolveFallbackRoutingPosture(caseItem)
+    resolveFallbackRoutingPosture(caseItem.case_status)
   )
 }
 
-function resolveFallbackRoutingPosture(caseItem: StabilityCase) {
-  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
-    return caseItem.case_status.includes('RECURRENCE')
+function resolveFallbackRoutingPosture(activeStatus: string) {
+  if (activeStatus.includes('STABILIZATION_OWNER_ROUTED')) {
+    return activeStatus.includes('RECURRENCE')
       ? 'Repeated governed routing direction has been established for stabilization action.'
       : 'Governed routing direction has been established for stabilization action.'
   }
 
-  if (caseItem.case_status.includes('INTERVENTION_ACTIVE')) {
+  if (activeStatus.includes('INTERVENTION_ACTIVE')) {
     return 'Routing has progressed into active stabilization action governance.'
   }
 
-  if (caseItem.case_status.includes('INTERVENTION_RECORDED')) {
+  if (activeStatus.includes('INTERVENTION_RECORDED')) {
     return 'Routing memory has already produced preserved stabilization action evidence.'
   }
 
-  if (caseItem.case_status.includes('STABILIZING')) {
+  if (activeStatus.includes('STABILIZING')) {
     return 'Routing direction is converting into stabilization movement.'
   }
 
-  if (caseItem.case_status.includes('ESCALATED')) {
+  if (activeStatus.includes('ESCALATED')) {
     return 'Routing has escalated into executive stabilization visibility.'
   }
 
   return 'Routing posture requires governed stabilization action interpretation.'
 }
 
-function resolveInterventionReadiness(caseItem: StabilityCase, source: string) {
+function resolveInterventionReadiness(
+  caseItem: StabilityCase,
+  source: string,
+  activeStatus: string,
+) {
   return (
     extractBlockField(source, 'ACTION READINESS') ||
-    resolveFallbackInterventionReadiness(caseItem)
+    resolveFallbackInterventionReadiness(caseItem, activeStatus)
   )
 }
 
-function resolveFallbackInterventionReadiness(caseItem: StabilityCase) {
-  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
-    return caseItem.case_status.includes('RECURRENCE')
+function resolveFallbackInterventionReadiness(
+  caseItem: StabilityCase,
+  activeStatus: string,
+) {
+  if (activeStatus.includes('STABILIZATION_OWNER_ROUTED')) {
+    return activeStatus.includes('RECURRENCE')
       ? 'ACTION_READY_AFTER_REPEATED_ROUTING_DIRECTION'
       : 'INTERVENTION_READY_FROM_ROUTING'
   }
 
-  if (caseItem.case_status.includes('INTERVENTION_ACTIVE')) {
+  if (activeStatus.includes('INTERVENTION_ACTIVE')) {
     return 'INTERVENTION_ALREADY_ACTIVE'
   }
 
-  if (caseItem.case_status.includes('INTERVENTION_RECORDED')) {
+  if (activeStatus.includes('INTERVENTION_RECORDED')) {
     return 'INTERVENTION_EVIDENCE_ALREADY_PRESERVED'
   }
 
-  if (caseItem.case_status.includes('STABILIZING')) {
+  if (activeStatus.includes('STABILIZING')) {
     return 'STABILIZATION_MOVEMENT_ALREADY_VISIBLE'
   }
 
-  if (caseItem.case_status.includes('ESCALATED')) {
+  if (activeStatus.includes('ESCALATED') || caseItem.severity_level === 'CRITICAL') {
     return 'INTERVENTION_REQUIRES_EXECUTIVE_VISIBILITY'
   }
 
   return 'INTERVENTION_REQUIRES_ROUTING_DIRECTION'
 }
 
-function resolveInheritedEvidencePosture(caseItem: StabilityCase, source: string) {
+function resolveInheritedEvidencePosture(
+  caseItem: StabilityCase,
+  source: string,
+  activeStatus: string,
+) {
   if (caseItem.evidence_posture) return caseItem.evidence_posture
 
   return (
     extractBlockField(source, 'INHERITED EVIDENCE POSTURE') ||
     extractBlockField(source, 'EVIDENCE POSTURE') ||
-    resolveFallbackEvidencePosture(caseItem)
+    resolveFallbackEvidencePosture(caseItem, activeStatus)
   )
 }
 
-function resolveFallbackEvidencePosture(caseItem: StabilityCase) {
+function resolveFallbackEvidencePosture(
+  caseItem: StabilityCase,
+  activeStatus: string,
+) {
   if (caseItem.latest_downstream_evidence) return caseItem.latest_downstream_evidence
 
-  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
+  if (activeStatus.includes('STABILIZATION_OWNER_ROUTED')) {
     return 'Routing evidence preserved; stabilization action evidence pending.'
   }
 
-  if (caseItem.case_status.includes('INTERVENTION_ACTIVE')) {
+  if (activeStatus.includes('INTERVENTION_ACTIVE')) {
     return 'Action evidence is being governed; outcome evidence pending.'
   }
 
-  if (caseItem.case_status.includes('ESCALATED')) {
+  if (activeStatus.includes('ESCALATED')) {
     return 'Escalation evidence remains visible before outcome verification.'
   }
 
   return 'Inherited routing evidence pending action governance.'
 }
 
-function resolveInheritedDriftSignal(caseItem: StabilityCase, source: string) {
+function resolveInheritedDriftSignal(
+  caseItem: StabilityCase,
+  source: string,
+  activeStatus: string,
+) {
   if (caseItem.drift_signal) return caseItem.drift_signal
 
   return (
     extractBlockField(source, 'INHERITED DRIFT SIGNAL') ||
-    resolveFallbackDriftSignal(caseItem)
+    resolveFallbackDriftSignal(activeStatus)
   )
 }
 
-function resolveFallbackDriftSignal(caseItem: StabilityCase) {
-  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED_RECURRENCE')) {
+function resolveFallbackDriftSignal(activeStatus: string) {
+  if (activeStatus.includes('STABILIZATION_OWNER_ROUTED_RECURRENCE')) {
     return 'ROUTING_RECURRENCE_AFTER_DIRECTION_VISIBLE'
   }
 
-  if (caseItem.case_status.includes('ESCALATED')) {
+  if (activeStatus.includes('ESCALATED')) {
     return 'ACTION_ESCALATION_DRIFT_VISIBLE'
   }
 
-  if (caseItem.case_status.includes('INTERVENTION_ACTIVE')) {
+  if (activeStatus.includes('INTERVENTION_ACTIVE')) {
     return 'ACTION_DRIFT_MONITORING_ACTIVE'
   }
 
-  if (caseItem.case_status.includes('STABILIZING')) {
+  if (activeStatus.includes('STABILIZING')) {
     return 'NO_ACTIVE_ACTION_DRIFT_VISIBLE'
   }
 
   return 'NO_ACTIVE_ACTION_DRIFT_VISIBLE'
 }
 
-function resolveInheritedConvergenceSignal(caseItem: StabilityCase, source: string) {
+function resolveInheritedConvergenceSignal(
+  caseItem: StabilityCase,
+  source: string,
+  activeStatus: string,
+) {
   if (caseItem.convergence_signal) return caseItem.convergence_signal
 
   return (
     extractBlockField(source, 'INHERITED CONVERGENCE SIGNAL') ||
-    resolveFallbackConvergenceSignal(caseItem)
+    resolveFallbackConvergenceSignal(activeStatus)
   )
 }
 
-function resolveFallbackConvergenceSignal(caseItem: StabilityCase) {
-  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED_RECURRENCE')) {
+function resolveFallbackConvergenceSignal(activeStatus: string) {
+  if (activeStatus.includes('STABILIZATION_OWNER_ROUTED_RECURRENCE')) {
     return 'CONVERGENCE_BUILDING_THROUGH_REPEATED_OWNER_DIRECTION'
   }
 
-  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
+  if (activeStatus.includes('STABILIZATION_OWNER_ROUTED')) {
     return 'CONVERGENCE_READY_FOR_ACTION'
   }
 
-  if (caseItem.case_status.includes('STABILIZING')) {
+  if (activeStatus.includes('STABILIZING')) {
     return 'CONVERGENCE_BUILDING_THROUGH_ACTION'
   }
 
-  if (caseItem.case_status.includes('ESCALATED')) {
+  if (activeStatus.includes('ESCALATED')) {
     return 'CONVERGENCE_CONSTRAINED_BY_ESCALATION'
   }
 
   return 'CONVERGENCE_PENDING_ACTION_EVIDENCE'
 }
 
-function resolveInheritedCommandMeaning(caseItem: StabilityCase, source: string) {
+function resolveInheritedCommandMeaning(
+  caseItem: StabilityCase,
+  source: string,
+  activeStatus: string,
+) {
   if (caseItem.command_meaning) return caseItem.command_meaning
 
   return (
     extractBlockField(source, 'INHERITED COMMAND MEANING') ||
     extractBlockField(source, 'COMMAND MEANING') ||
-    resolveFallbackCommandMeaning(caseItem)
+    resolveFallbackCommandMeaning(caseItem, activeStatus)
   )
 }
 
-function resolveFallbackCommandMeaning(caseItem: StabilityCase) {
-  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED_RECURRENCE')) {
+function resolveFallbackCommandMeaning(
+  caseItem: StabilityCase,
+  activeStatus: string,
+) {
+  if (activeStatus.includes('STABILIZATION_OWNER_ROUTED_RECURRENCE')) {
     return 'Repeated governed routing direction is visible; action evidence must now determine whether stabilization is becoming credible.'
   }
 
@@ -1132,26 +1270,33 @@ function resolveFallbackCommandMeaning(caseItem: StabilityCase) {
     return 'Safeguarding-sensitive routed instability requires protected action evidence and traceable owner movement.'
   }
 
-  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
+  if (activeStatus.includes('STABILIZATION_OWNER_ROUTED')) {
     return 'Routing direction is ready to become governed stabilization action.'
   }
 
   return 'Action governance should preserve command meaning inherited from routing.'
 }
 
-function resolveInheritedSurvivability(caseItem: StabilityCase, source: string) {
+function resolveInheritedSurvivability(
+  caseItem: StabilityCase,
+  source: string,
+  activeStatus: string,
+) {
   if (caseItem.survivability_interpretation) {
     return caseItem.survivability_interpretation
   }
 
   return (
     extractBlockField(source, 'INHERITED SURVIVABILITY INTERPRETATION') ||
-    resolveFallbackSurvivability(caseItem)
+    resolveFallbackSurvivability(caseItem, activeStatus)
   )
 }
 
-function resolveFallbackSurvivability(caseItem: StabilityCase) {
-  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED_RECURRENCE')) {
+function resolveFallbackSurvivability(
+  caseItem: StabilityCase,
+  activeStatus: string,
+) {
+  if (activeStatus.includes('STABILIZATION_OWNER_ROUTED_RECURRENCE')) {
     return 'Survivability credibility may begin strengthening through repeated owner direction, but action evidence is required before stabilization confidence improves.'
   }
 
@@ -1163,7 +1308,7 @@ function resolveFallbackSurvivability(caseItem: StabilityCase) {
     return 'High-pressure safeguarding pathway remains survivability-sensitive until action evidence strengthens.'
   }
 
-  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
+  if (activeStatus.includes('STABILIZATION_OWNER_ROUTED')) {
     return 'Survivability credibility can strengthen if routed ownership converts into action movement.'
   }
 
