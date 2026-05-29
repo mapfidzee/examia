@@ -183,6 +183,7 @@ function InterventionCompletionContent() {
   const [routingActions, setRoutingActions] = useState<RoutingAction[]>([])
   const [interventions, setInterventions] = useState<InterventionRecord[]>([])
   const [selectedCaseId, setSelectedCaseId] = useState('')
+  const [lastPreservedCaseId, setLastPreservedCaseId] = useState('')
   const [actionType, setActionType] = useState('')
   const [actionChannel, setActionChannel] = useState('')
   const [actionStatus, setActionStatus] = useState('')
@@ -207,9 +208,7 @@ function InterventionCompletionContent() {
       .select('*')
       .order('created_at', { ascending: false })
 
-    if (routingError) {
-      console.error(routingError)
-    }
+    if (routingError) console.error(routingError)
 
     const routedActions = (routingData || []).filter((item: RoutingAction) =>
       ACTION_READY_STATUSES.includes(item.routing_status),
@@ -239,13 +238,8 @@ function InterventionCompletionContent() {
       routedCasesQuery || Promise.resolve({ data: [], error: null }),
     ])
 
-    if (directCasesResult.error) {
-      console.error(directCasesResult.error)
-    }
-
-    if (routedCasesResult.error) {
-      console.error(routedCasesResult.error)
-    }
+    if (directCasesResult.error) console.error(directCasesResult.error)
+    if (routedCasesResult.error) console.error(routedCasesResult.error)
 
     const mergedCases = mergeCases([
       ...(directCasesResult.data || []),
@@ -283,6 +277,35 @@ function InterventionCompletionContent() {
     [selectedCase, routingActions],
   )
 
+  const selectedIntervention = useMemo(
+    () =>
+      selectedCase
+        ? findLatestIntervention(selectedCase.id, interventions)
+        : undefined,
+    [selectedCase, interventions],
+  )
+
+  const lastPreservedCase = useMemo(
+    () => cases.find((item) => item.id === lastPreservedCaseId),
+    [cases, lastPreservedCaseId],
+  )
+
+  const lastPreservedRoutingAction = useMemo(
+    () =>
+      lastPreservedCase
+        ? findLatestRoutingAction(lastPreservedCase.id, routingActions)
+        : undefined,
+    [lastPreservedCase, routingActions],
+  )
+
+  const lastPreservedIntervention = useMemo(
+    () =>
+      lastPreservedCase
+        ? findLatestIntervention(lastPreservedCase.id, interventions)
+        : undefined,
+    [lastPreservedCase, interventions],
+  )
+
   const inheritedContext = useMemo(
     () =>
       selectedCase
@@ -291,67 +314,110 @@ function InterventionCompletionContent() {
     [selectedCase, selectedRoutingAction],
   )
 
-  const hasActionEvidence = Boolean(selectedCaseId && actionStatus)
+  const selectedOrLatestIntervention =
+    selectedIntervention || lastPreservedIntervention
+
+  const hydratedEvidence = useMemo(
+    () => hydrateInterventionEvidence(selectedOrLatestIntervention),
+    [selectedOrLatestIntervention],
+  )
+
+  const displayActionStatus =
+    actionStatus || hydratedEvidence.actionMovement || ''
+
+  const displayActionTrajectory =
+    actionTrajectory || hydratedEvidence.actionTrajectory || ''
+
+  const displayEvidencePosture =
+    evidencePosture || hydratedEvidence.actionEvidencePosture || ''
+
+  const displayOwnerVisibility =
+    ownerVisibility || hydratedEvidence.ownerVisibility || ''
+
+  const displayContinuityOutlook =
+    continuityOutlook || hydratedEvidence.continuityOutlook || ''
+
+  const displayContinuityRisk =
+    continuityRisk || (hydratedEvidence.continuityRisk as ContinuityRisk | '') || ''
+
+  const displayReviewTiming =
+    reviewTiming || hydratedEvidence.reviewTiming || ''
+
+  const hasActionEvidence = Boolean(
+    selectedCaseId
+      ? actionStatus || selectedIntervention
+      : lastPreservedIntervention,
+  )
 
   const lifecycleDecision = evaluateInterventionLifecycle({
-    completionStatus: actionStatus,
-    continuityRisk: (continuityRisk || 'MODERATE') as ContinuityRisk,
+    completionStatus: displayActionStatus,
+    continuityRisk: (displayContinuityRisk || 'MODERATE') as ContinuityRisk,
   })
 
   const actionClimate = buildActionClimate({
     interventions,
-    hasSelectedCase: Boolean(selectedCaseId),
-    inheritedContext,
+    hasSelectedCase: Boolean(selectedCaseId || lastPreservedCaseId),
+    inheritedContext:
+      selectedCase || !lastPreservedCase
+        ? inheritedContext
+        : buildInheritedInterventionContext(
+            lastPreservedCase,
+            lastPreservedRoutingAction,
+          ),
   })
 
   const commandPosture = buildCommandPosture({
     hasActionEvidence,
-    actionStatus,
-    continuityRisk,
-    actionTrajectory,
-    continuityOutlook,
+    actionStatus: displayActionStatus,
+    continuityRisk: displayContinuityRisk,
+    actionTrajectory: displayActionTrajectory,
+    continuityOutlook: displayContinuityOutlook,
     inheritedContext,
   })
 
   const actionConfidence = buildActionConfidence({
     hasActionEvidence,
-    actionStatus,
-    continuityRisk,
-    actionTrajectory,
-    continuityOutlook,
+    actionStatus: displayActionStatus,
+    continuityRisk: displayContinuityRisk,
+    actionTrajectory: displayActionTrajectory,
+    continuityOutlook: displayContinuityOutlook,
     inheritedContext,
   })
 
   const survivabilitySignal = buildSurvivabilitySignal({
     hasActionEvidence,
-    continuityRisk,
-    actionTrajectory,
-    continuityOutlook,
-    actionStatus,
+    continuityRisk: displayContinuityRisk,
+    actionTrajectory: displayActionTrajectory,
+    continuityOutlook: displayContinuityOutlook,
+    actionStatus: displayActionStatus,
     inheritedContext,
   })
 
   const executiveMeaning = buildExecutiveMeaning({
     hasActionEvidence,
-    actionStatus,
-    continuityRisk,
-    actionTrajectory,
-    continuityOutlook,
+    actionStatus: displayActionStatus,
+    continuityRisk: displayContinuityRisk,
+    actionTrajectory: displayActionTrajectory,
+    continuityOutlook: displayContinuityOutlook,
     inheritedContext,
   })
 
   const pressureMeaning = buildPressureMeaning({
     hasActionEvidence,
-    actionTrajectory,
-    continuityOutlook,
-    continuityRisk,
+    actionTrajectory: displayActionTrajectory,
+    continuityOutlook: displayContinuityOutlook,
+    continuityRisk: displayContinuityRisk,
     inheritedContext,
   })
 
   function buildCaseLabel(caseItem: StabilityCase) {
     const latestRouting = findLatestRoutingAction(caseItem.id, routingActions)
     const inherited = buildInheritedInterventionContext(caseItem, latestRouting)
-    const activeStatus = latestRouting?.routing_status || caseItem.case_status
+    const latestIntervention = findLatestIntervention(caseItem.id, interventions)
+    const activeStatus =
+      latestIntervention
+        ? 'ACTION_EVIDENCE_PRESERVED'
+        : latestRouting?.routing_status || caseItem.case_status
 
     return `${inherited.intakeIdentity} • ${caseItem.support_domain} • ${activeStatus}`
   }
@@ -419,30 +485,16 @@ ACTION PRESSURE
 ${pressureMeaning}
 
 NEXT LIFECYCLE STATE
-${
-  selectedCase
-    ? lifecycleDecision.nextStatus
-    : 'Continuity lifecycle advancement pending stabilization action governance.'
-}
+${selectedCase ? lifecycleDecision.nextStatus : 'Continuity lifecycle advancement pending stabilization action governance.'}
 
 CASE SIGNAL
-${
-  selectedCase?.beneficiary_name ||
-  'Executive continuity interpretation will activate after stabilization action evidence is preserved.'
-}
+${selectedCase?.beneficiary_name || 'Executive continuity interpretation will activate after stabilization action evidence is preserved.'}
 
 STABILITY DOMAIN
-${
-  selectedCase?.support_domain ||
-  'Continuity domain visibility pending action assignment.'
-}
+${selectedCase?.support_domain || 'Continuity domain visibility pending action assignment.'}
 
 CURRENT CONTINUITY STATUS
-${
-  selectedRoutingAction?.routing_status ||
-  selectedCase?.case_status ||
-  'Continuity posture pending action governance.'
-}
+${selectedRoutingAction?.routing_status || selectedCase?.case_status || 'Continuity posture pending action governance.'}
 
 ACTION TYPE
 ${actionType || 'Awaiting action type selection'}
@@ -451,10 +503,7 @@ ACTION CHANNEL
 ${actionChannel || 'Awaiting action channel selection'}
 
 GOVERNANCE INTERPRETATION
-${
-  governanceInterpretation.trim() ||
-  'No additional operational continuity interpretation entered.'
-}
+${governanceInterpretation.trim() || 'No additional operational continuity interpretation entered.'}
 
 LIFECYCLE BOUNDARY
 Routing is not action.
@@ -523,6 +572,8 @@ Outcome is not recovery.
       return
     }
 
+    const preservedCaseId = selectedCaseId
+
     setSelectedCaseId('')
     setActionType('')
     setActionChannel('')
@@ -534,6 +585,7 @@ Outcome is not recovery.
     setReviewTiming('')
     setContinuityRisk('')
     setGovernanceInterpretation('')
+    setLastPreservedCaseId(preservedCaseId)
 
     setMessage(
       'Stabilization action evidence preserved. Routing memory, action movement, executive meaning, lifecycle posture, survivability visibility, and structural traceability remain operationally visible.',
@@ -546,22 +598,10 @@ Outcome is not recovery.
   }
 
   const climatePanels = [
-    {
-      title: 'Action Stability Climate',
-      value: actionClimate.stabilityClimate,
-    },
-    {
-      title: 'Continuity Action Posture',
-      value: actionClimate.actionPosture,
-    },
-    {
-      title: 'Dependency Visibility',
-      value: actionClimate.dependencyVisibility,
-    },
-    {
-      title: 'Outcome Readiness Landscape',
-      value: actionClimate.outcomeLandscape,
-    },
+    { title: 'Action Stability Climate', value: actionClimate.stabilityClimate },
+    { title: 'Continuity Action Posture', value: actionClimate.actionPosture },
+    { title: 'Dependency Visibility', value: actionClimate.dependencyVisibility },
+    { title: 'Outcome Readiness Landscape', value: actionClimate.outcomeLandscape },
   ]
 
   const synthesisRows = [
@@ -573,12 +613,13 @@ Outcome is not recovery.
     ['INHERITED CONVERGENCE SIGNAL', inheritedContext.inheritedConvergenceSignal],
     ['INHERITED COMMAND MEANING', inheritedContext.inheritedCommandMeaning],
     ['INHERITED SURVIVABILITY', inheritedContext.inheritedSurvivability],
-    ['ACTION MOVEMENT', actionStatus || 'Awaiting action movement selection'],
-    ['ACTION TRAJECTORY', actionTrajectory || 'Action trajectory pending'],
-    ['ACTION EVIDENCE POSTURE', evidencePosture || 'Awaiting evidence posture selection'],
-    ['OWNER VISIBILITY', ownerVisibility || 'Awaiting owner visibility selection'],
-    ['CONTINUITY OUTLOOK', continuityOutlook || 'Continuity outlook pending'],
-    ['CONTINUITY RISK', continuityRisk || 'Continuity risk pending'],
+    ['ACTION MOVEMENT', displayActionStatus || 'Awaiting action movement selection'],
+    ['ACTION TRAJECTORY', displayActionTrajectory || 'Action trajectory pending'],
+    ['ACTION EVIDENCE POSTURE', displayEvidencePosture || 'Awaiting evidence posture selection'],
+    ['OWNER VISIBILITY', displayOwnerVisibility || 'Awaiting owner visibility selection'],
+    ['CONTINUITY OUTLOOK', displayContinuityOutlook || 'Continuity outlook pending'],
+    ['CONTINUITY RISK', displayContinuityRisk || 'Continuity risk pending'],
+    ['REVIEW TIMING', displayReviewTiming || 'Awaiting review timing selection'],
     ['COMMAND POSTURE', commandPosture],
     ['ACTION CONFIDENCE', actionConfidence],
     ['SURVIVABILITY SIGNAL', survivabilitySignal],
@@ -586,31 +627,35 @@ Outcome is not recovery.
     ['ACTION PRESSURE', pressureMeaning],
     [
       'NEXT LIFECYCLE STATE',
-      selectedCase
+      selectedCase || lastPreservedCase
         ? lifecycleDecision.nextStatus
         : 'Continuity lifecycle advancement pending stabilization action governance.',
     ],
     [
       'CASE SIGNAL',
       selectedCase?.beneficiary_name ||
+        lastPreservedCase?.beneficiary_name ||
         'Executive continuity interpretation will activate after stabilization action evidence is preserved.',
     ],
     [
       'STABILITY DOMAIN',
       selectedCase?.support_domain ||
+        lastPreservedCase?.support_domain ||
         'Continuity domain visibility pending action assignment.',
     ],
     [
       'CURRENT CONTINUITY STATUS',
       selectedRoutingAction?.routing_status ||
         selectedCase?.case_status ||
+        lastPreservedCase?.case_status ||
         'Continuity posture pending action governance.',
     ],
-    ['ACTION TYPE', actionType || 'Awaiting action type selection'],
-    ['ACTION CHANNEL', actionChannel || 'Awaiting action channel selection'],
+    ['ACTION TYPE', actionType || hydratedEvidence.actionType || 'Awaiting action type selection'],
+    ['ACTION CHANNEL', actionChannel || hydratedEvidence.actionChannel || 'Awaiting action channel selection'],
     [
       'GOVERNANCE INTERPRETATION',
       governanceInterpretation.trim() ||
+        hydratedEvidence.governanceInterpretation ||
         'No additional operational continuity interpretation entered.',
     ],
   ]
@@ -671,6 +716,22 @@ Outcome is not recovery.
           </p>
         </div>
 
+        {lastPreservedIntervention && (
+          <section className="mt-6 rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-6">
+            <h3 className="text-lg font-semibold text-emerald-100">
+              Latest Preserved Action Evidence
+            </h3>
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              <Info label="Action Movement" value={hydratedEvidence.actionMovement || 'Not recorded'} />
+              <Info label="Action Trajectory" value={hydratedEvidence.actionTrajectory || 'Not recorded'} />
+              <Info label="Evidence Posture" value={hydratedEvidence.actionEvidencePosture || 'Not recorded'} />
+              <Info label="Owner Visibility" value={hydratedEvidence.ownerVisibility || 'Not recorded'} />
+              <Info label="Continuity Outlook" value={hydratedEvidence.continuityOutlook || 'Not recorded'} />
+              <Info label="Continuity Risk" value={hydratedEvidence.continuityRisk || 'Not recorded'} />
+            </div>
+          </section>
+        )}
+
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_1.1fr]">
           <section className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
             <h3 className="text-xl font-semibold text-white">
@@ -707,131 +768,27 @@ Outcome is not recovery.
 
                   <div className="mt-4 grid gap-3">
                     <Info label="Memory Source" value={inheritedContext.memorySource} />
-                    <Info
-                      label="Inherited Intake Identity"
-                      value={inheritedContext.intakeIdentity}
-                    />
-                    <Info
-                      label="Inherited Routing Posture"
-                      value={inheritedContext.routingPosture}
-                    />
-                    <Info
-                      label="Intervention Readiness"
-                      value={inheritedContext.interventionReadiness}
-                    />
-                    <Info
-                      label="Inherited Evidence Posture"
-                      value={inheritedContext.inheritedEvidencePosture}
-                    />
-                    <Info
-                      label="Inherited Drift Signal"
-                      value={inheritedContext.inheritedDriftSignal}
-                    />
-                    <Info
-                      label="Inherited Convergence Signal"
-                      value={inheritedContext.inheritedConvergenceSignal}
-                    />
-                    <Info
-                      label="Inherited Command Meaning"
-                      value={inheritedContext.inheritedCommandMeaning}
-                    />
-                    <Info
-                      label="Inherited Survivability"
-                      value={inheritedContext.inheritedSurvivability}
-                    />
+                    <Info label="Inherited Intake Identity" value={inheritedContext.intakeIdentity} />
+                    <Info label="Inherited Routing Posture" value={inheritedContext.routingPosture} />
+                    <Info label="Intervention Readiness" value={inheritedContext.interventionReadiness} />
+                    <Info label="Inherited Evidence Posture" value={inheritedContext.inheritedEvidencePosture} />
+                    <Info label="Inherited Drift Signal" value={inheritedContext.inheritedDriftSignal} />
+                    <Info label="Inherited Convergence Signal" value={inheritedContext.inheritedConvergenceSignal} />
+                    <Info label="Inherited Command Meaning" value={inheritedContext.inheritedCommandMeaning} />
+                    <Info label="Inherited Survivability" value={inheritedContext.inheritedSurvivability} />
                   </div>
                 </section>
               )}
 
-              <Select
-                label="Action Type"
-                placeholder="Select action type"
-                value={actionType}
-                setValue={setActionType}
-                options={ACTION_TYPES.map((item) => ({ label: item, value: item }))}
-              />
-
-              <Select
-                label="Action Channel"
-                placeholder="Select action channel"
-                value={actionChannel}
-                setValue={setActionChannel}
-                options={ACTION_CHANNELS.map((item) => ({ label: item, value: item }))}
-              />
-
-              <Select
-                label="Action Movement"
-                placeholder="Select action movement"
-                value={actionStatus}
-                setValue={setActionStatus}
-                options={ACTION_STATUSES.map((item) => ({ label: item, value: item }))}
-              />
-
-              <Select
-                label="Action Trajectory"
-                placeholder="Select action trajectory"
-                value={actionTrajectory}
-                setValue={setActionTrajectory}
-                options={ACTION_TRAJECTORIES.map((item) => ({
-                  label: item,
-                  value: item,
-                }))}
-              />
-
-              <Select
-                label="Evidence Posture"
-                placeholder="Select evidence posture"
-                value={evidencePosture}
-                setValue={setEvidencePosture}
-                options={EVIDENCE_POSTURES.map((item) => ({
-                  label: item,
-                  value: item,
-                }))}
-              />
-
-              <Select
-                label="Owner Visibility"
-                placeholder="Select owner visibility"
-                value={ownerVisibility}
-                setValue={setOwnerVisibility}
-                options={OWNER_VISIBILITIES.map((item) => ({
-                  label: item,
-                  value: item,
-                }))}
-              />
-
-              <Select
-                label="Continuity Outlook"
-                placeholder="Select continuity outlook"
-                value={continuityOutlook}
-                setValue={setContinuityOutlook}
-                options={CONTINUITY_OUTLOOKS.map((item) => ({
-                  label: item,
-                  value: item,
-                }))}
-              />
-
-              <Select
-                label="Review Timing"
-                placeholder="Select review timing"
-                value={reviewTiming}
-                setValue={setReviewTiming}
-                options={REVIEW_TIMINGS.map((item) => ({
-                  label: item,
-                  value: item,
-                }))}
-              />
-
-              <Select
-                label="Continuity Risk"
-                placeholder="Select continuity risk"
-                value={continuityRisk}
-                setValue={(value) => setContinuityRisk(value as ContinuityRisk)}
-                options={CONTINUITY_RISKS.map((item) => ({
-                  label: item,
-                  value: item,
-                }))}
-              />
+              <Select label="Action Type" placeholder="Select action type" value={actionType} setValue={setActionType} options={ACTION_TYPES.map((item) => ({ label: item, value: item }))} />
+              <Select label="Action Channel" placeholder="Select action channel" value={actionChannel} setValue={setActionChannel} options={ACTION_CHANNELS.map((item) => ({ label: item, value: item }))} />
+              <Select label="Action Movement" placeholder="Select action movement" value={actionStatus} setValue={setActionStatus} options={ACTION_STATUSES.map((item) => ({ label: item, value: item }))} />
+              <Select label="Action Trajectory" placeholder="Select action trajectory" value={actionTrajectory} setValue={setActionTrajectory} options={ACTION_TRAJECTORIES.map((item) => ({ label: item, value: item }))} />
+              <Select label="Evidence Posture" placeholder="Select evidence posture" value={evidencePosture} setValue={setEvidencePosture} options={EVIDENCE_POSTURES.map((item) => ({ label: item, value: item }))} />
+              <Select label="Owner Visibility" placeholder="Select owner visibility" value={ownerVisibility} setValue={setOwnerVisibility} options={OWNER_VISIBILITIES.map((item) => ({ label: item, value: item }))} />
+              <Select label="Continuity Outlook" placeholder="Select continuity outlook" value={continuityOutlook} setValue={setContinuityOutlook} options={CONTINUITY_OUTLOOKS.map((item) => ({ label: item, value: item }))} />
+              <Select label="Review Timing" placeholder="Select review timing" value={reviewTiming} setValue={setReviewTiming} options={REVIEW_TIMINGS.map((item) => ({ label: item, value: item }))} />
+              <Select label="Continuity Risk" placeholder="Select continuity risk" value={continuityRisk} setValue={(value) => setContinuityRisk(value as ContinuityRisk)} options={CONTINUITY_RISKS.map((item) => ({ label: item, value: item }))} />
 
               <label className="block">
                 <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
@@ -931,6 +888,33 @@ function mergeCases(items: StabilityCase[]) {
 
 function findLatestRoutingAction(caseId: string, routingActions: RoutingAction[]) {
   return routingActions.find((item) => item.case_id === caseId)
+}
+
+function findLatestIntervention(
+  caseId: string,
+  interventions: InterventionRecord[],
+) {
+  return interventions.find((item) => item.case_id === caseId)
+}
+
+function hydrateInterventionEvidence(intervention?: InterventionRecord) {
+  const source = intervention?.intervention_summary || ''
+
+  return {
+    actionMovement: extractBlockField(source, 'ACTION MOVEMENT'),
+    actionTrajectory: extractBlockField(source, 'ACTION TRAJECTORY'),
+    actionEvidencePosture: extractBlockField(source, 'ACTION EVIDENCE POSTURE'),
+    ownerVisibility: extractBlockField(source, 'OWNER VISIBILITY'),
+    continuityOutlook: extractBlockField(source, 'CONTINUITY OUTLOOK'),
+    continuityRisk: extractBlockField(source, 'CONTINUITY RISK'),
+    reviewTiming: extractBlockField(source, 'REVIEW TIMING'),
+    actionType: extractBlockField(source, 'ACTION TYPE'),
+    actionChannel: extractBlockField(source, 'ACTION CHANNEL'),
+    governanceInterpretation: extractBlockField(
+      source,
+      'GOVERNANCE INTERPRETATION',
+    ),
+  }
 }
 
 function buildEmptyInheritedInterventionContext(): InheritedInterventionContext {
@@ -1372,9 +1356,7 @@ function buildCommandPosture(input: {
   continuityOutlook: string
   inheritedContext: InheritedInterventionContext
 }) {
-  if (!input.hasActionEvidence) {
-    return input.inheritedContext.interventionReadiness
-  }
+  if (!input.hasActionEvidence) return input.inheritedContext.interventionReadiness
 
   if (
     input.continuityRisk === 'CRITICAL' ||
@@ -1438,9 +1420,7 @@ function buildSurvivabilitySignal(input: {
   actionStatus: string
   inheritedContext: InheritedInterventionContext
 }) {
-  if (!input.hasActionEvidence) {
-    return input.inheritedContext.inheritedSurvivability
-  }
+  if (!input.hasActionEvidence) return input.inheritedContext.inheritedSurvivability
 
   if (
     input.continuityRisk === 'CRITICAL' ||
@@ -1471,9 +1451,7 @@ function buildExecutiveMeaning(input: {
   continuityOutlook: string
   inheritedContext: InheritedInterventionContext
 }) {
-  if (!input.hasActionEvidence) {
-    return input.inheritedContext.inheritedCommandMeaning
-  }
+  if (!input.hasActionEvidence) return input.inheritedContext.inheritedCommandMeaning
 
   if (
     input.continuityRisk === 'CRITICAL' ||
@@ -1541,10 +1519,7 @@ function Select({
   placeholder: string
   value: string
   setValue: (value: string) => void
-  options: {
-    label: string
-    value: string
-  }[]
+  options: { label: string; value: string }[]
 }) {
   return (
     <label className="block">
