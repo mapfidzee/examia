@@ -329,7 +329,9 @@ function OutcomesContent() {
     'Verification trajectory pending'
 
   const displayRecurrenceSignal =
-    recurrenceSignal || hydratedOutcome.recurrenceSignal || 'Recurrence signal pending'
+    recurrenceSignal ||
+    hydratedOutcome.recurrenceSignal ||
+    'Recurrence signal pending'
 
   const displayRecoveryReadiness =
     recoveryReadiness ||
