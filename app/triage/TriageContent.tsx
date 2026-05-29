@@ -57,6 +57,7 @@ type InheritedIntakeContext = {
 
 type TriageIntelligence = {
   gateStatus: string
+  eligibilityDetermination: string
   maturity: string
   confidence: string
   recommendedPosture: string
@@ -83,13 +84,13 @@ const CGI_PRESSURE_TYPES = [
 const ACTIVE_TRIAGE_STATUSES = [
   'PENDING_TRIAGE',
   'UNDER_REVIEW',
-  'TRIAGE_EVIDENCE_REQUIRED',
-  'TRIAGE_COMMAND_ESCALATION',
-  'TRIAGE_CLARITY_REQUIRED',
 ]
 
 const PRESERVED_TRIAGE_STATUSES = [
   'ACCEPTED_FOR_GOVERNANCE',
+  'TRIAGE_EVIDENCE_REQUIRED',
+  'TRIAGE_COMMAND_ESCALATION',
+  'TRIAGE_CLARITY_REQUIRED',
   'TRIAGE_CLOSED_NO_CGI_ACTION',
 ]
 
@@ -188,7 +189,10 @@ export default function TriageContent() {
     if (!decision) return
 
     const inheritedContext = buildInheritedIntakeContext(item)
-    const triageIntelligence = buildTriageIntelligence(item)
+    const triageIntelligence = buildTriageIntelligenceForStatus(
+      item,
+      decision.status,
+    )
     const triageSummary = buildTriageDecisionSummary({
       item,
       decision,
@@ -531,6 +535,10 @@ function TriageCard({
 
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           <Info label="Gate Status" value={intelligence.gateStatus} />
+          <Info
+            label="Eligibility Determination"
+            value={intelligence.eligibilityDetermination}
+          />
           <Info label="Triage Maturity" value={intelligence.maturity} />
           <Info
             label="Eligibility Confidence"
@@ -652,6 +660,8 @@ async function preserveTriageEvidence(input: {
       inherited_evidence_posture: input.inheritedContext.evidencePosture,
       inherited_command_meaning: input.inheritedContext.commandMeaning,
       triage_gate_status: input.triageIntelligence.gateStatus,
+      eligibility_determination:
+        input.triageIntelligence.eligibilityDetermination,
       triage_confidence: input.triageIntelligence.confidence,
       linked_case_id: input.item.id,
       pressure_type: input.item.support_domain,
@@ -679,10 +689,7 @@ async function preserveTriageEvidence(input: {
 }
 
 function buildInheritedIntakeContext(item: VisibleInstability): InheritedIntakeContext {
-  const source =
-    item.intervention_summary ||
-    item.outcome_summary ||
-    ''
+  const source = item.intervention_summary || item.outcome_summary || ''
 
   return {
     intakeIdentity:
@@ -965,6 +972,9 @@ ${input.inheritedContext.commandMeaning}
 TRIAGE RESULT
 ${input.decision.status}
 
+ELIGIBILITY DETERMINATION
+${input.triageIntelligence.eligibilityDetermination}
+
 TRIAGE REASON
 ${input.decision.reason}
 
@@ -997,11 +1007,19 @@ Outcome is not recovery.
 }
 
 function buildTriageIntelligence(item: VisibleInstability): TriageIntelligence {
+  return buildTriageIntelligenceForStatus(item, item.case_status)
+}
+
+function buildTriageIntelligenceForStatus(
+  item: VisibleInstability,
+  status: string,
+): TriageIntelligence {
   const inheritedContext = buildInheritedIntakeContext(item)
 
-  if (item.case_status === 'ACCEPTED_FOR_GOVERNANCE') {
+  if (status === 'ACCEPTED_FOR_GOVERNANCE') {
     return {
       gateStatus: 'Accepted into governance',
+      eligibilityDetermination: 'ELIGIBLE_ACCEPTED_FOR_CASE_GOVERNANCE',
       maturity: 'ELIGIBILITY_CONFIRMED',
       confidence: 'CASE_GOVERNANCE_READY',
       recommendedPosture: 'Ready for active case governance',
@@ -1016,12 +1034,13 @@ function buildTriageIntelligence(item: VisibleInstability): TriageIntelligence {
   }
 
   if (
-    item.case_status.includes('EVIDENCE_REQUIRED') ||
+    status.includes('EVIDENCE_REQUIRED') ||
     inheritedContext.evidenceLevel === 'NONE' ||
     inheritedContext.evidenceLevel === 'LIMITED'
   ) {
     return {
       gateStatus: 'Evidence gate',
+      eligibilityDetermination: 'ELIGIBILITY_WITHHELD_PENDING_EVIDENCE',
       maturity: 'EVIDENCE_ALIGNMENT_PENDING',
       confidence: 'LIMITED_ELIGIBILITY_CONFIDENCE',
       recommendedPosture: 'Do not accept until evidence improves',
@@ -1038,11 +1057,12 @@ function buildTriageIntelligence(item: VisibleInstability): TriageIntelligence {
   }
 
   if (
-    item.case_status.includes('COMMAND_ESCALATION') ||
+    status.includes('COMMAND_ESCALATION') ||
     inheritedContext.governanceVisibility === 'COMMAND_VISIBILITY'
   ) {
     return {
       gateStatus: 'Command visibility required',
+      eligibilityDetermination: 'ELIGIBILITY_HELD_FOR_COMMAND_REVIEW',
       maturity: 'EXECUTIVE_TRIAGE_VISIBILITY',
       confidence: 'HIGH_ATTENTION_REQUIRED',
       recommendedPosture: 'Elevate before ordinary case movement',
@@ -1057,17 +1077,20 @@ function buildTriageIntelligence(item: VisibleInstability): TriageIntelligence {
   }
 
   if (
-    item.case_status.includes('CLARITY_REQUIRED') ||
+    status.includes('CLARITY_REQUIRED') ||
     inheritedContext.ownershipState === 'UNCLEAR' ||
     inheritedContext.ownershipState === 'MISSING' ||
     inheritedContext.ownershipState === 'CONTESTED'
   ) {
     return {
       gateStatus: 'Clarity gate',
+      eligibilityDetermination:
+        'ELIGIBILITY_WITHHELD_PENDING_OWNERSHIP_OR_SCOPE_CLARITY',
       maturity: 'CLARITY_ALIGNMENT_PENDING',
       confidence: 'VARIABLE_ELIGIBILITY_CONFIDENCE',
       recommendedPosture: 'Hold until ownership, scope, or context is clearer',
-      evidenceMeaning: 'Evidence may exist but inherited context is not yet actionable',
+      evidenceMeaning:
+        'Evidence appears usable for triage, but ownership or scope clarity is still required before acceptance.',
       ownershipMeaning: 'Inherited ownership is not clear enough',
       riskMeaning: 'Risk of misrouting if accepted too early',
       nextMovement: 'Clarify ownership, scope, or institutional context',
@@ -1077,9 +1100,10 @@ function buildTriageIntelligence(item: VisibleInstability): TriageIntelligence {
     }
   }
 
-  if (item.case_status.includes('CLOSED_NO_CGI_ACTION')) {
+  if (status.includes('CLOSED_NO_CGI_ACTION')) {
     return {
       gateStatus: 'Closed at triage',
+      eligibilityDetermination: 'NOT_ELIGIBLE_FOR_ACTIVE_CGI_CASE_GOVERNANCE',
       maturity: 'NO_ACTIVE_CGI_GOVERNANCE_REQUIRED',
       confidence: 'CLOSURE_CONFIDENCE_PRESERVED',
       recommendedPosture: 'No active CGI case required',
@@ -1096,6 +1120,8 @@ function buildTriageIntelligence(item: VisibleInstability): TriageIntelligence {
   if (item.safeguarding_flag || item.severity_level === 'CRITICAL') {
     return {
       gateStatus: 'Elevated triage visibility',
+      eligibilityDetermination:
+        'PROVISIONALLY_ELIGIBLE_REQUIRES_EXECUTIVE_VISIBILITY',
       maturity: 'ELEVATED_ELIGIBILITY_REVIEW',
       confidence: 'EXECUTIVE_VISIBILITY_RECOMMENDED',
       recommendedPosture: 'Executive visibility recommended',
@@ -1112,6 +1138,7 @@ function buildTriageIntelligence(item: VisibleInstability): TriageIntelligence {
   if (item.severity_level === 'HIGH') {
     return {
       gateStatus: 'High-pressure triage',
+      eligibilityDetermination: 'PROVISIONALLY_ELIGIBLE_PENDING_TRIAGE_DECISION',
       maturity: 'HIGH_PRESSURE_ELIGIBILITY_REVIEW',
       confidence: 'GOVERNANCE_LIKELY_IF_EVIDENCE_SUPPORTS',
       recommendedPosture: 'Likely accept or escalate depending on evidence',
@@ -1127,6 +1154,7 @@ function buildTriageIntelligence(item: VisibleInstability): TriageIntelligence {
 
   return {
     gateStatus: 'Pending triage judgment',
+    eligibilityDetermination: 'ELIGIBILITY_NOT_YET_DETERMINED',
     maturity: 'ELIGIBILITY_REVIEW_PENDING',
     confidence: 'ELIGIBILITY_CONFIDENCE_PENDING',
     recommendedPosture: 'Review for governance eligibility',
