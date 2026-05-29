@@ -85,21 +85,23 @@ type OutcomeRecord = {
   created_at?: string | null
 }
 
+type InheritedVerification = {
+  verificationResult: string
+  verificationCredibility: string
+  verificationTrajectory: string
+  recurrenceSignal: string
+  recoveryReadiness: string
+  continuityOutlook: string
+  stabilizationConfidence: string
+  survivabilitySignal: string
+  executiveMeaning: string
+}
+
 type RecoveryEligibleCase = {
   caseItem: StabilityCase
   latestVerificationOutcome?: OutcomeRecord
   latestRecoveryReview?: OutcomeRecord
-  inheritedVerification: {
-    verificationResult: string
-    verificationCredibility: string
-    verificationTrajectory: string
-    recurrenceSignal: string
-    recoveryReadiness: string
-    continuityOutlook: string
-    stabilizationConfidence: string
-    survivabilitySignal: string
-    executiveMeaning: string
-  }
+  inheritedVerification: InheritedVerification
 }
 
 const RECOVERY_ELIGIBLE_CASE_STATUSES = [
@@ -210,8 +212,10 @@ export default function RecoveryPage() {
           (outcome) => outcome.case_id === caseItem.id,
         )
 
-        const latestVerificationOutcome =
-          findLatestVerificationOutcome(caseOutcomes, caseItem)
+        const latestVerificationOutcome = findLatestVerificationOutcome(
+          caseOutcomes,
+          caseItem,
+        )
 
         const latestRecoveryReview = findLatestRecoveryReview(caseOutcomes)
 
@@ -243,7 +247,6 @@ export default function RecoveryPage() {
   )
 
   const activeCase = selectedCase || lastPreservedCase
-  const hasSelectedRecoveryCase = Boolean(selectedCase)
   const hasActiveRecoveryContext = Boolean(activeCase)
 
   const recoveryMaturity = useMemo(
@@ -788,12 +791,15 @@ function findLatestVerificationOutcome(
   caseItem?: StabilityCase,
 ) {
   const verificationOutcome = caseOutcomes.find((outcome) =>
-    isVerificationOutcome(outcome),
+    isPureVerificationOutcome(outcome),
   )
 
   if (verificationOutcome) return verificationOutcome
 
-  if (caseItem?.outcome_summary && isVerificationSummary(caseItem.outcome_summary)) {
+  if (
+    caseItem?.outcome_summary &&
+    isPureVerificationSummary(caseItem.outcome_summary)
+  ) {
     return {
       id: `${caseItem.id}-case-outcome-summary`,
       case_id: caseItem.id,
@@ -810,8 +816,28 @@ function findLatestRecoveryReview(caseOutcomes: OutcomeRecord[]) {
   return caseOutcomes.find((outcome) => isRecoveryReview(outcome))
 }
 
-function isVerificationOutcome(outcome: OutcomeRecord) {
-  return isVerificationSummary(outcome.outcome_summary || '')
+function isPureVerificationOutcome(outcome: OutcomeRecord) {
+  return isPureVerificationSummary(outcome.outcome_summary || '')
+}
+
+function isPureVerificationSummary(summary: string) {
+  if (!summary) return false
+
+  if (
+    summary.includes('DURABILITY RESULT') ||
+    summary.includes('RECOVERY TRAJECTORY') ||
+    summary.includes('REBURN SIGNAL') ||
+    summary.includes('RECOVERY MATURITY') ||
+    summary.includes('RECOVERY CONFIDENCE')
+  ) {
+    return false
+  }
+
+  return (
+    hasExactLabel(summary, 'VERIFICATION RESULT') &&
+    hasExactLabel(summary, 'VERIFICATION CREDIBILITY') &&
+    hasExactLabel(summary, 'RECOVERY READINESS')
+  )
 }
 
 function isRecoveryReview(outcome: OutcomeRecord) {
@@ -821,65 +847,71 @@ function isRecoveryReview(outcome: OutcomeRecord) {
     summary.includes('DURABILITY RESULT') ||
     summary.includes('RECOVERY TRAJECTORY') ||
     summary.includes('REBURN SIGNAL') ||
-    summary.includes('RECOVERY MATURITY')
-  )
-}
-
-function isVerificationSummary(summary: string) {
-  if (!summary) return false
-
-  return (
-    summary.includes('VERIFICATION RESULT') &&
-    summary.includes('VERIFICATION CREDIBILITY') &&
-    summary.includes('RECOVERY READINESS')
+    summary.includes('RECOVERY MATURITY') ||
+    summary.includes('RECOVERY CONFIDENCE')
   )
 }
 
 function buildInheritedVerification(
   outcome?: OutcomeRecord,
   caseItem?: StabilityCase,
-) {
+): InheritedVerification {
   const summary = outcome?.outcome_summary || ''
+  const caseSummary =
+    caseItem?.outcome_summary && isPureVerificationSummary(caseItem.outcome_summary)
+      ? caseItem.outcome_summary
+      : ''
 
   return {
     verificationResult:
       extractField(summary, 'VERIFICATION RESULT') ||
       outcome?.outcome_status ||
-      extractField(caseItem?.outcome_summary || '', 'VERIFICATION RESULT') ||
+      extractField(caseSummary, 'VERIFICATION RESULT') ||
       'Verification evidence pending',
     verificationCredibility:
       extractField(summary, 'VERIFICATION CREDIBILITY') ||
-      extractField(caseItem?.outcome_summary || '', 'VERIFICATION CREDIBILITY') ||
+      extractField(caseSummary, 'VERIFICATION CREDIBILITY') ||
       'Verification credibility pending',
     verificationTrajectory:
       extractField(summary, 'VERIFICATION TRAJECTORY') ||
-      extractField(caseItem?.outcome_summary || '', 'VERIFICATION TRAJECTORY') ||
+      extractField(caseSummary, 'VERIFICATION TRAJECTORY') ||
       'Verification trajectory pending',
     recurrenceSignal:
       extractField(summary, 'RECURRENCE SIGNAL') ||
-      extractField(caseItem?.outcome_summary || '', 'RECURRENCE SIGNAL') ||
+      extractField(caseSummary, 'RECURRENCE SIGNAL') ||
       'Recurrence visibility pending',
     recoveryReadiness:
       extractField(summary, 'RECOVERY READINESS') ||
-      extractField(caseItem?.outcome_summary || '', 'RECOVERY READINESS') ||
+      extractField(caseSummary, 'RECOVERY READINESS') ||
       'Recovery readiness pending',
     continuityOutlook:
       extractField(summary, 'CONTINUITY OUTLOOK') ||
-      extractField(caseItem?.outcome_summary || '', 'CONTINUITY OUTLOOK') ||
+      extractField(caseSummary, 'CONTINUITY OUTLOOK') ||
       'Continuity outlook pending',
     stabilizationConfidence:
       extractField(summary, 'STABILIZATION CONFIDENCE') ||
-      extractField(caseItem?.outcome_summary || '', 'STABILIZATION CONFIDENCE') ||
+      extractField(caseSummary, 'STABILIZATION CONFIDENCE') ||
       'Stabilization confidence pending',
     survivabilitySignal:
       extractField(summary, 'SURVIVABILITY SIGNAL') ||
-      extractField(caseItem?.outcome_summary || '', 'SURVIVABILITY SIGNAL') ||
+      extractField(caseSummary, 'SURVIVABILITY SIGNAL') ||
       'Survivability signal pending',
     executiveMeaning:
       extractField(summary, 'EXECUTIVE MEANING') ||
-      extractField(caseItem?.outcome_summary || '', 'EXECUTIVE MEANING') ||
+      extractField(caseSummary, 'EXECUTIVE MEANING') ||
       'Executive outcome meaning pending',
   }
+}
+
+function hasExactLabel(summary: string, label: string) {
+  const lines = summary
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+
+  const target = label.trim().toLowerCase()
+
+  return lines.some((line) => line.toLowerCase() === target)
 }
 
 function extractField(summary: string, label: string) {
@@ -1071,7 +1103,7 @@ function deriveSurvivabilitySignal(
 function deriveExecutiveMeaning(
   maturity: RecoveryMaturity,
   durabilityWindow: string,
-  inherited?: RecoveryEligibleCase['inheritedVerification'],
+  inherited?: InheritedVerification,
 ) {
   const inheritedPrefix =
     inherited?.verificationResult === 'VERIFIED_STABILIZATION'
