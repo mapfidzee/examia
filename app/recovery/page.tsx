@@ -87,7 +87,8 @@ type OutcomeRecord = {
 
 type RecoveryEligibleCase = {
   caseItem: StabilityCase
-  latestOutcome?: OutcomeRecord
+  latestVerificationOutcome?: OutcomeRecord
+  latestRecoveryReview?: OutcomeRecord
   inheritedVerification: {
     verificationResult: string
     verificationCredibility: string
@@ -161,6 +162,8 @@ export default function RecoveryPage() {
   const [eligibleCases, setEligibleCases] = useState<RecoveryEligibleCase[]>([])
   const [outcomes, setOutcomes] = useState<OutcomeRecord[]>([])
   const [selectedCaseId, setSelectedCaseId] = useState('')
+  const [lastPreservedCaseId, setLastPreservedCaseId] = useState('')
+
   const [durabilityResult, setDurabilityResult] =
     useState<DurabilityResult>('STABILITY_UNDER_VARIANCE')
   const [recoveryTrajectory, setRecoveryTrajectory] =
@@ -203,17 +206,28 @@ export default function RecoveryPage() {
 
     const inheritedCases = caseRows
       .map((caseItem) => {
-        const latestOutcome = outcomeRows.find(
+        const caseOutcomes = outcomeRows.filter(
           (outcome) => outcome.case_id === caseItem.id,
         )
 
+        const latestVerificationOutcome =
+          findLatestVerificationOutcome(caseOutcomes, caseItem)
+
+        const latestRecoveryReview = findLatestRecoveryReview(caseOutcomes)
+
         return {
           caseItem,
-          latestOutcome,
-          inheritedVerification: buildInheritedVerification(latestOutcome),
+          latestVerificationOutcome,
+          latestRecoveryReview,
+          inheritedVerification: buildInheritedVerification(
+            latestVerificationOutcome,
+            caseItem,
+          ),
         }
       })
-      .filter((item) => isRecoveryEligible(item.caseItem, item.latestOutcome))
+      .filter((item) =>
+        isRecoveryEligible(item.caseItem, item.latestVerificationOutcome),
+      )
 
     setEligibleCases(inheritedCases)
   }
@@ -223,7 +237,14 @@ export default function RecoveryPage() {
     [eligibleCases, selectedCaseId],
   )
 
+  const lastPreservedCase = useMemo(
+    () => eligibleCases.find((item) => item.caseItem.id === lastPreservedCaseId),
+    [eligibleCases, lastPreservedCaseId],
+  )
+
+  const activeCase = selectedCase || lastPreservedCase
   const hasSelectedRecoveryCase = Boolean(selectedCase)
+  const hasActiveRecoveryContext = Boolean(activeCase)
 
   const recoveryMaturity = useMemo(
     () =>
@@ -271,58 +292,59 @@ export default function RecoveryPage() {
   const executiveMeaning = deriveExecutiveMeaning(
     recoveryMaturity,
     durabilityWindow,
+    activeCase?.inheritedVerification,
   )
 
   const recoveryPressure = deriveRecoveryPressure(commandPosture)
   const memoryMeaning = deriveMemoryMeaning(memoryImpact)
 
-  const displayedDurabilityResult = hasSelectedRecoveryCase
+  const inheritedSummary = activeCase
+    ? activeCase.inheritedVerification
+    : buildInheritedVerification(undefined)
+
+  const displayedDurabilityResult = hasActiveRecoveryContext
     ? durabilityResult
     : 'Durability result pending recovery-eligible case selection'
 
-  const displayedRecoveryTrajectory = hasSelectedRecoveryCase
+  const displayedRecoveryTrajectory = hasActiveRecoveryContext
     ? recoveryTrajectory
     : 'Recovery trajectory pending recovery-eligible case selection'
 
-  const displayedReburnSignal = hasSelectedRecoveryCase
+  const displayedReburnSignal = hasActiveRecoveryContext
     ? reburnSignal
     : 'Reburn interpretation pending recovery-eligible case selection'
 
-  const displayedRecoveryConfidence = hasSelectedRecoveryCase
+  const displayedRecoveryConfidence = hasActiveRecoveryContext
     ? recoveryConfidence
     : 'Recovery confidence pending recovery-eligible case selection'
 
-  const displayedMemoryImpact = hasSelectedRecoveryCase
+  const displayedMemoryImpact = hasActiveRecoveryContext
     ? memoryImpact
     : 'Memory impact pending recovery-eligible case selection'
 
-  const displayedRecoveryMaturity = hasSelectedRecoveryCase
+  const displayedRecoveryMaturity = hasActiveRecoveryContext
     ? recoveryMaturity
     : 'RECOVERY_MATURITY_PENDING'
 
-  const displayedCommandPosture = hasSelectedRecoveryCase
+  const displayedCommandPosture = hasActiveRecoveryContext
     ? commandPosture
     : 'PENDING_RECOVERY_SELECTION'
 
-  const displayedSurvivabilitySignal = hasSelectedRecoveryCase
+  const displayedSurvivabilitySignal = hasActiveRecoveryContext
     ? survivabilitySignal
     : 'SURVIVABILITY_INTERPRETATION_PENDING'
 
-  const displayedExecutiveMeaning = hasSelectedRecoveryCase
+  const displayedExecutiveMeaning = hasActiveRecoveryContext
     ? executiveMeaning
     : 'Executive recovery meaning will activate after a recovery-eligible case is selected.'
 
-  const displayedRecoveryPressure = hasSelectedRecoveryCase
+  const displayedRecoveryPressure = hasActiveRecoveryContext
     ? recoveryPressure
     : 'Recovery pressure interpretation will activate after inherited outcome evidence is selected for durability review.'
 
-  const displayedMemoryMeaning = hasSelectedRecoveryCase
+  const displayedMemoryMeaning = hasActiveRecoveryContext
     ? memoryMeaning
     : 'Structural memory interpretation will activate after recovery durability review begins.'
-
-  const inheritedSummary = selectedCase
-    ? selectedCase.inheritedVerification
-    : buildInheritedVerification(undefined)
 
   const continuityProfiles = buildRecoveryContinuityProfiles({
     eligibleCases,
@@ -341,7 +363,12 @@ export default function RecoveryPage() {
     ['RECOVERY TRAJECTORY', displayedRecoveryTrajectory],
     ['REBURN SIGNAL', displayedReburnSignal],
     ['RECOVERY CONFIDENCE', displayedRecoveryConfidence],
-    ['DURABILITY WINDOW', hasSelectedRecoveryCase ? durabilityWindow : 'Durability window pending recovery-eligible case selection'],
+    [
+      'DURABILITY WINDOW',
+      hasActiveRecoveryContext
+        ? durabilityWindow
+        : 'Durability window pending recovery-eligible case selection',
+    ],
     ['MEMORY IMPACT', displayedMemoryImpact],
     ['RECOVERY MATURITY', displayedRecoveryMaturity],
     ['COMMAND POSTURE', displayedCommandPosture],
@@ -351,28 +378,29 @@ export default function RecoveryPage() {
     ['MEMORY MEANING', displayedMemoryMeaning],
     [
       'NEXT LIFECYCLE STATE',
-      selectedCase
-        ? 'Recovery durability observation continues under proportional continuity governance.'
+      activeCase
+        ? deriveNextRecoveryState(durabilityResult)
         : 'Awaiting recovery durability review assignment.',
     ],
     [
       'CASE SIGNAL',
-      selectedCase?.caseItem.beneficiary_name ??
+      activeCase?.caseItem.beneficiary_name ??
         'Executive synthesis will activate after recovery-eligible case selection.',
     ],
     [
       'STABILITY DOMAIN',
-      selectedCase?.caseItem.support_domain ??
+      activeCase?.caseItem.support_domain ??
         'Continuity domain visibility pending recovery-eligible case assignment.',
     ],
     [
       'CURRENT CONTINUITY STATUS',
-      selectedCase?.caseItem.case_status ??
+      activeCase?.caseItem.case_status ??
         'Recovery continuity posture pending inherited outcome selection.',
     ],
     [
       'RECOVERY INTERPRETATION',
       interpretation.trim() ||
+        getLatestRecoveryInterpretation(activeCase?.latestRecoveryReview) ||
         'No additional operational recovery interpretation entered.',
     ],
   ]
@@ -417,13 +445,7 @@ export default function RecoveryPage() {
       return
     }
 
-    const nextStatus =
-      durabilityResult === 'DURABLE_RECOVERY_CONFIRMED'
-        ? 'STABILIZED'
-        : durabilityResult === 'RECOVERY_COLLAPSE' ||
-            durabilityResult === 'REBURN_DETECTED'
-          ? 'REOPENED'
-          : 'RECOVERY_MONITORING'
+    const nextStatus = deriveCaseStatusAfterRecovery(durabilityResult)
 
     const { error: caseError } = await supabase
       .from('beneficiary_cases')
@@ -440,11 +462,14 @@ export default function RecoveryPage() {
       return
     }
 
+    const preservedCaseId = selectedCase.caseItem.id
+
     setMessage(
       'Recovery durability review preserved. Outcome inheritance, durability posture, memory meaning, and lifecycle movement remain visible.',
     )
 
     setSelectedCaseId('')
+    setLastPreservedCaseId(preservedCaseId)
     setInterpretation('')
     setLoading(false)
 
@@ -512,11 +537,27 @@ export default function RecoveryPage() {
             Outcome Inheritance Intelligence
           </h3>
           <p className="mt-3 text-sm leading-6 text-neutral-300">
-            {selectedCase
-              ? 'This recovery review is inheriting verification credibility, recurrence posture, recovery readiness, and continuity outlook from the latest preserved outcome evidence.'
+            {activeCase
+              ? 'This recovery review is inheriting verification credibility, recurrence posture, recovery readiness, and continuity outlook from the latest preserved outcome verification evidence.'
               : 'Select a recovery-eligible case to activate inherited verification context from /outcomes.'}
           </p>
         </div>
+
+        {activeCase?.latestRecoveryReview && (
+          <section className="mt-6 rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-6">
+            <h3 className="text-lg font-semibold text-emerald-100">
+              Latest Preserved Recovery Durability Evidence
+            </h3>
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              <Info label="Durability Result" value={extractField(activeCase.latestRecoveryReview.outcome_summary || '', 'DURABILITY RESULT') || 'Not recorded'} />
+              <Info label="Recovery Trajectory" value={extractField(activeCase.latestRecoveryReview.outcome_summary || '', 'RECOVERY TRAJECTORY') || 'Not recorded'} />
+              <Info label="Reburn Signal" value={extractField(activeCase.latestRecoveryReview.outcome_summary || '', 'REBURN SIGNAL') || 'Not recorded'} />
+              <Info label="Recovery Confidence" value={extractField(activeCase.latestRecoveryReview.outcome_summary || '', 'RECOVERY CONFIDENCE') || 'Not recorded'} />
+              <Info label="Durability Window" value={extractField(activeCase.latestRecoveryReview.outcome_summary || '', 'DURABILITY WINDOW') || 'Not recorded'} />
+              <Info label="Memory Impact" value={extractField(activeCase.latestRecoveryReview.outcome_summary || '', 'MEMORY IMPACT') || 'Not recorded'} />
+            </div>
+          </section>
+        )}
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_1.1fr]">
           <section className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
@@ -550,9 +591,8 @@ export default function RecoveryPage() {
                 <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
                   <p className="font-semibold">Inherited outcome context</p>
                   <p className="mt-2">
-                    {selectedCase.latestOutcome?.outcome_status ||
-                      'Outcome status not explicitly recorded'}{' '}
-                    • {selectedCase.inheritedVerification.recoveryReadiness} •{' '}
+                    {selectedCase.inheritedVerification.verificationResult} •{' '}
+                    {selectedCase.inheritedVerification.recoveryReadiness} •{' '}
                     {selectedCase.inheritedVerification.recurrenceSignal}
                   </p>
                 </div>
@@ -669,7 +709,9 @@ export default function RecoveryPage() {
                   <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                     {label}
                   </p>
-                  <p className="text-sm leading-6 text-neutral-100">{value}</p>
+                  <p className="break-words text-sm leading-6 text-neutral-100">
+                    {value}
+                  </p>
                 </div>
               ))}
             </div>
@@ -714,48 +756,128 @@ export default function RecoveryPage() {
   )
 }
 
-function isRecoveryEligible(caseItem: StabilityCase, latestOutcome?: OutcomeRecord) {
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-2xl border border-neutral-800 bg-neutral-950 p-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+        {label}
+      </p>
+      <p className="mt-2 break-words text-sm leading-6 text-neutral-100">
+        {value}
+      </p>
+    </div>
+  )
+}
+
+function isRecoveryEligible(
+  caseItem: StabilityCase,
+  latestVerificationOutcome?: OutcomeRecord,
+) {
   if (caseItem.case_status === 'RECOVERY_MONITORING') return true
 
-  const summary = latestOutcome?.outcome_summary || caseItem.outcome_summary || ''
-  const status = latestOutcome?.outcome_status || ''
+  const summary = latestVerificationOutcome?.outcome_summary || caseItem.outcome_summary || ''
+  const status = latestVerificationOutcome?.outcome_status || ''
 
   return RECOVERY_READY_OUTCOME_MARKERS.some(
     (marker) => summary.includes(marker) || status.includes(marker),
   )
 }
 
-function buildInheritedVerification(outcome?: OutcomeRecord) {
+function findLatestVerificationOutcome(
+  caseOutcomes: OutcomeRecord[],
+  caseItem?: StabilityCase,
+) {
+  const verificationOutcome = caseOutcomes.find((outcome) =>
+    isVerificationOutcome(outcome),
+  )
+
+  if (verificationOutcome) return verificationOutcome
+
+  if (caseItem?.outcome_summary && isVerificationSummary(caseItem.outcome_summary)) {
+    return {
+      id: `${caseItem.id}-case-outcome-summary`,
+      case_id: caseItem.id,
+      outcome_status: extractField(caseItem.outcome_summary, 'VERIFICATION RESULT'),
+      outcome_summary: caseItem.outcome_summary,
+      created_at: caseItem.updated_at || caseItem.created_at,
+    }
+  }
+
+  return undefined
+}
+
+function findLatestRecoveryReview(caseOutcomes: OutcomeRecord[]) {
+  return caseOutcomes.find((outcome) => isRecoveryReview(outcome))
+}
+
+function isVerificationOutcome(outcome: OutcomeRecord) {
+  return isVerificationSummary(outcome.outcome_summary || '')
+}
+
+function isRecoveryReview(outcome: OutcomeRecord) {
+  const summary = outcome.outcome_summary || ''
+
+  return (
+    summary.includes('DURABILITY RESULT') ||
+    summary.includes('RECOVERY TRAJECTORY') ||
+    summary.includes('REBURN SIGNAL') ||
+    summary.includes('RECOVERY MATURITY')
+  )
+}
+
+function isVerificationSummary(summary: string) {
+  if (!summary) return false
+
+  return (
+    summary.includes('VERIFICATION RESULT') &&
+    summary.includes('VERIFICATION CREDIBILITY') &&
+    summary.includes('RECOVERY READINESS')
+  )
+}
+
+function buildInheritedVerification(
+  outcome?: OutcomeRecord,
+  caseItem?: StabilityCase,
+) {
   const summary = outcome?.outcome_summary || ''
 
   return {
     verificationResult:
       extractField(summary, 'VERIFICATION RESULT') ||
       outcome?.outcome_status ||
+      extractField(caseItem?.outcome_summary || '', 'VERIFICATION RESULT') ||
       'Verification evidence pending',
     verificationCredibility:
       extractField(summary, 'VERIFICATION CREDIBILITY') ||
+      extractField(caseItem?.outcome_summary || '', 'VERIFICATION CREDIBILITY') ||
       'Verification credibility pending',
     verificationTrajectory:
       extractField(summary, 'VERIFICATION TRAJECTORY') ||
+      extractField(caseItem?.outcome_summary || '', 'VERIFICATION TRAJECTORY') ||
       'Verification trajectory pending',
     recurrenceSignal:
       extractField(summary, 'RECURRENCE SIGNAL') ||
+      extractField(caseItem?.outcome_summary || '', 'RECURRENCE SIGNAL') ||
       'Recurrence visibility pending',
     recoveryReadiness:
       extractField(summary, 'RECOVERY READINESS') ||
+      extractField(caseItem?.outcome_summary || '', 'RECOVERY READINESS') ||
       'Recovery readiness pending',
     continuityOutlook:
       extractField(summary, 'CONTINUITY OUTLOOK') ||
+      extractField(caseItem?.outcome_summary || '', 'CONTINUITY OUTLOOK') ||
       'Continuity outlook pending',
     stabilizationConfidence:
       extractField(summary, 'STABILIZATION CONFIDENCE') ||
+      extractField(caseItem?.outcome_summary || '', 'STABILIZATION CONFIDENCE') ||
       'Stabilization confidence pending',
     survivabilitySignal:
       extractField(summary, 'SURVIVABILITY SIGNAL') ||
+      extractField(caseItem?.outcome_summary || '', 'SURVIVABILITY SIGNAL') ||
       'Survivability signal pending',
     executiveMeaning:
       extractField(summary, 'EXECUTIVE MEANING') ||
+      extractField(caseItem?.outcome_summary || '', 'EXECUTIVE MEANING') ||
       'Executive outcome meaning pending',
   }
 }
@@ -768,7 +890,8 @@ function extractField(summary: string, label: string) {
     .map((line) => line.trim())
     .filter(Boolean)
 
-  const index = lines.findIndex((line) => line === label)
+  const target = label.trim().toLowerCase()
+  const index = lines.findIndex((line) => line.toLowerCase() === target)
 
   if (index === -1) return ''
 
@@ -804,8 +927,10 @@ function buildRecoveryContinuityProfiles(input: {
     ]
   }
 
-  const recurrenceVisible = input.eligibleCases.filter((item) =>
-    item.inheritedVerification.recurrenceSignal.includes('RECURRENCE'),
+  const recurrenceVisible = input.eligibleCases.filter(
+    (item) =>
+      item.inheritedVerification.recurrenceSignal.includes('RECURRENCE') &&
+      item.inheritedVerification.recurrenceSignal !== 'NO_RECURRENCE_VISIBLE',
   ).length
 
   const recoveryReady = input.eligibleCases.filter((item) =>
@@ -946,16 +1071,22 @@ function deriveSurvivabilitySignal(
 function deriveExecutiveMeaning(
   maturity: RecoveryMaturity,
   durabilityWindow: string,
+  inherited?: RecoveryEligibleCase['inheritedVerification'],
 ) {
+  const inheritedPrefix =
+    inherited?.verificationResult === 'VERIFIED_STABILIZATION'
+      ? 'Verified stabilization is inherited from Outcomes. '
+      : ''
+
   const meanings: Record<RecoveryMaturity, string> = {
     EARLY_RECOVERY:
-      'Recovery evidence is still early. Durability observation should continue before confidence matures.',
-    VARIABLE_STABILITY: `Recovery is showing variable stability across the ${durabilityWindow} observation window. Current conditions support continued continuity observation without escalation.`,
-    HOLDING_STABLE: `Recovery is holding across the ${durabilityWindow} durability window while confidence continues to strengthen.`,
-    DURABILITY_BUILDING: `Recovery durability is building steadily across the ${durabilityWindow} observation window. Current continuity signals support measured confidence progression.`,
-    RECOVERY_MATURING: `Recovery maturity is strengthening across the ${durabilityWindow} durability window. No major deterioration signal is currently weakening continuity confidence.`,
-    STABLE_UNDER_OBSERVATION: `Recovery remains stable across the ${durabilityWindow} durability window under normal continuity observation conditions.`,
-    DURABLE_RECOVERY_ESTABLISHED: `Durable recovery credibility is established across the ${durabilityWindow} durability window. Continuity monitoring may remain calm and proportional.`,
+      `${inheritedPrefix}Recovery evidence is still early. Durability observation should continue before confidence matures.`,
+    VARIABLE_STABILITY: `${inheritedPrefix}Recovery is showing variable stability across the ${durabilityWindow} observation window. Stabilization remains verified, but durability is still under observation.`,
+    HOLDING_STABLE: `${inheritedPrefix}Recovery is holding across the ${durabilityWindow} durability window while confidence continues to strengthen.`,
+    DURABILITY_BUILDING: `${inheritedPrefix}Recovery durability is building steadily across the ${durabilityWindow} observation window. Current continuity signals support measured confidence progression.`,
+    RECOVERY_MATURING: `${inheritedPrefix}Recovery maturity is strengthening across the ${durabilityWindow} durability window. No major deterioration signal is currently weakening continuity confidence.`,
+    STABLE_UNDER_OBSERVATION: `${inheritedPrefix}Recovery remains stable across the ${durabilityWindow} durability window under normal continuity observation conditions.`,
+    DURABLE_RECOVERY_ESTABLISHED: `${inheritedPrefix}Durable recovery credibility is established across the ${durabilityWindow} durability window. Continuity monitoring may remain calm and proportional.`,
   }
 
   return meanings[maturity]
@@ -997,6 +1128,38 @@ function deriveMemoryMeaning(impact: MemoryImpact) {
   return meanings[impact]
 }
 
+function deriveNextRecoveryState(durabilityResult: DurabilityResult) {
+  if (durabilityResult === 'DURABLE_RECOVERY_CONFIRMED') {
+    return 'Durable recovery may be confirmed; trust restoration can begin under preserved structural memory.'
+  }
+
+  if (
+    durabilityResult === 'RECOVERY_COLLAPSE' ||
+    durabilityResult === 'REBURN_DETECTED'
+  ) {
+    return 'Recovery durability failed; case should re-enter active continuity governance.'
+  }
+
+  return 'Recovery durability observation continues under proportional continuity governance.'
+}
+
+function deriveCaseStatusAfterRecovery(durabilityResult: DurabilityResult) {
+  if (durabilityResult === 'DURABLE_RECOVERY_CONFIRMED') return 'STABILIZED'
+
+  if (
+    durabilityResult === 'RECOVERY_COLLAPSE' ||
+    durabilityResult === 'REBURN_DETECTED'
+  ) {
+    return 'REOPENED'
+  }
+
+  return 'RECOVERY_MONITORING'
+}
+
+function getLatestRecoveryInterpretation(outcome?: OutcomeRecord) {
+  return extractField(outcome?.outcome_summary || '', 'RECOVERY INTERPRETATION')
+}
+
 function buildRecoveryCaseLabel(item: RecoveryEligibleCase) {
   return `${item.caseItem.beneficiary_name} • ${item.caseItem.case_status}`
 }
@@ -1035,6 +1198,9 @@ ${input.selectedCase.inheritedVerification.recoveryReadiness}
 
 INHERITED CONTINUITY OUTLOOK
 ${input.selectedCase.inheritedVerification.continuityOutlook}
+
+INHERITED STABILIZATION CONFIDENCE
+${input.selectedCase.inheritedVerification.stabilizationConfidence}
 
 DURABILITY RESULT
 ${input.durabilityResult}
