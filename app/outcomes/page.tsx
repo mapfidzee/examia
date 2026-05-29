@@ -61,6 +61,7 @@ const OUTCOME_READY_STATUSES = [
   'STABILIZING',
   'ESCALATED',
   'RECOVERY_MONITORING',
+  'RECOVERY_MONITORING_ELIGIBLE',
   'FOLLOW_UP_REQUIRED',
   'CONTINUITY_RISK_ACTIVE',
   'STABILIZATION_OWNER_ROUTED',
@@ -159,12 +160,11 @@ function OutcomesContent() {
 
   const [verificationResult, setVerificationResult] = useState('')
   const [actionImpact, setActionImpact] = useState('')
-  const [verificationCredibility, setVerificationCredibility] = useState('BUILDING')
-  const [recurrenceSignal, setRecurrenceSignal] = useState('RECURRENCE_OBSERVATION')
-  const [recoveryReadiness, setRecoveryReadiness] = useState('NOT_READY_FOR_RECOVERY')
-  const [continuityOutlook, setContinuityOutlook] = useState('STABILITY_BUILDING')
-  const [verificationTrajectory, setVerificationTrajectory] =
-    useState('HOLDING_WITH_VARIANCE')
+  const [verificationCredibility, setVerificationCredibility] = useState('')
+  const [recurrenceSignal, setRecurrenceSignal] = useState('')
+  const [recoveryReadiness, setRecoveryReadiness] = useState('')
+  const [continuityOutlook, setContinuityOutlook] = useState('')
+  const [verificationTrajectory, setVerificationTrajectory] = useState('')
   const [verificationInterpretation, setVerificationInterpretation] = useState('')
 
   const [message, setMessage] = useState('')
@@ -187,7 +187,11 @@ function OutcomesContent() {
     if (interventionError) console.error(interventionError)
 
     const interventionCaseIds = Array.from(
-      new Set((interventionData || []).map((item: InterventionRecord) => item.case_id)),
+      new Set(
+        (interventionData || []).map(
+          (item: InterventionRecord) => item.case_id,
+        ),
+      ),
     )
 
     const directCasesQuery = supabase
@@ -288,7 +292,9 @@ function OutcomesContent() {
 
   const lastPreservedOutcome = useMemo(
     () =>
-      lastPreservedCase ? findLatestOutcome(lastPreservedCase.id, outcomes) : undefined,
+      lastPreservedCase
+        ? findLatestOutcome(lastPreservedCase.id, outcomes)
+        : undefined,
     [lastPreservedCase, outcomes],
   )
 
@@ -313,30 +319,46 @@ function OutcomesContent() {
   const displayActionImpact = actionImpact || hydratedOutcome.actionImpact || ''
 
   const displayVerificationCredibility =
-    verificationCredibility || hydratedOutcome.verificationCredibility || 'BUILDING'
+    verificationCredibility ||
+    hydratedOutcome.verificationCredibility ||
+    'Verification credibility pending'
 
   const displayVerificationTrajectory =
-    verificationTrajectory || hydratedOutcome.verificationTrajectory || 'HOLDING_WITH_VARIANCE'
+    verificationTrajectory ||
+    hydratedOutcome.verificationTrajectory ||
+    'Verification trajectory pending'
 
   const displayRecurrenceSignal =
-    recurrenceSignal || hydratedOutcome.recurrenceSignal || 'RECURRENCE_OBSERVATION'
+    recurrenceSignal || hydratedOutcome.recurrenceSignal || 'Recurrence signal pending'
 
   const displayRecoveryReadiness =
-    recoveryReadiness || hydratedOutcome.recoveryReadiness || 'NOT_READY_FOR_RECOVERY'
+    recoveryReadiness ||
+    hydratedOutcome.recoveryReadiness ||
+    'Recovery readiness pending'
 
   const displayContinuityOutlook =
-    continuityOutlook || hydratedOutcome.continuityOutlook || 'STABILITY_BUILDING'
+    continuityOutlook ||
+    hydratedOutcome.continuityOutlook ||
+    'Continuity outlook pending'
 
-  const mappedOutcomeStatus = mapVerificationToLifecycleStatus(displayVerificationResult)
+  const mappedOutcomeStatus = mapVerificationToLifecycleStatus({
+    verificationResult: displayVerificationResult,
+    recoveryReadiness: displayRecoveryReadiness,
+    recurrenceSignal: displayRecurrenceSignal,
+  })
 
   const lifecycleDecision = evaluateOutcomeLifecycle({
     outcomeStatus: mappedOutcomeStatus,
     continuityOutlook: displayContinuityOutlook,
   })
 
-  const hasVerificationEvidence = Boolean(
-    selectedCaseId ? displayVerificationResult : activeOutcome,
-  )
+  const resolvedNextLifecycleState = resolveOutcomeLifecycleState({
+    verificationResult: displayVerificationResult,
+    verificationCredibility: displayVerificationCredibility,
+    recurrenceSignal: displayRecurrenceSignal,
+    recoveryReadiness: displayRecoveryReadiness,
+    lifecycleNextStatus: lifecycleDecision.nextStatus,
+  })
 
   const continuityClimate = buildContinuityClimate({
     outcomes,
@@ -447,19 +469,19 @@ ACTION IMPACT
 ${actionImpact || 'Operational impact pending'}
 
 VERIFICATION CREDIBILITY
-${verificationCredibility}
+${verificationCredibility || 'Verification credibility pending'}
 
 VERIFICATION TRAJECTORY
-${verificationTrajectory}
+${verificationTrajectory || 'Verification trajectory pending'}
 
 RECURRENCE SIGNAL
-${recurrenceSignal}
+${recurrenceSignal || 'Recurrence signal pending'}
 
 RECOVERY READINESS
-${recoveryReadiness}
+${recoveryReadiness || 'Recovery readiness pending'}
 
 CONTINUITY OUTLOOK
-${continuityOutlook}
+${continuityOutlook || 'Continuity outlook pending'}
 
 COMMAND POSTURE
 ${commandPosture}
@@ -477,7 +499,7 @@ VERIFICATION PRESSURE
 ${verificationPressureMeaning}
 
 NEXT LIFECYCLE STATE
-${selectedCase ? lifecycleDecision.nextStatus : 'Continuity lifecycle advancement pending stabilization verification.'}
+${selectedCase ? resolvedNextLifecycleState : 'Continuity lifecycle advancement pending stabilization verification.'}
 
 CASE SIGNAL
 ${selectedCase?.beneficiary_name || 'Executive continuity interpretation will activate after stabilization verification evidence is preserved.'}
@@ -543,7 +565,7 @@ but durable recovery must be confirmed separately.
     const { error: updateError } = await supabase
       .from('beneficiary_cases')
       .update({
-        case_status: lifecycleDecision.nextStatus,
+        case_status: resolvedNextLifecycleState,
         outcome_summary: summary,
         updated_at: new Date().toISOString(),
       })
@@ -560,16 +582,16 @@ but durable recovery must be confirmed separately.
     setSelectedCaseId('')
     setVerificationResult('')
     setActionImpact('')
-    setVerificationCredibility('BUILDING')
-    setRecurrenceSignal('RECURRENCE_OBSERVATION')
-    setRecoveryReadiness('NOT_READY_FOR_RECOVERY')
-    setContinuityOutlook('STABILITY_BUILDING')
-    setVerificationTrajectory('HOLDING_WITH_VARIANCE')
+    setVerificationCredibility('')
+    setRecurrenceSignal('')
+    setRecoveryReadiness('')
+    setContinuityOutlook('')
+    setVerificationTrajectory('')
     setVerificationInterpretation('')
     setLastPreservedCaseId(preservedCaseId)
 
     setMessage(
-      'Stabilization verification preserved. Intervention evidence, verification credibility, recovery eligibility, survivability posture, and lifecycle movement remain operationally visible.',
+      'Stabilization verification preserved. Intervention evidence, verification credibility, recovery monitoring eligibility, survivability posture, and lifecycle movement remain operationally visible.',
     )
 
     setLoading(false)
@@ -624,7 +646,7 @@ but durable recovery must be confirmed separately.
     [
       'NEXT LIFECYCLE STATE',
       activeCase
-        ? lifecycleDecision.nextStatus
+        ? resolvedNextLifecycleState
         : 'Continuity lifecycle advancement pending stabilization verification.',
     ],
     [
@@ -1186,28 +1208,78 @@ function buildContinuityClimate({
   }
 }
 
-function mapVerificationToLifecycleStatus(verificationResult: string) {
-  if (verificationResult === 'VERIFIED_STABILIZATION') return 'STABILIZED'
+function mapVerificationToLifecycleStatus(input: {
+  verificationResult: string
+  recoveryReadiness: string
+  recurrenceSignal: string
+}) {
+  if (
+    input.verificationResult === 'VERIFIED_STABILIZATION' &&
+    input.recurrenceSignal === 'NO_RECURRENCE_VISIBLE' &&
+    (input.recoveryReadiness === 'RECOVERY_MONITORING_RECOMMENDED' ||
+      input.recoveryReadiness === 'RECOVERY_WATCH_ELIGIBLE' ||
+      input.recoveryReadiness === 'RECOVERY_TRANSITION_READY')
+  ) {
+    return 'RECOVERY_MONITORING'
+  }
+
+  if (input.verificationResult === 'VERIFIED_STABILIZATION') {
+    return 'RECOVERY_MONITORING_ELIGIBLE'
+  }
 
   if (
-    verificationResult === 'STABILITY_BUILDING' ||
-    verificationResult === 'TRANSITIONAL_STABILITY'
+    input.verificationResult === 'STABILITY_BUILDING' ||
+    input.verificationResult === 'TRANSITIONAL_STABILITY'
   ) {
     return 'PARTIAL_STABILIZATION'
   }
 
-  if (verificationResult === 'PARTIAL_VERIFICATION') return 'FOLLOW_UP_REQUIRED'
+  if (input.verificationResult === 'PARTIAL_VERIFICATION') {
+    return 'FOLLOW_UP_REQUIRED'
+  }
 
   if (
-    verificationResult === 'RECURRENCE_DETECTED' ||
-    verificationResult === 'ACTION_INEFFECTIVE'
+    input.verificationResult === 'RECURRENCE_DETECTED' ||
+    input.verificationResult === 'ACTION_INEFFECTIVE'
   ) {
     return 'CONTINUITY_RISK_ACTIVE'
   }
 
-  if (verificationResult === 'ESCALATION_REQUIRED') return 'ESCALATION_REQUIRED'
+  if (input.verificationResult === 'ESCALATION_REQUIRED') {
+    return 'ESCALATION_REQUIRED'
+  }
 
   return 'PARTIAL_STABILIZATION'
+}
+
+function resolveOutcomeLifecycleState(input: {
+  verificationResult: string
+  verificationCredibility: string
+  recurrenceSignal: string
+  recoveryReadiness: string
+  lifecycleNextStatus: string
+}) {
+  if (
+    input.verificationResult === 'VERIFIED_STABILIZATION' &&
+    input.verificationCredibility === 'STRONG' &&
+    input.recurrenceSignal === 'NO_RECURRENCE_VISIBLE' &&
+    input.recoveryReadiness === 'RECOVERY_MONITORING_RECOMMENDED'
+  ) {
+    return 'RECOVERY_MONITORING'
+  }
+
+  if (
+    input.verificationResult === 'VERIFIED_STABILIZATION' &&
+    input.lifecycleNextStatus === 'STABILIZED'
+  ) {
+    return 'RECOVERY_MONITORING_ELIGIBLE'
+  }
+
+  if (input.lifecycleNextStatus === 'STABILIZED') {
+    return 'RECOVERY_MONITORING_ELIGIBLE'
+  }
+
+  return input.lifecycleNextStatus
 }
 
 function buildCommandPosture(input: {
@@ -1249,6 +1321,14 @@ function buildCommandPosture(input: {
 
   if (input.verificationTrajectory === 'STABILITY_BUILDING') {
     return 'STABILITY_HOLDING'
+  }
+
+  if (
+    input.verificationResult === 'VERIFIED_STABILIZATION' &&
+    input.verificationCredibility === 'STRONG' &&
+    input.recurrenceSignal === 'NO_RECURRENCE_VISIBLE'
+  ) {
+    return 'RECOVERY_MONITORING_VISIBILITY'
   }
 
   if (input.commandVisibility) return 'COMMAND_VISIBILITY_ACTIVE'
@@ -1362,6 +1442,10 @@ function buildExecutiveVerificationMeaning(input: {
 
   if (input.commandPosture === 'CONTINUITY_OBSERVATION') {
     return 'Continuity stabilization is holding with manageable variability under current verification observation conditions.'
+  }
+
+  if (input.commandPosture === 'RECOVERY_MONITORING_VISIBILITY') {
+    return 'Verification evidence supports recovery monitoring visibility while preserving the boundary that durable recovery must still be confirmed separately.'
   }
 
   if (
