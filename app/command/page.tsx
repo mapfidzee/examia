@@ -1,36 +1,87 @@
 'use client'
 
+import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import InfrastructureNav from '@/components/InfrastructureNav'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
-import CGICommandContinuityPanel from '@/components/cgi-command/CGICommandContinuityPanel'
-import { buildCGIExecutiveMemoryBoard } from '@/lib/cgiExecutiveMemoryBoardEngine'
-import {
-  formatCGIExecutivePosture,
-  formatCGIEvidenceLanguage,
-  formatCGISurvivabilityLanguage,
-  formatCGIGovernanceSafeLanguage,
-} from '@/lib/cgiExecutivePostureFormatter'
+import { supabase } from '../../lib/supabase'
 
-type MemoryBoardView = {
-  boardPosture: string
-  persistenceMaturity: string
-  executiveRisk: string
-  currentReading: string
-  executiveMeaning: string
-  evidenceGap: string
-  recoveryCredibility: string
-  copyReadyExecutiveMemoryBrief: string
+type CommandCase = {
+  id: string
+  beneficiary_name: string
+  support_domain: string
+  case_status: string
+  severity_level: string
+  region: string | null
+  beneficiary_level: string | null
+  institution_name: string | null
+  safeguarding_flag: boolean
+  intervention_summary: string | null
+  outcome_summary: string | null
+  created_at?: string | null
 }
 
+const COMMAND_VISIBLE_STATUSES = [
+  'TRIAGE_COMMAND_ESCALATION',
+  'ACCEPTED_FOR_GOVERNANCE',
+  'STABILIZATION_OWNER_ROUTED',
+  'STABILIZATION_OWNER_ROUTED_RECURRENCE',
+  'GOVERNANCE_REVIEW_REQUIRED',
+  'GOVERNANCE_REVIEW_REQUIRED_RECURRENCE',
+  'EVIDENCE_REQUIRED_BEFORE_ROUTING',
+  'OWNERSHIP_CLARITY_REQUIRED',
+  'ROUTING_STALLED',
+  'ACTION_ACTIVE',
+  'INTERVENTION_ACTIVE',
+  'INTERVENTION_RECORDED',
+  'PARTIAL_STABILIZATION',
+  'FOLLOW_UP_REQUIRED',
+  'IMPROVING',
+  'RECOVERY_MONITORING',
+  'ESCALATED',
+  'REOPENED',
+]
+
+const PRESSURE_TYPES = [
+  'FLOW',
+  'COVERAGE',
+  'COORDINATION',
+  'OWNERSHIP',
+  'EVIDENCE',
+  'RECOVERY',
+  'RELIABILITY',
+]
+
 export default function CommandPage() {
-  const commandPosture = formatCGIExecutivePosture('ELEVATED')
-  const evidenceLanguage = formatCGIEvidenceLanguage(false, 'ELEVATED')
-  const survivabilityLanguage = formatCGISurvivabilityLanguage('ELEVATED')
-  const governanceSafeLanguage = formatCGIGovernanceSafeLanguage()
-  const memoryBoard = buildMemoryBoardView()
+  const [cases, setCases] = useState<CommandCase[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadCommandCases()
+  }, [])
+
+  async function loadCommandCases() {
+    const { data, error } = await supabase
+      .from('beneficiary_cases')
+      .select('*')
+      .in('support_domain', PRESSURE_TYPES)
+      .in('case_status', COMMAND_VISIBLE_STATUSES)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error(error)
+      setCases([])
+      setLoading(false)
+      return
+    }
+
+    setCases(data || [])
+    setLoading(false)
+  }
+
+  const command = useMemo(() => buildCommandReading(cases), [cases])
 
   return (
     <GovernanceRouteGuard
@@ -60,35 +111,28 @@ export default function CommandPage() {
             <section style={styles.commandPostureCard}>
               <p style={styles.sectionKicker}>Command Posture</p>
 
-              <h2 style={styles.commandPostureTitle}>
-                {commandPosture.label}
-              </h2>
+              <h2 style={styles.commandPostureTitle}>{command.posture}</h2>
 
-              <p style={styles.commandHeadline}>
-                {commandPosture.headline}
-              </p>
+              <p style={styles.commandHeadline}>{command.headline}</p>
 
-              <p style={styles.bodyText}>{commandPosture.description}</p>
+              <p style={styles.bodyText}>{command.description}</p>
 
               <div style={styles.commandGrid}>
-                <CommandSignal
-                  title="Command Action"
-                  body={commandPosture.actionLanguage}
-                />
+                <CommandSignal title="Command Action" body={command.action} />
 
                 <CommandSignal
                   title="Evidence Requirement"
-                  body={evidenceLanguage}
+                  body={command.evidenceRequirement}
                 />
 
                 <CommandSignal
                   title="Survivability Protection"
-                  body={survivabilityLanguage}
+                  body={command.survivability}
                 />
 
                 <CommandSignal
                   title="Governance-Safe Meaning"
-                  body={governanceSafeLanguage}
+                  body="This interpretation does not judge individuals or assign blame. It reads continuity pressure, recurrence, evidence, recovery, and survivability as institutional conditions."
                 />
               </div>
             </section>
@@ -98,57 +142,95 @@ export default function CommandPage() {
                 <p style={styles.sectionKicker}>Command Memory Reading</p>
 
                 <h2 style={styles.cardTitle}>
-                  Command decisions now carry continuity memory.
+                  Command decisions must be traceable to active lifecycle
+                  evidence.
                 </h2>
 
                 <p style={styles.bodyText}>
-                  The command center should not treat pressure as a single
-                  event. It must read recurrence, persistence, evidence gaps,
-                  and recovery credibility before closing command attention.
+                  Command must not manufacture executive threat when no active
+                  governed instability exists. It should read only visible
+                  lifecycle records and show attribution when pressure is active.
                 </p>
               </div>
 
               <div style={styles.memoryGrid}>
-                <MemoryMetric
-                  label="Memory Posture"
-                  value={memoryBoard.boardPosture}
-                />
-
-                <MemoryMetric
-                  label="Persistence"
-                  value={memoryBoard.persistenceMaturity}
-                />
-
-                <MemoryMetric
-                  label="Command Risk"
-                  value={memoryBoard.executiveRisk}
-                />
+                <MemoryMetric label="Memory Posture" value={command.memory} />
+                <MemoryMetric label="Persistence" value={command.persistence} />
+                <MemoryMetric label="Command Risk" value={command.risk} />
               </div>
             </section>
 
             <section style={styles.grid}>
               <CommandPrinciple
                 title="What Is Happening?"
-                body={memoryBoard.currentReading}
+                body={command.currentReading}
               />
 
               <CommandPrinciple
                 title="Why It Matters"
-                body={memoryBoard.executiveMeaning}
+                body={command.executiveMeaning}
               />
 
               <CommandPrinciple
                 title="Evidence Gap"
-                body={memoryBoard.evidenceGap}
+                body={command.evidenceGap}
               />
 
               <CommandPrinciple
                 title="Recovery Credibility"
-                body={memoryBoard.recoveryCredibility}
+                body={command.recoveryCredibility}
               />
             </section>
 
-            <CGICommandContinuityPanel />
+            <section style={styles.card}>
+              <p style={styles.sectionKicker}>Command Case Attribution</p>
+
+              <h2 style={styles.cardTitle}>
+                {loading
+                  ? 'Loading active command evidence...'
+                  : command.attributionTitle}
+              </h2>
+
+              <p style={styles.bodyText}>{command.attributionMeaning}</p>
+
+              <div style={styles.caseList}>
+                {!loading &&
+                  cases.map((item) => (
+                    <article key={item.id} style={styles.caseCard}>
+                      <p style={styles.caseIdentity}>
+                        {item.beneficiary_name}
+                      </p>
+
+                      <div style={styles.caseMetaGrid}>
+                        <MemoryMetric
+                          label="Pressure"
+                          value={item.support_domain}
+                        />
+                        <MemoryMetric
+                          label="Status"
+                          value={item.case_status}
+                        />
+                        <MemoryMetric
+                          label="Severity"
+                          value={item.severity_level}
+                        />
+                        <MemoryMetric
+                          label="Area"
+                          value={item.region || 'Not recorded'}
+                        />
+                      </div>
+                    </article>
+                  ))}
+
+                {!loading && cases.length === 0 && (
+                  <div style={styles.emptyState}>
+                    No active governed instability is currently visible to
+                    Command. Create a new request or preserve a triage command
+                    escalation to activate command attribution.
+                  </div>
+                )}
+              </div>
+            </section>
 
             <section style={styles.card}>
               <p style={styles.sectionKicker}>Command Doctrine</p>
@@ -161,7 +243,9 @@ export default function CommandPage() {
                 The command center must help leadership understand whether
                 visible instability is being contained, whether recovery is
                 holding, and whether the institution can still stabilize itself
-                reliably under pressure.
+                reliably under pressure. When no active lifecycle evidence
+                exists, Command must remain calm and empty rather than
+                preserving old test interpretations.
               </p>
             </section>
 
@@ -173,9 +257,7 @@ export default function CommandPage() {
                 recovery follow-through.
               </h2>
 
-              <pre style={styles.summaryBox}>
-                {memoryBoard.copyReadyExecutiveMemoryBrief}
-              </pre>
+              <pre style={styles.summaryBox}>{command.copyReadyBrief}</pre>
             </section>
 
             <section style={styles.grid}>
@@ -206,63 +288,144 @@ export default function CommandPage() {
   )
 }
 
-function buildMemoryBoardView(): MemoryBoardView {
-  try {
-    const engineInput =
-      [] as Parameters<typeof buildCGIExecutiveMemoryBoard>[0]
+function buildCommandReading(cases: CommandCase[]) {
+  const total = cases.length
+  const commandEscalations = cases.filter(
+    (item) =>
+      item.case_status === 'TRIAGE_COMMAND_ESCALATION' ||
+      item.case_status.includes('ESCALATED') ||
+      item.safeguarding_flag,
+  ).length
 
-    const board = buildCGIExecutiveMemoryBoard(
-      engineInput
-    ) as unknown as Partial<MemoryBoardView>
+  const highSeverity = cases.filter(
+    (item) =>
+      item.severity_level === 'HIGH' || item.severity_level === 'CRITICAL',
+  ).length
 
+  const recurrenceVisible = cases.filter(
+    (item) =>
+      item.case_status.includes('RECURRENCE') ||
+      item.case_status === 'REOPENED' ||
+      item.beneficiary_name.includes('ISSUE_REPEATED') ||
+      item.outcome_summary?.includes('RECURRENCE') ||
+      item.intervention_summary?.includes('RECURRENCE'),
+  ).length
+
+  const recoveryMonitoring = cases.filter(
+    (item) => item.case_status === 'RECOVERY_MONITORING',
+  ).length
+
+  if (total === 0) {
     return {
-      boardPosture: board.boardPosture ?? 'MEMORY VISIBLE',
-      persistenceMaturity: board.persistenceMaturity ?? 'EMERGING',
-      executiveRisk: board.executiveRisk ?? 'WATCHED',
+      posture: 'NO ACTIVE COMMAND PRESSURE',
+      headline: 'Command is clear.',
+      description:
+        'No active governed instability is currently visible. Command should not display inherited threat language when lifecycle records are empty.',
+      action:
+        'No executive action required until new visible instability enters command scope.',
+      evidenceRequirement:
+        'No active command evidence required. Evidence requirements will activate when a governed signal becomes command-visible.',
+      survivability:
+        'Survivability is not currently under active command pressure from visible CGI records.',
+      memory: 'NO_ACTIVE_MEMORY_SIGNAL',
+      persistence: 'NONE_VISIBLE',
+      risk: 'CLEAR',
       currentReading:
-        board.currentReading ??
-        'Current pressure remains visible and must be interpreted with prior continuity memory.',
+        'No active command-visible instability is currently present.',
       executiveMeaning:
-        board.executiveMeaning ??
-        'Command should not close attention until recurrence, ownership, evidence, and recovery durability are reviewed.',
+        'Command can remain calm. There is no current lifecycle evidence requiring executive intervention.',
       evidenceGap:
-        board.evidenceGap ??
-        'Evidence is needed to confirm whether stabilization is durable, traceable, and not dependent on temporary relief.',
+        'No active evidence gap is visible because no command-visible lifecycle case is active.',
       recoveryCredibility:
-        board.recoveryCredibility ??
-        'Recovery remains under command watch until pressure reduction is sustained across time.',
-      copyReadyExecutiveMemoryBrief:
-        board.copyReadyExecutiveMemoryBrief ??
-        [
-          'CGI Command Memory Reading',
-          '',
-          'Current pressure remains visible.',
-          'Continuity memory must remain active.',
-          'Recovery should not be treated as complete until evidence confirms durable stabilization.',
-          'Command action should focus on evidence, ownership, recurrence, survivability, and follow-through.',
-        ].join('\n'),
-    }
-  } catch {
-    return {
-      boardPosture: 'MEMORY VISIBLE',
-      persistenceMaturity: 'EMERGING',
-      executiveRisk: 'WATCHED',
-      currentReading:
-        'Current pressure remains visible and requires command-level memory review.',
-      executiveMeaning:
-        'Command should determine whether this condition is isolated, recurring, or becoming structurally persistent.',
-      evidenceGap:
-        'Evidence is needed to confirm whether recovery is durable, traceable, and survivable.',
-      recoveryCredibility:
-        'Recovery remains under watch until stabilization can be proven across time.',
-      copyReadyExecutiveMemoryBrief: [
+        'No active recovery credibility concern is currently visible to Command.',
+      attributionTitle: 'No active command-attributed cases',
+      attributionMeaning:
+        'Command is not reading any active lifecycle cases. This confirms prior test data is no longer driving the command interface.',
+      copyReadyBrief: [
         'CGI Command Memory Reading',
         '',
-        'CGI now preserves continuity memory across time.',
-        'The command center should treat unresolved pressure, evidence gaps, and recovery fragility as active command concerns.',
-        'Action should remain focused on credible stabilization, survivability, and governance-safe follow-through.',
+        'No active command pressure is visible.',
+        'No governed instability is currently attributed to Command.',
+        'No executive intervention is required from current lifecycle records.',
+        'Command will activate when new command-visible instability enters the lifecycle.',
       ].join('\n'),
     }
+  }
+
+  if (commandEscalations > 0 || recurrenceVisible > 0 || highSeverity > 1) {
+    return {
+      posture: 'ELEVATED CONTINUITY EXPOSURE',
+      headline: 'Continuity requires executive review.',
+      description:
+        'One or more active lifecycle records show command escalation, recurrence visibility, high-pressure instability, or survivability exposure.',
+      action:
+        'Maintain executive review, confirm ownership, and require evidence-based stabilization follow-through.',
+      evidenceRequirement:
+        'Executive ownership, active mitigation, recurrence review, and continuity protection evidence are required.',
+      survivability:
+        'Survivability remains under observation until recurrence, pressure, and recovery durability are understood.',
+      memory: recurrenceVisible > 0 ? 'RECURRENCE_MEMORY_VISIBLE' : 'MEMORY_VISIBLE',
+      persistence: recurrenceVisible > 0 ? 'PERSISTENT' : 'EMERGING',
+      risk: 'WATCHED',
+      currentReading:
+        'Active command-visible instability is present and should be interpreted with lifecycle memory.',
+      executiveMeaning:
+        'Command should not allow repeated or escalated instability to move silently through ordinary handling.',
+      evidenceGap:
+        'Evidence must show ownership, action, outcome credibility, and recovery durability before command concern can relax.',
+      recoveryCredibility:
+        recoveryMonitoring > 0
+          ? 'Some records are in recovery monitoring, but durability must still be confirmed.'
+          : 'Recovery credibility is not yet established for all command-visible instability.',
+      attributionTitle: `${total} active command-attributed record(s)`,
+      attributionMeaning:
+        'The command reading below is being generated from active lifecycle records, not hardcoded threat language.',
+      copyReadyBrief: [
+        'CGI Command Memory Reading',
+        '',
+        `${total} active command-visible record(s) are present.`,
+        `Command escalation count: ${commandEscalations}.`,
+        `Recurrence visibility count: ${recurrenceVisible}.`,
+        `High-pressure count: ${highSeverity}.`,
+        'Command action should focus on evidence, ownership, recurrence, survivability, and follow-through.',
+      ].join('\n'),
+    }
+  }
+
+  return {
+    posture: 'ACTIVE COMMAND WATCH',
+    headline: 'Continuity remains visible but proportionate.',
+    description:
+      'Active governed instability exists, but current command exposure is not showing concentrated escalation or recurrence pressure.',
+    action:
+      'Maintain proportional command visibility and verify lifecycle movement continues.',
+    evidenceRequirement:
+      'Evidence should continue to show ownership, action movement, outcome credibility, and recovery readiness.',
+    survivability:
+      'Survivability remains protected through ordinary governed lifecycle monitoring.',
+    memory: 'MEMORY_VISIBLE',
+    persistence: 'EMERGING',
+    risk: 'MONITORED',
+    currentReading:
+      'Active governed instability is visible under command watch.',
+    executiveMeaning:
+      'Command should monitor lifecycle movement without over-escalating stable governed cases.',
+    evidenceGap:
+      'Evidence remains important, but no concentrated command evidence gap is currently visible.',
+    recoveryCredibility:
+      recoveryMonitoring > 0
+        ? 'Recovery monitoring is active for some records.'
+        : 'Recovery credibility will mature only after outcome verification and durability observation.',
+    attributionTitle: `${total} active command-attributed record(s)`,
+    attributionMeaning:
+      'Command is reading currently active lifecycle records and preserving proportional executive visibility.',
+    copyReadyBrief: [
+      'CGI Command Memory Reading',
+      '',
+      `${total} active command-visible record(s) are present.`,
+      'Command pressure remains proportionate.',
+      'Continue monitoring ownership, action evidence, outcome credibility, and recovery durability.',
+    ].join('\n'),
   }
 }
 
@@ -276,7 +439,6 @@ function CommandSignal({
   return (
     <article style={styles.commandSignal}>
       <p style={styles.principleKicker}>{title}</p>
-
       <p style={styles.commandSignalBody}>{body}</p>
     </article>
   )
@@ -292,7 +454,6 @@ function MemoryMetric({
   return (
     <article style={styles.memoryMetric}>
       <p style={styles.metricLabel}>{label}</p>
-
       <p style={styles.metricValue}>{value}</p>
     </article>
   )
@@ -308,9 +469,7 @@ function CommandPrinciple({
   return (
     <article style={styles.principleCard}>
       <p style={styles.principleKicker}>CGI Command</p>
-
       <h3 style={styles.principleTitle}>{title}</h3>
-
       <p style={styles.principleBody}>{body}</p>
     </article>
   )
@@ -507,5 +666,35 @@ const styles: Record<string, CSSProperties> = {
     minHeight: '220px',
     fontSize: '14px',
     overflowX: 'auto',
+  },
+  caseList: {
+    display: 'grid',
+    gap: '14px',
+    marginTop: '18px',
+  },
+  caseCard: {
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '18px',
+    padding: '16px',
+  },
+  caseIdentity: {
+    color: '#f8fafc',
+    fontWeight: 900,
+    margin: '0 0 12px',
+    lineHeight: 1.35,
+  },
+  caseMetaGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: '10px',
+  },
+  emptyState: {
+    background: '#0f172a',
+    border: '1px dashed #475569',
+    borderRadius: '18px',
+    padding: '22px',
+    color: '#cbd5e1',
+    lineHeight: 1.7,
   },
 }
