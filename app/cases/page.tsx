@@ -551,7 +551,7 @@ function CasesContent() {
                     onMove={changeCaseStatus}
                   />
 
-                  {caseItem.intervention_summary && (
+                  {actionEvidenceVisible && caseItem.intervention_summary && (
                     <div className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-sm leading-6 text-neutral-300">
                       <span className="font-semibold text-white">
                         Latest linked action evidence:{' '}
@@ -560,7 +560,7 @@ function CasesContent() {
                     </div>
                   )}
 
-                  {caseItem.outcome_summary && (
+                  {outcomeEvidenceVisible && caseItem.outcome_summary && (
                     <div className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-sm leading-6 text-neutral-300">
                       <span className="font-semibold text-white">
                         Latest downstream evidence:{' '}
@@ -864,22 +864,22 @@ function buildInheritedGovernanceContext(
 ): InheritedGovernanceContext {
   const timelineSource = buildLifecycleMemorySource(timelineEntries)
 
-  const currentSummary =
-    caseItem.intervention_summary ||
-    caseItem.outcome_summary ||
-    ''
-
-  const joinedSource = [currentSummary, timelineSource]
+  const joinedSource = [
+    caseItem.intervention_summary || '',
+    caseItem.outcome_summary || '',
+    timelineSource,
+  ]
     .filter(Boolean)
     .join('\n\n')
 
-  const memorySource = caseItem.intervention_summary
-    ? 'active lifecycle memory + timeline history'
-    : caseItem.outcome_summary
-      ? 'downstream lifecycle memory + timeline history'
-      : timelineSource
-        ? 'timeline history only'
-        : 'fallback case fields only'
+  const memorySource =
+    [
+      caseItem.intervention_summary ? 'intake/action memory' : '',
+      caseItem.outcome_summary ? 'triage/downstream memory' : '',
+      timelineSource ? 'timeline history' : '',
+    ]
+      .filter(Boolean)
+      .join(' + ') || 'fallback case fields only'
 
   return {
     inheritedIntakeIdentity:
@@ -941,31 +941,31 @@ function buildInheritedGovernanceContext(
 
     triageReason:
       extractBlockField(joinedSource, 'TRIAGE REASON') ||
-      'Triage reason not available',
+      inferTriageReason(caseItem),
 
     triageGateStatus:
       extractBlockField(joinedSource, 'TRIAGE GATE STATUS') ||
-      'Triage gate status not available',
+      inferTriageGateStatus(caseItem),
 
     triageMaturity:
       extractBlockField(joinedSource, 'TRIAGE MATURITY') ||
-      'Triage maturity not available',
+      inferTriageMaturity(caseItem),
 
     eligibilityConfidence:
       extractBlockField(joinedSource, 'ELIGIBILITY CONFIDENCE') ||
-      'Eligibility confidence not available',
+      inferEligibilityConfidence(caseItem),
 
     recommendedPosture:
       extractBlockField(joinedSource, 'RECOMMENDED POSTURE') ||
-      'Recommended posture not available',
+      inferRecommendedPosture(caseItem),
 
     caseReadiness:
       extractBlockField(joinedSource, 'CASE READINESS') ||
-      '/cases',
+      inferCaseReadiness(caseItem),
 
     nextLifecycleState:
       extractBlockField(joinedSource, 'NEXT LIFECYCLE STATE') ||
-      'Case lifecycle movement pending.',
+      inferNextLifecycleState(caseItem),
 
     memorySource,
 
@@ -975,6 +975,183 @@ function buildInheritedGovernanceContext(
 
     convergenceSignal: buildCaseConvergenceSignal(caseItem),
   }
+}
+
+function inferTriageReason(caseItem: InstabilityCase) {
+  if (caseItem.case_status === 'ACCEPTED_FOR_GOVERNANCE') {
+    return 'Visible instability was accepted into active CGI case governance after triage eligibility review.'
+  }
+
+  if (caseItem.case_status.includes('EVIDENCE_REQUIRED')) {
+    return 'Evidence threshold requires strengthening before confident downstream movement.'
+  }
+
+  if (caseItem.case_status.includes('OWNERSHIP_CLARITY')) {
+    return 'Ownership or scope clarity is required before routing direction can proceed.'
+  }
+
+  if (caseItem.case_status.includes('GOVERNANCE_REVIEW')) {
+    return 'Governance review remains active before downstream movement should continue.'
+  }
+
+  return 'Triage reason preserved through active case governance context.'
+}
+
+function inferTriageGateStatus(caseItem: InstabilityCase) {
+  if (caseItem.case_status === 'ACCEPTED_FOR_GOVERNANCE') {
+    return 'Accepted into governance'
+  }
+
+  if (caseItem.case_status.includes('EVIDENCE_REQUIRED')) {
+    return 'Evidence gate'
+  }
+
+  if (caseItem.case_status.includes('OWNERSHIP_CLARITY')) {
+    return 'Clarity gate'
+  }
+
+  if (caseItem.case_status.includes('GOVERNANCE_REVIEW')) {
+    return 'Governance review gate'
+  }
+
+  if (caseItem.case_status.includes('ESCALATED')) {
+    return 'Command visibility required'
+  }
+
+  return 'Active lifecycle gate'
+}
+
+function inferTriageMaturity(caseItem: InstabilityCase) {
+  if (caseItem.case_status === 'ACCEPTED_FOR_GOVERNANCE') {
+    return 'ELIGIBILITY_CONFIRMED'
+  }
+
+  if (caseItem.case_status.includes('EVIDENCE_REQUIRED')) {
+    return 'EVIDENCE_ALIGNMENT_PENDING'
+  }
+
+  if (caseItem.case_status.includes('OWNERSHIP_CLARITY')) {
+    return 'CLARITY_ALIGNMENT_PENDING'
+  }
+
+  if (caseItem.case_status.includes('GOVERNANCE_REVIEW')) {
+    return 'GOVERNANCE_VISIBILITY_REVIEW'
+  }
+
+  return 'CASE_GOVERNANCE_ACTIVE'
+}
+
+function inferEligibilityConfidence(caseItem: InstabilityCase) {
+  if (caseItem.case_status === 'ACCEPTED_FOR_GOVERNANCE') {
+    return 'CASE_GOVERNANCE_READY'
+  }
+
+  if (caseItem.case_status.includes('EVIDENCE_REQUIRED')) {
+    return 'LIMITED_ELIGIBILITY_CONFIDENCE'
+  }
+
+  if (caseItem.case_status.includes('OWNERSHIP_CLARITY')) {
+    return 'VARIABLE_GOVERNANCE_CONFIDENCE'
+  }
+
+  if (caseItem.case_status.includes('ESCALATED') || caseItem.safeguarding_flag) {
+    return 'HIGH_ATTENTION_REQUIRED'
+  }
+
+  if (caseItem.case_status === 'RECOVERY_MONITORING') {
+    return 'DURABILITY_CONFIDENCE_BUILDING'
+  }
+
+  return 'MEASURED_GOVERNANCE_CONFIDENCE'
+}
+
+function inferRecommendedPosture(caseItem: InstabilityCase) {
+  if (caseItem.case_status === 'ACCEPTED_FOR_GOVERNANCE') {
+    return 'Ready for active case governance'
+  }
+
+  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
+    return 'Preserve routing ownership and move toward action evidence'
+  }
+
+  if (
+    caseItem.case_status === 'ACTION_ACTIVE' ||
+    caseItem.case_status === 'INTERVENTION_ACTIVE' ||
+    caseItem.case_status === 'INTERVENTION_RECORDED'
+  ) {
+    return 'Preserve action evidence before outcome verification'
+  }
+
+  if (
+    caseItem.case_status === 'PARTIAL_STABILIZATION' ||
+    caseItem.case_status === 'FOLLOW_UP_REQUIRED' ||
+    caseItem.case_status === 'IMPROVING'
+  ) {
+    return 'Verify stabilization before recovery monitoring'
+  }
+
+  if (caseItem.case_status === 'RECOVERY_MONITORING') {
+    return 'Preserve durability observation before trust restoration'
+  }
+
+  return 'Continue governed lifecycle movement'
+}
+
+function inferCaseReadiness(caseItem: InstabilityCase) {
+  if (caseItem.case_status === 'ACCEPTED_FOR_GOVERNANCE') return '/cases'
+  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) return '/routing'
+
+  if (
+    caseItem.case_status === 'ACTION_ACTIVE' ||
+    caseItem.case_status === 'INTERVENTION_ACTIVE' ||
+    caseItem.case_status === 'INTERVENTION_RECORDED'
+  ) {
+    return '/interventions'
+  }
+
+  if (
+    caseItem.case_status === 'PARTIAL_STABILIZATION' ||
+    caseItem.case_status === 'FOLLOW_UP_REQUIRED' ||
+    caseItem.case_status === 'IMPROVING'
+  ) {
+    return '/outcomes'
+  }
+
+  if (caseItem.case_status === 'RECOVERY_MONITORING') return '/recovery'
+
+  return '/cases'
+}
+
+function inferNextLifecycleState(caseItem: InstabilityCase) {
+  if (caseItem.case_status === 'ACCEPTED_FOR_GOVERNANCE') {
+    return 'Route to stabilization ownership in /routing.'
+  }
+
+  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
+    return 'Preserve governed action evidence in /interventions.'
+  }
+
+  if (
+    caseItem.case_status === 'ACTION_ACTIVE' ||
+    caseItem.case_status === 'INTERVENTION_ACTIVE' ||
+    caseItem.case_status === 'INTERVENTION_RECORDED'
+  ) {
+    return 'Preserve outcome verification in /outcomes.'
+  }
+
+  if (
+    caseItem.case_status === 'PARTIAL_STABILIZATION' ||
+    caseItem.case_status === 'FOLLOW_UP_REQUIRED' ||
+    caseItem.case_status === 'IMPROVING'
+  ) {
+    return 'Assess recovery readiness after outcome verification.'
+  }
+
+  if (caseItem.case_status === 'RECOVERY_MONITORING') {
+    return 'Confirm durability in /recovery before trust restoration.'
+  }
+
+  return 'Continue governed lifecycle movement.'
 }
 
 function buildLifecycleMemorySource(timelineEntries: TimelineEntry[]) {
@@ -1128,11 +1305,17 @@ function buildDriftSignal(
     caseItem.case_status === 'REOPENED',
     caseItem.case_status === 'FOLLOW_UP_REQUIRED',
     !hasActionEvidence(caseItem) &&
-      caseItem.case_status !== 'ACCEPTED_FOR_GOVERNANCE',
-    !hasOutcomeEvidence(caseItem) &&
       !['ACCEPTED_FOR_GOVERNANCE', 'STABILIZATION_OWNER_ROUTED'].includes(
         caseItem.case_status,
       ),
+    !hasOutcomeEvidence(caseItem) &&
+      ![
+        'ACCEPTED_FOR_GOVERNANCE',
+        'STABILIZATION_OWNER_ROUTED',
+        'ACTION_ACTIVE',
+        'INTERVENTION_ACTIVE',
+        'INTERVENTION_RECORDED',
+      ].includes(caseItem.case_status),
     timelineText.includes('STALLED'),
     timelineText.includes('RECURRENCE'),
     timelineText.includes('REOPENED'),
@@ -1226,18 +1409,38 @@ function findConcentratedValue(counts: Record<string, number>) {
 }
 
 function hasActionEvidence(caseItem: InstabilityCase) {
+  const statusAllowsActionEvidence =
+    caseItem.case_status === 'ACTION_ACTIVE' ||
+    caseItem.case_status === 'INTERVENTION_ACTIVE' ||
+    caseItem.case_status === 'INTERVENTION_RECORDED' ||
+    caseItem.case_status === 'PARTIAL_STABILIZATION' ||
+    caseItem.case_status === 'FOLLOW_UP_REQUIRED' ||
+    caseItem.case_status === 'IMPROVING' ||
+    caseItem.case_status === 'RECOVERY_MONITORING'
+
+  if (!statusAllowsActionEvidence) return false
+
   const summary = caseItem.intervention_summary || ''
 
   return Boolean(
     summary.includes('ACTION MOVEMENT') ||
       summary.includes('ACTION TRAJECTORY') ||
-      summary.includes('EVIDENCE POSTURE') ||
       summary.includes('OWNER VISIBILITY') ||
-      summary.includes('RESIDUAL RISK'),
+      summary.includes('RESIDUAL RISK') ||
+      summary.includes('INTERVENTION RESULT') ||
+      summary.includes('INTERVENTION EVIDENCE'),
   )
 }
 
 function hasOutcomeEvidence(caseItem: InstabilityCase) {
+  const statusAllowsOutcomeEvidence =
+    caseItem.case_status === 'PARTIAL_STABILIZATION' ||
+    caseItem.case_status === 'FOLLOW_UP_REQUIRED' ||
+    caseItem.case_status === 'IMPROVING' ||
+    caseItem.case_status === 'RECOVERY_MONITORING'
+
+  if (!statusAllowsOutcomeEvidence) return false
+
   const summary = caseItem.outcome_summary || ''
 
   return Boolean(
@@ -1364,7 +1567,7 @@ function buildCaseIntelligence(
     return {
       phase: 'Accepted into governance',
       maturity: 'CASE_GOVERNANCE_OPENED',
-      confidence: inherited.eligibilityConfidence || 'PENDING_ROUTING_CONFIDENCE',
+      confidence: inherited.eligibilityConfidence || 'CASE_GOVERNANCE_READY',
       nextMovement: 'Route to stabilization ownership in /routing',
       evidencePosture,
       stagnationRisk: 'Moderate if routing direction does not begin.',
@@ -1417,7 +1620,9 @@ function buildCaseIntelligence(
   ) {
     return {
       phase: 'Stabilization action active',
-      maturity: 'ACTION_EVIDENCE_VISIBLE',
+      maturity: actionEvidenceVisible
+        ? 'ACTION_EVIDENCE_VISIBLE'
+        : 'ACTION_EVIDENCE_PENDING',
       confidence: outcomeEvidenceVisible
         ? 'OUTCOME_VERIFICATION_BUILDING'
         : 'PENDING_OUTCOME_VERIFICATION',
@@ -1513,6 +1718,7 @@ function hasRoutingEvidence(caseItem: InstabilityCase) {
     caseItem.case_status === 'INTERVENTION_ACTIVE' ||
     caseItem.case_status === 'INTERVENTION_RECORDED' ||
     caseItem.case_status === 'PARTIAL_STABILIZATION' ||
+    caseItem.case_status === 'FOLLOW_UP_REQUIRED' ||
     caseItem.case_status === 'IMPROVING' ||
     caseItem.case_status === 'RECOVERY_MONITORING'
   )
