@@ -23,8 +23,8 @@ type CommandCase = {
 }
 
 type CommandReading = {
-  posture: string
   statusShort: string
+  statusMeaning: string
   activeCaseCount: string
   evidenceShort: string
   survivabilityShort: string
@@ -43,7 +43,6 @@ type CommandReading = {
   risk: string
   hasActiveCommandEvidence: boolean
   executiveBrief: {
-    status: string
     cases: string
     evidence: string
     action: string
@@ -130,9 +129,7 @@ export default function CommandPage() {
           <div style={styles.container}>
             <section style={styles.header}>
               <p style={styles.kicker}>TSINAXA CGI • COMMAND</p>
-
               <h1 style={styles.title}>Command</h1>
-
               <p style={styles.subtitle}>
                 Executive reading of command-attributed instability, evidence
                 pressure, recovery credibility, survivability exposure, and
@@ -140,52 +137,26 @@ export default function CommandPage() {
               </p>
             </section>
 
-            <section style={styles.executiveReading}>
+            <section style={styles.commandStatus}>
               <div>
-                <p style={styles.sectionKicker}>Executive Reading</p>
-                <h2 style={styles.readingTitle}>
-                  {command.executiveBrief.status}
-                </h2>
+                <p style={styles.sectionKicker}>Command Status</p>
+                <h2 style={styles.commandStatusTitle}>{command.statusShort}</h2>
+                <p style={styles.bodyText}>{command.statusMeaning}</p>
               </div>
 
-              <div style={styles.readingGrid}>
+              <div style={styles.commandStatusGrid}>
                 <BriefLine label="Cases" value={command.executiveBrief.cases} />
-                <BriefLine
-                  label="Evidence"
-                  value={command.executiveBrief.evidence}
-                />
+                <BriefLine label="Evidence" value={command.executiveBrief.evidence} />
                 <BriefLine label="Action" value={command.executiveBrief.action} />
               </div>
             </section>
 
-            <section style={styles.statusStrip}>
-              <ExecutiveMetric
-                label="Posture"
-                value={command.statusShort}
-                body={command.posture}
-              />
-              <ExecutiveMetric
-                label="Cases"
-                value={loading ? '...' : command.activeCaseCount}
-                body={command.attributionTitle}
-              />
-              <ExecutiveMetric
-                label="Evidence"
-                value={command.evidenceShort}
-                body={command.evidenceGap}
-              />
-              <ExecutiveMetric
-                label="Survivability"
-                value={command.survivabilityShort}
-                body="Institutional survivability command exposure."
-              />
-            </section>
-
-            <section style={styles.intelligenceStrip}>
-              <MiniSignal label="Pressure" value={command.pressureShort} />
-              <MiniSignal label="Trajectory" value={command.trajectoryShort} />
-              <MiniSignal label="Recovery" value={command.recoveryShort} />
-              <MiniSignal label="Reliability" value={command.reliabilityShort} />
+            <section style={styles.signalGrid}>
+              <Signal label="Pressure" value={command.pressureShort} />
+              <Signal label="Trajectory" value={command.trajectoryShort} />
+              <Signal label="Recovery" value={command.recoveryShort} />
+              <Signal label="Reliability" value={command.reliabilityShort} />
+              <Signal label="Survivability" value={command.survivabilityShort} />
             </section>
 
             <section style={styles.commandGrid}>
@@ -198,18 +169,13 @@ export default function CommandPage() {
                   <div style={styles.caseList}>
                     {cases.map((item) => (
                       <article key={item.id} style={styles.caseCard}>
-                        <p style={styles.caseIdentity}>
-                          {item.beneficiary_name}
-                        </p>
+                        <p style={styles.caseIdentity}>{item.beneficiary_name}</p>
 
                         <div style={styles.caseMetaGrid}>
                           <SmallMetric label="Pressure" value={item.support_domain} />
                           <SmallMetric label="Status" value={item.case_status} />
                           <SmallMetric label="Severity" value={item.severity_level} />
-                          <SmallMetric
-                            label="Area"
-                            value={item.region || 'Not recorded'}
-                          />
+                          <SmallMetric label="Area" value={item.region || 'Not recorded'} />
                         </div>
                       </article>
                     ))}
@@ -222,21 +188,16 @@ export default function CommandPage() {
                 <h2 style={styles.compactTitle}>{command.commandVisibility}</h2>
                 <p style={styles.bodyText}>{command.commandAction}</p>
 
-                <div style={styles.inlineRisk}>
-                  <span>Memory: {command.memory}</span>
-                  <span>Persistence: {command.persistence}</span>
-                  <span>Risk: {command.risk}</span>
-                </div>
+                <p style={styles.inlineRisk}>
+                  Memory: {command.memory} • Persistence: {command.persistence} • Risk: {command.risk}
+                </p>
               </section>
             </section>
 
             {command.hasActiveCommandEvidence && (
               <section style={styles.twoColumnGrid}>
                 <ExecutivePanel title="Evidence" body={command.evidenceGap} />
-                <ExecutivePanel
-                  title="Recovery"
-                  body={command.recoveryCredibility}
-                />
+                <ExecutivePanel title="Recovery" body={command.recoveryCredibility} />
               </section>
             )}
 
@@ -244,33 +205,17 @@ export default function CommandPage() {
               <p style={styles.sectionKicker}>Continuity Memory</p>
 
               <div style={styles.memoryBoardGrid}>
-                <MemoryLine
-                  label="Continuity Memory"
-                  value={command.continuityMemory.continuityMemory}
-                />
-                <MemoryLine
-                  label="Last Command Activity"
-                  value={command.continuityMemory.lastCommandActivity}
-                />
-                <MemoryLine
-                  label="Last Escalation"
-                  value={command.continuityMemory.lastEscalation}
-                />
-                <MemoryLine
-                  label="Last Recovery Verification"
-                  value={command.continuityMemory.lastRecoveryVerification}
-                />
-                <MemoryLine
-                  label="Last Executive Review"
-                  value={command.continuityMemory.lastExecutiveReview}
-                />
+                <MemoryLine label="Memory" value={command.continuityMemory.continuityMemory} />
+                <MemoryLine label="Last Activity" value={command.continuityMemory.lastCommandActivity} />
+                <MemoryLine label="Escalation" value={command.continuityMemory.lastEscalation} />
+                <MemoryLine label="Recovery Review" value={command.continuityMemory.lastRecoveryVerification} />
+                <MemoryLine label="Executive Review" value={command.continuityMemory.lastExecutiveReview} />
               </div>
             </section>
 
             <section style={styles.doctrineCard}>
-              CGI governs continuity credibility. Visible recovery is not durable
-              stabilization. Command remains traceable to active lifecycle
-              evidence.
+              <strong>CONTINUITY CREDIBILITY GOVERNED</strong>
+              <span>Visible recovery is not durable stabilization.</span>
             </section>
           </div>
         </main>
@@ -311,92 +256,84 @@ function buildCommandReading(cases: CommandCase[]): CommandReading {
 
   if (total === 0) {
     return {
-      posture: 'NO ACTIVE COMMAND PRESSURE',
       statusShort: 'CLEAR',
+      statusMeaning: 'No executive intervention required.',
       activeCaseCount: '0',
       evidenceShort: 'NONE',
       survivabilityShort: 'CLEAR',
       pressureShort: 'CLEAR',
       trajectoryShort: 'STABLE',
-      recoveryShort: 'NONE ACTIVE',
+      recoveryShort: 'NONE',
       reliabilityShort: 'STABLE',
       attributionTitle: 'None active',
-      attributionMeaning: 'No command-attributed cases are visible.',
+      attributionMeaning: 'No command-attributed cases.',
       commandVisibility: 'Clear',
-      commandAction:
-        'No executive intervention is required from current lifecycle evidence.',
-      evidenceGap: 'No active evidence gap is visible.',
-      recoveryCredibility: 'No active recovery credibility concern is visible.',
+      commandAction: 'No command-visible instability.',
+      evidenceGap: 'No active evidence gap.',
+      recoveryCredibility: 'No active recovery concern.',
       memory: 'NONE',
       persistence: 'NONE',
       risk: 'CLEAR',
       hasActiveCommandEvidence: false,
       executiveBrief: {
-        status: 'Clear',
         cases: '0 active command-attributed cases',
         evidence: 'None required',
-        action: 'No executive intervention required',
+        action: 'No executive intervention',
       },
       continuityMemory: {
-        continuityMemory: 'No active command memory pressure',
-        lastCommandActivity: 'No active command-attributed activity',
-        lastEscalation: 'No active escalation visible',
-        lastRecoveryVerification: 'No active recovery verification pending',
-        lastExecutiveReview: 'No executive review required',
+        continuityMemory: 'CLEAR',
+        lastCommandActivity: 'NONE',
+        lastEscalation: 'NONE',
+        lastRecoveryVerification: 'NONE',
+        lastExecutiveReview: 'NONE REQUIRED',
       },
     }
   }
 
   if (commandEscalations > 0 || recurrenceVisible > 0 || highSeverity > 1) {
     return {
-      posture: 'ELEVATED CONTINUITY EXPOSURE',
       statusShort: 'ELEVATED',
+      statusMeaning: 'Executive continuity review required.',
       activeCaseCount: String(total),
       evidenceShort: 'REQUIRED',
       survivabilityShort: 'WATCH',
       pressureShort: highSeverity > 1 ? 'ELEVATED' : 'VISIBLE',
       trajectoryShort: recurrenceVisible > 0 ? 'UNSTABLE' : 'WATCH',
-      recoveryShort: recoveryMonitoring > 0 ? 'MONITORING' : 'NOT CONFIRMED',
+      recoveryShort: recoveryMonitoring > 0 ? 'MONITORING' : 'UNCONFIRMED',
       reliabilityShort: recurrenceVisible > 0 ? 'VARIABLE' : 'WATCH',
       attributionTitle: `${total} active record(s)`,
-      attributionMeaning:
-        'Command is reading active lifecycle evidence requiring executive visibility.',
+      attributionMeaning: 'Active lifecycle evidence requires executive visibility.',
       commandVisibility: 'Review required',
-      commandAction:
-        'Repeated or escalated instability must not move silently through ordinary handling.',
+      commandAction: 'Do not allow escalated instability to move silently.',
       evidenceGap:
-        'Ownership, action, outcome credibility, recurrence review, and recovery durability evidence are required.',
+        'Ownership, action, outcome credibility, recurrence review, and durability evidence are required.',
       recoveryCredibility:
         recoveryMonitoring > 0
-          ? 'Recovery monitoring is visible, but durability is not yet confirmed.'
+          ? 'Recovery monitoring is visible, but durability is unconfirmed.'
           : 'Recovery credibility is not yet established.',
       memory: recurrenceVisible > 0 ? 'RECURRENCE' : 'VISIBLE',
       persistence: recurrenceVisible > 0 ? 'PERSISTENT' : 'EMERGING',
       risk: 'WATCHED',
       hasActiveCommandEvidence: true,
       executiveBrief: {
-        status: 'Elevated',
         cases: `${total} command-attributed record(s)`,
         evidence: 'Executive evidence required',
-        action: 'Require ownership, recurrence review, and durability proof',
+        action: 'Require ownership and durability proof',
       },
       continuityMemory: {
-        continuityMemory:
-          recurrenceVisible > 0 ? 'Recurrence memory visible' : 'Active continuity memory visible',
-        lastCommandActivity:
-          latestCase?.created_at || 'Active command activity visible',
-        lastEscalation:
-          commandEscalations > 0 ? 'Escalation visible' : 'No command escalation concentration',
+        continuityMemory: recurrenceVisible > 0 ? 'RECURRENCE' : 'VISIBLE',
+        lastCommandActivity: latestCase?.created_at || 'ACTIVE',
+        lastEscalation: commandEscalations > 0 ? 'VISIBLE' : 'NONE CONCENTRATED',
         lastRecoveryVerification:
-          recoveryMonitoring > 0 ? 'Recovery monitoring visible' : 'Recovery verification not confirmed',
-        lastExecutiveReview: 'Executive review required',
+          recoveryMonitoring > 0 ? 'MONITORING' : 'UNCONFIRMED',
+        lastExecutiveReview: 'REQUIRED',
       },
     }
   }
 
   return {
-    posture: 'ACTIVE COMMAND WATCH',
     statusShort: 'WATCH',
+    statusMeaning: 'Proportional executive visibility remains active.',
     activeCaseCount: String(total),
     evidenceShort: 'MONITOR',
     survivabilityShort: 'STABLE',
@@ -405,35 +342,30 @@ function buildCommandReading(cases: CommandCase[]): CommandReading {
     recoveryShort: recoveryMonitoring > 0 ? 'MONITORING' : 'PENDING',
     reliabilityShort: 'STABLE',
     attributionTitle: `${total} active record(s)`,
-    attributionMeaning:
-      'Command is reading active lifecycle records under proportional executive visibility.',
+    attributionMeaning: 'Active lifecycle records remain under command watch.',
     commandVisibility: 'Watch active',
-    commandAction:
-      'Monitor lifecycle movement without over-escalating stable governed cases.',
-    evidenceGap:
-      'Evidence remains important, but no concentrated evidence gap is visible.',
+    commandAction: 'Monitor without over-escalating stable governed cases.',
+    evidenceGap: 'Evidence remains important; no concentrated gap is visible.',
     recoveryCredibility:
       recoveryMonitoring > 0
-        ? 'Recovery monitoring is active for some records.'
-        : 'Recovery credibility matures after verification and durability observation.',
+        ? 'Recovery monitoring is active.'
+        : 'Recovery credibility matures after verification.',
     memory: 'VISIBLE',
     persistence: 'EMERGING',
     risk: 'MONITORED',
     hasActiveCommandEvidence: true,
     executiveBrief: {
-      status: 'Watch',
       cases: `${total} active command-attributed record(s)`,
       evidence: 'Monitor evidence maturity',
-      action: 'Continue proportional command visibility',
+      action: 'Continue proportional visibility',
     },
     continuityMemory: {
-      continuityMemory: 'Active lifecycle memory visible',
-      lastCommandActivity:
-        latestCase?.created_at || 'Active command activity visible',
-      lastEscalation: 'No escalation concentration visible',
+      continuityMemory: 'VISIBLE',
+      lastCommandActivity: latestCase?.created_at || 'ACTIVE',
+      lastEscalation: 'NONE CONCENTRATED',
       lastRecoveryVerification:
-        recoveryMonitoring > 0 ? 'Recovery monitoring visible' : 'Recovery verification pending',
-      lastExecutiveReview: 'Proportional executive watch',
+        recoveryMonitoring > 0 ? 'MONITORING' : 'PENDING',
+      lastExecutiveReview: 'WATCH',
     },
   }
 }
@@ -456,11 +388,11 @@ function ExecutiveMetric({
   )
 }
 
-function MiniSignal({ label, value }: { label: string; value: string }) {
+function Signal({ label, value }: { label: string; value: string }) {
   return (
-    <article style={styles.miniSignal}>
+    <article style={styles.signalCard}>
       <p style={styles.metricLabel}>{label}</p>
-      <p style={styles.miniValue}>{value}</p>
+      <p style={styles.signalValue}>{value}</p>
     </article>
   )
 }
@@ -547,72 +479,44 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '13px',
     margin: 0,
   },
-  executiveReading: {
+  commandStatus: {
     display: 'grid',
-    gridTemplateColumns: '180px minmax(0, 1fr)',
+    gridTemplateColumns: '260px minmax(0, 1fr)',
     gap: '14px',
     background: deepBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '15px',
-    padding: '14px',
+    borderRadius: '16px',
+    padding: '15px',
     marginBottom: '12px',
     boxSizing: 'border-box',
   },
-  readingTitle: {
+  commandStatusTitle: {
     color: '#fff8e7',
-    fontSize: '24px',
+    fontSize: '32px',
     lineHeight: 1,
-    margin: '7px 0 0',
-    letterSpacing: '-0.04em',
+    margin: '7px 0',
+    letterSpacing: '-0.05em',
   },
-  readingGrid: {
+  commandStatusGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
     gap: '10px',
   },
-  statusStrip: {
+  signalGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
     gap: '12px',
     marginBottom: '12px',
   },
-  statusCard: {
+  signalCard: {
     background: cardBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '14px',
-    padding: '12px',
-    minHeight: '76px',
-    boxSizing: 'border-box',
+    borderRadius: '13px',
+    padding: '11px 12px',
   },
-  statusValue: {
-    color: '#fff8e7',
-    fontSize: '20px',
-    lineHeight: 1,
-    margin: '5px 0',
-    fontWeight: 950,
-    letterSpacing: '-0.04em',
-  },
-  statusBody: {
-    color: '#c9c0ad',
-    fontSize: '11px',
-    lineHeight: 1.3,
-    margin: 0,
-  },
-  intelligenceStrip: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '12px',
-    marginBottom: '12px',
-  },
-  miniSignal: {
-    background: deepBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '12px',
-    padding: '10px 12px',
-  },
-  miniValue: {
+  signalValue: {
     color: gold,
-    fontSize: '15px',
+    fontSize: '16px',
     fontWeight: 950,
     margin: '4px 0 0',
   },
@@ -627,8 +531,7 @@ const styles: Record<string, CSSProperties> = {
     border: `1px solid ${softLine}`,
     borderRadius: '15px',
     padding: '14px',
-    minHeight: '98px',
-    boxShadow: '0 14px 34px rgba(0,0,0,0.18)',
+    minHeight: '88px',
     boxSizing: 'border-box',
     overflow: 'hidden',
   },
@@ -654,9 +557,6 @@ const styles: Record<string, CSSProperties> = {
     margin: 0,
   },
   inlineRisk: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '8px',
     marginTop: '10px',
     color: '#fff8e7',
     fontSize: '11px',
@@ -680,13 +580,13 @@ const styles: Record<string, CSSProperties> = {
     border: `1px solid ${softLine}`,
     borderRadius: '11px',
     padding: '10px',
-    minHeight: '72px',
+    minHeight: '64px',
   },
   memoryValue: {
     color: '#fff8e7',
-    fontSize: '12px',
-    fontWeight: 800,
-    lineHeight: 1.35,
+    fontSize: '13px',
+    fontWeight: 900,
+    lineHeight: 1.25,
     margin: '5px 0 0',
   },
   smallMetric: {
@@ -743,6 +643,9 @@ const styles: Record<string, CSSProperties> = {
     margin: '4px 0 0',
   },
   doctrineCard: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: '14px',
     background: deepBlack,
     border: `1px solid ${softLine}`,
     borderRadius: '13px',
