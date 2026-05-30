@@ -1,7 +1,13 @@
-import { evaluateCGILiveOperationalIntegration } from '@/lib/cgiLiveOperationalIntegrationEngine'
+type CommandEvidence = {
+  activeRecords?: number
+  commandEscalations?: number
+  recurrenceVisible?: number
+  highPressureRecords?: number
+  recoveryMonitoring?: number
+}
 
-function formatLabel(value: string): string {
-  return value.replaceAll('_', ' ')
+function formatCount(value?: number): number {
+  return Number.isFinite(value) ? Number(value) : 0
 }
 
 function MiniPanel({
@@ -64,27 +70,67 @@ function MiniPanel({
   )
 }
 
-export default function CGICommandContinuityPanel() {
-  const commandIntelligence = evaluateCGILiveOperationalIntegration({
-    route: 'COMMAND',
-    openCases: 9,
-    escalatedCases: 4,
-    repeatedInstabilityCount: 6,
-    unresolvedCriticalCount: 1,
-    recoveryFailures: 3,
-    verifiedRecoveries: 0,
-    coordinationIssues: 5,
-    averageUnresolvedDays: 12,
-    unresolvedDurationDays: 12,
-    reburnCount: 2,
-    priorEscalationCount: 4,
-    priorSurvivabilityThreatCount: 0,
-    ownerAssigned: true,
-    actionStarted: true,
-    evidenceSubmitted: true,
-    evidenceVerified: false,
-    deadlineMissed: true,
-  })
+export default function CGICommandContinuityPanel({
+  evidence,
+}: {
+  evidence?: CommandEvidence
+}) {
+  const activeRecords = formatCount(evidence?.activeRecords)
+  const commandEscalations = formatCount(evidence?.commandEscalations)
+  const recurrenceVisible = formatCount(evidence?.recurrenceVisible)
+  const highPressureRecords = formatCount(evidence?.highPressureRecords)
+  const recoveryMonitoring = formatCount(evidence?.recoveryMonitoring)
+
+  const hasActiveEvidence = activeRecords > 0
+
+  const elevated =
+    commandEscalations > 0 || recurrenceVisible > 0 || highPressureRecords > 1
+
+  const dominantTruth = !hasActiveEvidence
+    ? 'No active command pressure is visible.'
+    : elevated
+      ? 'Command-visible continuity pressure requires executive review.'
+      : 'Command-visible continuity pressure remains proportionate.'
+
+  const narrative = !hasActiveEvidence
+    ? 'The continuity command layer is calm because no active lifecycle records are currently attributed to Command. This panel is no longer using hardcoded test pressure.'
+    : elevated
+      ? 'Active lifecycle evidence shows command escalation, recurrence visibility, or high-pressure continuity exposure. Command should preserve executive visibility until ownership, evidence, action, outcome credibility, and durability are clarified.'
+      : 'Active lifecycle evidence is visible, but current command exposure remains proportionate. Command should continue monitoring without manufacturing executive threat.'
+
+  const continuityCondition = !hasActiveEvidence
+    ? 'NO ACTIVE GOVERNED INSTABILITY'
+    : elevated
+      ? 'ELEVATED CONTINUITY EXPOSURE'
+      : 'ACTIVE COMMAND WATCH'
+
+  const executivePosture = !hasActiveEvidence
+    ? 'NO EXECUTIVE INTERVENTION REQUIRED'
+    : elevated
+      ? 'EXECUTIVE REVIEW REQUIRED'
+      : 'PROPORTIONAL COMMAND MONITORING'
+
+  const recoveryCredibility = !hasActiveEvidence
+    ? 'NO ACTIVE RECOVERY CONCERN'
+    : recoveryMonitoring > 0
+      ? 'RECOVERY MONITORING VISIBLE'
+      : 'RECOVERY CREDIBILITY NOT YET ESTABLISHED'
+
+  const structuralMemory = !hasActiveEvidence
+    ? 'NO ACTIVE MEMORY SIGNAL'
+    : recurrenceVisible > 0
+      ? 'RECURRENCE MEMORY VISIBLE'
+      : 'MEMORY VISIBLE'
+
+  const accountability = !hasActiveEvidence
+    ? 'NO ACTIVE ACCOUNTABILITY PRESSURE'
+    : elevated
+      ? 'EXECUTIVE ACCOUNTABILITY WATCH'
+      : 'GOVERNED ACCOUNTABILITY MONITORING'
+
+  const requiredEvidence = !hasActiveEvidence
+    ? 'No active command evidence required.'
+    : 'Evidence should show ownership, action movement, outcome credibility, recurrence status, and recovery durability before command concern relaxes.'
 
   return (
     <section
@@ -118,7 +164,7 @@ export default function CGICommandContinuityPanel() {
           margin: '10px 0 8px',
         }}
       >
-        {commandIntelligence.command.dominantTruth}
+        {dominantTruth}
       </h2>
 
       <p
@@ -129,7 +175,7 @@ export default function CGICommandContinuityPanel() {
           maxWidth: '860px',
         }}
       >
-        {commandIntelligence.operationalNarrative}
+        {narrative}
       </p>
 
       <div
@@ -140,29 +186,28 @@ export default function CGICommandContinuityPanel() {
           marginTop: '18px',
         }}
       >
-        <MiniPanel
-          title="Continuity Condition"
-          value={formatLabel(
-            commandIntelligence.derivation.continuityCondition
-          )}
-        >
-          {commandIntelligence.shell.continuityPanel.interpretation}
+        <MiniPanel title="Continuity Condition" value={continuityCondition}>
+          {!hasActiveEvidence
+            ? 'No active lifecycle evidence is currently placing continuity under command pressure.'
+            : elevated
+              ? 'Active lifecycle evidence requires executive visibility before command concern can relax.'
+              : 'Active lifecycle evidence remains visible but proportionate.'}
         </MiniPanel>
 
-        <MiniPanel
-          title="Executive Posture"
-          value={formatLabel(commandIntelligence.derivation.executivePosture)}
-        >
-          {commandIntelligence.shell.commandPanel.interpretation}
+        <MiniPanel title="Executive Posture" value={executivePosture}>
+          {!hasActiveEvidence
+            ? 'Command should remain calm and avoid inherited threat language.'
+            : elevated
+              ? 'Executive review should confirm ownership, evidence, and follow-through.'
+              : 'Executive monitoring may remain proportional.'}
         </MiniPanel>
 
-        <MiniPanel
-          title="Recovery Credibility"
-          value={formatLabel(
-            commandIntelligence.derivation.recoveryCredibility
-          )}
-        >
-          {commandIntelligence.shell.recoveryPanel.interpretation}
+        <MiniPanel title="Recovery Credibility" value={recoveryCredibility}>
+          {!hasActiveEvidence
+            ? 'No recovery credibility concern is visible without active command records.'
+            : recoveryMonitoring > 0
+              ? 'Recovery monitoring is visible, but durability must still be confirmed.'
+              : 'Recovery credibility will mature only after outcome verification and durability observation.'}
         </MiniPanel>
       </div>
 
@@ -174,27 +219,24 @@ export default function CGICommandContinuityPanel() {
           marginTop: '14px',
         }}
       >
-        <MiniPanel
-          title="Structural Memory"
-          value={formatLabel(commandIntelligence.memory.primaryMemorySignal)}
-        >
-          {commandIntelligence.memory.executiveMemoryWarning}
+        <MiniPanel title="Structural Memory" value={structuralMemory}>
+          {!hasActiveEvidence
+            ? 'No active structural memory signal is currently driving command interpretation.'
+            : recurrenceVisible > 0
+              ? 'Repeated instability remains visible and should not be dismissed as isolated noise.'
+              : 'Command memory is visible through current lifecycle evidence.'}
         </MiniPanel>
 
-        <MiniPanel
-          title="Accountability"
-          value={formatLabel(
-            commandIntelligence.accountability.accountabilityStatus
-          )}
-        >
-          {commandIntelligence.accountability.escalationRule}
+        <MiniPanel title="Accountability" value={accountability}>
+          {!hasActiveEvidence
+            ? 'No active accountability pressure is currently visible.'
+            : elevated
+              ? 'Continuity risk must become owned, evidenced, and time-bound responsibility.'
+              : 'Accountability remains under governed monitoring.'}
         </MiniPanel>
 
-        <MiniPanel
-          title="Required Evidence"
-          value="Evidence Required"
-        >
-          {commandIntelligence.command.requiredEvidence}
+        <MiniPanel title="Required Evidence" value="Evidence Status">
+          {requiredEvidence}
         </MiniPanel>
       </div>
 
@@ -229,8 +271,9 @@ export default function CGICommandContinuityPanel() {
             fontWeight: 800,
           }}
         >
-          Visible recovery is not the same as durable stabilization. CGI governs
-          continuity credibility under pressure.
+          Command must not manufacture threat from old tests. Visible recovery is
+          not the same as durable stabilization, and active command pressure must
+          be traceable to current lifecycle evidence.
         </p>
       </div>
     </section>
