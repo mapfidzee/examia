@@ -130,33 +130,16 @@ export default function CommandPage() {
               </div>
 
               <p style={styles.subtitle}>
-                Executive reading of command-attributed instability, evidence
-                pressure, recovery credibility, survivability exposure, and
-                institutional continuity posture.
+                Executive reading of command-attributed instability, evidence pressure,
+                recovery credibility, survivability exposure, and institutional continuity posture.
               </p>
             </section>
 
             <section style={styles.statusStrip}>
-              <ExecutiveMetric
-                label="Posture"
-                value={command.statusShort}
-                body={command.posture}
-              />
-              <ExecutiveMetric
-                label="Cases"
-                value={loading ? '...' : command.activeCaseCount}
-                body={command.attributionTitle}
-              />
-              <ExecutiveMetric
-                label="Evidence"
-                value={command.evidenceShort}
-                body={command.evidenceGap}
-              />
-              <ExecutiveMetric
-                label="Survivability"
-                value={command.survivabilityShort}
-                body="Institutional survivability command exposure."
-              />
+              <ExecutiveMetric label="Posture" value={command.statusShort} body={command.posture} />
+              <ExecutiveMetric label="Cases" value={loading ? '...' : command.activeCaseCount} body={command.attributionTitle} />
+              <ExecutiveMetric label="Evidence" value={command.evidenceShort} body={command.evidenceGap} />
+              <ExecutiveMetric label="Survivability" value={command.survivabilityShort} body="Institutional survivability command exposure." />
             </section>
 
             <section style={styles.intelligenceStrip}>
@@ -164,6 +147,19 @@ export default function CommandPage() {
               <MiniSignal label="Trajectory" value={command.trajectoryShort} />
               <MiniSignal label="Recovery" value={command.recoveryShort} />
               <MiniSignal label="Reliability" value={command.reliabilityShort} />
+            </section>
+
+            <section style={styles.executiveReading}>
+              <div>
+                <p style={styles.sectionKicker}>Executive Reading</p>
+                <h2 style={styles.readingTitle}>{command.executiveBrief.status}</h2>
+              </div>
+
+              <div style={styles.readingGrid}>
+                <BriefLine label="Cases" value={command.executiveBrief.cases} />
+                <BriefLine label="Evidence" value={command.executiveBrief.evidence} />
+                <BriefLine label="Action" value={command.executiveBrief.action} />
+              </div>
             </section>
 
             <section style={styles.commandGrid}>
@@ -176,18 +172,13 @@ export default function CommandPage() {
                   <div style={styles.caseList}>
                     {cases.map((item) => (
                       <article key={item.id} style={styles.caseCard}>
-                        <p style={styles.caseIdentity}>
-                          {item.beneficiary_name}
-                        </p>
+                        <p style={styles.caseIdentity}>{item.beneficiary_name}</p>
 
                         <div style={styles.caseMetaGrid}>
                           <SmallMetric label="Pressure" value={item.support_domain} />
                           <SmallMetric label="Status" value={item.case_status} />
                           <SmallMetric label="Severity" value={item.severity_level} />
-                          <SmallMetric
-                            label="Area"
-                            value={item.region || 'Not recorded'}
-                          />
+                          <SmallMetric label="Area" value={item.region || 'Not recorded'} />
                         </div>
                       </article>
                     ))}
@@ -200,10 +191,10 @@ export default function CommandPage() {
                 <h2 style={styles.compactTitle}>{command.commandVisibility}</h2>
                 <p style={styles.bodyText}>{command.commandAction}</p>
 
-                <div style={styles.memoryRow}>
-                  <SmallMetric label="Memory" value={command.memory} />
-                  <SmallMetric label="Persistence" value={command.persistence} />
-                  <SmallMetric label="Risk" value={command.risk} />
+                <div style={styles.inlineRisk}>
+                  <span>Memory: {command.memory}</span>
+                  <span>Persistence: {command.persistence}</span>
+                  <span>Risk: {command.risk}</span>
                 </div>
               </section>
             </section>
@@ -215,21 +206,9 @@ export default function CommandPage() {
               </section>
             )}
 
-            <section style={styles.briefCard}>
-              <p style={styles.sectionKicker}>Executive Reading</p>
-
-              <div style={styles.briefGrid}>
-                <BriefLine label="Status" value={command.executiveBrief.status} />
-                <BriefLine label="Cases" value={command.executiveBrief.cases} />
-                <BriefLine label="Evidence" value={command.executiveBrief.evidence} />
-                <BriefLine label="Action" value={command.executiveBrief.action} />
-              </div>
-            </section>
-
             <section style={styles.doctrineCard}>
-              CGI governs continuity credibility. Visible recovery is not durable
-              stabilization. Command remains traceable to active lifecycle
-              evidence.
+              CGI governs continuity credibility. Visible recovery is not durable stabilization.
+              Command remains traceable to active lifecycle evidence.
             </section>
           </div>
         </main>
@@ -249,8 +228,7 @@ function buildCommandReading(cases: CommandCase[]): CommandReading {
   ).length
 
   const highSeverity = cases.filter(
-    (item) =>
-      item.severity_level === 'HIGH' || item.severity_level === 'CRITICAL',
+    (item) => item.severity_level === 'HIGH' || item.severity_level === 'CRITICAL',
   ).length
 
   const recurrenceVisible = cases.filter(
@@ -280,8 +258,7 @@ function buildCommandReading(cases: CommandCase[]): CommandReading {
       attributionTitle: 'None active',
       attributionMeaning: 'No command-attributed cases are visible.',
       commandVisibility: 'Clear',
-      commandAction:
-        'No executive intervention is required from current lifecycle evidence.',
+      commandAction: 'No executive intervention is required from current lifecycle evidence.',
       evidenceGap: 'No active evidence gap is visible.',
       recoveryCredibility: 'No active recovery credibility concern is visible.',
       memory: 'NONE',
@@ -386,13 +363,7 @@ function ExecutiveMetric({
   )
 }
 
-function MiniSignal({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
+function MiniSignal({ label, value }: { label: string; value: string }) {
   return (
     <article style={styles.miniSignal}>
       <p style={styles.metricLabel}>{label}</p>
@@ -401,13 +372,7 @@ function MiniSignal({
   )
 }
 
-function SmallMetric({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
+function SmallMetric({ label, value }: { label: string; value: string }) {
   return (
     <article style={styles.smallMetric}>
       <p style={styles.metricLabel}>{label}</p>
@@ -416,13 +381,7 @@ function SmallMetric({
   )
 }
 
-function ExecutivePanel({
-  title,
-  body,
-}: {
-  title: string
-  body: string
-}) {
+function ExecutivePanel({ title, body }: { title: string; body: string }) {
   return (
     <article style={styles.panelCard}>
       <p style={styles.sectionKicker}>{title}</p>
@@ -431,13 +390,7 @@ function ExecutivePanel({
   )
 }
 
-function BriefLine({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
+function BriefLine({ label, value }: { label: string; value: string }) {
   return (
     <article style={styles.briefLine}>
       <p style={styles.metricLabel}>{label}</p>
@@ -465,11 +418,11 @@ const styles: Record<string, CSSProperties> = {
     width: '100%',
     maxWidth: '1120px',
     margin: '0 auto',
-    padding: '8px 24px 56px',
+    padding: '8px 24px 48px',
     boxSizing: 'border-box',
   },
   header: {
-    marginBottom: '16px',
+    marginBottom: '14px',
   },
   headerRow: {
     display: 'flex',
@@ -514,60 +467,83 @@ const styles: Record<string, CSSProperties> = {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
     gap: '12px',
-    marginBottom: '14px',
+    marginBottom: '12px',
   },
   statusCard: {
     background: cardBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '15px',
-    padding: '13px',
-    minHeight: '82px',
+    borderRadius: '14px',
+    padding: '12px',
+    minHeight: '76px',
     boxSizing: 'border-box',
   },
   statusValue: {
     color: '#fff8e7',
-    fontSize: '21px',
+    fontSize: '20px',
     lineHeight: 1,
-    margin: '6px 0',
+    margin: '5px 0',
     fontWeight: 950,
     letterSpacing: '-0.04em',
   },
   statusBody: {
     color: '#c9c0ad',
     fontSize: '11px',
-    lineHeight: 1.35,
+    lineHeight: 1.3,
     margin: 0,
   },
   intelligenceStrip: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
     gap: '12px',
-    marginBottom: '14px',
+    marginBottom: '12px',
   },
   miniSignal: {
     background: deepBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '13px',
-    padding: '11px 12px',
+    borderRadius: '12px',
+    padding: '10px 12px',
   },
   miniValue: {
     color: gold,
     fontSize: '15px',
     fontWeight: 950,
-    margin: '5px 0 0',
+    margin: '4px 0 0',
+  },
+  executiveReading: {
+    display: 'grid',
+    gridTemplateColumns: '180px minmax(0, 1fr)',
+    gap: '14px',
+    background: deepBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '15px',
+    padding: '14px',
+    marginBottom: '12px',
+    boxSizing: 'border-box',
+  },
+  readingTitle: {
+    color: '#fff8e7',
+    fontSize: '24px',
+    lineHeight: 1,
+    margin: '7px 0 0',
+    letterSpacing: '-0.04em',
+  },
+  readingGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: '10px',
   },
   commandGrid: {
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
-    gap: '14px',
-    marginBottom: '14px',
+    gap: '12px',
+    marginBottom: '12px',
   },
   compactCard: {
     background: panelBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '16px',
-    minHeight: '118px',
+    borderRadius: '15px',
+    padding: '14px',
+    minHeight: '98px',
     boxShadow: '0 14px 34px rgba(0,0,0,0.18)',
     boxSizing: 'border-box',
     overflow: 'hidden',
@@ -582,28 +558,31 @@ const styles: Record<string, CSSProperties> = {
   },
   compactTitle: {
     color: '#fff8e7',
-    fontSize: 'clamp(19px, 2vw, 24px)',
-    lineHeight: 1.12,
-    margin: '7px 0',
+    fontSize: 'clamp(18px, 2vw, 22px)',
+    lineHeight: 1.1,
+    margin: '6px 0',
     letterSpacing: '-0.04em',
   },
   bodyText: {
     color: '#cfc7b5',
-    lineHeight: 1.45,
+    lineHeight: 1.42,
     fontSize: '13px',
     margin: 0,
   },
-  memoryRow: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+  inlineRisk: {
+    display: 'flex',
+    flexWrap: 'wrap',
     gap: '8px',
-    marginTop: '12px',
+    marginTop: '10px',
+    color: '#fff8e7',
+    fontSize: '11px',
+    fontWeight: 850,
   },
   smallMetric: {
     background: '#15110a',
     border: `1px solid ${softLine}`,
-    borderRadius: '12px',
-    padding: '9px',
+    borderRadius: '11px',
+    padding: '8px',
   },
   metricLabel: {
     color: mutedGold,
@@ -615,67 +594,51 @@ const styles: Record<string, CSSProperties> = {
   },
   metricValue: {
     color: '#fff8e7',
-    fontSize: '14px',
+    fontSize: '13px',
     lineHeight: 1.15,
     fontWeight: 900,
-    margin: '5px 0 0',
+    margin: '4px 0 0',
   },
   twoColumnGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '14px',
-    marginBottom: '14px',
+    gap: '12px',
+    marginBottom: '12px',
   },
   panelCard: {
     background: '#100f0d',
     border: `1px solid ${softLine}`,
-    borderRadius: '14px',
-    padding: '14px',
-    minHeight: '76px',
+    borderRadius: '13px',
+    padding: '12px',
+    minHeight: '70px',
   },
   panelBody: {
     color: '#cfc7b5',
-    lineHeight: 1.45,
-    fontSize: '13px',
-    margin: '7px 0 0',
-  },
-  briefCard: {
-    display: 'grid',
-    gridTemplateColumns: '180px minmax(0, 1fr)',
-    gap: '14px',
-    background: deepBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '15px',
-    marginBottom: '14px',
-    boxSizing: 'border-box',
-  },
-  briefGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '10px',
+    lineHeight: 1.4,
+    fontSize: '12px',
+    margin: '6px 0 0',
   },
   briefLine: {
     background: '#15110a',
     border: `1px solid ${softLine}`,
-    borderRadius: '12px',
+    borderRadius: '11px',
     padding: '10px',
   },
   briefValue: {
     color: '#fff8e7',
     fontSize: '13px',
     fontWeight: 800,
-    lineHeight: 1.35,
-    margin: '5px 0 0',
+    lineHeight: 1.3,
+    margin: '4px 0 0',
   },
   doctrineCard: {
     background: deepBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '14px',
-    padding: '12px 15px',
+    borderRadius: '13px',
+    padding: '11px 14px',
     color: '#e8dec8',
     fontSize: '13px',
-    lineHeight: 1.45,
+    lineHeight: 1.4,
     fontWeight: 750,
     boxSizing: 'border-box',
   },
