@@ -3,10 +3,10 @@ export type CGINavigationItem = {
   href: string
   description: string
   systemArea:
-    | 'INTAKE'
-    | 'COORDINATION'
+    | 'LIFECYCLE'
+    | 'EXECUTIVE_INTELLIGENCE'
     | 'GOVERNANCE'
-    | 'CONTINUITY_INTELLIGENCE'
+    | 'INFRASTRUCTURE'
     | 'ADMINISTRATION'
   status: 'ACTIVE' | 'LEGACY_ALIAS' | 'FUTURE_RLI'
 }
@@ -19,193 +19,191 @@ export type CGINavigationGroup = {
 
 export const cgiNavigationGroups: CGINavigationGroup[] = [
   {
-    title: 'Continuity Entry',
-    purpose: 'Capture visible instability and open governed continuity visibility.',
+    title: 'Continuity Lifecycle',
+    purpose: 'Follow visible instability from intake to recovery durability.',
     items: [
       {
-        label: 'Need Intake',
+        label: 'Request',
         href: '/request',
-        description:
-          'Capture visible operational instability entering the TSINAXA CGI pathway.',
-        systemArea: 'INTAKE',
+        description: 'Open visible instability before triage begins.',
+        systemArea: 'LIFECYCLE',
         status: 'ACTIVE',
       },
       {
-        label: 'Case Governance',
+        label: 'Triage',
+        href: '/triage',
+        description: 'Judge eligibility before case governance begins.',
+        systemArea: 'LIFECYCLE',
+        status: 'ACTIVE',
+      },
+      {
+        label: 'Cases',
         href: '/cases',
-        description:
-          'Classify, govern, and preserve visibility over active instability cases.',
-        systemArea: 'INTAKE',
+        description: 'Preserve accepted instability under case governance.',
+        systemArea: 'LIFECYCLE',
         status: 'ACTIVE',
       },
-    ],
-  },
-  {
-    title: 'Governed Response',
-    purpose:
-      'Route instability, govern stabilization action evidence, verify action impact, and preserve continuity before recovery monitoring begins.',
-    items: [
       {
-        label: 'Routing Intelligence',
+        label: 'Routing',
         href: '/routing',
-        description:
-          'Coordinate routing ownership, owner alignment, and stabilization direction.',
-        systemArea: 'COORDINATION',
+        description: 'Direct stabilization ownership before action begins.',
+        systemArea: 'LIFECYCLE',
         status: 'ACTIVE',
       },
       {
-        label: 'Stabilization Action Governance',
+        label: 'Interventions',
         href: '/interventions',
-        description:
-          'Govern stabilization action evidence, continuity movement, residual risk, and executive visibility before outcome verification begins.',
-        systemArea: 'COORDINATION',
+        description: 'Preserve stabilization action evidence.',
+        systemArea: 'LIFECYCLE',
         status: 'ACTIVE',
       },
       {
-        label: 'Stabilization Verification Intelligence',
+        label: 'Outcomes',
         href: '/outcomes',
-        description:
-          'Verify action impact, recurrence signals, recovery readiness, and executive meaning before recovery monitoring begins.',
-        systemArea: 'COORDINATION',
-        status: 'ACTIVE',
-      },
-    ],
-  },
-  {
-    title: 'Executive Governance',
-    purpose:
-      'Maintain executive visibility, governance control, audit integrity, and stability command.',
-    items: [
-      {
-        label: 'Executive Stability Board',
-        href: '/system',
-        description:
-          'Executive continuity board showing stability, pressure, trajectory, recovery, memory, and survivability posture.',
-        systemArea: 'GOVERNANCE',
+        description: 'Verify stabilization credibility before recovery.',
+        systemArea: 'LIFECYCLE',
         status: 'ACTIVE',
       },
       {
-        label: 'Operations Intelligence',
-        href: '/operations',
-        description:
-          'View operational continuity scores, pressure signals, trajectory movement, and snapshot persistence.',
-        systemArea: 'GOVERNANCE',
-        status: 'ACTIVE',
-      },
-      {
-        label: 'Command Intelligence',
-        href: '/command',
-        description:
-          'Executive command view for active continuity governance and action prioritization.',
-        systemArea: 'GOVERNANCE',
-        status: 'ACTIVE',
-      },
-      {
-        label: 'Governance Framework',
-        href: '/governance',
-        description:
-          'Manage governance decisions, role boundaries, and non-punitive interpretation rules.',
-        systemArea: 'GOVERNANCE',
-        status: 'ACTIVE',
-      },
-      {
-        label: 'Audit Intelligence',
-        href: '/audit',
-        description:
-          'Review audit trails, completion evidence, and governance integrity.',
-        systemArea: 'GOVERNANCE',
-        status: 'ACTIVE',
-      },
-      {
-        label: 'Infrastructure Doctrine',
-        href: '/infrastructure',
-        description:
-          'Review TSINAXA CGI identity, adoption pathway, doctrine, readiness, and deployment guardrails.',
-        systemArea: 'GOVERNANCE',
-        status: 'ACTIVE',
-      },
-    ],
-  },
-  {
-    title: 'Continuity Intelligence',
-    purpose:
-      'Read persisted CGI metrics to evaluate pressure, prediction, recovery, reliability, and trajectory over time.',
-    items: [
-      {
-        label: 'Pressure Intelligence',
-        href: '/pressure',
-        description:
-          'Track pressure load, pressure spread, pressure containment, and dominant pressure drivers.',
-        systemArea: 'CONTINUITY_INTELLIGENCE',
-        status: 'ACTIVE',
-      },
-      {
-        label: 'Predictive Intelligence',
-        href: '/predictive',
-        description:
-          'Forecast near-term continuity instability using persisted historical CGI metrics.',
-        systemArea: 'CONTINUITY_INTELLIGENCE',
-        status: 'ACTIVE',
-      },
-      {
-        label: 'Recovery Intelligence',
+        label: 'Recovery',
         href: '/recovery',
-        description:
-          'Assess whether stabilization signals are converting into durable recovery.',
-        systemArea: 'CONTINUITY_INTELLIGENCE',
+        description: 'Test whether stabilization is holding over time.',
+        systemArea: 'LIFECYCLE',
+        status: 'ACTIVE',
+      },
+    ],
+  },
+  {
+    title: 'Executive Intelligence',
+    purpose: 'Read pressure, reliability, trajectory, prediction, and command exposure.',
+    items: [
+      {
+        label: 'Command',
+        href: '/command',
+        description: 'Executive command view for active continuity pressure.',
+        systemArea: 'EXECUTIVE_INTELLIGENCE',
         status: 'ACTIVE',
       },
       {
-        label: 'Trajectory Intelligence',
+        label: 'Pressure',
+        href: '/pressure',
+        description: 'Track pressure load, spread, and containment.',
+        systemArea: 'EXECUTIVE_INTELLIGENCE',
+        status: 'ACTIVE',
+      },
+      {
+        label: 'Trajectory',
         href: '/trajectory',
-        description:
-          'Review continuity direction, drift, deterioration, and stabilization movement.',
-        systemArea: 'CONTINUITY_INTELLIGENCE',
+        description: 'Review continuity direction and drift.',
+        systemArea: 'EXECUTIVE_INTELLIGENCE',
         status: 'ACTIVE',
       },
       {
-        label: 'Reliability Intelligence',
+        label: 'Predictive',
+        href: '/predictive',
+        description: 'Forecast near-term continuity instability.',
+        systemArea: 'EXECUTIVE_INTELLIGENCE',
+        status: 'ACTIVE',
+      },
+      {
+        label: 'Reliability',
         href: '/reliability',
-        description:
-          'Assess whether continuity patterns are becoming dependable across snapshots.',
-        systemArea: 'CONTINUITY_INTELLIGENCE',
+        description: 'Assess whether continuity patterns are dependable.',
+        systemArea: 'EXECUTIVE_INTELLIGENCE',
+        status: 'ACTIVE',
+      },
+    ],
+  },
+  {
+    title: 'Governance',
+    purpose: 'Preserve governance integrity, auditability, and action meaning.',
+    items: [
+      {
+        label: 'Audit',
+        href: '/audit',
+        description: 'Review evidence, audit trails, and governance integrity.',
+        systemArea: 'GOVERNANCE',
         status: 'ACTIVE',
       },
       {
-        label: 'Bottleneck Intelligence',
+        label: 'Governance',
+        href: '/governance',
+        description: 'Manage governance decisions and role boundaries.',
+        systemArea: 'GOVERNANCE',
+        status: 'ACTIVE',
+      },
+      {
+        label: 'Timeline',
+        href: '/timeline',
+        description: 'View continuity memory across lifecycle movement.',
+        systemArea: 'GOVERNANCE',
+        status: 'ACTIVE',
+      },
+      {
+        label: 'Action Cues',
+        href: '/action-cues',
+        description: 'Review standardized action meanings.',
+        systemArea: 'GOVERNANCE',
+        status: 'ACTIVE',
+      },
+    ],
+  },
+  {
+    title: 'Infrastructure',
+    purpose: 'Review system structure, doctrine, domains, and bottlenecks.',
+    items: [
+      {
+        label: 'System',
+        href: '/system',
+        description: 'Executive stability board and system posture.',
+        systemArea: 'INFRASTRUCTURE',
+        status: 'ACTIVE',
+      },
+      {
+        label: 'Infrastructure',
+        href: '/infrastructure',
+        description: 'CGI identity, doctrine, and deployment guardrails.',
+        systemArea: 'INFRASTRUCTURE',
+        status: 'ACTIVE',
+      },
+      {
+        label: 'Domains',
+        href: '/domains',
+        description: 'Review continuity domains and operating boundaries.',
+        systemArea: 'INFRASTRUCTURE',
+        status: 'ACTIVE',
+      },
+      {
+        label: 'Bottlenecks',
         href: '/bottlenecks',
-        description:
-          'Identify structural delays, pathway congestion, and repeated stabilization blockage.',
-        systemArea: 'CONTINUITY_INTELLIGENCE',
+        description: 'Identify repeated stabilization blockage.',
+        systemArea: 'INFRASTRUCTURE',
         status: 'FUTURE_RLI',
       },
     ],
   },
   {
     title: 'Administration',
-    purpose:
-      'Control institutional setup, assignment governance, and owner accountability pathways.',
+    purpose: 'Control setup, assignments, and owner accountability.',
     items: [
       {
-        label: 'Admin Hub',
+        label: 'Admin',
         href: '/admin',
-        description: 'Administrative control center for TSINAXA CGI configuration.',
+        description: 'Administrative control center.',
         systemArea: 'ADMINISTRATION',
         status: 'ACTIVE',
       },
       {
-        label: 'Assignment Control',
+        label: 'Assignment',
         href: '/admin/assign',
-        description:
-          'Assign owners and coordinate governed continuity ownership.',
+        description: 'Assign continuity ownership.',
         systemArea: 'ADMINISTRATION',
         status: 'ACTIVE',
       },
       {
-        label: 'Responder Registry',
+        label: 'Responders',
         href: '/admin/teachers',
-        description:
-          'Legacy route currently used for responder profile governance.',
+        description: 'Legacy responder profile governance.',
         systemArea: 'ADMINISTRATION',
         status: 'LEGACY_ALIAS',
       },
