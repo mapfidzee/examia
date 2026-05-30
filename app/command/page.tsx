@@ -28,19 +28,25 @@ type CommandReading = {
   activeCaseCount: string
   evidenceShort: string
   survivabilityShort: string
-  headline: string
+  pressureShort: string
+  trajectoryShort: string
+  recoveryShort: string
+  reliabilityShort: string
   attributionTitle: string
   attributionMeaning: string
-  currentReading: string
-  executiveMeaning: string
+  commandVisibility: string
+  commandAction: string
   evidenceGap: string
   recoveryCredibility: string
-  evidenceRequirement: string
-  survivability: string
   memory: string
   persistence: string
   risk: string
-  copyReadyBrief: string[]
+  executiveBrief: {
+    status: string
+    cases: string
+    evidence: string
+    action: string
+  }
 }
 
 const COMMAND_VISIBLE_STATUSES = [
@@ -115,71 +121,65 @@ export default function CommandPage() {
         <main style={styles.page}>
           <div style={styles.container}>
             <section style={styles.header}>
-              <div>
-                <p style={styles.kicker}>TSINAXA CGI • COMMAND</p>
+              <p style={styles.kicker}>TSINAXA CGI • COMMAND</p>
+
+              <div style={styles.headerRow}>
                 <h1 style={styles.title}>Command</h1>
-                <p style={styles.subtitle}>
-                  Executive reading of attributed instability, recurrence,
-                  evidence pressure, survivability exposure, and recovery
-                  credibility.
-                </p>
+
+                <p style={styles.headerPosture}>{command.posture}</p>
               </div>
 
-              <div style={styles.headerSignal}>
-                <p style={styles.headerSignalLabel}>Posture</p>
-                <p style={styles.headerSignalValue}>{command.statusShort}</p>
-              </div>
+              <p style={styles.subtitle}>
+                Executive reading of command-attributed instability, evidence
+                pressure, recovery credibility, survivability exposure, and
+                institutional continuity posture.
+              </p>
             </section>
 
             <section style={styles.statusStrip}>
-              <ExecutiveStatus
-                label="Status"
+              <ExecutiveMetric
+                label="Posture"
                 value={command.statusShort}
-                body={command.headline}
+                body={command.posture}
               />
-              <ExecutiveStatus
+
+              <ExecutiveMetric
                 label="Cases"
                 value={loading ? '...' : command.activeCaseCount}
                 body={command.attributionTitle}
               />
-              <ExecutiveStatus
+
+              <ExecutiveMetric
                 label="Evidence"
                 value={command.evidenceShort}
-                body={command.evidenceRequirement}
+                body={command.evidenceGap}
               />
-              <ExecutiveStatus
+
+              <ExecutiveMetric
                 label="Survivability"
                 value={command.survivabilityShort}
-                body={command.survivability}
+                body="Institutional survivability command exposure."
               />
             </section>
 
-            <section style={styles.executiveBand}>
-              <div>
-                <p style={styles.sectionKicker}>Executive Reading</p>
-                <h2 style={styles.bandTitle}>{command.posture}</h2>
-              </div>
-              <p style={styles.bandText}>{command.currentReading}</p>
+            <section style={styles.intelligenceStrip}>
+              <MiniSignal label="Pressure" value={command.pressureShort} />
+              <MiniSignal label="Trajectory" value={command.trajectoryShort} />
+              <MiniSignal label="Recovery" value={command.recoveryShort} />
+              <MiniSignal label="Reliability" value={command.reliabilityShort} />
             </section>
 
-            <section style={styles.primaryGrid}>
-              <section style={styles.primaryCard}>
-                <div style={styles.sectionHeaderRow}>
-                  <div>
-                    <p style={styles.sectionKicker}>Attribution</p>
-                    <h2 style={styles.cardTitle}>
-                      {loading
-                        ? 'Loading command evidence...'
-                        : command.attributionTitle}
-                    </h2>
-                  </div>
-                </div>
+            <section style={styles.commandGrid}>
+              <section style={styles.compactCard}>
+                <p style={styles.sectionKicker}>Attribution</p>
+
+                <h2 style={styles.compactTitle}>{command.attributionTitle}</h2>
 
                 <p style={styles.bodyText}>{command.attributionMeaning}</p>
 
-                <div style={styles.caseList}>
-                  {!loading &&
-                    cases.map((item) => (
+                {!loading && cases.length > 0 && (
+                  <div style={styles.caseList}>
+                    {cases.map((item) => (
                       <article key={item.id} style={styles.caseCard}>
                         <p style={styles.caseIdentity}>
                           {item.beneficiary_name}
@@ -196,21 +196,18 @@ export default function CommandPage() {
                         </div>
                       </article>
                     ))}
-
-                  {!loading && cases.length === 0 && (
-                    <div style={styles.emptyState}>
-                      No active governed instability is currently visible to
-                      Command.
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </section>
 
-              <section style={styles.primaryCard}>
-                <p style={styles.sectionKicker}>Interpretation</p>
-                <h2 style={styles.cardTitle}>{command.executiveMeaning}</h2>
+              <section style={styles.compactCard}>
+                <p style={styles.sectionKicker}>Command Visibility</p>
 
-                <div style={styles.compactMetrics}>
+                <h2 style={styles.compactTitle}>{command.commandVisibility}</h2>
+
+                <p style={styles.bodyText}>{command.commandAction}</p>
+
+                <div style={styles.memoryRow}>
                   <SmallMetric label="Memory" value={command.memory} />
                   <SmallMetric label="Persistence" value={command.persistence} />
                   <SmallMetric label="Risk" value={command.risk} />
@@ -220,33 +217,24 @@ export default function CommandPage() {
 
             <section style={styles.twoColumnGrid}>
               <ExecutivePanel title="Evidence" body={command.evidenceGap} />
-              <ExecutivePanel
-                title="Recovery"
-                body={command.recoveryCredibility}
-              />
+              <ExecutivePanel title="Recovery" body={command.recoveryCredibility} />
             </section>
 
             <section style={styles.briefCard}>
-              <div>
-                <p style={styles.sectionKicker}>Executive Brief</p>
-                <h2 style={styles.briefTitle}>Command-ready summary</h2>
-              </div>
+              <p style={styles.sectionKicker}>Executive Reading</p>
 
-              <ul style={styles.briefList}>
-                {command.copyReadyBrief.map((line) => (
-                  <li key={line} style={styles.briefItem}>
-                    {line}
-                  </li>
-                ))}
-              </ul>
+              <div style={styles.briefGrid}>
+                <BriefLine label="Status" value={command.executiveBrief.status} />
+                <BriefLine label="Cases" value={command.executiveBrief.cases} />
+                <BriefLine label="Evidence" value={command.executiveBrief.evidence} />
+                <BriefLine label="Action" value={command.executiveBrief.action} />
+              </div>
             </section>
 
             <section style={styles.doctrineCard}>
-              <p style={styles.doctrineText}>
-                CGI governs continuity credibility. Visible recovery is not
-                durable stabilization. Command remains traceable to active
-                lifecycle evidence.
-              </p>
+              CGI governs continuity credibility. Visible recovery is not durable
+              stabilization. Command remains traceable to active lifecycle
+              evidence.
             </section>
           </div>
         </main>
@@ -290,30 +278,30 @@ function buildCommandReading(cases: CommandCase[]): CommandReading {
       activeCaseCount: '0',
       evidenceShort: 'NONE',
       survivabilityShort: 'CLEAR',
-      headline: 'Command is clear.',
-      attributionTitle: 'No active attributed cases',
+      pressureShort: 'CLEAR',
+      trajectoryShort: 'STABLE',
+      recoveryShort: 'NONE ACTIVE',
+      reliabilityShort: 'STABLE',
+      attributionTitle: 'None active',
       attributionMeaning:
-        'Command is not reading active lifecycle cases. Prior test data is no longer driving this surface.',
-      currentReading:
-        'No command-visible instability is currently present.',
-      executiveMeaning:
-        'No executive intervention is required from current lifecycle evidence.',
+        'No active command-attributed cases are visible.',
+      commandVisibility:
+        'No command-visible instability.',
+      commandAction:
+        'Executive intervention is not required from current lifecycle evidence.',
       evidenceGap:
-        'No active evidence gap is visible because no command-visible lifecycle case is active.',
+        'No active evidence gap is visible.',
       recoveryCredibility:
-        'No active recovery credibility concern is currently visible to Command.',
-      evidenceRequirement: 'No active command evidence required.',
-      survivability:
-        'No active survivability pressure is visible.',
+        'No active recovery credibility concern is visible.',
       memory: 'NONE',
       persistence: 'NONE',
       risk: 'CLEAR',
-      copyReadyBrief: [
-        'No active command pressure is visible.',
-        'No governed instability is currently attributed to Command.',
-        'No executive intervention is required.',
-        'Command will activate when command-visible instability enters the lifecycle.',
-      ],
+      executiveBrief: {
+        status: 'Clear',
+        cases: '0 active command-attributed cases',
+        evidence: 'None required',
+        action: 'No executive intervention required',
+      },
     }
   }
 
@@ -324,35 +312,34 @@ function buildCommandReading(cases: CommandCase[]): CommandReading {
       activeCaseCount: String(total),
       evidenceShort: 'REQUIRED',
       survivabilityShort: 'WATCH',
-      headline: 'Executive review required.',
-      attributionTitle: `${total} active attributed record(s)`,
+      pressureShort: highSeverity > 1 ? 'ELEVATED' : 'VISIBLE',
+      trajectoryShort: recurrenceVisible > 0 ? 'UNSTABLE' : 'WATCH',
+      recoveryShort:
+        recoveryMonitoring > 0 ? 'MONITORING' : 'NOT CONFIRMED',
+      reliabilityShort: recurrenceVisible > 0 ? 'VARIABLE' : 'WATCH',
+      attributionTitle: `${total} active record(s)`,
       attributionMeaning:
-        'This command reading is generated from active lifecycle records, not hardcoded threat language.',
-      currentReading:
-        'Command-visible instability requires executive attention.',
-      executiveMeaning:
-        'Repeated or escalated instability must not move silently through ordinary handling.',
+        'Command is reading active lifecycle evidence requiring executive visibility.',
+      commandVisibility:
+        'Command-visible instability requires review.',
+      commandAction:
+        'Do not allow repeated or escalated instability to move silently through ordinary handling.',
       evidenceGap:
-        'Evidence must show ownership, action, outcome credibility, and recovery durability before command concern relaxes.',
+        'Ownership, action, outcome credibility, recurrence review, and recovery durability evidence are required.',
       recoveryCredibility:
         recoveryMonitoring > 0
           ? 'Recovery monitoring is visible, but durability is not yet confirmed.'
-          : 'Recovery credibility is not yet established for all command-visible instability.',
-      evidenceRequirement:
-        'Ownership, recurrence review, mitigation evidence, and continuity protection evidence are required.',
-      survivability:
-        'Survivability remains under observation until pressure and durability are understood.',
+          : 'Recovery credibility is not yet established.',
       memory:
-        recurrenceVisible > 0 ? 'RECURRENCE_VISIBLE' : 'VISIBLE',
+        recurrenceVisible > 0 ? 'RECURRENCE' : 'VISIBLE',
       persistence: recurrenceVisible > 0 ? 'PERSISTENT' : 'EMERGING',
       risk: 'WATCHED',
-      copyReadyBrief: [
-        `${total} active command-visible record(s) are present.`,
-        `Escalation count: ${commandEscalations}.`,
-        `Recurrence count: ${recurrenceVisible}.`,
-        `High-pressure count: ${highSeverity}.`,
-        'Command action should focus on evidence, ownership, recurrence, survivability, and follow-through.',
-      ],
+      executiveBrief: {
+        status: 'Elevated',
+        cases: `${total} command-attributed record(s)`,
+        evidence: 'Executive evidence required',
+        action: 'Require ownership, recurrence review, and durability proof',
+      },
     }
   }
 
@@ -362,36 +349,37 @@ function buildCommandReading(cases: CommandCase[]): CommandReading {
     activeCaseCount: String(total),
     evidenceShort: 'MONITOR',
     survivabilityShort: 'STABLE',
-    headline: 'Continuity remains proportionate.',
-    attributionTitle: `${total} active attributed record(s)`,
+    pressureShort: 'VISIBLE',
+    trajectoryShort: 'STABLE',
+    recoveryShort:
+      recoveryMonitoring > 0 ? 'MONITORING' : 'PENDING',
+    reliabilityShort: 'STABLE',
+    attributionTitle: `${total} active record(s)`,
     attributionMeaning:
-      'Command is reading active lifecycle records and preserving proportional executive visibility.',
-    currentReading:
-      'Active governed instability is visible under command watch.',
-    executiveMeaning:
+      'Command is reading active lifecycle records under proportional executive visibility.',
+    commandVisibility:
+      'Active governed instability is visible.',
+    commandAction:
       'Monitor lifecycle movement without over-escalating stable governed cases.',
     evidenceGap:
-      'Evidence remains important, but no concentrated command evidence gap is currently visible.',
+      'Evidence remains important, but no concentrated evidence gap is visible.',
     recoveryCredibility:
       recoveryMonitoring > 0
         ? 'Recovery monitoring is active for some records.'
-        : 'Recovery credibility matures after outcome verification and durability observation.',
-    evidenceRequirement:
-      'Evidence should continue to show ownership, action movement, outcome credibility, and recovery readiness.',
-    survivability:
-      'Survivability remains protected through ordinary governed lifecycle monitoring.',
+        : 'Recovery credibility matures after verification and durability observation.',
     memory: 'VISIBLE',
     persistence: 'EMERGING',
     risk: 'MONITORED',
-    copyReadyBrief: [
-      `${total} active command-visible record(s) are present.`,
-      'Command pressure remains proportionate.',
-      'Continue monitoring ownership, action evidence, outcome credibility, and recovery durability.',
-    ],
+    executiveBrief: {
+      status: 'Watch',
+      cases: `${total} active command-attributed record(s)`,
+      evidence: 'Monitor evidence maturity',
+      action: 'Continue proportional command visibility',
+    },
   }
 }
 
-function ExecutiveStatus({
+function ExecutiveMetric({
   label,
   value,
   body,
@@ -405,6 +393,21 @@ function ExecutiveStatus({
       <p style={styles.metricLabel}>{label}</p>
       <p style={styles.statusValue}>{value}</p>
       <p style={styles.statusBody}>{body}</p>
+    </article>
+  )
+}
+
+function MiniSignal({
+  label,
+  value,
+}: {
+  label: string
+  value: string
+}) {
+  return (
+    <article style={styles.miniSignal}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.miniValue}>{value}</p>
     </article>
   )
 }
@@ -433,9 +436,23 @@ function ExecutivePanel({
 }) {
   return (
     <article style={styles.panelCard}>
-      <p style={styles.sectionKicker}>CGI Command</p>
-      <h3 style={styles.panelTitle}>{title}</h3>
+      <p style={styles.sectionKicker}>{title}</p>
       <p style={styles.panelBody}>{body}</p>
+    </article>
+  )
+}
+
+function BriefLine({
+  label,
+  value,
+}: {
+  label: string
+  value: string
+}) {
+  return (
+    <article style={styles.briefLine}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.briefValue}>{value}</p>
     </article>
   )
 }
@@ -443,9 +460,9 @@ function ExecutivePanel({
 const gold = '#d6b25e'
 const mutedGold = '#9f8142'
 const deepBlack = '#030303'
-const panelBlack = '#0a0a0a'
-const cardBlack = '#101010'
-const softLine = 'rgba(214,178,94,0.22)'
+const panelBlack = '#090807'
+const cardBlack = '#11100d'
+const softLine = 'rgba(214,178,94,0.24)'
 
 const styles: Record<string, CSSProperties> = {
   page: {
@@ -453,21 +470,23 @@ const styles: Record<string, CSSProperties> = {
     color: '#f5f0e6',
     overflowX: 'hidden',
     background:
-      'radial-gradient(circle at top right, rgba(214,178,94,0.08), transparent 34%), #030303',
+      'radial-gradient(circle at top right, rgba(214,178,94,0.08), transparent 32%), #030303',
   },
   container: {
     width: '100%',
     maxWidth: '1120px',
     margin: '0 auto',
-    padding: '8px 24px 64px',
+    padding: '8px 24px 56px',
     boxSizing: 'border-box',
   },
   header: {
+    marginBottom: '16px',
+  },
+  headerRow: {
     display: 'flex',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    gap: '24px',
-    alignItems: 'flex-start',
-    marginBottom: '18px',
+    gap: '18px',
   },
   kicker: {
     color: gold,
@@ -478,127 +497,91 @@ const styles: Record<string, CSSProperties> = {
   },
   title: {
     color: '#fff8e7',
-    fontSize: 'clamp(30px, 4vw, 44px)',
+    fontSize: 'clamp(30px, 4vw, 42px)',
     lineHeight: 1,
     margin: '8px 0',
     letterSpacing: '-0.05em',
   },
-  subtitle: {
-    color: '#cfc7b5',
-    maxWidth: '720px',
-    lineHeight: 1.55,
-    fontSize: '14px',
-    margin: 0,
-  },
-  headerSignal: {
-    minWidth: '138px',
-    background: panelBlack,
+  headerPosture: {
+    color: gold,
     border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '13px',
-  },
-  headerSignalLabel: {
-    color: mutedGold,
+    borderRadius: '999px',
+    padding: '7px 11px',
     fontSize: '10px',
     fontWeight: 900,
-    letterSpacing: '0.14em',
+    letterSpacing: '0.12em',
     textTransform: 'uppercase',
     margin: 0,
+    whiteSpace: 'nowrap',
   },
-  headerSignalValue: {
-    color: gold,
-    fontSize: '20px',
-    fontWeight: 950,
-    margin: '6px 0 0',
+  subtitle: {
+    color: '#cfc7b5',
+    maxWidth: '760px',
+    lineHeight: 1.5,
+    fontSize: '13px',
+    margin: 0,
   },
   statusStrip: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
     gap: '12px',
-    marginBottom: '18px',
+    marginBottom: '14px',
   },
   statusCard: {
     background: cardBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '14px',
-    minHeight: '92px',
+    borderRadius: '15px',
+    padding: '13px',
+    minHeight: '82px',
     boxSizing: 'border-box',
   },
   statusValue: {
     color: '#fff8e7',
-    fontSize: '22px',
+    fontSize: '21px',
     lineHeight: 1,
-    margin: '7px 0',
+    margin: '6px 0',
     fontWeight: 950,
     letterSpacing: '-0.04em',
   },
   statusBody: {
     color: '#c9c0ad',
-    fontSize: '12px',
-    lineHeight: 1.42,
+    fontSize: '11px',
+    lineHeight: 1.35,
     margin: 0,
   },
-  executiveBand: {
+  intelligenceStrip: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(220px, 0.7fr) minmax(0, 1.3fr)',
-    gap: '18px',
-    alignItems: 'center',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: '12px',
+    marginBottom: '14px',
+  },
+  miniSignal: {
     background: deepBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '18px',
-    padding: '16px 18px',
-    marginBottom: '18px',
+    borderRadius: '13px',
+    padding: '11px 12px',
   },
-  bandTitle: {
+  miniValue: {
     color: gold,
-    fontSize: '20px',
-    lineHeight: 1.15,
-    margin: '6px 0 0',
-    letterSpacing: '-0.03em',
+    fontSize: '15px',
+    fontWeight: 950,
+    margin: '5px 0 0',
   },
-  bandText: {
-    color: '#efe6d1',
-    lineHeight: 1.55,
-    fontSize: '14px',
-    margin: 0,
-  },
-  primaryGrid: {
+  commandGrid: {
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
-    gap: '16px',
-    marginBottom: '18px',
+    gap: '14px',
+    marginBottom: '14px',
   },
-  primaryCard: {
+  compactCard: {
     background: panelBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '18px',
-    padding: '18px',
-    boxShadow: '0 18px 44px rgba(0,0,0,0.22)',
+    borderRadius: '16px',
+    padding: '16px',
+    minHeight: '150px',
+    boxShadow: '0 14px 34px rgba(0,0,0,0.18)',
     boxSizing: 'border-box',
     overflow: 'hidden',
-  },
-  doctrineCard: {
-    background: deepBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '14px 18px',
-    marginBottom: '20px',
-    boxSizing: 'border-box',
-  },
-  doctrineText: {
-    color: '#e8dec8',
-    fontSize: '14px',
-    lineHeight: 1.55,
-    margin: 0,
-    fontWeight: 750,
-  },
-  sectionHeaderRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    gap: '12px',
-    alignItems: 'flex-start',
-    marginBottom: '8px',
   },
   sectionKicker: {
     color: mutedGold,
@@ -608,31 +591,30 @@ const styles: Record<string, CSSProperties> = {
     margin: 0,
     fontSize: '10px',
   },
-  cardTitle: {
+  compactTitle: {
     color: '#fff8e7',
-    fontSize: 'clamp(20px, 2.2vw, 26px)',
+    fontSize: 'clamp(19px, 2vw, 24px)',
     lineHeight: 1.12,
-    margin: '8px 0',
+    margin: '7px 0',
     letterSpacing: '-0.04em',
   },
   bodyText: {
     color: '#cfc7b5',
-    lineHeight: 1.55,
+    lineHeight: 1.45,
     fontSize: '13px',
     margin: 0,
-    maxWidth: '720px',
   },
-  compactMetrics: {
+  memoryRow: {
     display: 'grid',
-    gridTemplateColumns: '1fr',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
     gap: '8px',
-    marginTop: '14px',
+    marginTop: '12px',
   },
   smallMetric: {
     background: '#15110a',
     border: `1px solid ${softLine}`,
-    borderRadius: '13px',
-    padding: '10px',
+    borderRadius: '12px',
+    padding: '9px',
   },
   metricLabel: {
     color: mutedGold,
@@ -644,93 +626,90 @@ const styles: Record<string, CSSProperties> = {
   },
   metricValue: {
     color: '#fff8e7',
-    fontSize: '15px',
-    lineHeight: 1.2,
+    fontSize: '14px',
+    lineHeight: 1.15,
     fontWeight: 900,
     margin: '5px 0 0',
   },
   twoColumnGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '16px',
-    marginBottom: '18px',
+    gap: '14px',
+    marginBottom: '14px',
   },
   panelCard: {
     background: '#100f0d',
     border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '16px',
-    minHeight: '96px',
-  },
-  panelTitle: {
-    color: '#fff8e7',
-    fontSize: '20px',
-    lineHeight: 1.15,
-    margin: '8px 0',
+    borderRadius: '14px',
+    padding: '14px',
+    minHeight: '76px',
   },
   panelBody: {
     color: '#cfc7b5',
-    lineHeight: 1.5,
+    lineHeight: 1.45,
     fontSize: '13px',
-    margin: 0,
+    margin: '7px 0 0',
   },
   briefCard: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(200px, 0.65fr) minmax(0, 1.35fr)',
-    gap: '18px',
+    gridTemplateColumns: '180px minmax(0, 1fr)',
+    gap: '14px',
     background: deepBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '18px',
-    padding: '18px',
-    marginBottom: '18px',
+    borderRadius: '16px',
+    padding: '15px',
+    marginBottom: '14px',
     boxSizing: 'border-box',
   },
-  briefTitle: {
+  briefGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: '10px',
+  },
+  briefLine: {
+    background: '#15110a',
+    border: `1px solid ${softLine}`,
+    borderRadius: '12px',
+    padding: '10px',
+  },
+  briefValue: {
     color: '#fff8e7',
-    fontSize: '22px',
-    lineHeight: 1.15,
-    margin: '8px 0 0',
-    letterSpacing: '-0.03em',
-  },
-  briefList: {
-    margin: 0,
-    paddingLeft: '18px',
-    color: '#efe6d1',
-    lineHeight: 1.55,
     fontSize: '13px',
+    fontWeight: 800,
+    lineHeight: 1.35,
+    margin: '5px 0 0',
   },
-  briefItem: {
-    marginBottom: '3px',
+  doctrineCard: {
+    background: deepBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '14px',
+    padding: '12px 15px',
+    color: '#e8dec8',
+    fontSize: '13px',
+    lineHeight: 1.45,
+    fontWeight: 750,
+    boxSizing: 'border-box',
   },
   caseList: {
     display: 'grid',
     gap: '10px',
-    marginTop: '14px',
+    marginTop: '12px',
   },
   caseCard: {
     background: '#15110a',
     border: `1px solid ${softLine}`,
-    borderRadius: '14px',
-    padding: '12px',
+    borderRadius: '12px',
+    padding: '11px',
   },
   caseIdentity: {
     color: '#fff8e7',
     fontWeight: 900,
-    margin: '0 0 10px',
+    margin: '0 0 8px',
     lineHeight: 1.3,
   },
   caseMetaGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
     gap: '8px',
-  },
-  emptyState: {
-    background: '#15110a',
-    border: `1px dashed ${softLine}`,
-    borderRadius: '14px',
-    padding: '14px',
-    color: '#d8cfba',
-    lineHeight: 1.5,
-    fontSize: '13px',
   },
 }
