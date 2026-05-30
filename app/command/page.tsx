@@ -41,6 +41,7 @@ type CommandReading = {
   memory: string
   persistence: string
   risk: string
+  hasActiveCommandEvidence: boolean
   executiveBrief: {
     status: string
     cases: string
@@ -125,7 +126,6 @@ export default function CommandPage() {
 
               <div style={styles.headerRow}>
                 <h1 style={styles.title}>Command</h1>
-
                 <p style={styles.headerPosture}>{command.posture}</p>
               </div>
 
@@ -142,19 +142,16 @@ export default function CommandPage() {
                 value={command.statusShort}
                 body={command.posture}
               />
-
               <ExecutiveMetric
                 label="Cases"
                 value={loading ? '...' : command.activeCaseCount}
                 body={command.attributionTitle}
               />
-
               <ExecutiveMetric
                 label="Evidence"
                 value={command.evidenceShort}
                 body={command.evidenceGap}
               />
-
               <ExecutiveMetric
                 label="Survivability"
                 value={command.survivabilityShort}
@@ -172,9 +169,7 @@ export default function CommandPage() {
             <section style={styles.commandGrid}>
               <section style={styles.compactCard}>
                 <p style={styles.sectionKicker}>Attribution</p>
-
                 <h2 style={styles.compactTitle}>{command.attributionTitle}</h2>
-
                 <p style={styles.bodyText}>{command.attributionMeaning}</p>
 
                 {!loading && cases.length > 0 && (
@@ -202,9 +197,7 @@ export default function CommandPage() {
 
               <section style={styles.compactCard}>
                 <p style={styles.sectionKicker}>Command Visibility</p>
-
                 <h2 style={styles.compactTitle}>{command.commandVisibility}</h2>
-
                 <p style={styles.bodyText}>{command.commandAction}</p>
 
                 <div style={styles.memoryRow}>
@@ -215,10 +208,12 @@ export default function CommandPage() {
               </section>
             </section>
 
-            <section style={styles.twoColumnGrid}>
-              <ExecutivePanel title="Evidence" body={command.evidenceGap} />
-              <ExecutivePanel title="Recovery" body={command.recoveryCredibility} />
-            </section>
+            {command.hasActiveCommandEvidence && (
+              <section style={styles.twoColumnGrid}>
+                <ExecutivePanel title="Evidence" body={command.evidenceGap} />
+                <ExecutivePanel title="Recovery" body={command.recoveryCredibility} />
+              </section>
+            )}
 
             <section style={styles.briefCard}>
               <p style={styles.sectionKicker}>Executive Reading</p>
@@ -283,19 +278,16 @@ function buildCommandReading(cases: CommandCase[]): CommandReading {
       recoveryShort: 'NONE ACTIVE',
       reliabilityShort: 'STABLE',
       attributionTitle: 'None active',
-      attributionMeaning:
-        'No active command-attributed cases are visible.',
-      commandVisibility:
-        'No command-visible instability.',
+      attributionMeaning: 'No command-attributed cases are visible.',
+      commandVisibility: 'Clear',
       commandAction:
-        'Executive intervention is not required from current lifecycle evidence.',
-      evidenceGap:
-        'No active evidence gap is visible.',
-      recoveryCredibility:
-        'No active recovery credibility concern is visible.',
+        'No executive intervention is required from current lifecycle evidence.',
+      evidenceGap: 'No active evidence gap is visible.',
+      recoveryCredibility: 'No active recovery credibility concern is visible.',
       memory: 'NONE',
       persistence: 'NONE',
       risk: 'CLEAR',
+      hasActiveCommandEvidence: false,
       executiveBrief: {
         status: 'Clear',
         cases: '0 active command-attributed cases',
@@ -314,26 +306,24 @@ function buildCommandReading(cases: CommandCase[]): CommandReading {
       survivabilityShort: 'WATCH',
       pressureShort: highSeverity > 1 ? 'ELEVATED' : 'VISIBLE',
       trajectoryShort: recurrenceVisible > 0 ? 'UNSTABLE' : 'WATCH',
-      recoveryShort:
-        recoveryMonitoring > 0 ? 'MONITORING' : 'NOT CONFIRMED',
+      recoveryShort: recoveryMonitoring > 0 ? 'MONITORING' : 'NOT CONFIRMED',
       reliabilityShort: recurrenceVisible > 0 ? 'VARIABLE' : 'WATCH',
       attributionTitle: `${total} active record(s)`,
       attributionMeaning:
         'Command is reading active lifecycle evidence requiring executive visibility.',
-      commandVisibility:
-        'Command-visible instability requires review.',
+      commandVisibility: 'Review required',
       commandAction:
-        'Do not allow repeated or escalated instability to move silently through ordinary handling.',
+        'Repeated or escalated instability must not move silently through ordinary handling.',
       evidenceGap:
         'Ownership, action, outcome credibility, recurrence review, and recovery durability evidence are required.',
       recoveryCredibility:
         recoveryMonitoring > 0
           ? 'Recovery monitoring is visible, but durability is not yet confirmed.'
           : 'Recovery credibility is not yet established.',
-      memory:
-        recurrenceVisible > 0 ? 'RECURRENCE' : 'VISIBLE',
+      memory: recurrenceVisible > 0 ? 'RECURRENCE' : 'VISIBLE',
       persistence: recurrenceVisible > 0 ? 'PERSISTENT' : 'EMERGING',
       risk: 'WATCHED',
+      hasActiveCommandEvidence: true,
       executiveBrief: {
         status: 'Elevated',
         cases: `${total} command-attributed record(s)`,
@@ -351,14 +341,12 @@ function buildCommandReading(cases: CommandCase[]): CommandReading {
     survivabilityShort: 'STABLE',
     pressureShort: 'VISIBLE',
     trajectoryShort: 'STABLE',
-    recoveryShort:
-      recoveryMonitoring > 0 ? 'MONITORING' : 'PENDING',
+    recoveryShort: recoveryMonitoring > 0 ? 'MONITORING' : 'PENDING',
     reliabilityShort: 'STABLE',
     attributionTitle: `${total} active record(s)`,
     attributionMeaning:
       'Command is reading active lifecycle records under proportional executive visibility.',
-    commandVisibility:
-      'Active governed instability is visible.',
+    commandVisibility: 'Watch active',
     commandAction:
       'Monitor lifecycle movement without over-escalating stable governed cases.',
     evidenceGap:
@@ -370,6 +358,7 @@ function buildCommandReading(cases: CommandCase[]): CommandReading {
     memory: 'VISIBLE',
     persistence: 'EMERGING',
     risk: 'MONITORED',
+    hasActiveCommandEvidence: true,
     executiveBrief: {
       status: 'Watch',
       cases: `${total} active command-attributed record(s)`,
@@ -578,7 +567,7 @@ const styles: Record<string, CSSProperties> = {
     border: `1px solid ${softLine}`,
     borderRadius: '16px',
     padding: '16px',
-    minHeight: '150px',
+    minHeight: '118px',
     boxShadow: '0 14px 34px rgba(0,0,0,0.18)',
     boxSizing: 'border-box',
     overflow: 'hidden',
