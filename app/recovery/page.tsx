@@ -61,6 +61,14 @@ type RecoverySurvivabilitySignal =
   | 'SURVIVABILITY_PRESSURE_RISING'
   | 'SURVIVABILITY_COMPROMISED'
 
+type RecoveryDisposition =
+  | 'MOVE_TO_STABILITY_BOARD'
+  | 'MOVE_TO_COMMAND_WATCH'
+  | 'MOVE_TO_COMMAND_ESCALATION'
+  | 'RETURN_TO_OUTCOMES_REVIEW'
+  | 'RETURN_TO_INTERVENTION_REVIEW'
+  | 'CONTINUE_RECOVERY_MONITORING'
+
 type StabilityCase = {
   id: string
   beneficiary_name: string
@@ -287,6 +295,28 @@ export default function RecoveryPage() {
     ],
   )
 
+  const recoveryDisposition = useMemo(
+    () =>
+      deriveRecoveryDisposition({
+        durabilityResult,
+        recoveryTrajectory,
+        reburnSignal,
+        recoveryConfidence,
+        memoryImpact,
+        recoveryMaturity,
+        inheritedVerification: activeCase?.inheritedVerification,
+      }),
+    [
+      durabilityResult,
+      recoveryTrajectory,
+      reburnSignal,
+      recoveryConfidence,
+      memoryImpact,
+      recoveryMaturity,
+      activeCase,
+    ],
+  )
+
   const survivabilitySignal = useMemo(
     () => deriveSurvivabilitySignal(commandPosture),
     [commandPosture],
@@ -300,6 +330,10 @@ export default function RecoveryPage() {
 
   const recoveryPressure = deriveRecoveryPressure(commandPosture)
   const memoryMeaning = deriveMemoryMeaning(memoryImpact)
+
+  const movementMeaning = deriveRecoveryMovementMeaning(recoveryDisposition)
+  const movementDestination = deriveRecoveryMovementDestination(recoveryDisposition)
+  const movementReason = deriveRecoveryMovementReason(recoveryDisposition)
 
   const inheritedSummary = activeCase
     ? activeCase.inheritedVerification
@@ -332,6 +366,18 @@ export default function RecoveryPage() {
   const displayedCommandPosture = hasActiveRecoveryContext
     ? commandPosture
     : 'PENDING_RECOVERY_SELECTION'
+
+  const displayedRecoveryDisposition = hasActiveRecoveryContext
+    ? recoveryDisposition
+    : 'PENDING_RECOVERY_SELECTION'
+
+  const displayedMovementDestination = hasActiveRecoveryContext
+    ? movementDestination
+    : 'Select a recovery-eligible case before lifecycle movement is assigned.'
+
+  const displayedMovementReason = hasActiveRecoveryContext
+    ? movementReason
+    : 'Recovery has not yet inherited outcome evidence for durability review.'
 
   const displayedSurvivabilitySignal = hasActiveRecoveryContext
     ? survivabilitySignal
@@ -375,16 +421,13 @@ export default function RecoveryPage() {
     ['MEMORY IMPACT', displayedMemoryImpact],
     ['RECOVERY MATURITY', displayedRecoveryMaturity],
     ['COMMAND POSTURE', displayedCommandPosture],
+    ['RECOVERY DISPOSITION', displayedRecoveryDisposition],
+    ['RECOMMENDED NEXT MOVEMENT', displayedMovementDestination],
+    ['MOVEMENT REASON', displayedMovementReason],
     ['RECOVERY SURVIVABILITY SIGNAL', displayedSurvivabilitySignal],
     ['EXECUTIVE MEANING', displayedExecutiveMeaning],
     ['RECOVERY PRESSURE', displayedRecoveryPressure],
     ['MEMORY MEANING', displayedMemoryMeaning],
-    [
-      'NEXT LIFECYCLE STATE',
-      activeCase
-        ? deriveNextRecoveryState(durabilityResult)
-        : 'Awaiting recovery durability review assignment.',
-    ],
     [
       'CASE SIGNAL',
       activeCase?.caseItem.beneficiary_name ??
@@ -427,20 +470,22 @@ export default function RecoveryPage() {
       memoryImpact,
       recoveryMaturity,
       commandPosture,
+      recoveryDisposition,
       survivabilitySignal,
       executiveMeaning,
       recoveryPressure,
       memoryMeaning,
+      movementMeaning,
+      movementDestination,
+      movementReason,
       interpretation,
     })
 
-    const { error: outcomeError } = await supabase
-      .from('case_outcomes')
-      .insert({
-        case_id: selectedCase.caseItem.id,
-        outcome_status: durabilityResult,
-        outcome_summary: summary,
-      })
+    const { error: outcomeError } = await supabase.from('case_outcomes').insert({
+      case_id: selectedCase.caseItem.id,
+      outcome_status: durabilityResult,
+      outcome_summary: summary,
+    })
 
     if (outcomeError) {
       alert(outcomeError.message)
@@ -448,7 +493,7 @@ export default function RecoveryPage() {
       return
     }
 
-    const nextStatus = deriveCaseStatusAfterRecovery(durabilityResult)
+    const nextStatus = deriveCaseStatusAfterRecovery(recoveryDisposition)
 
     const { error: caseError } = await supabase
       .from('beneficiary_cases')
@@ -468,7 +513,7 @@ export default function RecoveryPage() {
     const preservedCaseId = selectedCase.caseItem.id
 
     setMessage(
-      'Recovery durability review preserved. Outcome inheritance, durability posture, memory meaning, and lifecycle movement remain visible.',
+      `Recovery durability review preserved. Next governed movement: ${movementDestination}.`,
     )
 
     setSelectedCaseId('')
@@ -505,10 +550,11 @@ export default function RecoveryPage() {
           </p>
 
           <p className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
-            <span className="font-semibold">Boundary:</span> /recovery confirms
-            durability. It inherits verification evidence from /outcomes, but does
-            not erase structural memory, remove recurrence visibility, or restore
-            institutional trust automatically.
+            <span className="font-semibold">Boundary:</span> /recovery is now a
+            governed decision gate. It inherits verification evidence from
+            /outcomes, tests durability, and directs the next movement toward
+            Stability Board, Command Watch, Command Escalation, Outcomes Review,
+            Intervention Review, or continued recovery monitoring.
           </p>
         </div>
 
@@ -525,6 +571,41 @@ export default function RecoveryPage() {
             </div>
           ))}
         </div>
+
+        <section className="mt-6 rounded-3xl border border-amber-500/30 bg-gradient-to-br from-neutral-900 to-neutral-950 p-6 shadow-2xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-amber-400">
+            Recommended Next Movement
+          </p>
+
+          <div className="mt-4 grid gap-4 lg:grid-cols-[0.7fr_1.3fr]">
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                Recovery Disposition
+              </p>
+              <p className="mt-3 break-words text-2xl font-semibold text-white">
+                {displayedRecoveryDisposition}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                Move To
+              </p>
+              <p className="mt-3 text-lg font-semibold text-amber-100">
+                {displayedMovementDestination}
+              </p>
+              <p className="mt-3 text-sm leading-6 text-neutral-300">
+                {displayedMovementReason}
+              </p>
+            </div>
+          </div>
+
+          <p className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-sm leading-6 text-neutral-300">
+            {hasActiveRecoveryContext
+              ? movementMeaning
+              : 'Recovery movement activates only after a recovery-eligible case is selected and durability evidence is reviewed.'}
+          </p>
+        </section>
 
         <div className="mt-6 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
           <h3 className="text-lg font-semibold text-white">
@@ -552,12 +633,60 @@ export default function RecoveryPage() {
               Latest Preserved Recovery Durability Evidence
             </h3>
             <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              <Info label="Durability Result" value={extractField(activeCase.latestRecoveryReview.outcome_summary || '', 'DURABILITY RESULT') || 'Not recorded'} />
-              <Info label="Recovery Trajectory" value={extractField(activeCase.latestRecoveryReview.outcome_summary || '', 'RECOVERY TRAJECTORY') || 'Not recorded'} />
-              <Info label="Reburn Signal" value={extractField(activeCase.latestRecoveryReview.outcome_summary || '', 'REBURN SIGNAL') || 'Not recorded'} />
-              <Info label="Recovery Confidence" value={extractField(activeCase.latestRecoveryReview.outcome_summary || '', 'RECOVERY CONFIDENCE') || 'Not recorded'} />
-              <Info label="Durability Window" value={extractField(activeCase.latestRecoveryReview.outcome_summary || '', 'DURABILITY WINDOW') || 'Not recorded'} />
-              <Info label="Memory Impact" value={extractField(activeCase.latestRecoveryReview.outcome_summary || '', 'MEMORY IMPACT') || 'Not recorded'} />
+              <Info
+                label="Durability Result"
+                value={
+                  extractField(
+                    activeCase.latestRecoveryReview.outcome_summary || '',
+                    'DURABILITY RESULT',
+                  ) || 'Not recorded'
+                }
+              />
+              <Info
+                label="Recovery Trajectory"
+                value={
+                  extractField(
+                    activeCase.latestRecoveryReview.outcome_summary || '',
+                    'RECOVERY TRAJECTORY',
+                  ) || 'Not recorded'
+                }
+              />
+              <Info
+                label="Reburn Signal"
+                value={
+                  extractField(
+                    activeCase.latestRecoveryReview.outcome_summary || '',
+                    'REBURN SIGNAL',
+                  ) || 'Not recorded'
+                }
+              />
+              <Info
+                label="Recovery Confidence"
+                value={
+                  extractField(
+                    activeCase.latestRecoveryReview.outcome_summary || '',
+                    'RECOVERY CONFIDENCE',
+                  ) || 'Not recorded'
+                }
+              />
+              <Info
+                label="Recovery Disposition"
+                value={
+                  extractField(
+                    activeCase.latestRecoveryReview.outcome_summary || '',
+                    'RECOVERY DISPOSITION',
+                  ) || 'Not recorded'
+                }
+              />
+              <Info
+                label="Recommended Movement"
+                value={
+                  extractField(
+                    activeCase.latestRecoveryReview.outcome_summary || '',
+                    'RECOMMENDED NEXT MOVEMENT',
+                  ) || 'Not recorded'
+                }
+              />
             </div>
           </section>
         )}
@@ -571,7 +700,7 @@ export default function RecoveryPage() {
             <p className="mt-3 text-sm leading-6 text-neutral-400">
               Use this after /outcomes confirms recovery readiness or verified
               stabilization. Recovery now inherits outcome verification before
-              durability is confirmed.
+              durability is confirmed and assigns the next governed movement.
             </p>
 
             <div className="mt-6 space-y-5">
@@ -674,7 +803,7 @@ export default function RecoveryPage() {
                   value={interpretation}
                   onChange={(event) => setInterpretation(event.target.value)}
                   rows={5}
-                  placeholder="Use operational facts only. Preserve durability evidence, inherited outcome meaning, recurrence visibility, structural memory, survivability relevance, and executive continuity interpretation."
+                  placeholder="Use operational facts only. Preserve durability evidence, inherited outcome meaning, recurrence visibility, structural memory, survivability relevance, executive continuity interpretation, and next governed movement."
                   className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
                 />
               </label>
@@ -700,7 +829,7 @@ export default function RecoveryPage() {
             <p className="mt-3 text-sm leading-6 text-neutral-400">
               This synthesis confirms whether inherited stabilization evidence is
               holding, strengthening, varying, reburning, weakening, collapsing, or
-              becoming durable recovery.
+              becoming durable enough for institutional absorption.
             </p>
 
             <div className="mt-6 divide-y divide-neutral-800 rounded-2xl border border-neutral-800">
@@ -725,8 +854,9 @@ export default function RecoveryPage() {
               </h4>
               <p className="mt-3 text-sm leading-6 text-neutral-300">
                 Action is not outcome. Outcome is not recovery. Recovery is not
-                memory erasure. Durability must be observed before trust is
-                restored.
+                closure. Recovery decides whether continuity can move to Stability
+                Board, remain under Command Watch, escalate to Command, return to
+                Outcomes, return to Intervention, or continue durability monitoring.
               </p>
             </div>
           </section>
@@ -738,20 +868,20 @@ export default function RecoveryPage() {
           </h3>
 
           <p className="mt-4 text-sm leading-7 text-neutral-300">
-            Recovery is a credibility test, not a status label. CGI does not
-            restore trust simply because outcome verification appears positive.
-            Recovery durability must hold across time without reburn, unresolved
-            continuity pressure, recurring instability, structural deterioration,
-            or continuity collapse before institutional confidence matures.
+            Recovery is a credibility test and a decision gate, not a status label.
+            CGI does not restore trust simply because outcome verification appears
+            positive. Recovery durability must hold across time without reburn,
+            unresolved continuity pressure, recurring instability, structural
+            deterioration, or continuity collapse before institutional confidence
+            matures.
           </p>
 
           <p className="mt-4 text-sm leading-7 text-neutral-300">
             Mature recovery intelligence must recognize earned stability while
-            preserving inherited outcome meaning. When recovery holds without
-            reburn, collapse, escalation concentration, or structural
-            deterioration, the system should express measured confidence while
-            preserving structural continuity memory for future institutional
-            learning.
+            preserving inherited outcome meaning. Durable recovery may move toward
+            Stability Board. Fragile recovery moves to Command Watch. Reburn or
+            collapse moves to Command Escalation. Weak evidence returns to Outcomes
+            or Intervention Review. Memory survives every movement.
           </p>
         </section>
       </section>
@@ -778,7 +908,8 @@ function isRecoveryEligible(
 ) {
   if (caseItem.case_status === 'RECOVERY_MONITORING') return true
 
-  const summary = latestVerificationOutcome?.outcome_summary || caseItem.outcome_summary || ''
+  const summary =
+    latestVerificationOutcome?.outcome_summary || caseItem.outcome_summary || ''
   const status = latestVerificationOutcome?.outcome_status || ''
 
   return RECOVERY_READY_OUTCOME_MARKERS.some(
@@ -828,7 +959,8 @@ function isPureVerificationSummary(summary: string) {
     summary.includes('RECOVERY TRAJECTORY') ||
     summary.includes('REBURN SIGNAL') ||
     summary.includes('RECOVERY MATURITY') ||
-    summary.includes('RECOVERY CONFIDENCE')
+    summary.includes('RECOVERY CONFIDENCE') ||
+    summary.includes('RECOVERY DISPOSITION')
   ) {
     return false
   }
@@ -848,7 +980,8 @@ function isRecoveryReview(outcome: OutcomeRecord) {
     summary.includes('RECOVERY TRAJECTORY') ||
     summary.includes('REBURN SIGNAL') ||
     summary.includes('RECOVERY MATURITY') ||
-    summary.includes('RECOVERY CONFIDENCE')
+    summary.includes('RECOVERY CONFIDENCE') ||
+    summary.includes('RECOVERY DISPOSITION')
   )
 }
 
@@ -1012,6 +1145,14 @@ function deriveRecoveryMaturity(
   const days = Number.parseInt(durabilityWindow, 10)
 
   if (
+    durabilityResult === 'RECOVERY_COLLAPSE' ||
+    trajectory === 'COLLAPSING' ||
+    confidence === 'COLLAPSED'
+  ) {
+    return 'EARLY_RECOVERY'
+  }
+
+  if (
     durabilityResult === 'DURABLE_RECOVERY_CONFIRMED' &&
     trajectory === 'STRENGTHENING' &&
     reburnSignal === 'NO_REBURN_VISIBLE' &&
@@ -1061,9 +1202,14 @@ function deriveCommandPosture(
 
   if (
     durabilityResult === 'REBURN_DETECTED' ||
+    reburnSignal === 'REBURN_DETECTED' ||
     reburnSignal === 'RECURRENT_REBURN_PATTERN'
   ) {
     return 'EXECUTIVE_CONTINUITY_REVIEW'
+  }
+
+  if (confidence === 'LOW') {
+    return 'ELEVATED_RECOVERY_REVIEW'
   }
 
   if (maturity === 'VARIABLE_STABILITY' || confidence === 'VARIABLE') {
@@ -1074,12 +1220,89 @@ function deriveCommandPosture(
 
   if (
     maturity === 'RECOVERY_MATURING' ||
-    maturity === 'STABLE_UNDER_OBSERVATION'
+    maturity === 'STABLE_UNDER_OBSERVATION' ||
+    maturity === 'DURABLE_RECOVERY_ESTABLISHED'
   ) {
     return 'STABILITY_HOLDING'
   }
 
   return 'CONTINUITY_OBSERVATION'
+}
+
+function deriveRecoveryDisposition(input: {
+  durabilityResult: DurabilityResult
+  recoveryTrajectory: RecoveryTrajectory
+  reburnSignal: ReburnSignal
+  recoveryConfidence: RecoveryConfidence
+  memoryImpact: MemoryImpact
+  recoveryMaturity: RecoveryMaturity
+  inheritedVerification?: InheritedVerification
+}): RecoveryDisposition {
+  if (
+    input.durabilityResult === 'RECOVERY_COLLAPSE' ||
+    input.recoveryTrajectory === 'COLLAPSING' ||
+    input.recoveryConfidence === 'COLLAPSED'
+  ) {
+    return 'MOVE_TO_COMMAND_ESCALATION'
+  }
+
+  if (
+    input.durabilityResult === 'REBURN_DETECTED' ||
+    input.reburnSignal === 'REBURN_DETECTED' ||
+    input.reburnSignal === 'RECURRENT_REBURN_PATTERN'
+  ) {
+    return 'MOVE_TO_COMMAND_ESCALATION'
+  }
+
+  if (
+    input.recoveryConfidence === 'LOW' &&
+    input.inheritedVerification?.verificationCredibility
+      .toUpperCase()
+      .includes('LOW')
+  ) {
+    return 'RETURN_TO_OUTCOMES_REVIEW'
+  }
+
+  if (
+    input.recoveryConfidence === 'LOW' ||
+    input.memoryImpact === 'MEMORY_ESCALATION_REQUIRED'
+  ) {
+    return 'RETURN_TO_INTERVENTION_REVIEW'
+  }
+
+  if (
+    input.durabilityResult === 'DURABLE_RECOVERY_CONFIRMED' &&
+    input.recoveryMaturity === 'DURABLE_RECOVERY_ESTABLISHED'
+  ) {
+    return 'MOVE_TO_STABILITY_BOARD'
+  }
+
+  if (
+    input.durabilityResult === 'DURABLE_RECOVERY_CONFIRMED' &&
+    input.recoveryConfidence === 'CREDIBLE' &&
+    input.reburnSignal === 'NO_REBURN_VISIBLE'
+  ) {
+    return 'MOVE_TO_STABILITY_BOARD'
+  }
+
+  if (
+    input.durabilityResult === 'RECOVERY_HOLDING' &&
+    input.recoveryTrajectory === 'STRENGTHENING' &&
+    input.recoveryConfidence !== 'VARIABLE'
+  ) {
+    return 'CONTINUE_RECOVERY_MONITORING'
+  }
+
+  if (
+    input.durabilityResult === 'RECOVERY_HOLDING' ||
+    input.durabilityResult === 'STABILITY_UNDER_VARIANCE' ||
+    input.recoveryConfidence === 'VARIABLE' ||
+    input.reburnSignal === 'RECURRENCE_OBSERVATION'
+  ) {
+    return 'MOVE_TO_COMMAND_WATCH'
+  }
+
+  return 'CONTINUE_RECOVERY_MONITORING'
 }
 
 function deriveSurvivabilitySignal(
@@ -1160,32 +1383,78 @@ function deriveMemoryMeaning(impact: MemoryImpact) {
   return meanings[impact]
 }
 
-function deriveNextRecoveryState(durabilityResult: DurabilityResult) {
-  if (durabilityResult === 'DURABLE_RECOVERY_CONFIRMED') {
-    return 'Durable recovery may be confirmed; trust restoration can begin under preserved structural memory.'
+function deriveRecoveryMovementDestination(disposition: RecoveryDisposition) {
+  const destinations: Record<RecoveryDisposition, string> = {
+    MOVE_TO_STABILITY_BOARD:
+      '/system Stability Board — absorb into institutional continuity posture.',
+    MOVE_TO_COMMAND_WATCH:
+      '/command Command Watch — preserve executive visibility without full escalation.',
+    MOVE_TO_COMMAND_ESCALATION:
+      '/command Command Escalation — executive continuity review required.',
+    RETURN_TO_OUTCOMES_REVIEW:
+      '/outcomes Outcomes Review — verification evidence requires strengthening.',
+    RETURN_TO_INTERVENTION_REVIEW:
+      '/interventions Intervention Review — stabilization action requires renewed review.',
+    CONTINUE_RECOVERY_MONITORING:
+      '/recovery Recovery Monitoring — continue durability observation.',
   }
 
-  if (
-    durabilityResult === 'RECOVERY_COLLAPSE' ||
-    durabilityResult === 'REBURN_DETECTED'
-  ) {
-    return 'Recovery durability failed; case should re-enter active continuity governance.'
-  }
-
-  return 'Recovery durability observation continues under proportional continuity governance.'
+  return destinations[disposition]
 }
 
-function deriveCaseStatusAfterRecovery(durabilityResult: DurabilityResult) {
-  if (durabilityResult === 'DURABLE_RECOVERY_CONFIRMED') return 'STABILIZED'
-
-  if (
-    durabilityResult === 'RECOVERY_COLLAPSE' ||
-    durabilityResult === 'REBURN_DETECTED'
-  ) {
-    return 'REOPENED'
+function deriveRecoveryMovementReason(disposition: RecoveryDisposition) {
+  const reasons: Record<RecoveryDisposition, string> = {
+    MOVE_TO_STABILITY_BOARD:
+      'Recovery is durable enough to be absorbed into institutional posture while structural memory remains preserved.',
+    MOVE_TO_COMMAND_WATCH:
+      'Recovery is not collapsing, but durability remains fragile, variable, or recurrence-visible enough to require executive watch.',
+    MOVE_TO_COMMAND_ESCALATION:
+      'Recovery has reburned, collapsed, or moved toward continuity compromise. Executive review is required.',
+    RETURN_TO_OUTCOMES_REVIEW:
+      'Verification evidence is not strong enough to support durability confidence. Outcome credibility must be reviewed.',
+    RETURN_TO_INTERVENTION_REVIEW:
+      'Recovery weakness suggests stabilization action may need renewed intervention review before durability can mature.',
+    CONTINUE_RECOVERY_MONITORING:
+      'Recovery is holding but has not yet matured enough for final institutional absorption.',
   }
 
-  return 'RECOVERY_MONITORING'
+  return reasons[disposition]
+}
+
+function deriveRecoveryMovementMeaning(disposition: RecoveryDisposition) {
+  const meanings: Record<RecoveryDisposition, string> = {
+    MOVE_TO_STABILITY_BOARD:
+      'Recovery can move toward the Stability Board. This is not memory erasure. Stability Board must preserve recurrence history, recovery evidence, and durability context.',
+    MOVE_TO_COMMAND_WATCH:
+      'Recovery should remain visible to Command. The case does not require urgent escalation, but executive awareness should continue until durability becomes credible.',
+    MOVE_TO_COMMAND_ESCALATION:
+      'Recovery has failed or reburned. CGI must prevent the instability from disappearing behind a false recovery label.',
+    RETURN_TO_OUTCOMES_REVIEW:
+      'Recovery cannot mature because outcome evidence remains weak. The system should return to verification before continuing durability claims.',
+    RETURN_TO_INTERVENTION_REVIEW:
+      'Recovery cannot be trusted yet because stabilization action may not be sufficient. The system should return to intervention review.',
+    CONTINUE_RECOVERY_MONITORING:
+      'Recovery is still under observation. Durability may be building, but the case should remain in recovery until stronger confidence is established.',
+  }
+
+  return meanings[disposition]
+}
+
+function deriveCaseStatusAfterRecovery(disposition: RecoveryDisposition) {
+  switch (disposition) {
+    case 'MOVE_TO_STABILITY_BOARD':
+      return 'STABILIZED'
+    case 'MOVE_TO_COMMAND_ESCALATION':
+      return 'REOPENED'
+    case 'RETURN_TO_OUTCOMES_REVIEW':
+      return 'FOLLOW_UP_REQUIRED'
+    case 'RETURN_TO_INTERVENTION_REVIEW':
+      return 'FOLLOW_UP_REQUIRED'
+    case 'MOVE_TO_COMMAND_WATCH':
+    case 'CONTINUE_RECOVERY_MONITORING':
+    default:
+      return 'RECOVERY_MONITORING'
+  }
 }
 
 function getLatestRecoveryInterpretation(outcome?: OutcomeRecord) {
@@ -1206,10 +1475,14 @@ function buildRecoverySummary(input: {
   memoryImpact: MemoryImpact
   recoveryMaturity: RecoveryMaturity
   commandPosture: CommandPosture
+  recoveryDisposition: RecoveryDisposition
   survivabilitySignal: RecoverySurvivabilitySignal
   executiveMeaning: string
   recoveryPressure: string
   memoryMeaning: string
+  movementMeaning: string
+  movementDestination: string
+  movementReason: string
   interpretation: string
 }) {
   return `
@@ -1258,6 +1531,18 @@ ${input.recoveryMaturity}
 COMMAND POSTURE
 ${input.commandPosture}
 
+RECOVERY DISPOSITION
+${input.recoveryDisposition}
+
+RECOMMENDED NEXT MOVEMENT
+${input.movementDestination}
+
+MOVEMENT REASON
+${input.movementReason}
+
+MOVEMENT MEANING
+${input.movementMeaning}
+
 RECOVERY SURVIVABILITY SIGNAL
 ${input.survivabilitySignal}
 
@@ -1276,8 +1561,9 @@ ${input.interpretation.trim() || 'No additional operational recovery interpretat
 LIFECYCLE BOUNDARY
 Action is not outcome.
 Outcome is not recovery.
-Recovery is not memory erasure.
+Recovery is not closure.
 Durability must be observed before trust is restored.
+Final posture must be absorbed into Stability Board only when recovery can preserve evidence, recurrence history, and structural memory.
   `.trim()
 }
 
