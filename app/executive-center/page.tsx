@@ -72,6 +72,7 @@ type RecoveryMemoryRecord = {
 type ExecutiveSynthesis = {
   posture: ExecutivePosture
   meaning: string
+  executiveQuestion: string
   whatIsHappening: string
   whyItMatters: string
   nextMovement: string
@@ -189,9 +190,7 @@ function ExecutiveCenterContent() {
       <div style={styles.container}>
         <section style={styles.header}>
           <p style={styles.kicker}>TSINAXA CGI • EXECUTIVE CENTER</p>
-
           <h1 style={styles.title}>Executive Continuity Center</h1>
-
           <p style={styles.subtitle}>
             One leadership synthesis across current instability, recovery
             credibility, command pressure, institutional posture, evidence, and
@@ -200,7 +199,6 @@ function ExecutiveCenterContent() {
 
           <section style={styles.doctrinePanel}>
             <p style={styles.doctrineTitle}>EXECUTIVE CENTER DOCTRINE</p>
-
             <div style={styles.doctrineGrid}>
               {DOCTRINE.map((item) => (
                 <div key={item} style={styles.doctrineCard}>
@@ -216,23 +214,17 @@ function ExecutiveCenterContent() {
         <section style={styles.heroCard}>
           <div>
             <p style={styles.sectionKicker}>Current Executive Continuity Reading</p>
-
             <h2 style={styles.heroTitle}>{synthesis.posture}</h2>
-
             <p style={styles.heroMeaning}>{synthesis.meaning}</p>
           </div>
 
-          <div style={styles.commandBox}>
-            <p style={styles.commandLabel}>Executive Question</p>
-
-            <p style={styles.commandText}>
-              What must leadership understand before instability is treated as
-              stabilized?
-            </p>
+          <div style={styles.questionBox}>
+            <p style={styles.metricLabel}>Executive Question</p>
+            <p style={styles.questionText}>{synthesis.executiveQuestion}</p>
           </div>
         </section>
 
-        <section style={styles.metricGrid}>
+        <section style={styles.summaryGrid}>
           <MetricCard
             label="Active Instability"
             value={synthesis.activeInstability}
@@ -251,25 +243,23 @@ function ExecutiveCenterContent() {
           <MetricCard
             label="Memory Records"
             value={synthesis.historicalMemory}
-            body="Historical continuity memory preserved for learning."
+            body="Continuity memory preserved for institutional learning."
           />
         </section>
 
         <section style={styles.memoryCard}>
           <div>
             <p style={styles.sectionKicker}>Institutional Memory Status</p>
-
             <h2 style={styles.cardTitle}>{synthesis.memoryStatus}</h2>
-
             <p style={styles.bodyText}>
               Memory is not leftover data. Memory is how CGI prevents visible
-              instability from disappearing after the immediate pressure is gone.
+              instability from disappearing after immediate pressure is gone.
             </p>
           </div>
 
           <div style={styles.memoryGrid}>
-            <MemoryMetric label="Evidence Status" value={synthesis.evidenceStatus} />
-            <MemoryMetric label="Recovery Credibility" value={synthesis.recoveryCredibility} />
+            <MemoryMetric label="Evidence" value={synthesis.evidenceStatus} />
+            <MemoryMetric label="Recovery" value={synthesis.recoveryCredibility} />
             <MemoryMetric label="Survivability" value={synthesis.survivabilityMeaning} />
           </div>
         </section>
@@ -280,17 +270,17 @@ function ExecutiveCenterContent() {
         </section>
 
         <section style={styles.gridTwo}>
-          <Panel title="Recommended Next Movement">{synthesis.nextMovement}</Panel>
+          <Panel title="Lifecycle Movement">{synthesis.nextMovement}</Panel>
           <Panel title="Leadership Action">{synthesis.leadershipAction}</Panel>
         </section>
 
-        <section style={styles.gridThree}>
+        <section style={styles.signalStrip}>
           <SignalCard
             title="Pressure"
             value={synthesis.activeInstability > 0 ? 'Visible' : 'Clear'}
             body={
               synthesis.activeInstability > 0
-                ? 'Active lifecycle pressure remains visible and should not be hidden.'
+                ? 'Active lifecycle pressure remains visible.'
                 : 'No active lifecycle pressure is currently visible.'
             }
           />
@@ -316,39 +306,13 @@ function ExecutiveCenterContent() {
           />
         </section>
 
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Executive Action Posture</p>
+        {recoveryMemory.length > 0 && (
+          <section style={styles.card}>
+            <p style={styles.sectionKicker}>Recovery-to-Executive Synthesis</p>
+            <h2 style={styles.cardTitle}>
+              Recovery evidence remains visible before institutional confidence is restored.
+            </h2>
 
-          <h2 style={styles.cardTitle}>{synthesis.posture}</h2>
-
-          <p style={styles.bodyText}>{synthesis.leadershipAction}</p>
-
-          <div style={styles.priorityGrid}>
-            <PriorityItem title="Dominant Concern" body={deriveDominantConcern(synthesis)} />
-            <PriorityItem title="Evidence Meaning" body={synthesis.evidenceStatus} />
-            <PriorityItem
-              title="Governance Meaning"
-              body="Leadership visibility must remain proportional, non-punitive, evidence-aware, and memory-preserving."
-            />
-          </div>
-        </section>
-
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Recovery-to-Executive Synthesis</p>
-
-          <h2 style={styles.cardTitle}>
-            Recovery evidence remains visible before institutional confidence is
-            restored.
-          </h2>
-
-          {recoveryMemory.length === 0 && (
-            <div style={styles.emptyState}>
-              No recovery durability memory is currently available for executive
-              synthesis. This is clean while the lifecycle is clear.
-            </div>
-          )}
-
-          {recoveryMemory.length > 0 && (
             <div style={styles.tableWrap}>
               <table style={styles.table}>
                 <thead>
@@ -384,12 +348,26 @@ function ExecutiveCenterContent() {
                 </tbody>
               </table>
             </div>
-          )}
+          </section>
+        )}
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Executive Action Posture</p>
+          <h2 style={styles.cardTitle}>{synthesis.posture}</h2>
+          <p style={styles.bodyText}>{synthesis.leadershipAction}</p>
+
+          <div style={styles.priorityGrid}>
+            <PriorityItem title="Dominant Concern" body={deriveDominantConcern(synthesis)} />
+            <PriorityItem title="Evidence Meaning" body={synthesis.evidenceStatus} />
+            <PriorityItem
+              title="Governance Meaning"
+              body="Leadership visibility must remain proportional, non-punitive, evidence-aware, and memory-preserving."
+            />
+          </div>
         </section>
 
         <section style={styles.card}>
           <p style={styles.sectionKicker}>Memory-Aware Executive Brief</p>
-
           <h2 style={styles.cardTitle}>
             One leadership reading across pressure, recovery, evidence, command,
             stability, and continuity memory.
@@ -400,10 +378,8 @@ function ExecutiveCenterContent() {
 
         <section style={styles.card}>
           <p style={styles.sectionKicker}>Historical Memory Trail</p>
-
           <h2 style={styles.cardTitle}>
-            Historical continuity memory remains preserved without driving the
-            current posture.
+            Historical continuity memory remains preserved without driving the current posture.
           </h2>
 
           {metrics.length === 0 && (
@@ -545,6 +521,8 @@ function buildExecutiveSynthesis(
   let posture: ExecutivePosture = 'EXECUTIVE CENTER CLEAR'
   let meaning =
     'No active lifecycle instability, command pressure, or fragile recovery is currently visible.'
+  let executiveQuestion =
+    'What must leadership understand before instability is treated as stabilized?'
   let nextMovement =
     'Maintain executive visibility. No governed movement is currently required.'
   let leadershipAction =
@@ -554,6 +532,7 @@ function buildExecutiveSynthesis(
     posture = 'EXECUTIVE REVIEW REQUIRED'
     meaning =
       'Recovery or command pressure remains visible and should not be treated as resolved.'
+    executiveQuestion = 'Does leadership need to intervene before stability is trusted?'
     nextMovement = 'Move through Command before any stability absorption is trusted.'
     leadershipAction =
       'Review command pressure, recurrence signals, recovery durability, and unresolved evidence before allowing final posture.'
@@ -561,12 +540,14 @@ function buildExecutiveSynthesis(
     posture = 'EVIDENCE REVIEW REQUIRED'
     meaning =
       'Evidence or intervention credibility is not strong enough to support final stability confidence.'
+    executiveQuestion = 'Can the evidence support recovery confidence?'
     nextMovement = 'Return to Outcomes or Interventions for evidence strengthening.'
     leadershipAction = 'Require clearer verification before recovery is treated as durable.'
   } else if (fragileRecovery > 0) {
     posture = 'RECOVERY WATCH'
     meaning =
       'Recovery is visible but still fragile enough to require executive awareness.'
+    executiveQuestion = 'Is recovery durable enough to reduce visibility?'
     nextMovement = 'Continue Recovery Watch before stability absorption.'
     leadershipAction =
       'Maintain proportionate visibility until durability and recurrence conditions are clearer.'
@@ -574,6 +555,7 @@ function buildExecutiveSynthesis(
     posture = 'ACTIVE CONTINUITY WATCH'
     meaning =
       'Active lifecycle instability remains visible and should not be hidden by executive summary language.'
+    executiveQuestion = 'Is active instability moving through governed action?'
     nextMovement =
       'Continue governed lifecycle movement through cases, routing, intervention, outcomes, and recovery.'
     leadershipAction =
@@ -582,6 +564,7 @@ function buildExecutiveSynthesis(
     posture = 'STABILITY ABSORPTION READY'
     meaning =
       'Durable recovery evidence is available for institutional absorption while memory remains preserved.'
+    executiveQuestion = 'Can recovered instability be absorbed without hiding memory?'
     nextMovement =
       'Move to Stability Board while preserving recurrence history, evidence meaning, and unresolved risk.'
     leadershipAction = 'Absorb final posture without erasing structural memory.'
@@ -590,6 +573,7 @@ function buildExecutiveSynthesis(
   return {
     posture,
     meaning,
+    executiveQuestion,
     whatIsHappening: deriveWhatIsHappening({
       activeInstability,
       recoveryRecords: recoveryMemory.length,
@@ -601,10 +585,7 @@ function buildExecutiveSynthesis(
     whyItMatters: deriveWhyItMatters(posture),
     nextMovement,
     leadershipAction,
-    memoryStatus:
-      metrics.length > 0 || recoveryMemory.length > 0
-        ? 'MEMORY PRESERVED'
-        : 'MEMORY READY',
+    memoryStatus: 'MEMORY PRESERVED',
     evidenceStatus:
       evidenceReturn > 0
         ? 'Evidence requires review before stability can be trusted.'
@@ -639,7 +620,7 @@ function deriveWhatIsHappening(input: {
   absorbable: number
 }) {
   if (input.commandPressure > 0) {
-    return 'Command pressure remains active. Executive Center must keep leadership attention on unresolved instability before stability is trusted.'
+    return 'Command pressure remains active. Executive Center keeps leadership attention on unresolved instability before stability is trusted.'
   }
 
   if (input.evidenceReturn > 0) {
@@ -663,7 +644,7 @@ function deriveWhatIsHappening(input: {
 
 function deriveWhyItMatters(posture: ExecutivePosture) {
   if (posture === 'EXECUTIVE REVIEW REQUIRED') {
-    return 'Leadership risk increases when command pressure is allowed to disappear before recovery credibility is proven.'
+    return 'Leadership risk increases when command pressure disappears before recovery credibility is proven.'
   }
 
   if (posture === 'EVIDENCE REVIEW REQUIRED') {
@@ -700,13 +681,15 @@ function buildCopyReadyExecutiveBrief(synthesis: ExecutiveSynthesis) {
     '',
     `Current Posture: ${synthesis.posture}`,
     '',
+    `Executive Question: ${synthesis.executiveQuestion}`,
+    '',
     `Meaning: ${synthesis.meaning}`,
     '',
     `What is happening: ${synthesis.whatIsHappening}`,
     '',
     `Why it matters: ${synthesis.whyItMatters}`,
     '',
-    `Recommended next movement: ${synthesis.nextMovement}`,
+    `Lifecycle movement: ${synthesis.nextMovement}`,
     '',
     `Leadership action: ${synthesis.leadershipAction}`,
     '',
@@ -849,11 +832,11 @@ const styles: Record<string, CSSProperties> = {
     width: '100%',
     maxWidth: '1120px',
     margin: '0 auto',
-    padding: '8px 24px 48px',
+    padding: '16px 28px 72px',
     boxSizing: 'border-box',
   },
   header: {
-    marginBottom: '14px',
+    marginBottom: '28px',
   },
   kicker: {
     color: gold,
@@ -864,66 +847,66 @@ const styles: Record<string, CSSProperties> = {
   },
   title: {
     color: '#fff8e7',
-    fontSize: 'clamp(30px, 4vw, 42px)',
+    fontSize: 'clamp(34px, 4vw, 48px)',
     lineHeight: 1,
-    margin: '8px 0',
+    margin: '10px 0',
     letterSpacing: '-0.05em',
   },
   subtitle: {
     color: '#cfc7b5',
-    maxWidth: '760px',
-    lineHeight: 1.5,
-    fontSize: '13px',
+    maxWidth: '820px',
+    lineHeight: 1.65,
+    fontSize: '14px',
     margin: 0,
   },
   doctrinePanel: {
     background: panelBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '15px',
-    marginTop: '14px',
+    borderRadius: '20px',
+    padding: '22px',
+    marginTop: '22px',
   },
   doctrineTitle: {
     color: gold,
     fontSize: '10px',
     fontWeight: 900,
     letterSpacing: '0.15em',
-    margin: '0 0 10px',
+    margin: '0 0 14px',
   },
   doctrineGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '10px',
+    gap: '14px',
   },
   doctrineCard: {
     background: deepBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '12px',
-    padding: '10px',
+    borderRadius: '14px',
+    padding: '14px',
     color: '#fff8e7',
     fontSize: '12px',
-    lineHeight: 1.35,
+    lineHeight: 1.45,
     fontWeight: 800,
   },
   message: {
     background: 'rgba(16, 185, 129, 0.14)',
     color: '#bbf7d0',
     border: '1px solid rgba(16, 185, 129, 0.28)',
-    padding: '12px 14px',
+    padding: '13px 16px',
     borderRadius: '14px',
     fontWeight: 800,
-    marginBottom: '12px',
+    marginBottom: '24px',
     fontSize: '13px',
   },
   heroCard: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.35fr) minmax(260px, 0.65fr)',
-    gap: '14px',
+    gridTemplateColumns: 'minmax(0, 1.35fr) minmax(280px, 0.65fr)',
+    gap: '24px',
     background: deepBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '16px',
-    marginBottom: '12px',
+    borderRadius: '22px',
+    padding: '24px',
+    marginBottom: '24px',
   },
   sectionKicker: {
     color: mutedGold,
@@ -935,50 +918,42 @@ const styles: Record<string, CSSProperties> = {
   },
   heroTitle: {
     color: gold,
-    fontSize: 'clamp(28px, 4vw, 42px)',
+    fontSize: 'clamp(32px, 4vw, 48px)',
     lineHeight: 1,
-    margin: '8px 0',
+    margin: '10px 0',
     letterSpacing: '-0.05em',
   },
   heroMeaning: {
     color: '#cfc7b5',
-    lineHeight: 1.45,
+    lineHeight: 1.6,
     margin: 0,
-    fontSize: '13px',
+    fontSize: '14px',
   },
-  commandBox: {
+  questionBox: {
     background: '#15110a',
     border: `1px solid ${softLine}`,
-    borderRadius: '13px',
-    padding: '12px',
+    borderRadius: '18px',
+    padding: '20px',
   },
-  commandLabel: {
-    color: mutedGold,
-    fontSize: '9px',
-    fontWeight: 900,
-    letterSpacing: '0.14em',
-    textTransform: 'uppercase',
-    margin: 0,
-  },
-  commandText: {
+  questionText: {
     color: '#fff8e7',
-    fontSize: '18px',
+    fontSize: '22px',
     lineHeight: 1.25,
-    margin: '7px 0 0',
+    margin: '10px 0 0',
     fontWeight: 900,
   },
-  metricGrid: {
+  summaryGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '12px',
-    marginBottom: '12px',
+    gap: '16px',
+    marginBottom: '24px',
   },
   metricCard: {
     background: cardBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '13px',
-    padding: '12px',
-    minHeight: '126px',
+    borderRadius: '16px',
+    padding: '16px',
+    minHeight: '144px',
   },
   metricLabel: {
     color: mutedGold,
@@ -990,112 +965,112 @@ const styles: Record<string, CSSProperties> = {
   },
   metricValue: {
     color: gold,
-    fontSize: '28px',
+    fontSize: '32px',
     fontWeight: 950,
     lineHeight: 1,
-    margin: '8px 0',
+    margin: '10px 0',
   },
   memoryCard: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.15fr) minmax(280px, 0.85fr)',
-    gap: '14px',
+    gridTemplateColumns: 'minmax(0, 1.15fr) minmax(300px, 0.85fr)',
+    gap: '24px',
     background: panelBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '15px',
-    marginBottom: '12px',
+    borderRadius: '22px',
+    padding: '24px',
+    marginBottom: '24px',
   },
   memoryGrid: {
     display: 'grid',
     gridTemplateColumns: '1fr',
-    gap: '10px',
+    gap: '14px',
   },
   memoryMetric: {
     background: '#15110a',
     border: `1px solid ${softLine}`,
-    borderRadius: '12px',
-    padding: '10px',
+    borderRadius: '14px',
+    padding: '14px',
   },
   memoryMetricValue: {
     color: '#fff8e7',
     fontSize: '14px',
-    lineHeight: 1.25,
+    lineHeight: 1.35,
     fontWeight: 900,
-    margin: '5px 0 0',
-  },
-  gridThree: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '12px',
-    marginBottom: '12px',
+    margin: '8px 0 0',
   },
   gridTwo: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '12px',
-    marginBottom: '12px',
+    gap: '24px',
+    marginBottom: '24px',
+  },
+  signalStrip: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: '16px',
+    marginBottom: '24px',
   },
   signalCard: {
     background: cardBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '13px',
-    padding: '12px',
-    minHeight: '124px',
+    borderRadius: '16px',
+    padding: '18px',
+    minHeight: '136px',
   },
   signalValue: {
     color: gold,
-    fontSize: '18px',
+    fontSize: '20px',
     lineHeight: 1.15,
-    margin: '8px 0',
+    margin: '10px 0',
     fontWeight: 900,
     textTransform: 'capitalize',
   },
   card: {
     background: deepBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '15px',
-    marginBottom: '12px',
+    borderRadius: '22px',
+    padding: '24px',
+    marginBottom: '24px',
     overflow: 'hidden',
   },
   cardTitle: {
     color: '#fff8e7',
-    fontSize: 'clamp(20px, 3vw, 26px)',
+    fontSize: 'clamp(22px, 3vw, 30px)',
     lineHeight: 1.15,
-    margin: '8px 0',
+    margin: '10px 0',
     letterSpacing: '-0.04em',
   },
   bodyText: {
     color: '#cfc7b5',
-    lineHeight: 1.45,
+    lineHeight: 1.6,
     fontSize: '13px',
     margin: 0,
   },
   priorityGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '10px',
-    marginTop: '12px',
+    gap: '14px',
+    marginTop: '18px',
   },
   priorityItem: {
     background: '#15110a',
     border: `1px solid ${softLine}`,
-    borderRadius: '12px',
-    padding: '10px',
+    borderRadius: '14px',
+    padding: '14px',
   },
   priorityBody: {
     color: '#fff8e7',
-    lineHeight: 1.4,
+    lineHeight: 1.5,
     fontSize: '12px',
-    margin: '6px 0 0',
+    margin: '8px 0 0',
     fontWeight: 700,
   },
   panel: {
     background: cardBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '13px',
-    padding: '12px',
-    minHeight: '130px',
+    borderRadius: '18px',
+    padding: '20px',
+    minHeight: '150px',
   },
   panelKicker: {
     color: mutedGold,
@@ -1108,23 +1083,23 @@ const styles: Record<string, CSSProperties> = {
   panelBody: {
     color: '#cfc7b5',
     fontSize: '13px',
-    lineHeight: 1.45,
-    marginTop: '8px',
+    lineHeight: 1.6,
+    marginTop: '10px',
   },
   emptyState: {
     background: '#15110a',
     border: `1px solid ${softLine}`,
-    borderRadius: '12px',
-    padding: '12px',
+    borderRadius: '14px',
+    padding: '14px',
     color: '#cfc7b5',
-    lineHeight: 1.45,
-    marginTop: '12px',
+    lineHeight: 1.55,
+    marginTop: '16px',
     fontSize: '13px',
   },
   tableWrap: {
     width: '100%',
     overflowX: 'auto',
-    marginTop: '12px',
+    marginTop: '16px',
   },
   table: {
     width: '100%',
@@ -1135,41 +1110,41 @@ const styles: Record<string, CSSProperties> = {
     textAlign: 'left',
     color: mutedGold,
     borderBottom: `1px solid ${softLine}`,
-    padding: '9px',
+    padding: '10px',
     fontSize: '10px',
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
   },
   td: {
     borderBottom: '1px solid rgba(214,178,94,0.12)',
-    padding: '9px',
+    padding: '10px',
     color: '#e8dec8',
     verticalAlign: 'top',
-    lineHeight: 1.45,
+    lineHeight: 1.5,
     fontSize: '12px',
   },
   summaryBox: {
     whiteSpace: 'pre-wrap',
     background: '#15110a',
     border: `1px solid ${softLine}`,
-    borderRadius: '12px',
-    padding: '12px',
+    borderRadius: '14px',
+    padding: '16px',
     color: '#e8dec8',
-    lineHeight: 1.45,
-    minHeight: '190px',
+    lineHeight: 1.55,
+    minHeight: '180px',
     fontSize: '12px',
     overflowX: 'auto',
   },
   primaryButton: {
     width: '100%',
-    padding: '13px',
-    borderRadius: '13px',
+    padding: '14px',
+    borderRadius: '14px',
     border: 'none',
     background: gold,
     color: '#11100d',
     fontWeight: 950,
     cursor: 'pointer',
     fontSize: '14px',
-    marginTop: '14px',
+    marginTop: '18px',
   },
 }
