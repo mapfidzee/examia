@@ -1,37 +1,123 @@
+'use client'
+
+import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
-import InfrastructureNav from '@/components/InfrastructureNav'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
-import { buildCGIExecutiveBriefing } from '@/lib/cgiExecutiveBriefingGenerator'
-import { buildCGIExecutiveMemoryBoard } from '@/lib/cgiExecutiveMemoryBoardEngine'
-import {
-  formatCGIExecutivePosture,
-  formatCGIEvidenceLanguage,
-  formatCGISurvivabilityLanguage,
-  formatCGIGovernanceSafeLanguage,
-} from '@/lib/cgiExecutivePostureFormatter'
-import { getCGIPreferredTerm } from '@/lib/cgiExecutiveSemanticRegistry'
+import { supabase } from '../../lib/supabase'
 
-type MemoryBoardView = {
-  boardPosture: string
-  persistenceMaturity: string
-  executiveRisk: string
-  currentReading: string
-  executiveMeaning: string
-  evidenceGap: string
-  recoveryCredibility: string
-  copyReadyExecutiveMemoryBrief: string
+type StabilityCase = {
+  id: string
+  beneficiary_name: string
+  beneficiary_level: string | null
+  support_domain: string
+  case_status: string
+  severity_level: string
+  region: string | null
+  institution_name: string | null
+  safeguarding_flag: boolean
+  intervention_summary: string | null
+  outcome_summary: string | null
+  created_at?: string | null
+  updated_at?: string | null
 }
+
+type OutcomeRecord = {
+  id: string
+  case_id: string
+  outcome_status: string | null
+  outcome_summary: string | null
+  created_at?: string | null
+}
+
+type CgiOperationalMetric = {
+  id: string
+  created_at: string
+  executive_summary: string | null
+  action_cue: string | null
+  dominant_pressure_source: string | null
+  dominant_trajectory_signal: string | null
+  dominant_memory_pattern: string | null
+}
+
+type ExecutivePosture =
+  | 'EXECUTIVE CENTER CLEAR'
+  | 'ACTIVE CONTINUITY WATCH'
+  | 'RECOVERY WATCH'
+  | 'EVIDENCE REVIEW REQUIRED'
+  | 'EXECUTIVE REVIEW REQUIRED'
+  | 'STABILITY ABSORPTION READY'
+
+type RecoveryDisposition =
+  | 'MOVE_TO_STABILITY_BOARD'
+  | 'MOVE_TO_COMMAND_WATCH'
+  | 'MOVE_TO_COMMAND_ESCALATION'
+  | 'RETURN_TO_OUTCOMES_REVIEW'
+  | 'RETURN_TO_INTERVENTION_REVIEW'
+  | 'CONTINUE_RECOVERY_MONITORING'
+  | 'NO_RECOVERY_DISPOSITION'
+
+type RecoveryMemoryRecord = {
+  caseItem: StabilityCase
+  latestRecoveryReview?: OutcomeRecord
+  disposition: RecoveryDisposition
+  durabilityResult: string
+  commandPosture: string
+  recoveryConfidence: string
+  memoryImpact: string
+  movementReason: string
+}
+
+type ExecutiveSynthesis = {
+  posture: ExecutivePosture
+  meaning: string
+  whatIsHappening: string
+  whyItMatters: string
+  nextMovement: string
+  leadershipAction: string
+  memoryStatus: string
+  evidenceStatus: string
+  recoveryCredibility: string
+  survivabilityMeaning: string
+  activeInstability: number
+  stabilized: number
+  recoveryRecords: number
+  fragileRecovery: number
+  commandPressure: number
+  evidenceReturn: number
+  absorbable: number
+  historicalMemory: number
+}
+
+const CASE_SAMPLE_LIMIT = 120
+const METRIC_SAMPLE_LIMIT = 40
+
+const ACTIVE_CASE_STATUSES = [
+  'NEW',
+  'TRIAGE',
+  'UNDER_REVIEW',
+  'ROUTED',
+  'RESPONDER_ASSIGNED',
+  'INTERVENTION_ACTIVE',
+  'FOLLOW_UP_REQUIRED',
+  'REOPENED',
+  'RECOVERY_MONITORING',
+  'PARTIAL_STABILIZATION',
+  'IMPROVING',
+]
+
+const DOCTRINE = [
+  'Executive Center synthesizes; it does not close.',
+  'Command is not closure.',
+  'Recovery is not durability.',
+  'Memory must survive stabilization.',
+]
 
 export default function ExecutiveCenterPage() {
   return (
     <GovernanceRouteGuard
-      allowedRoles={[
-        'SUPER_ADMIN',
-        'COMMAND_ADMIN',
-        'GOVERNANCE_OFFICER',
-      ]}
+      allowedRoles={['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']}
     >
       <CGIGovernanceShell>
         <ExecutiveCenterContent />
@@ -41,269 +127,626 @@ export default function ExecutiveCenterPage() {
 }
 
 function ExecutiveCenterContent() {
-  const briefing = buildCGIExecutiveBriefing({
-    pressurePosture: 'ELEVATED',
-    trajectoryPosture: 'ELEVATED',
-    predictivePosture: 'ELEVATED',
-    recoveryPosture: 'WATCHED',
-    reliabilityPosture: 'ELEVATED',
-    evidenceVerified: false,
-    accountabilityActive: true,
-    structuralMemoryVisible: true,
-  })
+  const [cases, setCases] = useState<StabilityCase[]>([])
+  const [outcomes, setOutcomes] = useState<OutcomeRecord[]>([])
+  const [metrics, setMetrics] = useState<CgiOperationalMetric[]>([])
+  const [message, setMessage] = useState('')
 
-  const memoryBoard = buildMemoryBoardView()
+  useEffect(() => {
+    loadExecutiveCenter()
+  }, [])
 
-  const executivePosture = formatCGIExecutivePosture(
-    briefing.synthesis.synthesisPosture
+  async function loadExecutiveCenter() {
+    setMessage('Loading executive continuity synthesis...')
+
+    const [casesResult, outcomesResult, metricsResult] = await Promise.all([
+      supabase
+        .from('beneficiary_cases')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(CASE_SAMPLE_LIMIT),
+      supabase
+        .from('case_outcomes')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(CASE_SAMPLE_LIMIT),
+      supabase
+        .from('cgi_operational_metrics')
+        .select(
+          'id, created_at, executive_summary, action_cue, dominant_pressure_source, dominant_trajectory_signal, dominant_memory_pattern',
+        )
+        .order('created_at', { ascending: false })
+        .limit(METRIC_SAMPLE_LIMIT),
+    ])
+
+    if (casesResult.error) console.error(casesResult.error)
+    if (outcomesResult.error) console.error(outcomesResult.error)
+    if (metricsResult.error) console.error(metricsResult.error)
+
+    if (casesResult.error || outcomesResult.error || metricsResult.error) {
+      setMessage('Some executive continuity intelligence failed to load.')
+      return
+    }
+
+    setCases(casesResult.data || [])
+    setOutcomes(outcomesResult.data || [])
+    setMetrics(metricsResult.data || [])
+    setMessage('Executive continuity synthesis loaded.')
+  }
+
+  const recoveryMemory = useMemo(
+    () => buildRecoveryMemoryRecords(cases, outcomes),
+    [cases, outcomes],
   )
 
-  const evidenceLanguage = formatCGIEvidenceLanguage(
-    false,
-    briefing.synthesis.synthesisPosture
+  const synthesis = useMemo(
+    () => buildExecutiveSynthesis(cases, recoveryMemory, metrics),
+    [cases, recoveryMemory, metrics],
   )
-
-  const survivabilityLanguage = formatCGISurvivabilityLanguage(
-    briefing.synthesis.synthesisPosture
-  )
-
-  const governanceLanguage = formatCGIGovernanceSafeLanguage()
 
   return (
     <main style={styles.page}>
       <div style={styles.container}>
-        <InfrastructureNav />
-
         <section style={styles.header}>
           <p style={styles.kicker}>TSINAXA CGI • EXECUTIVE CENTER</p>
 
           <h1 style={styles.title}>Executive Continuity Center</h1>
 
           <p style={styles.subtitle}>
-            A unified leadership surface for current pressure, continuity
-            memory, recovery credibility, evidence gaps, and required executive
-            action.
+            One leadership synthesis across current instability, recovery
+            credibility, command pressure, institutional posture, evidence, and
+            continuity memory.
           </p>
+
+          <section style={styles.doctrinePanel}>
+            <p style={styles.doctrineTitle}>EXECUTIVE CENTER DOCTRINE</p>
+
+            <div style={styles.doctrineGrid}>
+              {DOCTRINE.map((item) => (
+                <div key={item} style={styles.doctrineCard}>
+                  {item}
+                </div>
+              ))}
+            </div>
+          </section>
         </section>
+
+        {message && <div style={styles.message}>{message}</div>}
 
         <section style={styles.heroCard}>
           <div>
-            <p style={styles.sectionKicker}>Current Continuity Reading</p>
+            <p style={styles.sectionKicker}>Current Executive Continuity Reading</p>
 
-            <h2 style={styles.heroTitle}>{executivePosture.label}</h2>
+            <h2 style={styles.heroTitle}>{synthesis.posture}</h2>
 
-            <p style={styles.heroMeaning}>{briefing.executiveSummary}</p>
+            <p style={styles.heroMeaning}>{synthesis.meaning}</p>
           </div>
 
           <div style={styles.commandBox}>
             <p style={styles.commandLabel}>Executive Question</p>
 
-            <p style={styles.commandText}>{briefing.coreQuestion}</p>
+            <p style={styles.commandText}>
+              What must leadership understand before instability is treated as
+              stabilized?
+            </p>
           </div>
+        </section>
+
+        <section style={styles.metricGrid}>
+          <MetricCard
+            label="Active Instability"
+            value={synthesis.activeInstability}
+            body="Current lifecycle records still carrying instability."
+          />
+          <MetricCard
+            label="Recovery Records"
+            value={synthesis.recoveryRecords}
+            body="Durability reviews available for executive synthesis."
+          />
+          <MetricCard
+            label="Command Pressure"
+            value={synthesis.commandPressure}
+            body="Records requiring command watch or escalation."
+          />
+          <MetricCard
+            label="Memory Records"
+            value={synthesis.historicalMemory}
+            body="Historical continuity memory preserved for learning."
+          />
         </section>
 
         <section style={styles.memoryCard}>
           <div>
-            <p style={styles.sectionKicker}>Continuity Memory Board</p>
+            <p style={styles.sectionKicker}>Institutional Memory Status</p>
 
-            <h2 style={styles.cardTitle}>
-              Memory is now part of the executive reading.
-            </h2>
+            <h2 style={styles.cardTitle}>{synthesis.memoryStatus}</h2>
 
             <p style={styles.bodyText}>
-              CGI now carries prior pressure, unresolved evidence, recovery
-              fragility, and recurring instability into the leadership view.
+              Memory is not leftover data. Memory is how CGI prevents visible
+              instability from disappearing after the immediate pressure is gone.
             </p>
           </div>
 
           <div style={styles.memoryGrid}>
-            <MemoryMetric
-              label="Memory Posture"
-              value={memoryBoard.boardPosture}
-            />
-
-            <MemoryMetric
-              label="Persistence"
-              value={memoryBoard.persistenceMaturity}
-            />
-
-            <MemoryMetric
-              label="Executive Risk"
-              value={memoryBoard.executiveRisk}
-            />
+            <MemoryMetric label="Evidence Status" value={synthesis.evidenceStatus} />
+            <MemoryMetric label="Recovery Credibility" value={synthesis.recoveryCredibility} />
+            <MemoryMetric label="Survivability" value={synthesis.survivabilityMeaning} />
           </div>
+        </section>
+
+        <section style={styles.gridTwo}>
+          <Panel title="What Is Happening?">{synthesis.whatIsHappening}</Panel>
+          <Panel title="Why It Matters">{synthesis.whyItMatters}</Panel>
+        </section>
+
+        <section style={styles.gridTwo}>
+          <Panel title="Recommended Next Movement">{synthesis.nextMovement}</Panel>
+          <Panel title="Leadership Action">{synthesis.leadershipAction}</Panel>
         </section>
 
         <section style={styles.gridThree}>
           <SignalCard
             title="Pressure"
-            value={getCGIPreferredTerm('PRESSURE')}
-            body="Visible strain requires leadership attention before disruption becomes normalized."
+            value={synthesis.activeInstability > 0 ? 'Visible' : 'Clear'}
+            body={
+              synthesis.activeInstability > 0
+                ? 'Active lifecycle pressure remains visible and should not be hidden.'
+                : 'No active lifecycle pressure is currently visible.'
+            }
           />
 
-          <SignalCard
-            title="Early Warning"
-            value={getCGIPreferredTerm('PREDICTIVE')}
-            body="The system is reading whether current signals may become continuity failure."
-          />
-
-          <SignalCard
-            title="Trajectory"
-            value={getCGIPreferredTerm('TRAJECTORY')}
-            body="Direction matters more than a single snapshot. CGI reads whether conditions are improving, holding, or worsening."
-          />
-        </section>
-
-        <section style={styles.gridThree}>
           <SignalCard
             title="Recovery"
-            value={getCGIPreferredTerm('RECOVERY')}
-            body="Recovery must prove durability before confidence is restored."
+            value={synthesis.recoveryRecords > 0 ? 'Memory Active' : 'No Active Review'}
+            body={
+              synthesis.recoveryRecords > 0
+                ? 'Recovery evidence is available for executive synthesis.'
+                : 'No recovery durability records currently require executive interpretation.'
+            }
           />
 
           <SignalCard
-            title="Trustworthiness"
-            value={getCGIPreferredTerm('RELIABILITY')}
-            body="Stabilization cannot be treated as dependable until evidence supports it."
-          />
-
-          <SignalCard
-            title="Survivability"
-            value={getCGIPreferredTerm('SURVIVABILITY')}
-            body={survivabilityLanguage}
+            title="Command"
+            value={synthesis.commandPressure > 0 ? 'Required' : 'Clear'}
+            body={
+              synthesis.commandPressure > 0
+                ? 'Command attention remains necessary before stability can be absorbed.'
+                : 'No current command pressure is visible from lifecycle records.'
+            }
           />
         </section>
 
         <section style={styles.card}>
           <p style={styles.sectionKicker}>Executive Action Posture</p>
 
-          <h2 style={styles.cardTitle}>{executivePosture.headline}</h2>
+          <h2 style={styles.cardTitle}>{synthesis.posture}</h2>
 
-          <p style={styles.bodyText}>{executivePosture.actionLanguage}</p>
+          <p style={styles.bodyText}>{synthesis.leadershipAction}</p>
 
           <div style={styles.priorityGrid}>
-            <PriorityItem
-              title="Dominant Concern"
-              body={briefing.dominantConcern}
-            />
-
-            <PriorityItem
-              title="Evidence Missing"
-              body={evidenceLanguage}
-            />
-
+            <PriorityItem title="Dominant Concern" body={deriveDominantConcern(synthesis)} />
+            <PriorityItem title="Evidence Meaning" body={synthesis.evidenceStatus} />
             <PriorityItem
               title="Governance Meaning"
-              body={governanceLanguage}
+              body="Leadership visibility must remain proportional, non-punitive, evidence-aware, and memory-preserving."
             />
           </div>
         </section>
 
-        <section style={styles.gridTwo}>
-          <Panel title="What Is Happening?">
-            {memoryBoard.currentReading}
-          </Panel>
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Recovery-to-Executive Synthesis</p>
 
-          <Panel title="Why It Matters">
-            {memoryBoard.executiveMeaning}
-          </Panel>
-        </section>
+          <h2 style={styles.cardTitle}>
+            Recovery evidence remains visible before institutional confidence is
+            restored.
+          </h2>
 
-        <section style={styles.gridTwo}>
-          <Panel title="What Evidence Is Missing?">
-            {memoryBoard.evidenceGap}
-          </Panel>
+          {recoveryMemory.length === 0 && (
+            <div style={styles.emptyState}>
+              No recovery durability memory is currently available for executive
+              synthesis. This is clean while the lifecycle is clear.
+            </div>
+          )}
 
-          <Panel title="Is Recovery Credible?">
-            {memoryBoard.recoveryCredibility}
-          </Panel>
+          {recoveryMemory.length > 0 && (
+            <div style={styles.tableWrap}>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>Case</th>
+                    <th style={styles.th}>Disposition</th>
+                    <th style={styles.th}>Command Posture</th>
+                    <th style={styles.th}>Durability</th>
+                    <th style={styles.th}>Memory Impact</th>
+                    <th style={styles.th}>Reason</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {recoveryMemory.slice(0, 12).map((record) => (
+                    <tr
+                      key={`${record.caseItem.id}-${
+                        record.latestRecoveryReview?.id || 'case'
+                      }`}
+                    >
+                      <td style={styles.td}>
+                        <strong>{record.caseItem.beneficiary_name}</strong>
+                        <br />
+                        {record.caseItem.support_domain}
+                      </td>
+                      <td style={styles.td}>{record.disposition}</td>
+                      <td style={styles.td}>{record.commandPosture}</td>
+                      <td style={styles.td}>{record.durabilityResult}</td>
+                      <td style={styles.td}>{record.memoryImpact}</td>
+                      <td style={styles.td}>{record.movementReason}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
 
         <section style={styles.card}>
           <p style={styles.sectionKicker}>Memory-Aware Executive Brief</p>
 
           <h2 style={styles.cardTitle}>
-            One leadership reading across pressure, recovery, evidence, and
-            continuity memory.
+            One leadership reading across pressure, recovery, evidence, command,
+            stability, and continuity memory.
           </h2>
 
-          <pre style={styles.summaryBox}>
-            {memoryBoard.copyReadyExecutiveMemoryBrief}
-          </pre>
+          <pre style={styles.summaryBox}>{buildCopyReadyExecutiveBrief(synthesis)}</pre>
         </section>
 
         <section style={styles.card}>
-          <p style={styles.sectionKicker}>Current Executive Continuity Brief</p>
+          <p style={styles.sectionKicker}>Historical Memory Trail</p>
 
           <h2 style={styles.cardTitle}>
-            Snapshot interpretation remains available for immediate review.
+            Historical continuity memory remains preserved without driving the
+            current posture.
           </h2>
 
-          <pre style={styles.summaryBox}>{briefing.copyReadyBrief}</pre>
+          {metrics.length === 0 && (
+            <div style={styles.emptyState}>
+              No historical continuity metric records are currently available.
+            </div>
+          )}
+
+          {metrics.length > 0 && (
+            <div style={styles.tableWrap}>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>Created</th>
+                    <th style={styles.th}>Pressure Memory</th>
+                    <th style={styles.th}>Trajectory Memory</th>
+                    <th style={styles.th}>Structural Memory</th>
+                    <th style={styles.th}>Executive Memory</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {metrics.slice(0, 10).map((item) => (
+                    <tr key={item.id}>
+                      <td style={styles.td}>{formatDate(item.created_at)}</td>
+                      <td style={styles.td}>
+                        {item.dominant_pressure_source || 'No pressure memory recorded'}
+                      </td>
+                      <td style={styles.td}>
+                        {item.dominant_trajectory_signal || 'No trajectory memory recorded'}
+                      </td>
+                      <td style={styles.td}>
+                        {item.dominant_memory_pattern || 'No structural memory recorded'}
+                      </td>
+                      <td style={styles.td}>
+                        {item.executive_summary || 'No executive memory summary recorded'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <button onClick={loadExecutiveCenter} style={styles.primaryButton}>
+            Refresh Executive Center
+          </button>
         </section>
       </div>
     </main>
   )
 }
 
-function buildMemoryBoardView(): MemoryBoardView {
-  try {
-    const engineInput =
-      [] as Parameters<typeof buildCGIExecutiveMemoryBoard>[0]
+function buildRecoveryMemoryRecords(
+  cases: StabilityCase[],
+  outcomes: OutcomeRecord[],
+): RecoveryMemoryRecord[] {
+  const records: RecoveryMemoryRecord[] = []
 
-    const board = buildCGIExecutiveMemoryBoard(
-      engineInput
-    ) as unknown as Partial<MemoryBoardView>
+  cases.forEach((caseItem) => {
+    const caseOutcomes = outcomes.filter(
+      (outcome) => outcome.case_id === caseItem.id,
+    )
 
-    return {
-      boardPosture: board.boardPosture ?? 'MEMORY VISIBLE',
-      persistenceMaturity: board.persistenceMaturity ?? 'EMERGING',
-      executiveRisk: board.executiveRisk ?? 'WATCHED',
-      currentReading:
-        board.currentReading ??
-        'Current pressure remains visible and must be interpreted together with prior continuity memory.',
-      executiveMeaning:
-        board.executiveMeaning ??
-        'Leadership should not treat the current snapshot as isolated until recurrence, evidence, and recovery durability are reviewed.',
-      evidenceGap:
-        board.evidenceGap ??
-        'Evidence is still needed to confirm whether stabilization is durable, traceable, and not dependent on temporary relief.',
-      recoveryCredibility:
-        board.recoveryCredibility ??
-        'Recovery is not yet fully credible until pressure reduction is sustained across time.',
-      copyReadyExecutiveMemoryBrief:
-        board.copyReadyExecutiveMemoryBrief ??
-        [
-          'CGI Executive Memory Reading',
-          '',
-          'Current pressure remains visible.',
-          'Continuity memory must remain active.',
-          'Recovery should not be treated as fully credible until evidence confirms durable stabilization.',
-          'Executive action should focus on evidence, recurrence, survivability, and follow-through.',
-        ].join('\n'),
-    }
-  } catch {
-    return {
-      boardPosture: 'MEMORY VISIBLE',
-      persistenceMaturity: 'EMERGING',
-      executiveRisk: 'WATCHED',
-      currentReading:
-        'Current pressure remains visible and requires memory-aware leadership review.',
-      executiveMeaning:
-        'Leadership should review whether the current condition is isolated, recurring, or becoming structurally persistent.',
-      evidenceGap:
-        'Evidence is needed to confirm whether recovery is durable, traceable, and survivable.',
-      recoveryCredibility:
-        'Recovery remains under watch until stabilization can be proven across time.',
-      copyReadyExecutiveMemoryBrief: [
-        'CGI Executive Memory Reading',
-        '',
-        'CGI now preserves continuity memory across time.',
-        'The executive center should treat unresolved pressure, evidence gaps, and recovery fragility as part of the current leadership reading.',
-        'Action should remain focused on credible stabilization, survivability, and governance-safe follow-through.',
-      ].join('\n'),
-    }
+    const latestRecoveryReview = caseOutcomes.find((outcome) =>
+      isRecoverySummary(outcome.outcome_summary || ''),
+    )
+
+    const summary =
+      latestRecoveryReview?.outcome_summary || caseItem.outcome_summary || ''
+
+    if (!summary || !isRecoverySummary(summary)) return
+
+    const disposition =
+      (extractField(summary, 'RECOVERY DISPOSITION') ||
+        'NO_RECOVERY_DISPOSITION') as RecoveryDisposition
+
+    records.push({
+      caseItem,
+      latestRecoveryReview,
+      disposition,
+      durabilityResult:
+        extractField(summary, 'DURABILITY RESULT') ||
+        latestRecoveryReview?.outcome_status ||
+        'DURABILITY_UNRECORDED',
+      commandPosture:
+        extractField(summary, 'COMMAND POSTURE') || 'COMMAND_POSTURE_UNRECORDED',
+      recoveryConfidence:
+        extractField(summary, 'RECOVERY CONFIDENCE') ||
+        'RECOVERY_CONFIDENCE_UNRECORDED',
+      memoryImpact:
+        extractField(summary, 'MEMORY IMPACT') || 'MEMORY_IMPACT_UNRECORDED',
+      movementReason:
+        extractField(summary, 'MOVEMENT REASON') ||
+        'Movement reason was not explicitly preserved.',
+    })
+  })
+
+  return records
+}
+
+function buildExecutiveSynthesis(
+  cases: StabilityCase[],
+  recoveryMemory: RecoveryMemoryRecord[],
+  metrics: CgiOperationalMetric[],
+): ExecutiveSynthesis {
+  const activeInstability = cases.filter((caseItem) =>
+    ACTIVE_CASE_STATUSES.includes(caseItem.case_status),
+  ).length
+
+  const stabilized = cases.filter(
+    (caseItem) => caseItem.case_status === 'STABILIZED',
+  ).length
+
+  const absorbable = recoveryMemory.filter(
+    (record) => record.disposition === 'MOVE_TO_STABILITY_BOARD',
+  ).length
+
+  const commandPressure = recoveryMemory.filter(
+    (record) =>
+      record.disposition === 'MOVE_TO_COMMAND_WATCH' ||
+      record.disposition === 'MOVE_TO_COMMAND_ESCALATION',
+  ).length
+
+  const evidenceReturn = recoveryMemory.filter(
+    (record) =>
+      record.disposition === 'RETURN_TO_OUTCOMES_REVIEW' ||
+      record.disposition === 'RETURN_TO_INTERVENTION_REVIEW',
+  ).length
+
+  const fragileRecovery = recoveryMemory.filter(
+    (record) =>
+      record.disposition === 'CONTINUE_RECOVERY_MONITORING' ||
+      record.disposition === 'MOVE_TO_COMMAND_WATCH' ||
+      record.disposition === 'RETURN_TO_OUTCOMES_REVIEW' ||
+      record.disposition === 'RETURN_TO_INTERVENTION_REVIEW',
+  ).length
+
+  let posture: ExecutivePosture = 'EXECUTIVE CENTER CLEAR'
+  let meaning =
+    'No active lifecycle instability, command pressure, or fragile recovery is currently visible.'
+  let nextMovement =
+    'Maintain executive visibility. No governed movement is currently required.'
+  let leadershipAction =
+    'Continue monitoring without creating artificial pressure. Preserve institutional memory for future recurrence learning.'
+
+  if (commandPressure > 0) {
+    posture = 'EXECUTIVE REVIEW REQUIRED'
+    meaning =
+      'Recovery or command pressure remains visible and should not be treated as resolved.'
+    nextMovement = 'Move through Command before any stability absorption is trusted.'
+    leadershipAction =
+      'Review command pressure, recurrence signals, recovery durability, and unresolved evidence before allowing final posture.'
+  } else if (evidenceReturn > 0) {
+    posture = 'EVIDENCE REVIEW REQUIRED'
+    meaning =
+      'Evidence or intervention credibility is not strong enough to support final stability confidence.'
+    nextMovement = 'Return to Outcomes or Interventions for evidence strengthening.'
+    leadershipAction = 'Require clearer verification before recovery is treated as durable.'
+  } else if (fragileRecovery > 0) {
+    posture = 'RECOVERY WATCH'
+    meaning =
+      'Recovery is visible but still fragile enough to require executive awareness.'
+    nextMovement = 'Continue Recovery Watch before stability absorption.'
+    leadershipAction =
+      'Maintain proportionate visibility until durability and recurrence conditions are clearer.'
+  } else if (activeInstability > 0) {
+    posture = 'ACTIVE CONTINUITY WATCH'
+    meaning =
+      'Active lifecycle instability remains visible and should not be hidden by executive summary language.'
+    nextMovement =
+      'Continue governed lifecycle movement through cases, routing, intervention, outcomes, and recovery.'
+    leadershipAction =
+      'Protect visibility, ownership, evidence, and next movement until stabilization is credible.'
+  } else if (absorbable > 0) {
+    posture = 'STABILITY ABSORPTION READY'
+    meaning =
+      'Durable recovery evidence is available for institutional absorption while memory remains preserved.'
+    nextMovement =
+      'Move to Stability Board while preserving recurrence history, evidence meaning, and unresolved risk.'
+    leadershipAction = 'Absorb final posture without erasing structural memory.'
   }
+
+  return {
+    posture,
+    meaning,
+    whatIsHappening: deriveWhatIsHappening({
+      activeInstability,
+      recoveryRecords: recoveryMemory.length,
+      commandPressure,
+      evidenceReturn,
+      fragileRecovery,
+      absorbable,
+    }),
+    whyItMatters: deriveWhyItMatters(posture),
+    nextMovement,
+    leadershipAction,
+    memoryStatus:
+      metrics.length > 0 || recoveryMemory.length > 0
+        ? 'MEMORY PRESERVED'
+        : 'MEMORY READY',
+    evidenceStatus:
+      evidenceReturn > 0
+        ? 'Evidence requires review before stability can be trusted.'
+        : 'No active evidence gap is currently driving executive posture.',
+    recoveryCredibility:
+      recoveryMemory.length === 0
+        ? 'No active recovery durability review is currently visible.'
+        : fragileRecovery > 0 || commandPressure > 0
+          ? 'Recovery remains visible but not yet fully durable.'
+          : 'Recovery credibility is currently absorbable into institutional posture.',
+    survivabilityMeaning:
+      commandPressure > 0 || activeInstability > 0
+        ? 'Survivability requires continued executive visibility.'
+        : 'No current survivability pressure is visible from lifecycle records.',
+    activeInstability,
+    stabilized,
+    recoveryRecords: recoveryMemory.length,
+    fragileRecovery,
+    commandPressure,
+    evidenceReturn,
+    absorbable,
+    historicalMemory: metrics.length,
+  }
+}
+
+function deriveWhatIsHappening(input: {
+  activeInstability: number
+  recoveryRecords: number
+  commandPressure: number
+  evidenceReturn: number
+  fragileRecovery: number
+  absorbable: number
+}) {
+  if (input.commandPressure > 0) {
+    return 'Command pressure remains active. Executive Center must keep leadership attention on unresolved instability before stability is trusted.'
+  }
+
+  if (input.evidenceReturn > 0) {
+    return 'Some recovery evidence is not strong enough for final confidence. The lifecycle must return to evidence or intervention review.'
+  }
+
+  if (input.fragileRecovery > 0) {
+    return 'Recovery is visible but still fragile. Durability must mature before institutional stability is declared.'
+  }
+
+  if (input.activeInstability > 0) {
+    return 'Active instability remains in the lifecycle. CGI must keep visibility until governed movement reaches credible stabilization.'
+  }
+
+  if (input.absorbable > 0) {
+    return 'Recovered instability appears ready for institutional absorption while preserving memory and recurrence history.'
+  }
+
+  return 'The current lifecycle is clear. Executive Center remains available as the synthesis layer when instability, recovery, command pressure, or evidence gaps appear.'
+}
+
+function deriveWhyItMatters(posture: ExecutivePosture) {
+  if (posture === 'EXECUTIVE REVIEW REQUIRED') {
+    return 'Leadership risk increases when command pressure is allowed to disappear before recovery credibility is proven.'
+  }
+
+  if (posture === 'EVIDENCE REVIEW REQUIRED') {
+    return 'Without evidence, stabilization becomes an assumption rather than a governed continuity conclusion.'
+  }
+
+  if (posture === 'RECOVERY WATCH') {
+    return 'Fragile recovery can look stable too early. CGI preserves watch until durability becomes credible.'
+  }
+
+  if (posture === 'ACTIVE CONTINUITY WATCH') {
+    return 'Visible instability must continue moving through governed action rather than fragmenting across pages.'
+  }
+
+  if (posture === 'STABILITY ABSORPTION READY') {
+    return 'Stable posture has value only if memory, recurrence, and unresolved risk remain visible after recovery.'
+  }
+
+  return 'A clear executive center prevents false escalation while keeping institutional memory ready for future recurrence.'
+}
+
+function deriveDominantConcern(synthesis: ExecutiveSynthesis) {
+  if (synthesis.commandPressure > 0) return 'Command pressure remains unresolved.'
+  if (synthesis.evidenceReturn > 0) return 'Evidence requires renewed review.'
+  if (synthesis.fragileRecovery > 0) return 'Recovery remains fragile.'
+  if (synthesis.activeInstability > 0) return 'Active lifecycle instability remains visible.'
+  if (synthesis.absorbable > 0) return 'Stability absorption requires memory preservation.'
+  return 'No active executive concern is currently visible.'
+}
+
+function buildCopyReadyExecutiveBrief(synthesis: ExecutiveSynthesis) {
+  return [
+    'TSINAXA CGI Executive Continuity Brief',
+    '',
+    `Current Posture: ${synthesis.posture}`,
+    '',
+    `Meaning: ${synthesis.meaning}`,
+    '',
+    `What is happening: ${synthesis.whatIsHappening}`,
+    '',
+    `Why it matters: ${synthesis.whyItMatters}`,
+    '',
+    `Recommended next movement: ${synthesis.nextMovement}`,
+    '',
+    `Leadership action: ${synthesis.leadershipAction}`,
+    '',
+    `Memory status: ${synthesis.memoryStatus}`,
+    '',
+    `Evidence status: ${synthesis.evidenceStatus}`,
+    '',
+    `Recovery credibility: ${synthesis.recoveryCredibility}`,
+  ].join('\n')
+}
+
+function isRecoverySummary(summary: string) {
+  return (
+    summary.includes('DURABILITY RESULT') ||
+    summary.includes('RECOVERY TRAJECTORY') ||
+    summary.includes('RECOVERY MATURITY') ||
+    summary.includes('RECOVERY CONFIDENCE') ||
+    summary.includes('RECOVERY DISPOSITION') ||
+    summary.includes('RECOMMENDED NEXT MOVEMENT')
+  )
+}
+
+function extractField(summary: string, label: string) {
+  if (!summary) return ''
+
+  const lines = summary
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+
+  const target = label.trim().toLowerCase()
+  const index = lines.findIndex((line) => line.toLowerCase() === target)
+
+  if (index === -1) return ''
+
+  return lines[index + 1] || ''
+}
+
+function formatDate(value: string) {
+  return new Date(value).toLocaleString()
 }
 
 function SignalCard({
@@ -318,9 +761,25 @@ function SignalCard({
   return (
     <article style={styles.signalCard}>
       <p style={styles.panelKicker}>{title}</p>
-
       <h3 style={styles.signalValue}>{value}</h3>
+      <p style={styles.panelBody}>{body}</p>
+    </article>
+  )
+}
 
+function MetricCard({
+  label,
+  value,
+  body,
+}: {
+  label: string
+  value: number
+  body: string
+}) {
+  return (
+    <article style={styles.metricCard}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.metricValue}>{value}</p>
       <p style={styles.panelBody}>{body}</p>
     </article>
   )
@@ -336,8 +795,7 @@ function MemoryMetric({
   return (
     <article style={styles.memoryMetric}>
       <p style={styles.metricLabel}>{label}</p>
-
-      <p style={styles.metricValue}>{value}</p>
+      <p style={styles.memoryMetricValue}>{value}</p>
     </article>
   )
 }
@@ -352,7 +810,6 @@ function PriorityItem({
   return (
     <article style={styles.priorityItem}>
       <p style={styles.panelKicker}>{title}</p>
-
       <p style={styles.priorityBody}>{body}</p>
     </article>
   )
@@ -368,113 +825,185 @@ function Panel({
   return (
     <section style={styles.panel}>
       <p style={styles.panelKicker}>{title}</p>
-
       <div style={styles.panelBody}>{children}</div>
     </section>
   )
 }
 
+const gold = '#d6b25e'
+const mutedGold = '#9f8142'
+const deepBlack = '#030303'
+const panelBlack = '#090807'
+const cardBlack = '#11100d'
+const softLine = 'rgba(214,178,94,0.24)'
+
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    color: 'white',
+    color: '#f5f0e6',
     overflowX: 'hidden',
+    background:
+      'radial-gradient(circle at top right, rgba(214,178,94,0.08), transparent 32%), #030303',
   },
   container: {
     width: '100%',
     maxWidth: '1120px',
     margin: '0 auto',
-    padding: '0 20px 48px',
+    padding: '8px 24px 48px',
     boxSizing: 'border-box',
   },
   header: {
-    marginBottom: '20px',
-    paddingTop: '4px',
+    marginBottom: '14px',
   },
   kicker: {
-    color: '#67e8f9',
-    fontSize: '12px',
+    color: gold,
+    fontSize: '11px',
     fontWeight: 900,
     letterSpacing: '2px',
     margin: 0,
   },
   title: {
-    fontSize: 'clamp(34px, 5vw, 52px)',
-    lineHeight: 1.05,
-    margin: '10px 0',
+    color: '#fff8e7',
+    fontSize: 'clamp(30px, 4vw, 42px)',
+    lineHeight: 1,
+    margin: '8px 0',
+    letterSpacing: '-0.05em',
   },
   subtitle: {
-    color: '#cbd5e1',
-    maxWidth: '820px',
-    lineHeight: 1.65,
-    fontSize: '16px',
+    color: '#cfc7b5',
+    maxWidth: '760px',
+    lineHeight: 1.5,
+    fontSize: '13px',
     margin: 0,
+  },
+  doctrinePanel: {
+    background: panelBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '16px',
+    padding: '15px',
+    marginTop: '14px',
+  },
+  doctrineTitle: {
+    color: gold,
+    fontSize: '10px',
+    fontWeight: 900,
+    letterSpacing: '0.15em',
+    margin: '0 0 10px',
+  },
+  doctrineGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: '10px',
+  },
+  doctrineCard: {
+    background: deepBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '12px',
+    padding: '10px',
+    color: '#fff8e7',
+    fontSize: '12px',
+    lineHeight: 1.35,
+    fontWeight: 800,
+  },
+  message: {
+    background: 'rgba(16, 185, 129, 0.14)',
+    color: '#bbf7d0',
+    border: '1px solid rgba(16, 185, 129, 0.28)',
+    padding: '12px 14px',
+    borderRadius: '14px',
+    fontWeight: 800,
+    marginBottom: '12px',
+    fontSize: '13px',
   },
   heroCard: {
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1.35fr) minmax(260px, 0.65fr)',
-    gap: '16px',
-    background: '#020617',
-    border: '1px solid #67e8f9',
-    borderRadius: '26px',
-    padding: '24px',
-    marginBottom: '16px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
-  },
-  memoryCard: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.15fr) minmax(280px, 0.85fr)',
-    gap: '16px',
-    background: '#02111f',
-    border: '1px solid #2563eb',
-    borderRadius: '24px',
-    padding: '22px',
-    marginBottom: '16px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.24)',
+    gap: '14px',
+    background: deepBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '16px',
+    padding: '16px',
+    marginBottom: '12px',
   },
   sectionKicker: {
-    color: '#94a3b8',
+    color: mutedGold,
+    fontWeight: 900,
+    letterSpacing: '0.15em',
+    textTransform: 'uppercase',
+    margin: 0,
+    fontSize: '10px',
+  },
+  heroTitle: {
+    color: gold,
+    fontSize: 'clamp(28px, 4vw, 42px)',
+    lineHeight: 1,
+    margin: '8px 0',
+    letterSpacing: '-0.05em',
+  },
+  heroMeaning: {
+    color: '#cfc7b5',
+    lineHeight: 1.45,
+    margin: 0,
+    fontSize: '13px',
+  },
+  commandBox: {
+    background: '#15110a',
+    border: `1px solid ${softLine}`,
+    borderRadius: '13px',
+    padding: '12px',
+  },
+  commandLabel: {
+    color: mutedGold,
+    fontSize: '9px',
     fontWeight: 900,
     letterSpacing: '0.14em',
     textTransform: 'uppercase',
     margin: 0,
-    fontSize: '12px',
-  },
-  heroTitle: {
-    color: '#a5f3fc',
-    fontSize: 'clamp(34px, 5vw, 54px)',
-    lineHeight: 1,
-    margin: '10px 0 14px',
-    letterSpacing: '-0.04em',
-  },
-  heroMeaning: {
-    color: '#e0f2fe',
-    lineHeight: 1.65,
-    margin: 0,
-    maxWidth: '760px',
-    fontSize: '16px',
-  },
-  commandBox: {
-    background: '#083344',
-    border: '1px solid #22d3ee',
-    borderRadius: '20px',
-    padding: '18px',
-    alignSelf: 'stretch',
-  },
-  commandLabel: {
-    color: '#67e8f9',
-    fontWeight: 900,
-    margin: '0 0 10px',
-    fontSize: '12px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.12em',
   },
   commandText: {
-    color: '#cffafe',
-    fontSize: '24px',
+    color: '#fff8e7',
+    fontSize: '18px',
     lineHeight: 1.25,
-    margin: 0,
+    margin: '7px 0 0',
     fontWeight: 900,
+  },
+  metricGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: '12px',
+    marginBottom: '12px',
+  },
+  metricCard: {
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '13px',
+    padding: '12px',
+    minHeight: '126px',
+  },
+  metricLabel: {
+    color: mutedGold,
+    fontSize: '9px',
+    fontWeight: 900,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+    margin: 0,
+  },
+  metricValue: {
+    color: gold,
+    fontSize: '28px',
+    fontWeight: 950,
+    lineHeight: 1,
+    margin: '8px 0',
+  },
+  memoryCard: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.15fr) minmax(280px, 0.85fr)',
+    gap: '14px',
+    background: panelBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '16px',
+    padding: '15px',
+    marginBottom: '12px',
   },
   memoryGrid: {
     display: 'grid',
@@ -482,124 +1011,165 @@ const styles: Record<string, CSSProperties> = {
     gap: '10px',
   },
   memoryMetric: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '16px',
-    padding: '14px',
+    background: '#15110a',
+    border: `1px solid ${softLine}`,
+    borderRadius: '12px',
+    padding: '10px',
   },
-  metricLabel: {
-    color: '#93c5fd',
-    fontSize: '11px',
+  memoryMetricValue: {
+    color: '#fff8e7',
+    fontSize: '14px',
+    lineHeight: 1.25,
     fontWeight: 900,
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
-    margin: 0,
-  },
-  metricValue: {
-    color: '#f8fafc',
-    fontSize: '20px',
-    lineHeight: 1.2,
-    fontWeight: 900,
-    margin: '8px 0 0',
+    margin: '5px 0 0',
   },
   gridThree: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '14px',
-    marginBottom: '16px',
+    gap: '12px',
+    marginBottom: '12px',
   },
   gridTwo: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '16px',
-    marginBottom: '16px',
+    gap: '12px',
+    marginBottom: '12px',
   },
   signalCard: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '16px',
-    minHeight: '160px',
-    boxSizing: 'border-box',
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '13px',
+    padding: '12px',
+    minHeight: '124px',
   },
   signalValue: {
-    color: '#f8fafc',
-    fontSize: '22px',
+    color: gold,
+    fontSize: '18px',
     lineHeight: 1.15,
-    margin: '10px 0',
+    margin: '8px 0',
+    fontWeight: 900,
     textTransform: 'capitalize',
   },
   card: {
-    background: '#020617',
-    border: '1px solid #1e293b',
-    borderRadius: '22px',
-    padding: '20px',
-    marginBottom: '16px',
-    boxSizing: 'border-box',
+    background: deepBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '16px',
+    padding: '15px',
+    marginBottom: '12px',
     overflow: 'hidden',
   },
   cardTitle: {
-    color: '#f8fafc',
-    fontSize: '26px',
+    color: '#fff8e7',
+    fontSize: 'clamp(20px, 3vw, 26px)',
     lineHeight: 1.15,
-    margin: '10px 0 10px',
+    margin: '8px 0',
+    letterSpacing: '-0.04em',
   },
   bodyText: {
-    color: '#cbd5e1',
-    lineHeight: 1.7,
+    color: '#cfc7b5',
+    lineHeight: 1.45,
+    fontSize: '13px',
     margin: 0,
-    maxWidth: '880px',
   },
   priorityGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '12px',
-    marginTop: '16px',
+    gap: '10px',
+    marginTop: '12px',
   },
   priorityItem: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '16px',
-    padding: '14px',
+    background: '#15110a',
+    border: `1px solid ${softLine}`,
+    borderRadius: '12px',
+    padding: '10px',
   },
   priorityBody: {
-    color: '#e2e8f0',
-    lineHeight: 1.55,
-    margin: '10px 0 0',
+    color: '#fff8e7',
+    lineHeight: 1.4,
+    fontSize: '12px',
+    margin: '6px 0 0',
     fontWeight: 700,
   },
   panel: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '16px',
-    minHeight: '150px',
-    boxSizing: 'border-box',
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '13px',
+    padding: '12px',
+    minHeight: '130px',
   },
   panelKicker: {
-    color: '#94a3b8',
-    fontSize: '12px',
+    color: mutedGold,
+    fontSize: '10px',
     fontWeight: 900,
-    letterSpacing: '0.12em',
+    letterSpacing: '0.14em',
     textTransform: 'uppercase',
     margin: 0,
   },
   panelBody: {
-    color: '#cbd5e1',
-    fontSize: '14px',
-    lineHeight: 1.6,
-    marginTop: '10px',
+    color: '#cfc7b5',
+    fontSize: '13px',
+    lineHeight: 1.45,
+    marginTop: '8px',
+  },
+  emptyState: {
+    background: '#15110a',
+    border: `1px solid ${softLine}`,
+    borderRadius: '12px',
+    padding: '12px',
+    color: '#cfc7b5',
+    lineHeight: 1.45,
+    marginTop: '12px',
+    fontSize: '13px',
+  },
+  tableWrap: {
+    width: '100%',
+    overflowX: 'auto',
+    marginTop: '12px',
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    minWidth: '920px',
+  },
+  th: {
+    textAlign: 'left',
+    color: mutedGold,
+    borderBottom: `1px solid ${softLine}`,
+    padding: '9px',
+    fontSize: '10px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+  },
+  td: {
+    borderBottom: '1px solid rgba(214,178,94,0.12)',
+    padding: '9px',
+    color: '#e8dec8',
+    verticalAlign: 'top',
+    lineHeight: 1.45,
+    fontSize: '12px',
   },
   summaryBox: {
     whiteSpace: 'pre-wrap',
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '16px',
-    padding: '16px',
-    color: '#e2e8f0',
-    lineHeight: 1.55,
-    minHeight: '220px',
-    fontSize: '14px',
+    background: '#15110a',
+    border: `1px solid ${softLine}`,
+    borderRadius: '12px',
+    padding: '12px',
+    color: '#e8dec8',
+    lineHeight: 1.45,
+    minHeight: '190px',
+    fontSize: '12px',
     overflowX: 'auto',
+  },
+  primaryButton: {
+    width: '100%',
+    padding: '13px',
+    borderRadius: '13px',
+    border: 'none',
+    background: gold,
+    color: '#11100d',
+    fontWeight: 950,
+    cursor: 'pointer',
+    fontSize: '14px',
+    marginTop: '14px',
   },
 }
