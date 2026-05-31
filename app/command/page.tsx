@@ -67,12 +67,23 @@ type CommandReading = {
   memory: string
   persistence: string
   risk: string
+
+  lifecyclePosition: string
+  nextDestination: string
+  handoffReason: string
+  coordinationRequired: boolean
+  crossSiteRequired: boolean
+  executiveReviewRequired: boolean
+  auditRequired: boolean
+  continuityHistoryRequired: boolean
+
   destinationExecutiveCenter: number
   destinationRecovery: number
-  destinationOutcomes: number
-  destinationInterventions: number
-  destinationCommandWatch: number
+  destinationCoordination: number
+  destinationCrossSite: number
+  destinationAudit: number
   destinationStabilityBoard: number
+
   hasActiveCommandEvidence: boolean
   executiveBrief: {
     cases: string
@@ -175,8 +186,8 @@ export default function CommandPage() {
               <h1 style={styles.title}>Command</h1>
               <p style={styles.subtitle}>
                 Executive decision gate for active lifecycle pressure, recovery
-                fragility, command escalation, evidence return, and next governed
-                movement.
+                fragility, coordination need, cross-site exposure, executive
+                review, audit reconstruction, and next governed movement.
               </p>
             </section>
 
@@ -189,9 +200,9 @@ export default function CommandPage() {
               <div style={styles.commandAuthorityBox}>
                 <p style={styles.metricLabel}>Command Authority</p>
                 <p style={styles.bodyText}>
-                  Command determines whether continuity requires executive
-                  synthesis, recovery watch, evidence return, intervention
-                  return, command watch, or Stability Board eligibility.
+                  Command determines where continuity must move next: recovery
+                  verification, coordination, cross-site review, executive
+                  synthesis, audit reconstruction, or monitored stability.
                 </p>
               </div>
             </section>
@@ -221,29 +232,101 @@ export default function CommandPage() {
                 <p style={styles.sectionKicker}>Next Governed Movement</p>
                 <h2 style={styles.movementTitle}>{command.nextGovernedMovement}</h2>
                 <p style={styles.bodyText}>
-                  Command does not close instability. Command decides where
-                  continuity moves next.
+                  Command does not close instability. Command determines where
+                  continuity must move next.
                 </p>
               </div>
             </section>
 
+            <section style={styles.handoffPanel}>
+              <div>
+                <p style={styles.sectionKicker}>Continuity Handoff Chain</p>
+                <h2 style={styles.compactTitle}>{command.lifecyclePosition}</h2>
+                <p style={styles.bodyText}>{command.handoffReason}</p>
+              </div>
+
+              <div style={styles.handoffGrid}>
+                <HandoffStep label="Recovery" value="Verifies durability" />
+                <HandoffStep label="Command" value="Decides movement" />
+                <HandoffStep
+                  label="Next"
+                  value={command.nextDestination}
+                  active
+                />
+                <HandoffStep
+                  label="Executive"
+                  value={
+                    command.executiveReviewRequired
+                      ? 'Required'
+                      : 'Conditional'
+                  }
+                />
+                <HandoffStep
+                  label="Audit"
+                  value={command.auditRequired ? 'Required' : 'Preserve if needed'}
+                />
+              </div>
+            </section>
+
+            <section style={styles.requirementGrid}>
+              <RequirementCard
+                label="Coordination"
+                active={command.coordinationRequired}
+                body={
+                  command.coordinationRequired
+                    ? 'Coordination must synchronize ownership before continuity advances.'
+                    : 'No concentrated coordination handoff is required.'
+                }
+              />
+
+              <RequirementCard
+                label="Cross-Site"
+                active={command.crossSiteRequired}
+                body={
+                  command.crossSiteRequired
+                    ? 'Cross-site review is required because the signal may no longer be isolated.'
+                    : 'No cross-site review is required by current command posture.'
+                }
+              />
+
+              <RequirementCard
+                label="Executive"
+                active={command.executiveReviewRequired}
+                body={
+                  command.executiveReviewRequired
+                    ? 'Leadership synthesis is required before continuity confidence can be restored.'
+                    : 'Executive review remains conditional.'
+                }
+              />
+
+              <RequirementCard
+                label="Audit"
+                active={command.auditRequired}
+                body={
+                  command.auditRequired
+                    ? 'Evidence must remain reconstructable across the governed chain.'
+                    : 'No audit escalation is required beyond routine preservation.'
+                }
+              />
+            </section>
+
             <section style={styles.destinationPanel}>
               <div>
-                <p style={styles.sectionKicker}>Command Destinations</p>
-                <h2 style={styles.compactTitle}>Where Command can send continuity</h2>
+                <p style={styles.sectionKicker}>Lifecycle Destinations</p>
+                <h2 style={styles.compactTitle}>Where Command can move continuity</h2>
                 <p style={styles.bodyText}>
-                  These are the governed destinations available after Command
-                  interprets pressure, evidence, recovery durability, recurrence,
-                  and survivability.
+                  These destinations now reflect the governed continuity chain:
+                  Recovery, Coordination, Cross-Site, Executive Center, Audit,
+                  and Stability Board.
                 </p>
               </div>
 
               <div style={styles.destinationGrid}>
                 <Destination label="Executive Center" value={command.destinationExecutiveCenter} />
                 <Destination label="Recovery" value={command.destinationRecovery} />
-                <Destination label="Outcomes" value={command.destinationOutcomes} />
-                <Destination label="Interventions" value={command.destinationInterventions} />
-                <Destination label="Command Watch" value={command.destinationCommandWatch} />
+                <Destination label="Coordination" value={command.destinationCoordination} />
+                <Destination label="Cross-Site" value={command.destinationCrossSite} />
+                <Destination label="Audit" value={command.destinationAudit} />
                 <Destination label="Stability Board" value={command.destinationStabilityBoard} />
               </div>
             </section>
@@ -323,9 +406,9 @@ export default function CommandPage() {
             <section style={styles.doctrineCard}>
               <strong>COMMAND DECISION GATE</strong>
               <span>
-                Recovery verifies. Command decides. Executive Center synthesizes
-                when required. Stability Board absorbs only when memory,
-                recurrence, evidence, and risk remain visible.
+                Recovery verifies. Command decides. Coordination synchronizes.
+                Cross-Site reveals enterprise pattern. Executive Center
+                synthesizes when required. Audit preserves reconstructability.
               </span>
             </section>
           </div>
@@ -415,10 +498,6 @@ function buildCommandReading(records: CommandCaseRecord[]): CommandReading {
       record.caseItem.case_status === 'OWNERSHIP_CLARITY_REQUIRED',
   ).length
 
-  const interventionReturn = records.filter(
-    (record) => record.recoveryDisposition === 'RETURN_TO_INTERVENTION_REVIEW',
-  ).length
-
   const stabilityReady = records.filter(
     (record) => record.recoveryDisposition === 'MOVE_TO_STABILITY_BOARD',
   ).length
@@ -451,6 +530,29 @@ function buildCommandReading(records: CommandCaseRecord[]): CommandReading {
       record.recoveryDisposition === 'CONTINUE_RECOVERY_MONITORING',
   ).length
 
+  const coordinationPressure = records.filter(
+    (record) =>
+      record.caseItem.support_domain === 'COORDINATION' ||
+      record.caseItem.case_status === 'ROUTING_STALLED' ||
+      record.caseItem.case_status === 'OWNERSHIP_CLARITY_REQUIRED',
+  ).length
+
+  const crossSitePressure = records.filter(
+    (record) =>
+      record.caseItem.region ||
+      record.caseItem.institution_name ||
+      record.memoryImpact === 'CONTINUITY_MEMORY_VISIBLE' ||
+      record.reburnVisible,
+  ).length
+
+  const auditPressure = records.filter(
+    (record) =>
+      record.caseItem.safeguarding_flag ||
+      record.caseItem.case_status.includes('ESCALATED') ||
+      record.caseItem.case_status.includes('RECURRENCE') ||
+      record.reburnVisible,
+  ).length
+
   const latestCase = records[0]?.caseItem
 
   if (total === 0) {
@@ -479,11 +581,20 @@ function buildCommandReading(records: CommandCaseRecord[]): CommandReading {
       memory: 'PRESERVED',
       persistence: 'NONE ACTIVE',
       risk: 'CLEAR',
+      lifecyclePosition: 'Command is clear. No lifecycle handoff is required.',
+      nextDestination: 'Monitoring',
+      handoffReason:
+        'No active command-attributed instability exists. CGI should preserve readiness without manufacturing escalation.',
+      coordinationRequired: false,
+      crossSiteRequired: false,
+      executiveReviewRequired: false,
+      auditRequired: false,
+      continuityHistoryRequired: false,
       destinationExecutiveCenter: 0,
       destinationRecovery: 0,
-      destinationOutcomes: 0,
-      destinationInterventions: 0,
-      destinationCommandWatch: 0,
+      destinationCoordination: 0,
+      destinationCrossSite: 0,
+      destinationAudit: 0,
       destinationStabilityBoard: 0,
       hasActiveCommandEvidence: false,
       executiveBrief: {
@@ -501,6 +612,15 @@ function buildCommandReading(records: CommandCaseRecord[]): CommandReading {
     }
   }
 
+  const destinations = {
+    executiveCenter: commandEscalations,
+    recovery: recoveryDestination,
+    coordination: coordinationPressure,
+    crossSite: crossSitePressure,
+    audit: auditPressure,
+    stabilityBoard: stabilityReady,
+  }
+
   if (commandEscalations > 0) {
     return elevatedReading({
       total,
@@ -508,14 +628,29 @@ function buildCommandReading(records: CommandCaseRecord[]): CommandReading {
       recurrenceVisible,
       recoveryMonitoring,
       latestCase,
-      destinations: {
-        executiveCenter: commandEscalations,
-        recovery: recoveryDestination,
-        outcomes: evidenceReturn,
-        interventions: interventionReturn,
-        commandWatch,
-        stabilityBoard: stabilityReady,
-      },
+      destinations,
+    })
+  }
+
+  if (coordinationPressure > 0) {
+    return coordinationReading({
+      total,
+      highSeverity,
+      recurrenceVisible,
+      recoveryMonitoring,
+      latestCase,
+      destinations,
+    })
+  }
+
+  if (crossSitePressure > 1) {
+    return crossSiteReading({
+      total,
+      highSeverity,
+      recurrenceVisible,
+      recoveryMonitoring,
+      latestCase,
+      destinations,
     })
   }
 
@@ -524,14 +659,7 @@ function buildCommandReading(records: CommandCaseRecord[]): CommandReading {
       total,
       recoveryMonitoring,
       latestCase,
-      destinations: {
-        executiveCenter: commandEscalations,
-        recovery: recoveryDestination,
-        outcomes: evidenceReturn,
-        interventions: interventionReturn,
-        commandWatch,
-        stabilityBoard: stabilityReady,
-      },
+      destinations,
     })
   }
 
@@ -542,14 +670,7 @@ function buildCommandReading(records: CommandCaseRecord[]): CommandReading {
       recurrenceVisible,
       recoveryMonitoring,
       latestCase,
-      destinations: {
-        executiveCenter: commandEscalations,
-        recovery: recoveryDestination,
-        outcomes: evidenceReturn,
-        interventions: interventionReturn,
-        commandWatch: Math.max(commandWatch, total),
-        stabilityBoard: stabilityReady,
-      },
+      destinations,
     })
   }
 
@@ -557,14 +678,7 @@ function buildCommandReading(records: CommandCaseRecord[]): CommandReading {
     return stabilityReadyReading({
       total,
       latestCase,
-      destinations: {
-        executiveCenter: commandEscalations,
-        recovery: recoveryDestination,
-        outcomes: evidenceReturn,
-        interventions: interventionReturn,
-        commandWatch,
-        stabilityBoard: stabilityReady,
-      },
+      destinations,
     })
   }
 
@@ -574,14 +688,7 @@ function buildCommandReading(records: CommandCaseRecord[]): CommandReading {
     recurrenceVisible,
     recoveryMonitoring,
     latestCase,
-    destinations: {
-      executiveCenter: commandEscalations,
-      recovery: recoveryDestination,
-      outcomes: evidenceReturn,
-      interventions: interventionReturn,
-      commandWatch: total,
-      stabilityBoard: stabilityReady,
-    },
+    destinations,
   })
 }
 
@@ -594,9 +701,9 @@ type ReadingInput = {
   destinations: {
     executiveCenter: number
     recovery: number
-    outcomes: number
-    interventions: number
-    commandWatch: number
+    coordination: number
+    crossSite: number
+    audit: number
     stabilityBoard: number
   }
 }
@@ -624,7 +731,7 @@ function elevatedReading(input: ReadingInput): CommandReading {
     movementReason:
       'Command escalation is visible. Leadership synthesis is required before any final stability absorption.',
     evidenceGap:
-      'Ownership, action, outcome credibility, recurrence review, and durability evidence are required.',
+      'Ownership, action, outcome credibility, recurrence review, durability evidence, and audit-ready reconstruction are required.',
     recoveryCredibility:
       (input.recoveryMonitoring || 0) > 0
         ? 'Recovery monitoring is visible, but durability is unconfirmed.'
@@ -632,16 +739,26 @@ function elevatedReading(input: ReadingInput): CommandReading {
     memory: (input.recurrenceVisible || 0) > 0 ? 'RECURRENCE' : 'VISIBLE',
     persistence: (input.recurrenceVisible || 0) > 0 ? 'PERSISTENT' : 'EMERGING',
     risk: 'WATCHED',
+    lifecyclePosition:
+      'Command is escalating continuity toward executive synthesis.',
+    nextDestination: 'Executive Center',
+    handoffReason:
+      'Escalation, severe pressure, safeguarding visibility, or reburn risk requires leadership interpretation before continuity confidence can be restored.',
+    coordinationRequired: input.destinations.coordination > 0,
+    crossSiteRequired: input.destinations.crossSite > 1,
+    executiveReviewRequired: true,
+    auditRequired: true,
+    continuityHistoryRequired: (input.recurrenceVisible || 0) > 0,
     destinationExecutiveCenter: input.destinations.executiveCenter,
     destinationRecovery: input.destinations.recovery,
-    destinationOutcomes: input.destinations.outcomes,
-    destinationInterventions: input.destinations.interventions,
-    destinationCommandWatch: input.destinations.commandWatch,
+    destinationCoordination: input.destinations.coordination,
+    destinationCrossSite: input.destinations.crossSite,
+    destinationAudit: Math.max(input.destinations.audit, input.destinations.executiveCenter),
     destinationStabilityBoard: input.destinations.stabilityBoard,
     hasActiveCommandEvidence: true,
     executiveBrief: {
       cases: `${input.total} command-attributed record(s)`,
-      evidence: 'Executive evidence required',
+      evidence: 'Executive and audit evidence required',
       action: 'Require leadership synthesis',
     },
     continuityMemory: {
@@ -651,6 +768,130 @@ function elevatedReading(input: ReadingInput): CommandReading {
       lastRecoveryVerification:
         (input.recoveryMonitoring || 0) > 0 ? 'MONITORING' : 'UNCONFIRMED',
       lastExecutiveReview: 'REQUIRED',
+    },
+  }
+}
+
+function coordinationReading(input: ReadingInput): CommandReading {
+  return {
+    statusShort: 'COORDINATE',
+    statusMeaning: 'Coordination ownership is required before continuity can advance.',
+    activeCaseCount: String(input.total),
+    evidenceShort: 'REQUIRED',
+    survivabilityShort: 'WATCH',
+    pressureShort: 'VISIBLE',
+    trajectoryShort: (input.recurrenceVisible || 0) > 0 ? 'UNSTABLE' : 'WATCH',
+    recoveryShort: (input.recoveryMonitoring || 0) > 0 ? 'MONITORING' : 'PENDING',
+    reliabilityShort: 'VARIABLE',
+    attributionTitle: `${input.total} active record(s)`,
+    attributionMeaning:
+      'Command visibility remains active because coordination, ownership, or routing clarity is not yet strong enough.',
+    commandVisibility: 'Coordination handoff required',
+    commandAction:
+      'Move continuity to Coordination Center before escalation, cross-site review, or executive synthesis is trusted.',
+    commandDecision: 'Coordination Required',
+    commandQuestion: 'Must coordination stabilize ownership before continuity moves forward?',
+    nextGovernedMovement: 'Move to Coordination Center',
+    movementReason:
+      'Coordination pressure, stalled routing, or ownership ambiguity requires synchronized action before recovery credibility can mature.',
+    evidenceGap:
+      'Coordination ownership, routing clarity, response responsibility, and evidence maturity must be strengthened.',
+    recoveryCredibility:
+      'Recovery cannot become durable until coordination responsibility is clear.',
+    memory: (input.recurrenceVisible || 0) > 0 ? 'RECURRENCE' : 'VISIBLE',
+    persistence: (input.recurrenceVisible || 0) > 0 ? 'PERSISTENT' : 'EMERGING',
+    risk: 'MONITORED',
+    lifecyclePosition:
+      'Command is handing continuity to Coordination Center for synchronization.',
+    nextDestination: 'Coordination Center',
+    handoffReason:
+      'The current signal requires ownership synchronization before continuity can safely move to recovery, cross-site review, or executive synthesis.',
+    coordinationRequired: true,
+    crossSiteRequired: input.destinations.crossSite > 1,
+    executiveReviewRequired: false,
+    auditRequired: true,
+    continuityHistoryRequired: (input.recurrenceVisible || 0) > 0,
+    destinationExecutiveCenter: input.destinations.executiveCenter,
+    destinationRecovery: input.destinations.recovery,
+    destinationCoordination: Math.max(input.destinations.coordination, 1),
+    destinationCrossSite: input.destinations.crossSite,
+    destinationAudit: Math.max(input.destinations.audit, 1),
+    destinationStabilityBoard: input.destinations.stabilityBoard,
+    hasActiveCommandEvidence: true,
+    executiveBrief: {
+      cases: `${input.total} command-attributed record(s)`,
+      evidence: 'Coordination evidence required',
+      action: 'Move to Coordination Center',
+    },
+    continuityMemory: {
+      continuityMemory: (input.recurrenceVisible || 0) > 0 ? 'RECURRENCE' : 'VISIBLE',
+      lastCommandActivity: input.latestCase?.created_at || 'ACTIVE',
+      lastEscalation: 'NONE CONCENTRATED',
+      lastRecoveryVerification:
+        (input.recoveryMonitoring || 0) > 0 ? 'MONITORING' : 'PENDING',
+      lastExecutiveReview: 'CONDITIONAL',
+    },
+  }
+}
+
+function crossSiteReading(input: ReadingInput): CommandReading {
+  return {
+    statusShort: 'CROSS-SITE',
+    statusMeaning: 'Continuity may no longer be isolated to one operational lane.',
+    activeCaseCount: String(input.total),
+    evidenceShort: 'REQUIRED',
+    survivabilityShort: 'WATCH',
+    pressureShort: (input.highSeverity || 0) > 1 ? 'ELEVATED' : 'VISIBLE',
+    trajectoryShort: 'UNSTABLE',
+    recoveryShort: (input.recoveryMonitoring || 0) > 0 ? 'MONITORING' : 'PENDING',
+    reliabilityShort: 'VARIABLE',
+    attributionTitle: `${input.total} active record(s)`,
+    attributionMeaning:
+      'Command visibility indicates continuity may require cross-site pattern review.',
+    commandVisibility: 'Cross-site review required',
+    commandAction:
+      'Move continuity to Cross-Site Review so distributed pressure, recurrence, memory, and survivability exposure remain visible.',
+    commandDecision: 'Cross-Site Review Required',
+    commandQuestion: 'Has continuity moved beyond one site or isolated operational lane?',
+    nextGovernedMovement: 'Move to Cross-Site Review',
+    movementReason:
+      'Recurring memory, site exposure, reburn, or regional visibility suggests the instability may require enterprise comparison.',
+    evidenceGap:
+      'Cross-site evidence must preserve affected site, pressure type, recovery posture, recurrence memory, and executive meaning.',
+    recoveryCredibility:
+      'Recovery credibility cannot be trusted until cross-site pattern risk is interpreted.',
+    memory: 'RECURRENCE',
+    persistence: 'PERSISTENT',
+    risk: 'WATCHED',
+    lifecyclePosition:
+      'Command is moving continuity into cross-site enterprise pattern review.',
+    nextDestination: 'Cross-Site Review',
+    handoffReason:
+      'The signal may no longer be contained within one case, site, or operational lane. Cross-site review must determine whether the pattern is isolated or distributed.',
+    coordinationRequired: true,
+    crossSiteRequired: true,
+    executiveReviewRequired: true,
+    auditRequired: true,
+    continuityHistoryRequired: true,
+    destinationExecutiveCenter: Math.max(input.destinations.executiveCenter, 1),
+    destinationRecovery: input.destinations.recovery,
+    destinationCoordination: Math.max(input.destinations.coordination, 1),
+    destinationCrossSite: Math.max(input.destinations.crossSite, 1),
+    destinationAudit: Math.max(input.destinations.audit, 1),
+    destinationStabilityBoard: input.destinations.stabilityBoard,
+    hasActiveCommandEvidence: true,
+    executiveBrief: {
+      cases: `${input.total} command-attributed record(s)`,
+      evidence: 'Cross-site evidence required',
+      action: 'Move to Cross-Site Review',
+    },
+    continuityMemory: {
+      continuityMemory: 'RECURRENCE',
+      lastCommandActivity: input.latestCase?.created_at || 'ACTIVE',
+      lastEscalation: 'DISTRIBUTED SIGNAL',
+      lastRecoveryVerification:
+        (input.recoveryMonitoring || 0) > 0 ? 'MONITORING' : 'PENDING',
+      lastExecutiveReview: 'REQUIRED AFTER CROSS-SITE',
     },
   }
 }
@@ -684,11 +925,21 @@ function evidenceReturnReading(input: ReadingInput): CommandReading {
     memory: 'VISIBLE',
     persistence: 'EMERGING',
     risk: 'MONITORED',
+    lifecyclePosition:
+      'Command is returning continuity to evidence strengthening before further movement.',
+    nextDestination: 'Outcomes / Interventions Review',
+    handoffReason:
+      'The evidence standard is not mature enough to support recovery confidence, executive review, or stability absorption.',
+    coordinationRequired: false,
+    crossSiteRequired: false,
+    executiveReviewRequired: false,
+    auditRequired: true,
+    continuityHistoryRequired: false,
     destinationExecutiveCenter: input.destinations.executiveCenter,
     destinationRecovery: input.destinations.recovery,
-    destinationOutcomes: input.destinations.outcomes,
-    destinationInterventions: input.destinations.interventions,
-    destinationCommandWatch: input.destinations.commandWatch,
+    destinationCoordination: input.destinations.coordination,
+    destinationCrossSite: input.destinations.crossSite,
+    destinationAudit: Math.max(input.destinations.audit, 1),
     destinationStabilityBoard: input.destinations.stabilityBoard,
     hasActiveCommandEvidence: true,
     executiveBrief: {
@@ -736,11 +987,21 @@ function watchReading(input: ReadingInput): CommandReading {
     memory: (input.recurrenceVisible || 0) > 0 ? 'RECURRENCE' : 'VISIBLE',
     persistence: (input.recurrenceVisible || 0) > 0 ? 'PERSISTENT' : 'EMERGING',
     risk: 'MONITORED',
+    lifecyclePosition:
+      'Command is holding proportional visibility while continuity remains watched.',
+    nextDestination: 'Command Watch',
+    handoffReason:
+      'Current signals remain visible but do not yet justify coordination, cross-site review, executive synthesis, or stability absorption.',
+    coordinationRequired: false,
+    crossSiteRequired: false,
+    executiveReviewRequired: false,
+    auditRequired: (input.recurrenceVisible || 0) > 0,
+    continuityHistoryRequired: (input.recurrenceVisible || 0) > 0,
     destinationExecutiveCenter: input.destinations.executiveCenter,
     destinationRecovery: input.destinations.recovery,
-    destinationOutcomes: input.destinations.outcomes,
-    destinationInterventions: input.destinations.interventions,
-    destinationCommandWatch: input.destinations.commandWatch,
+    destinationCoordination: input.destinations.coordination,
+    destinationCrossSite: input.destinations.crossSite,
+    destinationAudit: input.destinations.audit,
     destinationStabilityBoard: input.destinations.stabilityBoard,
     hasActiveCommandEvidence: true,
     executiveBrief: {
@@ -788,11 +1049,21 @@ function stabilityReadyReading(input: ReadingInput): CommandReading {
     memory: 'PRESERVED',
     persistence: 'RESOLVED',
     risk: 'CLEARING',
+    lifecyclePosition:
+      'Command is releasing durable recovery into monitored institutional posture.',
+    nextDestination: 'Stability Board',
+    handoffReason:
+      'Recovery is durable enough to leave Command while continuity memory, evidence, and recurrence visibility remain preserved.',
+    coordinationRequired: false,
+    crossSiteRequired: false,
+    executiveReviewRequired: false,
+    auditRequired: true,
+    continuityHistoryRequired: true,
     destinationExecutiveCenter: input.destinations.executiveCenter,
     destinationRecovery: input.destinations.recovery,
-    destinationOutcomes: input.destinations.outcomes,
-    destinationInterventions: input.destinations.interventions,
-    destinationCommandWatch: input.destinations.commandWatch,
+    destinationCoordination: input.destinations.coordination,
+    destinationCrossSite: input.destinations.crossSite,
+    destinationAudit: Math.max(input.destinations.audit, 1),
     destinationStabilityBoard: input.destinations.stabilityBoard,
     hasActiveCommandEvidence: true,
     executiveBrief: {
@@ -1003,6 +1274,51 @@ function MemoryLine({ label, value }: { label: string; value: string }) {
   )
 }
 
+function HandoffStep({
+  label,
+  value,
+  active,
+}: {
+  label: string
+  value: string
+  active?: boolean
+}) {
+  return (
+    <article
+      style={{
+        ...styles.handoffStep,
+        ...(active ? styles.handoffStepActive : {}),
+      }}
+    >
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.handoffValue}>{value}</p>
+    </article>
+  )
+}
+
+function RequirementCard({
+  label,
+  active,
+  body,
+}: {
+  label: string
+  active: boolean
+  body: string
+}) {
+  return (
+    <article
+      style={{
+        ...styles.requirementCard,
+        ...(active ? styles.requirementCardActive : {}),
+      }}
+    >
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.requirementStatus}>{active ? 'Required' : 'Not Required'}</p>
+      <p style={styles.requirementBody}>{body}</p>
+    </article>
+  )
+}
+
 const gold = '#d6b25e'
 const mutedGold = '#9f8142'
 const deepBlack = '#030303'
@@ -1127,6 +1443,68 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.05,
     margin: '10px 0',
     letterSpacing: '-0.04em',
+  },
+  handoffPanel: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 0.9fr) minmax(0, 1.1fr)',
+    gap: '24px',
+    background: deepBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '20px',
+    padding: '24px',
+    marginBottom: '24px',
+  },
+  handoffGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+    gap: '12px',
+  },
+  handoffStep: {
+    background: '#15110a',
+    border: `1px solid ${softLine}`,
+    borderRadius: '14px',
+    padding: '14px',
+    minHeight: '88px',
+  },
+  handoffStepActive: {
+    background: '#201809',
+    border: `1px solid ${gold}`,
+  },
+  handoffValue: {
+    color: '#fff8e7',
+    fontSize: '13px',
+    lineHeight: 1.25,
+    fontWeight: 900,
+    margin: '8px 0 0',
+  },
+  requirementGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: '14px',
+    marginBottom: '24px',
+  },
+  requirementCard: {
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '16px',
+    padding: '16px',
+    minHeight: '138px',
+  },
+  requirementCardActive: {
+    background: '#1a1308',
+    border: `1px solid ${gold}`,
+  },
+  requirementStatus: {
+    color: gold,
+    fontSize: '17px',
+    fontWeight: 950,
+    margin: '8px 0',
+  },
+  requirementBody: {
+    color: '#cfc7b5',
+    fontSize: '12px',
+    lineHeight: 1.5,
+    margin: 0,
   },
   destinationPanel: {
     display: 'grid',
