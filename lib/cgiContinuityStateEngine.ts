@@ -28,6 +28,15 @@ export type CGITransitionTrigger =
   | 'STABILITY_VERIFICATION'
   | 'NO_SIGNIFICANT_CHANGE'
 
+export type CGINextContinuityDestination =
+  | 'MONITORING'
+  | 'RECOVERY_VERIFICATION'
+  | 'COORDINATION_CENTER'
+  | 'CROSS_SITE_REVIEW'
+  | 'EXECUTIVE_CENTER'
+  | 'AUDIT_RECONSTRUCTION'
+  | 'CONTINUITY_HISTORY'
+
 export type CGITransitionDecision = {
   previousState: CGIContinuityState
   nextState: CGIContinuityState
@@ -36,6 +45,12 @@ export type CGITransitionDecision = {
   reason: string
   requiredEvidence: string
   persistenceRule: string
+  nextDestination: CGINextContinuityDestination
+  coordinationRequired: boolean
+  crossSiteRequired: boolean
+  executiveReviewRequired: boolean
+  auditRequired: boolean
+  handoffReason: string
 }
 
 export type CGIStateEngineInput = {
@@ -201,6 +216,118 @@ function buildPersistenceRule(state: CGIContinuityState): string {
   return 'State may change only when continuity credibility changes.'
 }
 
+function deriveNextDestination(
+  input: CGIStateEngineInput,
+  nextState: CGIContinuityState,
+  trigger: CGITransitionTrigger
+): CGINextContinuityDestination {
+  if (
+    nextState === 'SURVIVABILITY_THREAT' ||
+    input.survivabilityPressure === 'SEVERE'
+  ) {
+    return 'EXECUTIVE_CENTER'
+  }
+
+  if (
+    trigger === 'COORDINATION_DEGRADATION' ||
+    input.coordinationIssueCount >= 3
+  ) {
+    return 'CROSS_SITE_REVIEW'
+  }
+
+  if (
+    input.recurrenceSeverity === 'STRUCTURAL' ||
+    input.recurrenceSeverity === 'SYSTEMIC' ||
+    input.repeatedInstabilityCount >= 4
+  ) {
+    return 'CROSS_SITE_REVIEW'
+  }
+
+  if (nextState === 'ESCALATED_INSTABILITY') {
+    return 'COORDINATION_CENTER'
+  }
+
+  if (nextState === 'ACTIVE_INSTABILITY') {
+    return 'COORDINATION_CENTER'
+  }
+
+  if (nextState === 'FRAGILE_RECOVERY') {
+    return 'RECOVERY_VERIFICATION'
+  }
+
+  if (nextState === 'RECURRENCE_RISK') {
+    return 'CONTINUITY_HISTORY'
+  }
+
+  if (nextState === 'VERIFIED_STABILITY') {
+    return 'AUDIT_RECONSTRUCTION'
+  }
+
+  return 'MONITORING'
+}
+
+function buildHandoffReason(
+  destination: CGINextContinuityDestination,
+  nextState: CGIContinuityState
+): string {
+  if (destination === 'EXECUTIVE_CENTER') {
+    return 'Continuity pressure has reached executive significance and requires leadership synthesis.'
+  }
+
+  if (destination === 'CROSS_SITE_REVIEW') {
+    return 'The pattern may no longer be contained within one operational lane and requires cross-site continuity review.'
+  }
+
+  if (destination === 'COORDINATION_CENTER') {
+    return 'Active instability requires coordination ownership before it spreads or hardens.'
+  }
+
+  if (destination === 'RECOVERY_VERIFICATION') {
+    return 'Visible recovery exists, but durability has not yet been proven.'
+  }
+
+  if (destination === 'CONTINUITY_HISTORY') {
+    return 'Recurring instability must be preserved as continuity memory before it is treated as resolved.'
+  }
+
+  if (destination === 'AUDIT_RECONSTRUCTION') {
+    return 'Verified stability requires evidence preservation for reconstructability.'
+  }
+
+  return `Continuity remains in ${nextState} and should stay under governed monitoring.`
+}
+
+function buildDecision(
+  input: CGIStateEngineInput,
+  nextState: CGIContinuityState,
+  trigger: CGITransitionTrigger,
+  transitionAllowed: boolean,
+  reason: string
+): CGITransitionDecision {
+  const nextDestination = deriveNextDestination(input, nextState, trigger)
+
+  return {
+    previousState: input.previousState,
+    nextState,
+    trigger,
+    transitionAllowed,
+    reason,
+    requiredEvidence: buildRequiredEvidence(nextState),
+    persistenceRule: buildPersistenceRule(nextState),
+    nextDestination,
+    coordinationRequired:
+      nextDestination === 'COORDINATION_CENTER' ||
+      nextDestination === 'CROSS_SITE_REVIEW',
+    crossSiteRequired: nextDestination === 'CROSS_SITE_REVIEW',
+    executiveReviewRequired: nextDestination === 'EXECUTIVE_CENTER',
+    auditRequired:
+      nextDestination === 'AUDIT_RECONSTRUCTION' ||
+      nextState === 'VERIFIED_STABILITY' ||
+      nextState === 'SURVIVABILITY_THREAT',
+    handoffReason: buildHandoffReason(nextDestination, nextState),
+  }
+}
+
 export function evaluateCGIContinuityState(
   input: CGIStateEngineInput
 ): CGITransitionDecision {
@@ -208,78 +335,60 @@ export function evaluateCGIContinuityState(
   const derivedState = mapConditionToState(input.derivedCondition)
 
   if (canReturnToStable(input)) {
-    return {
-      previousState: input.previousState,
-      nextState: 'STABLE',
-      trigger: 'STABILITY_VERIFICATION',
-      transitionAllowed: true,
-      reason:
-        'Continuity has already passed through verified stability and remains credible.',
-      requiredEvidence: buildRequiredEvidence('STABLE'),
-      persistenceRule: buildPersistenceRule('STABLE'),
-    }
+    return buildDecision(
+      input,
+      'STABLE',
+      'STABILITY_VERIFICATION',
+      true,
+      'Continuity has already passed through verified stability and remains credible.'
+    )
   }
 
   if (canReturnToVerifiedStability(input)) {
-    return {
-      previousState: input.previousState,
-      nextState: 'VERIFIED_STABILITY',
-      trigger: 'STABILITY_VERIFICATION',
-      transitionAllowed: true,
-      reason:
-        'Recovery has demonstrated durability without recurrence, failure, or survivability pressure.',
-      requiredEvidence: buildRequiredEvidence('VERIFIED_STABILITY'),
-      persistenceRule: buildPersistenceRule('VERIFIED_STABILITY'),
-    }
+    return buildDecision(
+      input,
+      'VERIFIED_STABILITY',
+      'STABILITY_VERIFICATION',
+      true,
+      'Recovery has demonstrated durability without recurrence, failure, or survivability pressure.'
+    )
   }
 
   if (shouldHoldFragileRecovery(input)) {
-    return {
-      previousState: input.previousState,
-      nextState: 'FRAGILE_RECOVERY',
-      trigger: 'RECOVERY_VERIFICATION',
-      transitionAllowed: true,
-      reason:
-        'Visible recovery exists, but durability has not yet been proven. CGI must not jump directly from escalated instability to stable.',
-      requiredEvidence: buildRequiredEvidence('FRAGILE_RECOVERY'),
-      persistenceRule: buildPersistenceRule('FRAGILE_RECOVERY'),
-    }
+    return buildDecision(
+      input,
+      'FRAGILE_RECOVERY',
+      'RECOVERY_VERIFICATION',
+      true,
+      'Visible recovery exists, but durability has not yet been proven. CGI must not jump directly from escalated instability to stable.'
+    )
   }
 
   if (shouldRemainInRecurrenceRisk(input)) {
-    return {
-      previousState: input.previousState,
-      nextState: 'RECURRENCE_RISK',
-      trigger: 'RECURRENCE_DETECTION',
-      transitionAllowed: true,
-      reason:
-        'Recurring instability has not yet been structurally resolved or proven durable.',
-      requiredEvidence: buildRequiredEvidence('RECURRENCE_RISK'),
-      persistenceRule: buildPersistenceRule('RECURRENCE_RISK'),
-    }
+    return buildDecision(
+      input,
+      'RECURRENCE_RISK',
+      'RECURRENCE_DETECTION',
+      true,
+      'Recurring instability has not yet been structurally resolved or proven durable.'
+    )
   }
 
   if (derivedState === input.previousState) {
-    return {
-      previousState: input.previousState,
-      nextState: input.previousState,
+    return buildDecision(
+      input,
+      input.previousState,
       trigger,
-      transitionAllowed: false,
-      reason:
-        'No material continuity credibility change has been detected. Current state remains valid.',
-      requiredEvidence: buildRequiredEvidence(input.previousState),
-      persistenceRule: buildPersistenceRule(input.previousState),
-    }
+      false,
+      'No material continuity credibility change has been detected. Current state remains valid.'
+    )
   }
 
-  return {
-    previousState: input.previousState,
-    nextState: derivedState,
+  return buildDecision(
+    input,
+    derivedState,
     trigger,
-    transitionAllowed: true,
-    reason:
-      'Continuity credibility has changed enough to justify a governed state transition.',
-    requiredEvidence: buildRequiredEvidence(derivedState),
-    persistenceRule: buildPersistenceRule(derivedState),
-  }
+    true,
+    'Continuity credibility has changed enough to justify a governed state transition.'
+  )
 }

@@ -1,5 +1,8 @@
 import type { CGIDerivationOutput } from './cgiDerivationEngine'
-import type { CGITransitionDecision } from './cgiContinuityStateEngine'
+import type {
+  CGINextContinuityDestination,
+  CGITransitionDecision,
+} from './cgiContinuityStateEngine'
 
 export type CGICommandUrgency =
   | 'ROUTINE'
@@ -17,6 +20,12 @@ export type CGICommandOutput = {
   requiredEvidence: string
   consequenceIfUnresolved: string
   continuityRisk: string
+  nextDestination: CGINextContinuityDestination
+  coordinationRequired: boolean
+  crossSiteRequired: boolean
+  executiveReviewRequired: boolean
+  auditRequired: boolean
+  handoffReason: string
   commandNarrative: string
 }
 
@@ -36,6 +45,18 @@ function normalizeUrgency(timePressure: string): CGICommandUrgency {
 function deriveOwnerRole(input: CGICommandInput): string {
   if (input.ownerRole && input.ownerRole.trim().length > 0) {
     return input.ownerRole
+  }
+
+  if (input.stateDecision.crossSiteRequired) {
+    return 'Cross-Site Continuity Lead'
+  }
+
+  if (input.stateDecision.coordinationRequired) {
+    return 'Coordination Lead'
+  }
+
+  if (input.stateDecision.executiveReviewRequired) {
+    return 'Executive Lead'
   }
 
   if (
@@ -97,6 +118,10 @@ function deriveContinuityRisk(input: CGICommandInput): string {
   const confidence = input.derivation.continuityConfidence
   const pressure = input.derivation.survivabilityPressure
 
+  if (input.stateDecision.crossSiteRequired) {
+    return 'Continuity risk may no longer be contained within one site or operational lane.'
+  }
+
   if (condition === 'SURVIVABILITY_THREAT') {
     return 'Institutional survivability may weaken if leadership does not intervene.'
   }
@@ -130,6 +155,10 @@ function deriveContinuityRisk(input: CGICommandInput): string {
 
 function deriveConsequenceIfUnresolved(input: CGICommandInput): string {
   const condition = input.derivation.continuityCondition
+
+  if (input.stateDecision.crossSiteRequired) {
+    return 'Failure to act may allow instability patterns to spread across sites, weaken coordination credibility, and obscure executive accountability.'
+  }
 
   if (condition === 'SURVIVABILITY_THREAT') {
     return 'Failure to act may compromise institutional continuity, executive credibility, and stabilization capacity.'
@@ -166,6 +195,8 @@ function buildCommandNarrative(input: {
   deadline: string
   evidence: string
   consequence: string
+  nextDestination: CGINextContinuityDestination
+  handoffReason: string
 }): string {
   return [
     input.dominantTruth,
@@ -174,6 +205,8 @@ function buildCommandNarrative(input: {
     `Required action: ${input.action}`,
     `Timing expectation: ${input.deadline}`,
     `Evidence standard: ${input.evidence}`,
+    `Continuity handoff: ${input.nextDestination}.`,
+    `Handoff reason: ${input.handoffReason}`,
     `Consequence if unresolved: ${input.consequence}`,
   ].join(' ')
 }
@@ -195,6 +228,8 @@ export function buildCGIExecutiveCommand(
     deadline: actionDeadline,
     evidence: input.stateDecision.requiredEvidence,
     consequence: consequenceIfUnresolved,
+    nextDestination: input.stateDecision.nextDestination,
+    handoffReason: input.stateDecision.handoffReason,
   })
 
   return {
@@ -207,6 +242,12 @@ export function buildCGIExecutiveCommand(
     requiredEvidence: input.stateDecision.requiredEvidence,
     consequenceIfUnresolved,
     continuityRisk,
+    nextDestination: input.stateDecision.nextDestination,
+    coordinationRequired: input.stateDecision.coordinationRequired,
+    crossSiteRequired: input.stateDecision.crossSiteRequired,
+    executiveReviewRequired: input.stateDecision.executiveReviewRequired,
+    auditRequired: input.stateDecision.auditRequired,
+    handoffReason: input.stateDecision.handoffReason,
     commandNarrative,
   }
 }
