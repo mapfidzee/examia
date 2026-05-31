@@ -58,13 +58,21 @@ type CommandReading = {
   attributionMeaning: string
   commandVisibility: string
   commandAction: string
-  recommendedMovement: string
+  commandDecision: string
+  commandQuestion: string
+  nextGovernedMovement: string
   movementReason: string
   evidenceGap: string
   recoveryCredibility: string
   memory: string
   persistence: string
   risk: string
+  destinationExecutiveCenter: number
+  destinationRecovery: number
+  destinationOutcomes: number
+  destinationInterventions: number
+  destinationCommandWatch: number
+  destinationStabilityBoard: number
   hasActiveCommandEvidence: boolean
   executiveBrief: {
     cases: string
@@ -166,10 +174,26 @@ export default function CommandPage() {
               <p style={styles.kicker}>TSINAXA CGI • COMMAND</p>
               <h1 style={styles.title}>Command</h1>
               <p style={styles.subtitle}>
-                Executive visibility for active lifecycle pressure, recovery
+                Executive decision gate for active lifecycle pressure, recovery
                 fragility, command escalation, evidence return, and next governed
                 movement.
               </p>
+            </section>
+
+            <section style={styles.commandQuestionPanel}>
+              <div>
+                <p style={styles.sectionKicker}>Command Question</p>
+                <h2 style={styles.questionTitle}>{command.commandQuestion}</h2>
+              </div>
+
+              <div style={styles.commandAuthorityBox}>
+                <p style={styles.metricLabel}>Command Authority</p>
+                <p style={styles.bodyText}>
+                  Command determines whether continuity requires executive
+                  synthesis, recovery watch, evidence return, intervention
+                  return, command watch, or Stability Board eligibility.
+                </p>
+              </div>
             </section>
 
             <section style={styles.commandStatus}>
@@ -186,20 +210,41 @@ export default function CommandPage() {
               </div>
             </section>
 
-            <section style={styles.movementPanel}>
-              <div>
-                <p style={styles.sectionKicker}>Recommended Next Movement</p>
-                <h2 style={styles.movementTitle}>{command.recommendedMovement}</h2>
+            <section style={styles.decisionPanel}>
+              <div style={styles.decisionPrimary}>
+                <p style={styles.sectionKicker}>Command Decision</p>
+                <h2 style={styles.decisionTitle}>{command.commandDecision}</h2>
                 <p style={styles.bodyText}>{command.movementReason}</p>
               </div>
 
-              <div style={styles.movementDoctrineBox}>
-                <p style={styles.metricLabel}>Command Boundary</p>
-                <p style={styles.movementDoctrineText}>
-                  Command is not closure. Command decides whether instability
-                  needs executive review, recovery watch, evidence return,
-                  intervention return, or Stability Board absorption.
+              <div style={styles.decisionSecondary}>
+                <p style={styles.sectionKicker}>Next Governed Movement</p>
+                <h2 style={styles.movementTitle}>{command.nextGovernedMovement}</h2>
+                <p style={styles.bodyText}>
+                  Command does not close instability. Command decides where
+                  continuity moves next.
                 </p>
+              </div>
+            </section>
+
+            <section style={styles.destinationPanel}>
+              <div>
+                <p style={styles.sectionKicker}>Command Destinations</p>
+                <h2 style={styles.compactTitle}>Where Command can send continuity</h2>
+                <p style={styles.bodyText}>
+                  These are the governed destinations available after Command
+                  interprets pressure, evidence, recovery durability, recurrence,
+                  and survivability.
+                </p>
+              </div>
+
+              <div style={styles.destinationGrid}>
+                <Destination label="Executive Center" value={command.destinationExecutiveCenter} />
+                <Destination label="Recovery" value={command.destinationRecovery} />
+                <Destination label="Outcomes" value={command.destinationOutcomes} />
+                <Destination label="Interventions" value={command.destinationInterventions} />
+                <Destination label="Command Watch" value={command.destinationCommandWatch} />
+                <Destination label="Stability Board" value={command.destinationStabilityBoard} />
               </div>
             </section>
 
@@ -276,10 +321,11 @@ export default function CommandPage() {
             </section>
 
             <section style={styles.doctrineCard}>
-              <strong>CONTINUITY CREDIBILITY GOVERNED</strong>
+              <strong>COMMAND DECISION GATE</strong>
               <span>
-                Visible recovery is not durable stabilization. Command preserves
-                executive visibility until the next governed movement is clear.
+                Recovery verifies. Command decides. Executive Center synthesizes
+                when required. Stability Board absorbs only when memory,
+                recurrence, evidence, and risk remain visible.
               </span>
             </section>
           </div>
@@ -369,8 +415,18 @@ function buildCommandReading(records: CommandCaseRecord[]): CommandReading {
       record.caseItem.case_status === 'OWNERSHIP_CLARITY_REQUIRED',
   ).length
 
+  const interventionReturn = records.filter(
+    (record) => record.recoveryDisposition === 'RETURN_TO_INTERVENTION_REVIEW',
+  ).length
+
   const stabilityReady = records.filter(
     (record) => record.recoveryDisposition === 'MOVE_TO_STABILITY_BOARD',
+  ).length
+
+  const recoveryDestination = records.filter(
+    (record) =>
+      record.recoveryDisposition === 'CONTINUE_RECOVERY_MONITORING' ||
+      record.caseItem.case_status === 'RECOVERY_MONITORING',
   ).length
 
   const highSeverity = records.filter(
@@ -413,7 +469,9 @@ function buildCommandReading(records: CommandCaseRecord[]): CommandReading {
       commandVisibility: 'Clear',
       commandAction:
         'No executive intervention is required. Command remains available if instability, recurrence, recovery fragility, or evidence gaps reappear.',
-      recommendedMovement: 'Maintain Clear Command',
+      commandDecision: 'Maintain Clear Command',
+      commandQuestion: 'Where should continuity move next?',
+      nextGovernedMovement: 'No Movement Required',
       movementReason:
         'No active command-attributed lifecycle records exist. Do not create artificial pressure.',
       evidenceGap: 'No active evidence gap.',
@@ -421,6 +479,12 @@ function buildCommandReading(records: CommandCaseRecord[]): CommandReading {
       memory: 'PRESERVED',
       persistence: 'NONE ACTIVE',
       risk: 'CLEAR',
+      destinationExecutiveCenter: 0,
+      destinationRecovery: 0,
+      destinationOutcomes: 0,
+      destinationInterventions: 0,
+      destinationCommandWatch: 0,
+      destinationStabilityBoard: 0,
       hasActiveCommandEvidence: false,
       executiveBrief: {
         cases: '0 active command-attributed cases',
@@ -438,99 +502,180 @@ function buildCommandReading(records: CommandCaseRecord[]): CommandReading {
   }
 
   if (commandEscalations > 0) {
-    return elevatedReading(total, highSeverity, recurrenceVisible, recoveryMonitoring, latestCase)
+    return elevatedReading({
+      total,
+      highSeverity,
+      recurrenceVisible,
+      recoveryMonitoring,
+      latestCase,
+      destinations: {
+        executiveCenter: commandEscalations,
+        recovery: recoveryDestination,
+        outcomes: evidenceReturn,
+        interventions: interventionReturn,
+        commandWatch,
+        stabilityBoard: stabilityReady,
+      },
+    })
   }
 
   if (evidenceReturn > 0) {
-    return evidenceReturnReading(total, recoveryMonitoring, latestCase)
+    return evidenceReturnReading({
+      total,
+      recoveryMonitoring,
+      latestCase,
+      destinations: {
+        executiveCenter: commandEscalations,
+        recovery: recoveryDestination,
+        outcomes: evidenceReturn,
+        interventions: interventionReturn,
+        commandWatch,
+        stabilityBoard: stabilityReady,
+      },
+    })
   }
 
   if (commandWatch > 0 || recurrenceVisible > 0 || highSeverity > 1) {
-    return watchReading(total, highSeverity, recurrenceVisible, recoveryMonitoring, latestCase)
+    return watchReading({
+      total,
+      highSeverity,
+      recurrenceVisible,
+      recoveryMonitoring,
+      latestCase,
+      destinations: {
+        executiveCenter: commandEscalations,
+        recovery: recoveryDestination,
+        outcomes: evidenceReturn,
+        interventions: interventionReturn,
+        commandWatch: Math.max(commandWatch, total),
+        stabilityBoard: stabilityReady,
+      },
+    })
   }
 
   if (stabilityReady > 0) {
-    return stabilityReadyReading(total, latestCase)
+    return stabilityReadyReading({
+      total,
+      latestCase,
+      destinations: {
+        executiveCenter: commandEscalations,
+        recovery: recoveryDestination,
+        outcomes: evidenceReturn,
+        interventions: interventionReturn,
+        commandWatch,
+        stabilityBoard: stabilityReady,
+      },
+    })
   }
 
-  return watchReading(total, highSeverity, recurrenceVisible, recoveryMonitoring, latestCase)
+  return watchReading({
+    total,
+    highSeverity,
+    recurrenceVisible,
+    recoveryMonitoring,
+    latestCase,
+    destinations: {
+      executiveCenter: commandEscalations,
+      recovery: recoveryDestination,
+      outcomes: evidenceReturn,
+      interventions: interventionReturn,
+      commandWatch: total,
+      stabilityBoard: stabilityReady,
+    },
+  })
 }
 
-function elevatedReading(
-  total: number,
-  highSeverity: number,
-  recurrenceVisible: number,
-  recoveryMonitoring: number,
-  latestCase?: CommandCase,
-): CommandReading {
+type ReadingInput = {
+  total: number
+  highSeverity?: number
+  recurrenceVisible?: number
+  recoveryMonitoring?: number
+  latestCase?: CommandCase
+  destinations: {
+    executiveCenter: number
+    recovery: number
+    outcomes: number
+    interventions: number
+    commandWatch: number
+    stabilityBoard: number
+  }
+}
+
+function elevatedReading(input: ReadingInput): CommandReading {
   return {
     statusShort: 'ELEVATED',
     statusMeaning: 'Executive continuity review is required.',
-    activeCaseCount: String(total),
+    activeCaseCount: String(input.total),
     evidenceShort: 'REQUIRED',
     survivabilityShort: 'WATCH',
-    pressureShort: highSeverity > 1 ? 'ELEVATED' : 'VISIBLE',
-    trajectoryShort: recurrenceVisible > 0 ? 'UNSTABLE' : 'WATCH',
-    recoveryShort: recoveryMonitoring > 0 ? 'MONITORING' : 'UNCONFIRMED',
-    reliabilityShort: recurrenceVisible > 0 ? 'VARIABLE' : 'WATCH',
-    attributionTitle: `${total} active record(s)`,
+    pressureShort: (input.highSeverity || 0) > 1 ? 'ELEVATED' : 'VISIBLE',
+    trajectoryShort: (input.recurrenceVisible || 0) > 0 ? 'UNSTABLE' : 'WATCH',
+    recoveryShort: (input.recoveryMonitoring || 0) > 0 ? 'MONITORING' : 'UNCONFIRMED',
+    reliabilityShort: (input.recurrenceVisible || 0) > 0 ? 'VARIABLE' : 'WATCH',
+    attributionTitle: `${input.total} active record(s)`,
     attributionMeaning:
       'Active lifecycle evidence requires executive visibility before stability can be trusted.',
     commandVisibility: 'Executive review required',
     commandAction:
       'Do not allow escalated instability, reburn, or severe continuity pressure to move silently.',
-    recommendedMovement: 'Move to Executive Center',
+    commandDecision: 'Executive Review Required',
+    commandQuestion: 'Must leadership become involved before stability is trusted?',
+    nextGovernedMovement: 'Move to Executive Center',
     movementReason:
       'Command escalation is visible. Leadership synthesis is required before any final stability absorption.',
     evidenceGap:
       'Ownership, action, outcome credibility, recurrence review, and durability evidence are required.',
     recoveryCredibility:
-      recoveryMonitoring > 0
+      (input.recoveryMonitoring || 0) > 0
         ? 'Recovery monitoring is visible, but durability is unconfirmed.'
         : 'Recovery credibility is not yet established.',
-    memory: recurrenceVisible > 0 ? 'RECURRENCE' : 'VISIBLE',
-    persistence: recurrenceVisible > 0 ? 'PERSISTENT' : 'EMERGING',
+    memory: (input.recurrenceVisible || 0) > 0 ? 'RECURRENCE' : 'VISIBLE',
+    persistence: (input.recurrenceVisible || 0) > 0 ? 'PERSISTENT' : 'EMERGING',
     risk: 'WATCHED',
+    destinationExecutiveCenter: input.destinations.executiveCenter,
+    destinationRecovery: input.destinations.recovery,
+    destinationOutcomes: input.destinations.outcomes,
+    destinationInterventions: input.destinations.interventions,
+    destinationCommandWatch: input.destinations.commandWatch,
+    destinationStabilityBoard: input.destinations.stabilityBoard,
     hasActiveCommandEvidence: true,
     executiveBrief: {
-      cases: `${total} command-attributed record(s)`,
+      cases: `${input.total} command-attributed record(s)`,
       evidence: 'Executive evidence required',
       action: 'Require leadership synthesis',
     },
     continuityMemory: {
-      continuityMemory: recurrenceVisible > 0 ? 'RECURRENCE' : 'VISIBLE',
-      lastCommandActivity: latestCase?.created_at || 'ACTIVE',
+      continuityMemory: (input.recurrenceVisible || 0) > 0 ? 'RECURRENCE' : 'VISIBLE',
+      lastCommandActivity: input.latestCase?.created_at || 'ACTIVE',
       lastEscalation: 'VISIBLE',
       lastRecoveryVerification:
-        recoveryMonitoring > 0 ? 'MONITORING' : 'UNCONFIRMED',
+        (input.recoveryMonitoring || 0) > 0 ? 'MONITORING' : 'UNCONFIRMED',
       lastExecutiveReview: 'REQUIRED',
     },
   }
 }
 
-function evidenceReturnReading(
-  total: number,
-  recoveryMonitoring: number,
-  latestCase?: CommandCase,
-): CommandReading {
+function evidenceReturnReading(input: ReadingInput): CommandReading {
   return {
     statusShort: 'WATCH',
     statusMeaning:
       'Evidence or intervention review is required before stability can be trusted.',
-    activeCaseCount: String(total),
+    activeCaseCount: String(input.total),
     evidenceShort: 'REQUIRED',
     survivabilityShort: 'STABLE',
     pressureShort: 'VISIBLE',
     trajectoryShort: 'WATCH',
-    recoveryShort: recoveryMonitoring > 0 ? 'MONITORING' : 'PENDING',
+    recoveryShort: (input.recoveryMonitoring || 0) > 0 ? 'MONITORING' : 'PENDING',
     reliabilityShort: 'VARIABLE',
-    attributionTitle: `${total} active record(s)`,
+    attributionTitle: `${input.total} active record(s)`,
     attributionMeaning:
       'Command visibility remains active because evidence or ownership is not yet strong enough.',
     commandVisibility: 'Evidence watch active',
     commandAction:
       'Return weak evidence to the appropriate operational review point before declaring durability.',
-    recommendedMovement: 'Return to Outcomes or Interventions',
+    commandDecision: 'Evidence Insufficient',
+    commandQuestion: 'Can the evidence be trusted enough for recovery confidence?',
+    nextGovernedMovement: 'Return to Outcomes or Interventions',
     movementReason:
       'Evidence, ownership, or stabilization credibility requires strengthening before recovery can mature.',
     evidenceGap: 'Evidence maturity is insufficient for durability confidence.',
@@ -539,95 +684,102 @@ function evidenceReturnReading(
     memory: 'VISIBLE',
     persistence: 'EMERGING',
     risk: 'MONITORED',
+    destinationExecutiveCenter: input.destinations.executiveCenter,
+    destinationRecovery: input.destinations.recovery,
+    destinationOutcomes: input.destinations.outcomes,
+    destinationInterventions: input.destinations.interventions,
+    destinationCommandWatch: input.destinations.commandWatch,
+    destinationStabilityBoard: input.destinations.stabilityBoard,
     hasActiveCommandEvidence: true,
     executiveBrief: {
-      cases: `${total} command-attributed record(s)`,
+      cases: `${input.total} command-attributed record(s)`,
       evidence: 'Evidence review required',
       action: 'Return to evidence or intervention review',
     },
     continuityMemory: {
       continuityMemory: 'VISIBLE',
-      lastCommandActivity: latestCase?.created_at || 'ACTIVE',
+      lastCommandActivity: input.latestCase?.created_at || 'ACTIVE',
       lastEscalation: 'NONE CONCENTRATED',
       lastRecoveryVerification:
-        recoveryMonitoring > 0 ? 'MONITORING' : 'PENDING',
+        (input.recoveryMonitoring || 0) > 0 ? 'MONITORING' : 'PENDING',
       lastExecutiveReview: 'WATCH',
     },
   }
 }
 
-function watchReading(
-  total: number,
-  highSeverity: number,
-  recurrenceVisible: number,
-  recoveryMonitoring: number,
-  latestCase?: CommandCase,
-): CommandReading {
+function watchReading(input: ReadingInput): CommandReading {
   return {
     statusShort: 'WATCH',
     statusMeaning: 'Proportional executive visibility remains active.',
-    activeCaseCount: String(total),
+    activeCaseCount: String(input.total),
     evidenceShort: 'MONITOR',
     survivabilityShort: 'STABLE',
-    pressureShort: highSeverity > 1 ? 'ELEVATED' : 'VISIBLE',
-    trajectoryShort: recurrenceVisible > 0 ? 'UNSTABLE' : 'STABLE',
-    recoveryShort: recoveryMonitoring > 0 ? 'MONITORING' : 'PENDING',
-    reliabilityShort: recurrenceVisible > 0 ? 'VARIABLE' : 'STABLE',
-    attributionTitle: `${total} active record(s)`,
+    pressureShort: (input.highSeverity || 0) > 1 ? 'ELEVATED' : 'VISIBLE',
+    trajectoryShort: (input.recurrenceVisible || 0) > 0 ? 'UNSTABLE' : 'STABLE',
+    recoveryShort: (input.recoveryMonitoring || 0) > 0 ? 'MONITORING' : 'PENDING',
+    reliabilityShort: (input.recurrenceVisible || 0) > 0 ? 'VARIABLE' : 'STABLE',
+    attributionTitle: `${input.total} active record(s)`,
     attributionMeaning: 'Active lifecycle records remain under command watch.',
     commandVisibility: 'Watch active',
     commandAction:
       'Monitor without over-escalating, but do not allow fragile recovery to disappear.',
-    recommendedMovement: 'Maintain Command Watch',
+    commandDecision: 'Maintain Command Watch',
+    commandQuestion: 'Can continuity remain under watch without executive escalation?',
+    nextGovernedMovement: 'Continue Command Visibility',
     movementReason:
       'Recovery, recurrence, or severity signals remain visible but do not yet require full escalation.',
     evidenceGap: 'Evidence remains important; no concentrated gap is visible.',
     recoveryCredibility:
-      recoveryMonitoring > 0
+      (input.recoveryMonitoring || 0) > 0
         ? 'Recovery monitoring is active.'
         : 'Recovery credibility matures after verification.',
-    memory: recurrenceVisible > 0 ? 'RECURRENCE' : 'VISIBLE',
-    persistence: recurrenceVisible > 0 ? 'PERSISTENT' : 'EMERGING',
+    memory: (input.recurrenceVisible || 0) > 0 ? 'RECURRENCE' : 'VISIBLE',
+    persistence: (input.recurrenceVisible || 0) > 0 ? 'PERSISTENT' : 'EMERGING',
     risk: 'MONITORED',
+    destinationExecutiveCenter: input.destinations.executiveCenter,
+    destinationRecovery: input.destinations.recovery,
+    destinationOutcomes: input.destinations.outcomes,
+    destinationInterventions: input.destinations.interventions,
+    destinationCommandWatch: input.destinations.commandWatch,
+    destinationStabilityBoard: input.destinations.stabilityBoard,
     hasActiveCommandEvidence: true,
     executiveBrief: {
-      cases: `${total} active command-attributed record(s)`,
+      cases: `${input.total} active command-attributed record(s)`,
       evidence: 'Monitor evidence maturity',
       action: 'Continue proportional visibility',
     },
     continuityMemory: {
-      continuityMemory: recurrenceVisible > 0 ? 'RECURRENCE' : 'VISIBLE',
-      lastCommandActivity: latestCase?.created_at || 'ACTIVE',
+      continuityMemory: (input.recurrenceVisible || 0) > 0 ? 'RECURRENCE' : 'VISIBLE',
+      lastCommandActivity: input.latestCase?.created_at || 'ACTIVE',
       lastEscalation: 'NONE CONCENTRATED',
       lastRecoveryVerification:
-        recoveryMonitoring > 0 ? 'MONITORING' : 'PENDING',
+        (input.recoveryMonitoring || 0) > 0 ? 'MONITORING' : 'PENDING',
       lastExecutiveReview: 'WATCH',
     },
   }
 }
 
-function stabilityReadyReading(
-  total: number,
-  latestCase?: CommandCase,
-): CommandReading {
+function stabilityReadyReading(input: ReadingInput): CommandReading {
   return {
     statusShort: 'CLEAR',
     statusMeaning:
       'Command does not need to hold the case. Stability Board absorption is available.',
-    activeCaseCount: String(total),
+    activeCaseCount: String(input.total),
     evidenceShort: 'PRESERVED',
     survivabilityShort: 'CLEAR',
     pressureShort: 'CLEARING',
     trajectoryShort: 'STABLE',
     recoveryShort: 'DURABLE',
     reliabilityShort: 'STABLE',
-    attributionTitle: `${total} active record(s)`,
+    attributionTitle: `${input.total} active record(s)`,
     attributionMeaning:
       'Durable recovery is visible and can move to institutional posture without memory loss.',
     commandVisibility: 'Release to Stability Board',
     commandAction:
       'Do not hold durable recovery in Command. Move to Stability Board while preserving recurrence and evidence memory.',
-    recommendedMovement: 'Move to Stability Board',
+    commandDecision: 'Durability Confirmed',
+    commandQuestion: 'Can this recovery be absorbed without hiding memory or risk?',
+    nextGovernedMovement: 'Move to Stability Board',
     movementReason:
       'Recovery is durable enough for institutional absorption while memory remains preserved.',
     evidenceGap: 'No active evidence gap is driving command pressure.',
@@ -636,15 +788,21 @@ function stabilityReadyReading(
     memory: 'PRESERVED',
     persistence: 'RESOLVED',
     risk: 'CLEARING',
+    destinationExecutiveCenter: input.destinations.executiveCenter,
+    destinationRecovery: input.destinations.recovery,
+    destinationOutcomes: input.destinations.outcomes,
+    destinationInterventions: input.destinations.interventions,
+    destinationCommandWatch: input.destinations.commandWatch,
+    destinationStabilityBoard: input.destinations.stabilityBoard,
     hasActiveCommandEvidence: true,
     executiveBrief: {
-      cases: `${total} command-visible record(s)`,
+      cases: `${input.total} command-visible record(s)`,
       evidence: 'Preserved',
       action: 'Move to Stability Board',
     },
     continuityMemory: {
       continuityMemory: 'PRESERVED',
-      lastCommandActivity: latestCase?.created_at || 'ACTIVE',
+      lastCommandActivity: input.latestCase?.created_at || 'ACTIVE',
       lastEscalation: 'NONE CONCENTRATED',
       lastRecoveryVerification: 'DURABLE',
       lastExecutiveReview: 'NOT REQUIRED',
@@ -791,6 +949,15 @@ function extractField(summary: string, label: string) {
   return lines[index + 1] || ''
 }
 
+function Destination({ label, value }: { label: string; value: number }) {
+  return (
+    <article style={styles.destinationCard}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.destinationValue}>{value}</p>
+    </article>
+  )
+}
+
 function Signal({ label, value }: { label: string; value: string }) {
   return (
     <article style={styles.signalCard}>
@@ -855,11 +1022,11 @@ const styles: Record<string, CSSProperties> = {
     width: '100%',
     maxWidth: '1120px',
     margin: '0 auto',
-    padding: '8px 24px 48px',
+    padding: '16px 28px 72px',
     boxSizing: 'border-box',
   },
   header: {
-    marginBottom: '14px',
+    marginBottom: '28px',
   },
   kicker: {
     color: gold,
@@ -870,102 +1037,157 @@ const styles: Record<string, CSSProperties> = {
   },
   title: {
     color: '#fff8e7',
-    fontSize: 'clamp(30px, 4vw, 42px)',
+    fontSize: 'clamp(34px, 4vw, 48px)',
     lineHeight: 1,
-    margin: '8px 0',
+    margin: '10px 0',
     letterSpacing: '-0.05em',
   },
   subtitle: {
     color: '#cfc7b5',
-    maxWidth: '760px',
-    lineHeight: 1.5,
-    fontSize: '13px',
+    maxWidth: '800px',
+    lineHeight: 1.65,
+    fontSize: '14px',
     margin: 0,
+  },
+  commandQuestionPanel: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.2fr) minmax(280px, 0.8fr)',
+    gap: '24px',
+    background: deepBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '20px',
+    padding: '24px',
+    marginBottom: '24px',
+    boxSizing: 'border-box',
+  },
+  questionTitle: {
+    color: gold,
+    fontSize: 'clamp(28px, 4vw, 42px)',
+    lineHeight: 1.05,
+    margin: '10px 0 0',
+    letterSpacing: '-0.04em',
+  },
+  commandAuthorityBox: {
+    background: '#15110a',
+    border: `1px solid ${softLine}`,
+    borderRadius: '16px',
+    padding: '18px',
   },
   commandStatus: {
     display: 'grid',
-    gridTemplateColumns: '260px minmax(0, 1fr)',
-    gap: '14px',
+    gridTemplateColumns: '280px minmax(0, 1fr)',
+    gap: '24px',
     background: deepBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '15px',
-    marginBottom: '12px',
+    borderRadius: '20px',
+    padding: '24px',
+    marginBottom: '24px',
     boxSizing: 'border-box',
   },
   commandStatusTitle: {
     color: '#fff8e7',
-    fontSize: '32px',
+    fontSize: '38px',
     lineHeight: 1,
-    margin: '7px 0',
+    margin: '10px 0',
     letterSpacing: '-0.05em',
   },
   commandStatusGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '10px',
-  },
-  movementPanel: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.3fr) minmax(260px, 0.7fr)',
     gap: '14px',
+  },
+  decisionPanel: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+    gap: '24px',
+    marginBottom: '24px',
+  },
+  decisionPrimary: {
+    background: deepBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '20px',
+    padding: '24px',
+  },
+  decisionSecondary: {
     background: panelBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '15px',
-    marginBottom: '12px',
-    boxSizing: 'border-box',
+    borderRadius: '20px',
+    padding: '24px',
   },
-  movementTitle: {
+  decisionTitle: {
     color: gold,
-    fontSize: 'clamp(22px, 3vw, 32px)',
+    fontSize: 'clamp(28px, 3vw, 40px)',
     lineHeight: 1.05,
-    margin: '7px 0',
+    margin: '10px 0',
     letterSpacing: '-0.04em',
   },
-  movementDoctrineBox: {
+  movementTitle: {
+    color: '#fff8e7',
+    fontSize: 'clamp(26px, 3vw, 36px)',
+    lineHeight: 1.05,
+    margin: '10px 0',
+    letterSpacing: '-0.04em',
+  },
+  destinationPanel: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 0.9fr) minmax(0, 1.1fr)',
+    gap: '24px',
+    background: panelBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '20px',
+    padding: '24px',
+    marginBottom: '24px',
+  },
+  destinationGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: '14px',
+  },
+  destinationCard: {
     background: '#15110a',
     border: `1px solid ${softLine}`,
-    borderRadius: '13px',
-    padding: '12px',
+    borderRadius: '14px',
+    padding: '14px',
+    minHeight: '76px',
   },
-  movementDoctrineText: {
-    color: '#fff8e7',
-    fontSize: '12px',
-    lineHeight: 1.45,
-    fontWeight: 750,
-    margin: '6px 0 0',
+  destinationValue: {
+    color: gold,
+    fontSize: '26px',
+    fontWeight: 950,
+    margin: '8px 0 0',
+    lineHeight: 1,
   },
   signalGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-    gap: '12px',
-    marginBottom: '12px',
+    gap: '16px',
+    marginBottom: '24px',
   },
   signalCard: {
     background: cardBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '13px',
-    padding: '11px 12px',
+    borderRadius: '16px',
+    padding: '16px',
+    minHeight: '82px',
   },
   signalValue: {
     color: gold,
-    fontSize: '16px',
+    fontSize: '18px',
     fontWeight: 950,
-    margin: '4px 0 0',
+    margin: '8px 0 0',
   },
   commandGrid: {
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
-    gap: '12px',
-    marginBottom: '12px',
+    gap: '24px',
+    marginBottom: '24px',
   },
   compactCard: {
     background: panelBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '15px',
-    padding: '14px',
-    minHeight: '88px',
+    borderRadius: '20px',
+    padding: '24px',
+    minHeight: '150px',
     boxSizing: 'border-box',
     overflow: 'hidden',
   },
@@ -979,55 +1201,56 @@ const styles: Record<string, CSSProperties> = {
   },
   compactTitle: {
     color: '#fff8e7',
-    fontSize: 'clamp(18px, 2vw, 22px)',
+    fontSize: 'clamp(20px, 2vw, 26px)',
     lineHeight: 1.1,
-    margin: '6px 0',
+    margin: '10px 0',
     letterSpacing: '-0.04em',
   },
   bodyText: {
     color: '#cfc7b5',
-    lineHeight: 1.42,
+    lineHeight: 1.6,
     fontSize: '13px',
     margin: 0,
   },
   inlineRisk: {
-    marginTop: '10px',
+    marginTop: '18px',
     color: '#fff8e7',
-    fontSize: '11px',
+    fontSize: '12px',
     fontWeight: 850,
+    lineHeight: 1.5,
   },
   memoryBoard: {
     background: panelBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '15px',
-    padding: '14px',
-    marginBottom: '12px',
+    borderRadius: '20px',
+    padding: '24px',
+    marginBottom: '24px',
   },
   memoryBoardGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-    gap: '10px',
-    marginTop: '10px',
+    gap: '14px',
+    marginTop: '18px',
   },
   memoryLine: {
     background: '#15110a',
     border: `1px solid ${softLine}`,
-    borderRadius: '11px',
-    padding: '10px',
-    minHeight: '64px',
+    borderRadius: '14px',
+    padding: '14px',
+    minHeight: '80px',
   },
   memoryValue: {
     color: '#fff8e7',
-    fontSize: '13px',
+    fontSize: '14px',
     fontWeight: 900,
     lineHeight: 1.25,
-    margin: '5px 0 0',
+    margin: '8px 0 0',
   },
   smallMetric: {
     background: '#15110a',
     border: `1px solid ${softLine}`,
-    borderRadius: '11px',
-    padding: '8px',
+    borderRadius: '12px',
+    padding: '10px',
   },
   metricLabel: {
     color: mutedGold,
@@ -1040,82 +1263,83 @@ const styles: Record<string, CSSProperties> = {
   metricValue: {
     color: '#fff8e7',
     fontSize: '13px',
-    lineHeight: 1.15,
+    lineHeight: 1.2,
     fontWeight: 900,
-    margin: '4px 0 0',
+    margin: '6px 0 0',
   },
   twoColumnGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '12px',
-    marginBottom: '12px',
+    gap: '24px',
+    marginBottom: '24px',
   },
   panelCard: {
     background: '#100f0d',
     border: `1px solid ${softLine}`,
-    borderRadius: '13px',
-    padding: '12px',
-    minHeight: '70px',
+    borderRadius: '16px',
+    padding: '20px',
+    minHeight: '110px',
   },
   panelBody: {
     color: '#cfc7b5',
-    lineHeight: 1.4,
-    fontSize: '12px',
-    margin: '6px 0 0',
+    lineHeight: 1.55,
+    fontSize: '13px',
+    margin: '10px 0 0',
   },
   briefLine: {
     background: '#15110a',
     border: `1px solid ${softLine}`,
-    borderRadius: '11px',
-    padding: '10px',
+    borderRadius: '14px',
+    padding: '14px',
+    minHeight: '82px',
   },
   briefValue: {
     color: '#fff8e7',
-    fontSize: '13px',
+    fontSize: '14px',
     fontWeight: 800,
-    lineHeight: 1.3,
-    margin: '4px 0 0',
+    lineHeight: 1.35,
+    margin: '8px 0 0',
   },
   doctrineCard: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    gap: '14px',
+    display: 'grid',
+    gridTemplateColumns: '220px minmax(0, 1fr)',
+    gap: '24px',
     background: deepBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '13px',
-    padding: '11px 14px',
+    borderRadius: '18px',
+    padding: '20px 24px',
     color: '#e8dec8',
     fontSize: '13px',
-    lineHeight: 1.4,
+    lineHeight: 1.55,
     fontWeight: 750,
     boxSizing: 'border-box',
   },
   caseList: {
     display: 'grid',
-    gap: '10px',
-    marginTop: '12px',
+    gap: '14px',
+    marginTop: '18px',
   },
   caseCard: {
     background: '#15110a',
     border: `1px solid ${softLine}`,
-    borderRadius: '12px',
-    padding: '11px',
+    borderRadius: '14px',
+    padding: '14px',
   },
   caseIdentity: {
     color: '#fff8e7',
     fontWeight: 900,
-    margin: '0 0 8px',
+    margin: '0 0 10px',
     lineHeight: 1.3,
   },
   caseMetaGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '8px',
+    gap: '10px',
   },
   recoveryMiniPanel: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '8px',
-    marginTop: '8px',
+    gap: '10px',
+    marginTop: '10px',
   },
 }
