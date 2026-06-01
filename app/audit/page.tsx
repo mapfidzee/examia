@@ -52,6 +52,12 @@ type AuditEscalation =
   | 'GOVERNANCE ESCALATION'
   | 'EXECUTIVE REVIEW'
 
+type ChainReconstructionPosture =
+  | 'CHAIN NOT YET RECONSTRUCTABLE'
+  | 'PARTIAL CHAIN RECONSTRUCTION'
+  | 'CHAIN RECONSTRUCTION ACTIVE'
+  | 'EXECUTIVE CHAIN RECONSTRUCTABLE'
+
 type EvidenceSummary = {
   total: number
   critical: number
@@ -97,6 +103,24 @@ type AuditMemoryItem = {
   meaning: string
 }
 
+type ChainStage = {
+  label: string
+  count: number
+  status: string
+  meaning: string
+}
+
+type ChainReconstruction = {
+  posture: ChainReconstructionPosture
+  chainQuestion: string
+  reconstructionMeaning: string
+  weakestLink: string
+  nextAuditAction: string
+  requiredEvidence: string
+  chainTrust: string
+  stages: ChainStage[]
+}
+
 const severityOrder: Record<string, number> = {
   CRITICAL: 4,
   HIGH: 3,
@@ -123,11 +147,53 @@ const PROVENANCE_STAGES = [
   { label: 'Triage', terms: ['TRIAGE', '/TRIAGE'] },
   { label: 'Cases', terms: ['CASE', 'CASES', '/CASES'] },
   { label: 'Routing', terms: ['ROUTING', 'ROUTED', '/ROUTING'] },
-  { label: 'Intervention', terms: ['INTERVENTION', 'INTERVENTIONS', '/INTERVENTIONS'] },
+  {
+    label: 'Intervention',
+    terms: ['INTERVENTION', 'INTERVENTIONS', '/INTERVENTIONS'],
+  },
   { label: 'Outcomes', terms: ['OUTCOME', 'OUTCOMES', '/OUTCOMES'] },
   { label: 'Recovery', terms: ['RECOVERY', '/RECOVERY', 'DURABILITY'] },
   { label: 'Command', terms: ['COMMAND', '/COMMAND', 'ESCALATION'] },
-  { label: 'Executive Center', terms: ['EXECUTIVE CENTER', '/EXECUTIVE-CENTER', 'EXECUTIVE'] },
+  {
+    label: 'Coordination',
+    terms: ['COORDINATION', '/COORDINATION', 'SYNCHRONIZATION'],
+  },
+  {
+    label: 'Cross-Site',
+    terms: ['CROSS-SITE', '/CROSS-SITE', 'ENTERPRISE PATTERN'],
+  },
+  {
+    label: 'Executive Center',
+    terms: ['EXECUTIVE CENTER', '/EXECUTIVE-CENTER', 'EXECUTIVE'],
+  },
+  { label: 'Audit', terms: ['AUDIT', '/AUDIT', 'RECONSTRUCTION'] },
+]
+
+const CHAIN_STAGES = [
+  {
+    label: 'Recovery',
+    terms: ['RECOVERY', '/RECOVERY', 'DURABILITY', 'FRAGILE_RECOVERY'],
+  },
+  {
+    label: 'Command',
+    terms: ['COMMAND', '/COMMAND', 'COMMAND WATCH', 'ESCALATION'],
+  },
+  {
+    label: 'Coordination',
+    terms: ['COORDINATION', '/COORDINATION', 'SYNCHRONIZATION'],
+  },
+  {
+    label: 'Cross-Site',
+    terms: ['CROSS-SITE', '/CROSS-SITE', 'ENTERPRISE PATTERN'],
+  },
+  {
+    label: 'Executive Center',
+    terms: ['EXECUTIVE CENTER', '/EXECUTIVE-CENTER', 'EXECUTIVE'],
+  },
+  {
+    label: 'Audit',
+    terms: ['AUDIT', '/AUDIT', 'RECONSTRUCTION', 'RECONSTRUCTABLE'],
+  },
 ]
 
 export default function AuditPage() {
@@ -211,6 +277,11 @@ function GovernanceEvidenceLedger() {
     [filteredLogs],
   )
 
+  const chainReconstruction = useMemo(
+    () => buildChainReconstruction(filteredLogs),
+    [filteredLogs],
+  )
+
   const evidenceGaps = useMemo(
     () => buildEvidenceGapDashboard(filteredLogs),
     [filteredLogs],
@@ -254,12 +325,13 @@ function GovernanceEvidenceLedger() {
         <section style={styles.header}>
           <p style={styles.kicker}>TSINAXA CGI • AUDIT</p>
 
-          <h1 style={styles.title}>Governance Evidence Ledger</h1>
+          <h1 style={styles.title}>Continuity Reconstruction Audit</h1>
 
           <p style={styles.subtitle}>
-            Evidence integrity surface for reconstructing lifecycle movement,
-            governance action, executive visibility, memory preservation, and
-            continuity accountability.
+            Final evidence seal for reconstructing lifecycle movement,
+            governance action, recovery credibility, command decisions,
+            coordination synchronization, cross-site exposure, executive
+            visibility, memory preservation, and continuity accountability.
           </p>
 
           <section style={styles.doctrinePanel}>
@@ -290,10 +362,49 @@ function GovernanceEvidenceLedger() {
             <p style={styles.metricLabel}>Audit Question</p>
 
             <p style={styles.questionText}>
-              Can leadership reconstruct what happened, why it mattered, who
-              acted, where it applied, and what evidence is missing?
+              Can leadership reconstruct how continuity moved from recovery
+              through command, coordination, cross-site review, executive
+              synthesis, and audit preservation?
             </p>
           </div>
+        </section>
+
+        <section style={styles.chainHero}>
+          <div>
+            <p style={styles.sectionKicker}>Continuity Chain Reconstruction</p>
+
+            <h2 style={styles.cardTitle}>{chainReconstruction.posture}</h2>
+
+            <p style={styles.bodyText}>
+              {chainReconstruction.reconstructionMeaning}
+            </p>
+          </div>
+
+          <div style={styles.questionBox}>
+            <p style={styles.metricLabel}>Weakest Link</p>
+
+            <p style={styles.questionText}>{chainReconstruction.weakestLink}</p>
+          </div>
+        </section>
+
+        <section style={styles.chainGrid}>
+          {chainReconstruction.stages.map((stage) => (
+            <ChainStageCard key={stage.label} stage={stage} />
+          ))}
+        </section>
+
+        <section style={styles.gridTwo}>
+          <Panel title="Next Audit Action">
+            <p style={styles.panelText}>
+              {chainReconstruction.nextAuditAction}
+            </p>
+          </Panel>
+
+          <Panel title="Required Evidence">
+            <p style={styles.panelText}>
+              {chainReconstruction.requiredEvidence}
+            </p>
+          </Panel>
         </section>
 
         <section style={styles.reconstructionPanel}>
@@ -345,6 +456,7 @@ function GovernanceEvidenceLedger() {
             <div style={styles.infoList}>
               <Info label="Escalation" value={summary.auditEscalation} />
               <Info label="Reason" value={summary.escalationReason} />
+              <Info label="Chain Trust" value={chainReconstruction.chainTrust} />
               <Info
                 label="Command Concern"
                 value={
@@ -364,8 +476,8 @@ function GovernanceEvidenceLedger() {
           <h2 style={styles.cardTitle}>Where did evidence come from?</h2>
 
           <p style={styles.bodyText}>
-            Audit should reveal which lifecycle stages generated evidence and
-            which stages remain difficult to reconstruct.
+            Audit reveals which lifecycle stages generated evidence and which
+            stages remain difficult to reconstruct.
           </p>
 
           <div style={styles.provenanceGrid}>
@@ -382,7 +494,8 @@ function GovernanceEvidenceLedger() {
 
           <p style={styles.bodyText}>
             Evidence gaps show where lifecycle credibility may weaken if
-            decisions, actions, recovery, or executive review are not preserved.
+            decisions, actions, recovery, coordination, cross-site review, audit
+            reconstruction, or executive review are not preserved.
           </p>
 
           <div style={styles.gapGrid}>
@@ -398,8 +511,9 @@ function GovernanceEvidenceLedger() {
           <h2 style={styles.cardTitle}>Which evidence gaps keep returning?</h2>
 
           <p style={styles.bodyText}>
-            Audit memory tracks recurring weaknesses in reconstruction,
-            evidence maturity, governance scope, and lifecycle proof.
+            Audit memory tracks recurring weaknesses in reconstruction, evidence
+            maturity, governance scope, lifecycle proof, and continuity chain
+            preservation.
           </p>
 
           <div style={styles.gapGrid}>
@@ -460,10 +574,11 @@ function GovernanceEvidenceLedger() {
 
           <p style={styles.bodyText}>
             Without reconstructable evidence, leadership cannot distinguish
-            recovery from appearance, closure from stabilization, or confidence
-            from assumption. Audit protects continuity credibility by preserving
-            what happened, why it mattered, what proof exists, and what remains
-            unresolved.
+            recovery from appearance, closure from stabilization, coordination
+            from assumption, cross-site exposure from isolated pressure, or
+            confidence from proof. Audit protects continuity credibility by
+            preserving what happened, why it mattered, what proof exists, and
+            what remains unresolved.
           </p>
         </section>
 
@@ -597,11 +712,11 @@ function GovernanceEvidenceLedger() {
               />
               <MeaningCard
                 title="Hardened Evidence"
-                text="Structured governance meaning is preserved so role, routing, intervention, and operational decisions do not disappear."
+                text="Structured governance meaning is preserved so role, routing, intervention, coordination, and operational decisions do not disappear."
               />
               <MeaningCard
                 title="Executive Reconstruction"
-                text="The strongest records preserve enough context for leaders to reconstruct what happened, why it mattered, and whether continuity was governed."
+                text="The strongest records preserve enough context for leaders to reconstruct what happened, why it mattered, whether continuity was governed, and whether the chain can be trusted."
               />
             </div>
           </section>
@@ -863,6 +978,111 @@ function buildEvidenceProvenance(logs: AuditLog[]): ProvenanceStage[] {
   })
 }
 
+function buildChainReconstruction(logs: AuditLog[]): ChainReconstruction {
+  const stages: ChainStage[] = CHAIN_STAGES.map((stage) => {
+    const count = logs.filter((log) => {
+      const text = fullEvidenceText(log)
+      const route = safeText(log.route, '').toUpperCase()
+      return stage.terms.some((term) => text.includes(term) || route.includes(term))
+    }).length
+
+    return {
+      label: stage.label,
+      count,
+      status:
+        count === 0
+          ? 'MISSING'
+          : count >= 3
+            ? 'RECONSTRUCTABLE'
+            : 'VISIBLE',
+      meaning:
+        count === 0
+          ? `${stage.label} is not yet reconstructable from the current audit evidence.`
+          : `${stage.label} has preserved evidence for continuity reconstruction.`,
+    }
+  })
+
+  const activeStages = stages.filter((stage) => stage.count > 0).length
+  const missingStages = stages.filter((stage) => stage.count === 0)
+  const executiveStage = stages.find((stage) => stage.label === 'Executive Center')
+  const auditStage = stages.find((stage) => stage.label === 'Audit')
+
+  let posture: ChainReconstructionPosture = 'CHAIN NOT YET RECONSTRUCTABLE'
+
+  if (activeStages >= CHAIN_STAGES.length) {
+    posture = 'EXECUTIVE CHAIN RECONSTRUCTABLE'
+  } else if (activeStages >= 4 && executiveStage && executiveStage.count > 0) {
+    posture = 'CHAIN RECONSTRUCTION ACTIVE'
+  } else if (activeStages > 0) {
+    posture = 'PARTIAL CHAIN RECONSTRUCTION'
+  }
+
+  const weakestLink =
+    missingStages.length === 0
+      ? 'No major chain gap is visible.'
+      : missingStages.map((stage) => stage.label).join(', ')
+
+  return {
+    posture,
+    chainQuestion:
+      'Can Audit reconstruct how continuity moved through Recovery, Command, Coordination, Cross-Site, Executive Center, and Audit?',
+    reconstructionMeaning: buildChainReconstructionMeaning(posture),
+    weakestLink,
+    nextAuditAction: buildNextAuditAction(posture, weakestLink),
+    requiredEvidence: buildRequiredChainEvidence(missingStages),
+    chainTrust:
+      auditStage && auditStage.count > 0 && executiveStage && executiveStage.count > 0
+        ? 'EXECUTIVE AND AUDIT LINK VISIBLE'
+        : 'EXECUTIVE-AUDIT LINK NEEDS STRENGTHENING',
+    stages,
+  }
+}
+
+function buildChainReconstructionMeaning(posture: ChainReconstructionPosture) {
+  if (posture === 'EXECUTIVE CHAIN RECONSTRUCTABLE') {
+    return 'Audit can reconstruct the full governed continuity chain from recovery through executive synthesis and audit preservation.'
+  }
+
+  if (posture === 'CHAIN RECONSTRUCTION ACTIVE') {
+    return 'Audit can reconstruct major lifecycle movement, but at least one chain layer still needs stronger evidence.'
+  }
+
+  if (posture === 'PARTIAL CHAIN RECONSTRUCTION') {
+    return 'Some lifecycle movement is visible, but the governed chain is not yet fully reconstructable.'
+  }
+
+  return 'Audit cannot yet reconstruct the governed continuity chain from the current evidence set.'
+}
+
+function buildNextAuditAction(
+  posture: ChainReconstructionPosture,
+  weakestLink: string,
+) {
+  if (posture === 'EXECUTIVE CHAIN RECONSTRUCTABLE') {
+    return 'Preserve current reconstruction depth and continue monitoring for recurring evidence gaps.'
+  }
+
+  if (posture === 'CHAIN RECONSTRUCTION ACTIVE') {
+    return `Strengthen missing or weak chain evidence: ${weakestLink}.`
+  }
+
+  if (posture === 'PARTIAL CHAIN RECONSTRUCTION') {
+    return `Do not treat continuity proof as complete. Preserve additional lifecycle evidence for: ${weakestLink}.`
+  }
+
+  return 'Begin preserving chain evidence from recovery, command, coordination, cross-site review, executive synthesis, and audit reconstruction.'
+}
+
+function buildRequiredChainEvidence(missingStages: ChainStage[]) {
+  if (missingStages.length === 0) {
+    return 'Current chain evidence is sufficient for reconstruction. Continue preserving actor, route, institution, linked snapshot, visibility, and governance reason.'
+  }
+
+  return `Required evidence should be strengthened for: ${missingStages
+    .map((stage) => stage.label)
+    .join(', ')}.`
+}
+
 function buildEvidenceGapDashboard(logs: AuditLog[]): EvidenceGapItem[] {
   return [
     {
@@ -881,6 +1101,16 @@ function buildEvidenceGapDashboard(logs: AuditLog[]): EvidenceGapItem[] {
       meaning: 'Recovery durability may not yet be auditable.',
     },
     {
+      label: 'Missing Coordination Evidence',
+      count: countMissingStage(logs, ['COORDINATION', 'SYNCHRONIZATION']),
+      meaning: 'Ownership or routing synchronization may be difficult to reconstruct.',
+    },
+    {
+      label: 'Missing Cross-Site Evidence',
+      count: countMissingStage(logs, ['CROSS-SITE', 'ENTERPRISE PATTERN']),
+      meaning: 'Distributed continuity exposure may not yet be reconstructable.',
+    },
+    {
       label: 'Missing Accountability Trail',
       count: logs.filter((log) => getActor(log) === 'Actor not recorded').length,
       meaning: 'Some records do not preserve actor context.',
@@ -889,6 +1119,11 @@ function buildEvidenceGapDashboard(logs: AuditLog[]): EvidenceGapItem[] {
       label: 'Missing Executive Review',
       count: countMissingStage(logs, ['EXECUTIVE', 'COMMAND']),
       meaning: 'Executive or command review may not yet be traceable.',
+    },
+    {
+      label: 'Missing Audit Reconstruction',
+      count: countMissingStage(logs, ['AUDIT', 'RECONSTRUCTION']),
+      meaning: 'Final reconstruction evidence may not yet be preserved.',
     },
   ]
 }
@@ -1334,6 +1569,22 @@ function MetricCard({ title, value }: { title: string; value: number }) {
   )
 }
 
+function ChainStageCard({ stage }: { stage: ChainStage }) {
+  return (
+    <article
+      style={{
+        ...styles.chainStageCard,
+        ...(stage.status === 'MISSING' ? styles.chainStageMissing : {}),
+      }}
+    >
+      <p style={styles.metricLabel}>{stage.label}</p>
+      <p style={styles.chainStageValue}>{stage.count}</p>
+      <strong style={styles.provenanceStatus}>{stage.status}</strong>
+      <p style={styles.panelBody}>{stage.meaning}</p>
+    </article>
+  )
+}
+
 function ProvenanceCard({ stage }: { stage: ProvenanceStage }) {
   return (
     <article style={styles.provenanceCard}>
@@ -1504,6 +1755,40 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: '22px',
     padding: '24px',
     marginBottom: '24px',
+  },
+  chainHero: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.35fr) minmax(280px, 0.65fr)',
+    gap: '24px',
+    background: panelBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '22px',
+    padding: '24px',
+    marginBottom: '24px',
+  },
+  chainGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+    gap: '12px',
+    marginBottom: '24px',
+  },
+  chainStageCard: {
+    background: '#15110a',
+    border: `1px solid ${softLine}`,
+    borderRadius: '16px',
+    padding: '14px',
+    minHeight: '150px',
+  },
+  chainStageMissing: {
+    border: '1px solid rgba(248,113,113,0.45)',
+    background: 'rgba(127,29,29,0.18)',
+  },
+  chainStageValue: {
+    color: gold,
+    fontSize: '30px',
+    fontWeight: 950,
+    margin: '10px 0 4px',
+    lineHeight: 1,
   },
   sectionKicker: {
     color: mutedGold,
