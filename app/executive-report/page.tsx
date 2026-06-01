@@ -9,6 +9,8 @@ import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { buildCGIContinuitySnapshot } from '@/lib/cgiContinuitySnapshotEngine'
 import { reviewCGIExecutiveHistory } from '@/lib/cgiExecutiveHistoryEngine'
 import { buildCGIExecutiveReportPackage } from '@/lib/cgiExecutiveReportingEngine'
+import { buildCGIContinuityTrajectory } from '@/lib/cgiContinuityTrajectoryEngine'
+import { buildCGIInstitutionalMemory } from '@/lib/cgiInstitutionalMemoryEngine'
 import {
   loadCGIExecutiveReports,
   saveCGIExecutiveReport,
@@ -19,11 +21,7 @@ type PersistedExecutiveReport = Record<string, any>
 export default function ExecutiveReportPage() {
   return (
     <GovernanceRouteGuard
-      allowedRoles={[
-        'SUPER_ADMIN',
-        'COMMAND_ADMIN',
-        'GOVERNANCE_OFFICER',
-      ]}
+      allowedRoles={['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']}
     >
       <CGIGovernanceShell>
         <ExecutiveReportContent />
@@ -81,6 +79,59 @@ function ExecutiveReportContent() {
     historyReview,
   })
 
+  const trajectory = buildCGIContinuityTrajectory({
+    continuityCondition: 'FRAGILE_RECOVERY',
+    continuityConfidence: 'FRAGILE',
+    survivabilityPressure: 'ELEVATED',
+    recoveryCredibility: 'PARTIAL',
+    recurrenceSeverity: 'RECURRING',
+    executivePosture: 'VERIFY',
+    openCases: 4,
+    escalatedCases: 1,
+    repeatedInstabilityCount: 3,
+    unresolvedCriticalCount: 0,
+    recoveryFailures: 1,
+    verifiedRecoveries: 1,
+    coordinationIssues: 2,
+    averageUnresolvedDays: 6,
+    crossSiteSignals: 1,
+    commandReviews: 1,
+    auditGaps: 1,
+  })
+
+  const institutionalMemory = buildCGIInstitutionalMemory({
+    historicalRecords: snapshots.length,
+    recurringInstabilityCount: historyReview.continuityDriftDetected ? 2 : 1,
+    recoveryFailureCount: report.requiredEvidence.toUpperCase().includes('GAP') ? 1 : 0,
+    verifiedRecoveryCount: report.requiredEvidence.toUpperCase().includes('VERIFIED') ? 1 : 0,
+    commandInterventionCount: report.requiredExecutiveAction
+      .toUpperCase()
+      .includes('COMMAND')
+      ? 1
+      : 0,
+    coordinationIssueCount: report.requiredExecutiveAction
+      .toUpperCase()
+      .includes('COORDIN')
+      ? 1
+      : 0,
+    crossSiteSignalCount: report.classification.includes('CROSS_SITE') ? 1 : 0,
+    executiveReviewCount: report.requiredExecutiveAction
+      .toUpperCase()
+      .includes('EXECUTIVE')
+      ? 1
+      : 0,
+    auditReconstructionCount: report.requiredEvidence
+      .toUpperCase()
+      .includes('AUDIT')
+      ? 1
+      : 0,
+    survivabilityThreatCount: historyReview.survivabilityConcernPersisting
+      ? 1
+      : 0,
+    unresolvedMemoryGaps: report.requiredEvidence.toUpperCase().includes('GAP') ? 1 : 0,
+    lastKnownPattern: report.dominantConcern,
+  })
+
   async function loadReports() {
     try {
       setLoadingReports(true)
@@ -109,19 +160,29 @@ function ExecutiveReportContent() {
 
       await saveCGIExecutiveReport({
         reportClassification: report.classification,
-        reportTitle: 'Executive Continuity Report',
+        reportTitle: 'Executive Continuity Intelligence Report',
         currentContinuityPosture: report.currentContinuityPosture,
         historyDirection: report.historyDirection,
         continuityDriftDetected: report.continuityDriftDetected,
         survivabilityConcernPersisting:
           report.survivabilityConcernPersisting,
         dominantConcern: report.dominantConcern,
-        requiredExecutiveAction: report.requiredExecutiveAction,
-        requiredEvidence: report.requiredEvidence,
-        executiveSummary: report.executiveSummary,
-        copyReadyReport: report.copyReadyReport,
+        requiredExecutiveAction: trajectory.trajectoryRecommendation,
+        requiredEvidence: institutionalMemory.evidenceToPreserve,
+        executiveSummary: buildExecutiveSummary({
+          report,
+          trajectory,
+          institutionalMemory,
+        }),
+        copyReadyReport: buildCopyReadyIntelligenceReport({
+          report,
+          trajectory,
+          institutionalMemory,
+        }),
         rawPayload: {
           report,
+          trajectory,
+          institutionalMemory,
           latestSnapshot,
           historyReview,
           savedFrom: '/executive-report',
@@ -146,12 +207,13 @@ function ExecutiveReportContent() {
         <section style={styles.header}>
           <p style={styles.kicker}>TSINAXA CGI • EXECUTIVE REPORT</p>
 
-          <h1 style={styles.title}>Executive Continuity Report</h1>
+          <h1 style={styles.title}>Executive Continuity Intelligence Report</h1>
 
           <p style={styles.subtitle}>
-            Standardized executive reporting surface for continuity posture,
-            history direction, survivability persistence, required action,
-            required evidence, and governance-safe interpretation.
+            Board-ready continuity intelligence package combining current
+            posture, history direction, trajectory, institutional memory,
+            survivability persistence, required action, required evidence, and
+            audit-ready interpretation.
           </p>
         </section>
 
@@ -161,7 +223,13 @@ function ExecutiveReportContent() {
 
             <h2 style={styles.heroTitle}>{report.classification}</h2>
 
-            <p style={styles.heroMeaning}>{report.executiveSummary}</p>
+            <p style={styles.heroMeaning}>
+              {buildExecutiveSummary({
+                report,
+                trajectory,
+                institutionalMemory,
+              })}
+            </p>
           </div>
 
           <div style={styles.statusBox}>
@@ -170,6 +238,48 @@ function ExecutiveReportContent() {
             <p style={styles.statusValue}>
               {report.currentContinuityPosture}
             </p>
+          </div>
+        </section>
+
+        <section style={styles.gridThree}>
+          <SignalCard
+            title="Trajectory"
+            value={trajectory.trajectory}
+            body={trajectory.trajectoryDirection}
+          />
+
+          <SignalCard
+            title="Memory Posture"
+            value={institutionalMemory.memoryPosture}
+            body={institutionalMemory.memoryMeaning}
+          />
+
+          <SignalCard
+            title="Memory Domain"
+            value={institutionalMemory.dominantMemoryDomain}
+            body="The strongest institutional memory domain influencing this report."
+          />
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Executive Intelligence Reading</p>
+
+          <h2 style={styles.cardTitle}>{trajectory.commanderQuestion}</h2>
+
+          <p style={styles.bodyText}>{trajectory.executiveMeaning}</p>
+
+          <div style={styles.priorityGrid}>
+            <PriorityItem title="Trajectory Risk" body={trajectory.trajectoryRisk} />
+
+            <PriorityItem
+              title="Memory Risk"
+              body={institutionalMemory.memoryRisk}
+            />
+
+            <PriorityItem
+              title="Continuity Learning"
+              body={institutionalMemory.continuityLearning}
+            />
           </div>
         </section>
 
@@ -183,13 +293,12 @@ function ExecutiveReportContent() {
 
             <p style={styles.actionText}>
               Saving the report creates an institutional record that can later
-              support history review, board summaries, continuity audits, and
-              stabilization evidence.
+              support history review, board summaries, continuity audits,
+              trajectory comparison, institutional memory, and stabilization
+              evidence.
             </p>
 
-            {saveMessage && (
-              <p style={styles.saveMessage}>{saveMessage}</p>
-            )}
+            {saveMessage && <p style={styles.saveMessage}>{saveMessage}</p>}
           </div>
 
           <button
@@ -219,9 +328,7 @@ function ExecutiveReportContent() {
               Supabase.
             </p>
 
-            {reportMessage && (
-              <p style={styles.saveMessage}>{reportMessage}</p>
-            )}
+            {reportMessage && <p style={styles.saveMessage}>{reportMessage}</p>}
           </div>
 
           <button
@@ -260,7 +367,9 @@ function ExecutiveReportContent() {
         <section style={styles.card}>
           <p style={styles.sectionKicker}>Required Executive Action</p>
 
-          <h2 style={styles.cardTitle}>{report.requiredExecutiveAction}</h2>
+          <h2 style={styles.cardTitle}>
+            {trajectory.trajectoryRecommendation}
+          </h2>
 
           <p style={styles.bodyText}>
             CGI reporting is designed to preserve continuity meaning across
@@ -275,11 +384,40 @@ function ExecutiveReportContent() {
 
             <PriorityItem
               title="Required Evidence"
-              body={report.requiredEvidence}
+              body={institutionalMemory.evidenceToPreserve}
             />
 
             <PriorityItem title="Generated" body={report.generatedAt} />
           </div>
+        </section>
+
+        <section style={styles.gridTwo}>
+          <Panel title="Trajectory Interpretation">
+            <p style={styles.panelText}>{trajectory.trajectoryExplanation}</p>
+            <p style={styles.panelText}>{trajectory.watchNext}</p>
+          </Panel>
+
+          <Panel title="Institutional Memory Requirement">
+            <p style={styles.panelText}>
+              {institutionalMemory.memoryPersistenceRequirement}
+            </p>
+          </Panel>
+        </section>
+
+        <section style={styles.gridTwo}>
+          <Panel title="Original Report Package">
+            <pre style={styles.compactPre}>{report.copyReadyReport}</pre>
+          </Panel>
+
+          <Panel title="Executive Intelligence Package">
+            <pre style={styles.compactPre}>
+              {buildCopyReadyIntelligenceReport({
+                report,
+                trajectory,
+                institutionalMemory,
+              })}
+            </pre>
+          </Panel>
         </section>
 
         <section style={styles.card}>
@@ -289,9 +427,7 @@ function ExecutiveReportContent() {
             Executive continuity reports retrieved from Supabase.
           </h2>
 
-          <p style={styles.bodyText}>
-            Report Count: {reports.length}
-          </p>
+          <p style={styles.bodyText}>Report Count: {reports.length}</p>
 
           <div style={styles.archiveList}>
             {reports.length === 0 ? (
@@ -370,19 +506,77 @@ function ExecutiveReportContent() {
           <p style={styles.sectionKicker}>Copy-Ready Report</p>
 
           <h2 style={styles.cardTitle}>
-            Standardized executive continuity report package.
+            Standardized executive continuity intelligence package.
           </h2>
 
-          <pre style={styles.summaryBox}>{report.copyReadyReport}</pre>
+          <pre style={styles.summaryBox}>
+            {buildCopyReadyIntelligenceReport({
+              report,
+              trajectory,
+              institutionalMemory,
+            })}
+          </pre>
         </section>
       </div>
     </main>
   )
 }
 
+function buildExecutiveSummary(input: {
+  report: ReturnType<typeof buildCGIExecutiveReportPackage>
+  trajectory: ReturnType<typeof buildCGIContinuityTrajectory>
+  institutionalMemory: ReturnType<typeof buildCGIInstitutionalMemory>
+}) {
+  return [
+    input.report.executiveSummary,
+    `Trajectory is ${input.trajectory.trajectory}: ${input.trajectory.trajectoryDirection}`,
+    `Institutional memory posture is ${input.institutionalMemory.memoryPosture} in the ${input.institutionalMemory.dominantMemoryDomain} domain.`,
+    input.institutionalMemory.memoryMeaning,
+  ].join(' ')
+}
+
+function buildCopyReadyIntelligenceReport(input: {
+  report: ReturnType<typeof buildCGIExecutiveReportPackage>
+  trajectory: ReturnType<typeof buildCGIContinuityTrajectory>
+  institutionalMemory: ReturnType<typeof buildCGIInstitutionalMemory>
+}) {
+  return [
+    'TSINAXA CGI Executive Continuity Intelligence Report',
+    '',
+    `Report Classification: ${input.report.classification}`,
+    `Current Continuity Posture: ${input.report.currentContinuityPosture}`,
+    `History Direction: ${input.report.historyDirection}`,
+    `Continuity Drift Detected: ${
+      input.report.continuityDriftDetected ? 'YES' : 'NO'
+    }`,
+    `Survivability Concern Persisting: ${
+      input.report.survivabilityConcernPersisting ? 'YES' : 'NO'
+    }`,
+    '',
+    `Trajectory: ${input.trajectory.trajectory}`,
+    `Momentum: ${input.trajectory.momentum}`,
+    `Direction: ${input.trajectory.trajectoryDirection}`,
+    `Commander Question: ${input.trajectory.commanderQuestion}`,
+    `Trajectory Risk: ${input.trajectory.trajectoryRisk}`,
+    `Watch Next: ${input.trajectory.watchNext}`,
+    '',
+    `Institutional Memory Posture: ${input.institutionalMemory.memoryPosture}`,
+    `Dominant Memory Domain: ${input.institutionalMemory.dominantMemoryDomain}`,
+    `Executive Memory Question: ${input.institutionalMemory.executiveQuestion}`,
+    `Continuity Learning: ${input.institutionalMemory.continuityLearning}`,
+    `Memory Risk: ${input.institutionalMemory.memoryRisk}`,
+    '',
+    `Dominant Concern: ${input.report.dominantConcern}`,
+    `Required Executive Action: ${input.trajectory.trajectoryRecommendation}`,
+    `Required Evidence: ${input.institutionalMemory.evidenceToPreserve}`,
+    '',
+    `Executive Summary: ${buildExecutiveSummary(input)}`,
+  ].join('\n')
+}
+
 function getReportValue(
   report: PersistedExecutiveReport,
-  key: string,
+  key: string
 ): string | null {
   const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
 
@@ -636,9 +830,10 @@ const styles: Record<string, CSSProperties> = {
   },
   signalValue: {
     color: '#f8fafc',
-    fontSize: '28px',
+    fontSize: '24px',
     lineHeight: 1.15,
     margin: '10px 0',
+    overflowWrap: 'anywhere',
   },
   card: {
     background: '#020617',
@@ -703,6 +898,11 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '14px',
     lineHeight: 1.6,
     marginTop: '10px',
+  },
+  panelText: {
+    color: '#cbd5e1',
+    lineHeight: 1.7,
+    margin: '0 0 12px',
   },
   compactPre: {
     whiteSpace: 'pre-wrap',
