@@ -5,6 +5,10 @@ import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
+import {
+  buildCGIExecutiveContinuityChain,
+  type CGIExecutiveContinuityChain,
+} from '@/lib/cgiExecutiveContinuityChainEngine'
 import { supabase } from '../../lib/supabase'
 
 type StabilityCase = {
@@ -89,6 +93,11 @@ type ExecutiveSynthesis = {
   evidenceReturn: number
   absorbable: number
   historicalMemory: number
+  recurrenceVisible: number
+  coordinationPressure: number
+  crossSitePressure: number
+  auditPressure: number
+  safeguardingVisible: number
 }
 
 const CASE_SAMPLE_LIMIT = 120
@@ -106,6 +115,9 @@ const ACTIVE_CASE_STATUSES = [
   'RECOVERY_MONITORING',
   'PARTIAL_STABILIZATION',
   'IMPROVING',
+  'ACTION_ACTIVE',
+  'ROUTING_STALLED',
+  'OWNERSHIP_CLARITY_REQUIRED',
 ]
 
 const DOCTRINE = [
@@ -185,6 +197,25 @@ function ExecutiveCenterContent() {
     [cases, recoveryMemory, metrics],
   )
 
+  const continuityChain = useMemo(
+    () =>
+      buildCGIExecutiveContinuityChain({
+        activeInstability: synthesis.activeInstability,
+        recoveryRecords: synthesis.recoveryRecords,
+        fragileRecovery: synthesis.fragileRecovery,
+        commandPressure: synthesis.commandPressure,
+        evidenceReturn: synthesis.evidenceReturn,
+        absorbable: synthesis.absorbable,
+        historicalMemory: synthesis.historicalMemory,
+        recurrenceVisible: synthesis.recurrenceVisible,
+        coordinationPressure: synthesis.coordinationPressure,
+        crossSitePressure: synthesis.crossSitePressure,
+        auditPressure: synthesis.auditPressure,
+        safeguardingVisible: synthesis.safeguardingVisible,
+      }),
+    [synthesis],
+  )
+
   return (
     <main style={styles.page}>
       <div style={styles.container}>
@@ -193,8 +224,8 @@ function ExecutiveCenterContent() {
           <h1 style={styles.title}>Executive Continuity Center</h1>
           <p style={styles.subtitle}>
             One leadership synthesis across current instability, recovery
-            credibility, command pressure, institutional posture, evidence, and
-            continuity memory.
+            credibility, command pressure, coordination pressure, cross-site
+            exposure, evidence, audit meaning, and continuity memory.
           </p>
 
           <section style={styles.doctrinePanel}>
@@ -213,7 +244,9 @@ function ExecutiveCenterContent() {
 
         <section style={styles.heroCard}>
           <div>
-            <p style={styles.sectionKicker}>Current Executive Continuity Reading</p>
+            <p style={styles.sectionKicker}>
+              Current Executive Continuity Reading
+            </p>
             <h2 style={styles.heroTitle}>{synthesis.posture}</h2>
             <p style={styles.heroMeaning}>{synthesis.meaning}</p>
           </div>
@@ -222,6 +255,52 @@ function ExecutiveCenterContent() {
             <p style={styles.metricLabel}>Executive Question</p>
             <p style={styles.questionText}>{synthesis.executiveQuestion}</p>
           </div>
+        </section>
+
+        <section style={styles.chainHero}>
+          <div>
+            <p style={styles.sectionKicker}>Executive Continuity Chain</p>
+            <h2 style={styles.cardTitle}>
+              Origin: {continuityChain.dominantOrigin}
+            </h2>
+            <p style={styles.bodyText}>{continuityChain.chainNarrative}</p>
+          </div>
+
+          <div style={styles.chainConfidenceBox}>
+            <p style={styles.metricLabel}>Chain Confidence</p>
+            <p style={styles.chainConfidence}>
+              {continuityChain.chainConfidence}
+            </p>
+          </div>
+        </section>
+
+        <section style={styles.chainPath}>
+          {continuityChain.continuityPath.map((step, index) => (
+            <ChainStep
+              key={`${step}-${index}`}
+              label={`Step ${index + 1}`}
+              value={step}
+              active={step === 'Executive Center'}
+            />
+          ))}
+        </section>
+
+        <section style={styles.chainGrid}>
+          <ChainPanel title="Executive Reason">
+            {continuityChain.executiveReason}
+          </ChainPanel>
+
+          <ChainPanel title="Trust Question">
+            {continuityChain.trustQuestion}
+          </ChainPanel>
+
+          <ChainPanel title="Next Required Movement">
+            {continuityChain.nextRequiredMovement}
+          </ChainPanel>
+
+          <ChainPanel title="Audit Meaning">
+            {continuityChain.auditMeaning}
+          </ChainPanel>
         </section>
 
         <section style={styles.summaryGrid}>
@@ -247,20 +326,48 @@ function ExecutiveCenterContent() {
           />
         </section>
 
+        <section style={styles.summaryGrid}>
+          <MetricCard
+            label="Coordination Pressure"
+            value={synthesis.coordinationPressure}
+            body="Ownership, routing, responder, or institutional synchronization pressure."
+          />
+          <MetricCard
+            label="Cross-Site Pressure"
+            value={synthesis.crossSitePressure}
+            body="Signals that may no longer be isolated to one operational lane."
+          />
+          <MetricCard
+            label="Audit Pressure"
+            value={synthesis.auditPressure}
+            body="Records requiring reconstructable executive interpretation."
+          />
+          <MetricCard
+            label="Safeguarding"
+            value={synthesis.safeguardingVisible}
+            body="Safeguarding-visible records requiring careful executive visibility."
+          />
+        </section>
+
         <section style={styles.memoryCard}>
           <div>
             <p style={styles.sectionKicker}>Institutional Memory Status</p>
             <h2 style={styles.cardTitle}>{synthesis.memoryStatus}</h2>
             <p style={styles.bodyText}>
-              Memory is not leftover data. Memory is how CGI prevents visible
-              instability from disappearing after immediate pressure is gone.
+              {continuityChain.memoryMeaning}
             </p>
           </div>
 
           <div style={styles.memoryGrid}>
             <MemoryMetric label="Evidence" value={synthesis.evidenceStatus} />
-            <MemoryMetric label="Recovery" value={synthesis.recoveryCredibility} />
-            <MemoryMetric label="Survivability" value={synthesis.survivabilityMeaning} />
+            <MemoryMetric
+              label="Recovery"
+              value={synthesis.recoveryCredibility}
+            />
+            <MemoryMetric
+              label="Survivability"
+              value={synthesis.survivabilityMeaning}
+            />
           </div>
         </section>
 
@@ -287,7 +394,9 @@ function ExecutiveCenterContent() {
 
           <SignalCard
             title="Recovery"
-            value={synthesis.recoveryRecords > 0 ? 'Memory Active' : 'No Active Review'}
+            value={
+              synthesis.recoveryRecords > 0 ? 'Memory Active' : 'No Active Review'
+            }
             body={
               synthesis.recoveryRecords > 0
                 ? 'Recovery evidence is available for executive synthesis.'
@@ -310,7 +419,8 @@ function ExecutiveCenterContent() {
           <section style={styles.card}>
             <p style={styles.sectionKicker}>Recovery-to-Executive Synthesis</p>
             <h2 style={styles.cardTitle}>
-              Recovery evidence remains visible before institutional confidence is restored.
+              Recovery evidence remains visible before institutional confidence
+              is restored.
             </h2>
 
             <div style={styles.tableWrap}>
@@ -357,11 +467,17 @@ function ExecutiveCenterContent() {
           <p style={styles.bodyText}>{synthesis.leadershipAction}</p>
 
           <div style={styles.priorityGrid}>
-            <PriorityItem title="Dominant Concern" body={deriveDominantConcern(synthesis)} />
-            <PriorityItem title="Evidence Meaning" body={synthesis.evidenceStatus} />
+            <PriorityItem
+              title="Dominant Concern"
+              body={deriveDominantConcern(synthesis)}
+            />
+            <PriorityItem
+              title="Evidence Meaning"
+              body={synthesis.evidenceStatus}
+            />
             <PriorityItem
               title="Governance Meaning"
-              body="Leadership visibility must remain proportional, non-punitive, evidence-aware, and memory-preserving."
+              body="Leadership visibility must remain proportional, non-punitive, evidence-aware, chain-aware, and memory-preserving."
             />
           </div>
         </section>
@@ -370,16 +486,20 @@ function ExecutiveCenterContent() {
           <p style={styles.sectionKicker}>Memory-Aware Executive Brief</p>
           <h2 style={styles.cardTitle}>
             One leadership reading across pressure, recovery, evidence, command,
-            stability, and continuity memory.
+            coordination, cross-site exposure, stability, audit, and continuity
+            memory.
           </h2>
 
-          <pre style={styles.summaryBox}>{buildCopyReadyExecutiveBrief(synthesis)}</pre>
+          <pre style={styles.summaryBox}>
+            {buildCopyReadyExecutiveBrief(synthesis, continuityChain)}
+          </pre>
         </section>
 
         <section style={styles.card}>
           <p style={styles.sectionKicker}>Historical Memory Trail</p>
           <h2 style={styles.cardTitle}>
-            Historical continuity memory remains preserved without driving the current posture.
+            Historical continuity memory remains preserved without driving the
+            current posture.
           </h2>
 
           {metrics.length === 0 && (
@@ -406,16 +526,20 @@ function ExecutiveCenterContent() {
                     <tr key={item.id}>
                       <td style={styles.td}>{formatDate(item.created_at)}</td>
                       <td style={styles.td}>
-                        {item.dominant_pressure_source || 'No pressure memory recorded'}
+                        {item.dominant_pressure_source ||
+                          'No pressure memory recorded'}
                       </td>
                       <td style={styles.td}>
-                        {item.dominant_trajectory_signal || 'No trajectory memory recorded'}
+                        {item.dominant_trajectory_signal ||
+                          'No trajectory memory recorded'}
                       </td>
                       <td style={styles.td}>
-                        {item.dominant_memory_pattern || 'No structural memory recorded'}
+                        {item.dominant_memory_pattern ||
+                          'No structural memory recorded'}
                       </td>
                       <td style={styles.td}>
-                        {item.executive_summary || 'No executive memory summary recorded'}
+                        {item.executive_summary ||
+                          'No executive memory summary recorded'}
                       </td>
                     </tr>
                   ))}
@@ -518,9 +642,44 @@ function buildExecutiveSynthesis(
       record.disposition === 'RETURN_TO_INTERVENTION_REVIEW',
   ).length
 
+  const recurrenceVisible = recoveryMemory.filter(
+    (record) =>
+      record.memoryImpact.includes('RECURRENCE') ||
+      record.caseItem.case_status.includes('RECURRENCE') ||
+      record.caseItem.case_status === 'REOPENED' ||
+      record.durabilityResult.includes('REBURN'),
+  ).length
+
+  const coordinationPressure = cases.filter(
+    (caseItem) =>
+      caseItem.support_domain === 'COORDINATION' ||
+      caseItem.case_status === 'ROUTING_STALLED' ||
+      caseItem.case_status === 'OWNERSHIP_CLARITY_REQUIRED',
+  ).length
+
+  const crossSitePressure = cases.filter(
+    (caseItem) =>
+      caseItem.region ||
+      caseItem.institution_name ||
+      caseItem.case_status.includes('RECURRENCE') ||
+      caseItem.case_status === 'REOPENED',
+  ).length
+
+  const auditPressure = cases.filter(
+    (caseItem) =>
+      caseItem.safeguarding_flag ||
+      caseItem.case_status.includes('ESCALATED') ||
+      caseItem.case_status.includes('RECURRENCE') ||
+      caseItem.case_status === 'REOPENED',
+  ).length
+
+  const safeguardingVisible = cases.filter(
+    (caseItem) => caseItem.safeguarding_flag,
+  ).length
+
   let posture: ExecutivePosture = 'EXECUTIVE CENTER CLEAR'
   let meaning =
-    'No active lifecycle instability, command pressure, or fragile recovery is currently visible.'
+    'No active lifecycle instability, command pressure, coordination pressure, cross-site exposure, or fragile recovery is currently visible.'
   let executiveQuestion =
     'What must leadership understand before instability is treated as stabilized?'
   let nextMovement =
@@ -528,7 +687,27 @@ function buildExecutiveSynthesis(
   let leadershipAction =
     'Continue monitoring without creating artificial pressure. Preserve institutional memory for future recurrence learning.'
 
-  if (commandPressure > 0) {
+  if (crossSitePressure > 1 && (recurrenceVisible > 0 || auditPressure > 0)) {
+    posture = 'EXECUTIVE REVIEW REQUIRED'
+    meaning =
+      'Cross-site or recurring continuity exposure is visible and should not be treated as isolated.'
+    executiveQuestion =
+      'Can leadership trust continuity if the signal may be distributed across sites?'
+    nextMovement =
+      'Review cross-site exposure, preserve audit evidence, and determine whether leadership action is required.'
+    leadershipAction =
+      'Interpret whether continuity pressure is isolated, repeated, or distributed before restoring confidence.'
+  } else if (coordinationPressure > 0) {
+    posture = 'ACTIVE CONTINUITY WATCH'
+    meaning =
+      'Coordination pressure is visible and ownership or routing synchronization must remain under executive awareness.'
+    executiveQuestion =
+      'Can continuity be trusted before ownership and evidence are synchronized?'
+    nextMovement =
+      'Confirm coordination ownership before moving toward recovery, cross-site review, or stability absorption.'
+    leadershipAction =
+      'Require clear routing ownership, responder alignment, evidence maturity, and capacity visibility.'
+  } else if (commandPressure > 0) {
     posture = 'EXECUTIVE REVIEW REQUIRED'
     meaning =
       'Recovery or command pressure remains visible and should not be treated as resolved.'
@@ -557,7 +736,7 @@ function buildExecutiveSynthesis(
       'Active lifecycle instability remains visible and should not be hidden by executive summary language.'
     executiveQuestion = 'Is active instability moving through governed action?'
     nextMovement =
-      'Continue governed lifecycle movement through cases, routing, intervention, outcomes, and recovery.'
+      'Continue governed lifecycle movement through cases, routing, intervention, outcomes, recovery, command, and coordination.'
     leadershipAction =
       'Protect visibility, ownership, evidence, and next movement until stabilization is credible.'
   } else if (absorbable > 0) {
@@ -581,14 +760,17 @@ function buildExecutiveSynthesis(
       evidenceReturn,
       fragileRecovery,
       absorbable,
+      coordinationPressure,
+      crossSitePressure,
+      recurrenceVisible,
     }),
     whyItMatters: deriveWhyItMatters(posture),
     nextMovement,
     leadershipAction,
     memoryStatus: 'MEMORY PRESERVED',
     evidenceStatus:
-      evidenceReturn > 0
-        ? 'Evidence requires review before stability can be trusted.'
+      evidenceReturn > 0 || auditPressure > 0
+        ? 'Evidence must remain reviewable before stability can be trusted.'
         : 'No active evidence gap is currently driving executive posture.',
     recoveryCredibility:
       recoveryMemory.length === 0
@@ -597,7 +779,10 @@ function buildExecutiveSynthesis(
           ? 'Recovery remains visible but not yet fully durable.'
           : 'Recovery credibility is currently absorbable into institutional posture.',
     survivabilityMeaning:
-      commandPressure > 0 || activeInstability > 0
+      commandPressure > 0 ||
+      activeInstability > 0 ||
+      coordinationPressure > 0 ||
+      crossSitePressure > 1
         ? 'Survivability requires continued executive visibility.'
         : 'No current survivability pressure is visible from lifecycle records.',
     activeInstability,
@@ -608,6 +793,11 @@ function buildExecutiveSynthesis(
     evidenceReturn,
     absorbable,
     historicalMemory: metrics.length,
+    recurrenceVisible,
+    coordinationPressure,
+    crossSitePressure,
+    auditPressure,
+    safeguardingVisible,
   }
 }
 
@@ -618,7 +808,18 @@ function deriveWhatIsHappening(input: {
   evidenceReturn: number
   fragileRecovery: number
   absorbable: number
+  coordinationPressure: number
+  crossSitePressure: number
+  recurrenceVisible: number
 }) {
+  if (input.crossSitePressure > 1 && input.recurrenceVisible > 0) {
+    return 'Continuity may no longer be isolated. Cross-site exposure and recurrence visibility require executive interpretation before trust is restored.'
+  }
+
+  if (input.coordinationPressure > 0) {
+    return 'Coordination pressure remains visible. Ownership, routing, capacity, or evidence synchronization must be clarified before continuity advances.'
+  }
+
   if (input.commandPressure > 0) {
     return 'Command pressure remains active. Executive Center keeps leadership attention on unresolved instability before stability is trusted.'
   }
@@ -639,12 +840,12 @@ function deriveWhatIsHappening(input: {
     return 'Recovered instability appears ready for institutional absorption while preserving memory and recurrence history.'
   }
 
-  return 'The current lifecycle is clear. Executive Center remains available as the synthesis layer when instability, recovery, command pressure, or evidence gaps appear.'
+  return 'The current lifecycle is clear. Executive Center remains available as the synthesis layer when instability, recovery, command pressure, coordination pressure, cross-site exposure, or evidence gaps appear.'
 }
 
 function deriveWhyItMatters(posture: ExecutivePosture) {
   if (posture === 'EXECUTIVE REVIEW REQUIRED') {
-    return 'Leadership risk increases when command pressure disappears before recovery credibility is proven.'
+    return 'Leadership risk increases when command pressure, cross-site pressure, or recurrence disappears before continuity credibility is proven.'
   }
 
   if (posture === 'EVIDENCE REVIEW REQUIRED') {
@@ -667,6 +868,14 @@ function deriveWhyItMatters(posture: ExecutivePosture) {
 }
 
 function deriveDominantConcern(synthesis: ExecutiveSynthesis) {
+  if (synthesis.crossSitePressure > 1 && synthesis.recurrenceVisible > 0) {
+    return 'Cross-site recurrence or distributed continuity exposure may be visible.'
+  }
+
+  if (synthesis.coordinationPressure > 0) {
+    return 'Coordination pressure requires ownership or evidence synchronization.'
+  }
+
   if (synthesis.commandPressure > 0) return 'Command pressure remains unresolved.'
   if (synthesis.evidenceReturn > 0) return 'Evidence requires renewed review.'
   if (synthesis.fragileRecovery > 0) return 'Recovery remains fragile.'
@@ -675,15 +884,28 @@ function deriveDominantConcern(synthesis: ExecutiveSynthesis) {
   return 'No active executive concern is currently visible.'
 }
 
-function buildCopyReadyExecutiveBrief(synthesis: ExecutiveSynthesis) {
+function buildCopyReadyExecutiveBrief(
+  synthesis: ExecutiveSynthesis,
+  chain: CGIExecutiveContinuityChain,
+) {
   return [
     'TSINAXA CGI Executive Continuity Brief',
     '',
     `Current Posture: ${synthesis.posture}`,
     '',
+    `Dominant Origin: ${chain.dominantOrigin}`,
+    '',
+    `Chain Confidence: ${chain.chainConfidence}`,
+    '',
+    `Continuity Path: ${chain.continuityPath.join(' → ')}`,
+    '',
     `Executive Question: ${synthesis.executiveQuestion}`,
     '',
+    `Trust Question: ${chain.trustQuestion}`,
+    '',
     `Meaning: ${synthesis.meaning}`,
+    '',
+    `Executive Reason: ${chain.executiveReason}`,
     '',
     `What is happening: ${synthesis.whatIsHappening}`,
     '',
@@ -691,9 +913,15 @@ function buildCopyReadyExecutiveBrief(synthesis: ExecutiveSynthesis) {
     '',
     `Lifecycle movement: ${synthesis.nextMovement}`,
     '',
+    `Next required movement: ${chain.nextRequiredMovement}`,
+    '',
     `Leadership action: ${synthesis.leadershipAction}`,
     '',
+    `Audit meaning: ${chain.auditMeaning}`,
+    '',
     `Memory status: ${synthesis.memoryStatus}`,
+    '',
+    `Memory meaning: ${chain.memoryMeaning}`,
     '',
     `Evidence status: ${synthesis.evidenceStatus}`,
     '',
@@ -730,6 +958,43 @@ function extractField(summary: string, label: string) {
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString()
+}
+
+function ChainStep({
+  label,
+  value,
+  active,
+}: {
+  label: string
+  value: string
+  active?: boolean
+}) {
+  return (
+    <article
+      style={{
+        ...styles.chainStep,
+        ...(active ? styles.chainStepActive : {}),
+      }}
+    >
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.chainStepValue}>{value}</p>
+    </article>
+  )
+}
+
+function ChainPanel({
+  title,
+  children,
+}: {
+  title: string
+  children: ReactNode
+}) {
+  return (
+    <article style={styles.chainPanelCard}>
+      <p style={styles.panelKicker}>{title}</p>
+      <p style={styles.panelBody}>{children}</p>
+    </article>
+  )
 }
 
 function SignalCard({
@@ -907,6 +1172,66 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: '22px',
     padding: '24px',
     marginBottom: '24px',
+  },
+  chainHero: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.2fr) minmax(260px, 0.8fr)',
+    gap: '24px',
+    background: panelBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '22px',
+    padding: '24px',
+    marginBottom: '18px',
+  },
+  chainConfidenceBox: {
+    background: '#15110a',
+    border: `1px solid ${softLine}`,
+    borderRadius: '18px',
+    padding: '18px',
+  },
+  chainConfidence: {
+    color: gold,
+    fontSize: '26px',
+    lineHeight: 1.1,
+    fontWeight: 950,
+    margin: '10px 0 0',
+  },
+  chainPath: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+    gap: '12px',
+    marginBottom: '18px',
+  },
+  chainStep: {
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '14px',
+    padding: '14px',
+    minHeight: '86px',
+  },
+  chainStepActive: {
+    background: '#201809',
+    border: `1px solid ${gold}`,
+  },
+  chainStepValue: {
+    color: '#fff8e7',
+    fontSize: '13px',
+    lineHeight: 1.3,
+    fontWeight: 900,
+    margin: '8px 0 0',
+  },
+  chainGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: '14px',
+    marginBottom: '24px',
+  },
+  chainPanelCard: {
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '16px',
+    padding: '16px',
+    minHeight: '150px',
   },
   sectionKicker: {
     color: mutedGold,
