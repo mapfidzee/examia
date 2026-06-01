@@ -10,6 +10,7 @@ import { buildCGIExecutiveBriefing } from '@/lib/cgiExecutiveBriefingGenerator'
 import { buildCGIContinuitySnapshot } from '@/lib/cgiContinuitySnapshotEngine'
 import { reviewCGIExecutiveHistory } from '@/lib/cgiExecutiveHistoryEngine'
 import { buildCGIExecutiveReportPackage } from '@/lib/cgiExecutiveReportingEngine'
+import { buildCGIContinuityTrajectory } from '@/lib/cgiContinuityTrajectoryEngine'
 import {
   loadCGISituationReviews,
   saveCGISituationReview,
@@ -56,6 +57,26 @@ function SituationRoomContent() {
     evidenceVerified: false,
     accountabilityActive: true,
     structuralMemoryVisible: true,
+  })
+
+  const trajectory = buildCGIContinuityTrajectory({
+    continuityCondition: 'FRAGILE_RECOVERY',
+    continuityConfidence: 'FRAGILE',
+    survivabilityPressure: 'ELEVATED',
+    recoveryCredibility: 'PARTIAL',
+    recurrenceSeverity: 'RECURRING',
+    executivePosture: 'VERIFY',
+    openCases: 4,
+    escalatedCases: 1,
+    repeatedInstabilityCount: 3,
+    unresolvedCriticalCount: 0,
+    recoveryFailures: 1,
+    verifiedRecoveries: 1,
+    coordinationIssues: 2,
+    averageUnresolvedDays: 6,
+    crossSiteSignals: 1,
+    commandReviews: 1,
+    auditGaps: 1,
   })
 
   const snapshots = [
@@ -145,17 +166,23 @@ function SituationRoomContent() {
       await saveCGISituationReview({
         situationTitle: 'Executive Continuity Situation Room',
         situationPosture: briefing.synthesis.synthesisPosture,
-        commandQuestion: briefing.coreQuestion,
+        commandQuestion: trajectory.commanderQuestion,
         executiveSummary: briefing.executiveSummary,
         dominantConcern: briefing.dominantConcern,
         historyDirection: historyReview.direction,
         continuityDriftDetected: historyReview.continuityDriftDetected,
         reportClassification: report.classification,
-        requiredExecutiveAction: report.requiredExecutiveAction,
-        requiredEvidence: report.requiredEvidence,
-        copyReadySituationReport: report.copyReadyReport,
+        requiredExecutiveAction: trajectory.trajectoryRecommendation,
+        requiredEvidence: trajectory.trajectoryEvidence,
+        copyReadySituationReport: buildSituationReport({
+          trajectory,
+          briefing,
+          historyReview,
+          report,
+        }),
         rawPayload: {
           briefing,
+          trajectory,
           latestSnapshot,
           historyReview,
           report,
@@ -182,34 +209,113 @@ function SituationRoomContent() {
         <section style={styles.header}>
           <p style={styles.kicker}>TSINAXA CGI • SITUATION ROOM</p>
 
-          <h1 style={styles.title}>
-            Executive Continuity Situation Room
-          </h1>
+          <h1 style={styles.title}>Operational Continuity Situation Room</h1>
 
           <p style={styles.subtitle}>
-            Highest-level executive continuity theater for command posture,
-            cross-site coordination, continuity history, survivability
-            protection, reporting, and governance-safe stabilization oversight.
+            Operational-now continuity theater for seeing where continuity is
+            heading, what is weakening, what must be watched next, and whether
+            the current situation should remain under monitoring, move to
+            command, coordination, cross-site review, executive synthesis, or
+            audit preservation.
           </p>
         </section>
 
         <section style={styles.heroCard}>
           <div>
-            <p style={styles.sectionKicker}>Situation Reading</p>
+            <p style={styles.sectionKicker}>Trajectory Reading</p>
 
-            <h2 style={styles.heroTitle}>{executivePosture.label}</h2>
+            <h2 style={styles.heroTitle}>{trajectory.trajectory}</h2>
 
             <p style={styles.heroMeaning}>
-              {briefing.executiveSummary}
+              {trajectory.trajectoryDirection}
             </p>
           </div>
 
           <div style={styles.statusBox}>
-            <p style={styles.statusLabel}>Command Question</p>
+            <p style={styles.statusLabel}>Commander Question</p>
 
-            <p style={styles.statusQuestion}>
-              {briefing.coreQuestion}
+            <p style={styles.statusQuestion}>{trajectory.commanderQuestion}</p>
+          </div>
+        </section>
+
+        <section style={styles.trajectoryPanel}>
+          <div>
+            <p style={styles.sectionKicker}>Operational Meaning</p>
+
+            <h2 style={styles.cardTitle}>{trajectory.momentum}</h2>
+
+            <p style={styles.bodyText}>
+              {trajectory.trajectoryExplanation}
             </p>
+          </div>
+
+          <div style={styles.statusBox}>
+            <p style={styles.statusLabel}>Watch Next</p>
+
+            <p style={styles.statusQuestion}>{trajectory.watchNext}</p>
+          </div>
+        </section>
+
+        <section style={styles.gridFour}>
+          <SignalCard
+            title="Trajectory"
+            value={trajectory.trajectory}
+            body="Current continuity direction, not prediction or guessing."
+          />
+
+          <SignalCard
+            title="Momentum"
+            value={trajectory.momentum}
+            body="Operational movement pressure behind the current situation."
+          />
+
+          <SignalCard
+            title="History Direction"
+            value={historyReview.direction}
+            body="Whether continuity is improving, holding, worsening, or not yet historically mature."
+          />
+
+          <SignalCard
+            title="Continuity Drift"
+            value={historyReview.continuityDriftDetected ? 'YES' : 'NO'}
+            body="Whether continuity degradation or exposure persistence requires leadership review."
+          />
+        </section>
+
+        <section style={styles.gridThree}>
+          <Panel title="Situation Room">
+            What is happening now, where continuity is heading, and what must
+            be watched next.
+          </Panel>
+
+          <Panel title="Executive Center">
+            What leadership must understand and why executive meaning matters.
+          </Panel>
+
+          <Panel title="Audit">
+            Whether the movement, evidence, and decisions can be reconstructed.
+          </Panel>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Trajectory Evidence</p>
+
+          <h2 style={styles.cardTitle}>
+            Situation Room does not guess. It interprets movement from evidence.
+          </h2>
+
+          <p style={styles.bodyText}>{trajectory.trajectoryEvidence}</p>
+
+          <div style={styles.priorityGrid}>
+            <PriorityItem title="Risk" body={trajectory.trajectoryRisk} />
+            <PriorityItem
+              title="Recommendation"
+              body={trajectory.trajectoryRecommendation}
+            />
+            <PriorityItem
+              title="Executive Meaning"
+              body={trajectory.executiveMeaning}
+            />
           </div>
         </section>
 
@@ -218,12 +324,12 @@ function SituationRoomContent() {
             <p style={styles.sectionKicker}>Persistence Action</p>
 
             <h2 style={styles.actionTitle}>
-              Preserve this situation review as executive continuity memory.
+              Preserve this situation review as operational continuity memory.
             </h2>
 
             <p style={styles.actionText}>
               Saving the situation review creates a durable institutional
-              record of the executive operating picture, command question,
+              record of trajectory direction, momentum, commander question,
               continuity drift, required evidence, and survivability posture.
             </p>
 
@@ -252,8 +358,8 @@ function SituationRoomContent() {
             </h2>
 
             <p style={styles.actionText}>
-              CGI can now reconstruct historical executive operating pictures,
-              continuity drift signals, required actions, and survivability
+              CGI can reconstruct historical operating pictures, continuity
+              drift, trajectory direction, required actions, and survivability
               interpretation across time.
             </p>
 
@@ -283,15 +389,15 @@ function SituationRoomContent() {
           />
 
           <SignalCard
-            title="History Direction"
-            value={historyReview.direction}
-            body="Shows whether continuity is improving, holding, worsening, or not yet historically mature."
+            title="Evidence"
+            value="UNVERIFIED"
+            body="Current evidence posture supporting or weakening continuity interpretation."
           />
 
           <SignalCard
-            title="Continuity Drift"
-            value={historyReview.continuityDriftDetected ? 'YES' : 'NO'}
-            body="Indicates whether continuity degradation or exposure persistence requires leadership review."
+            title="Dominant Concern"
+            value={briefing.dominantConcern}
+            body="The strongest visible continuity concern in the current operating picture."
           />
 
           <SignalCard
@@ -306,9 +412,7 @@ function SituationRoomContent() {
 
           <h2 style={styles.cardTitle}>{executivePosture.headline}</h2>
 
-          <p style={styles.bodyText}>
-            {executivePosture.actionLanguage}
-          </p>
+          <p style={styles.bodyText}>{executivePosture.actionLanguage}</p>
 
           <div style={styles.priorityGrid}>
             <PriorityItem title="Evidence" body={evidenceLanguage} />
@@ -324,9 +428,7 @@ function SituationRoomContent() {
             Executive situation reviews retrieved from Supabase.
           </h2>
 
-          <p style={styles.bodyText}>
-            Review Count: {reviews.length}
-          </p>
+          <p style={styles.bodyText}>Review Count: {reviews.length}</p>
 
           <div style={styles.archiveList}>
             {reviews.length === 0 ? (
@@ -393,29 +495,12 @@ function SituationRoomContent() {
           </div>
         </section>
 
-        <section style={styles.gridThree}>
-          <Panel title="Command Center">
-            Leadership should coordinate stabilization, require evidence,
-            and keep continuity protection visible until credibility improves.
-          </Panel>
-
-          <Panel title="Coordination Center">
-            Sites with elevated exposure should remain synchronized through
-            ownership, action, evidence, and executive review.
-          </Panel>
-
-          <Panel title="Continuity History">
-            Continuity snapshots indicate whether instability is improving,
-            holding, or drifting across time.
-          </Panel>
-        </section>
-
         <section style={styles.card}>
           <p style={styles.sectionKicker}>Situation Priorities</p>
 
           <h2 style={styles.cardTitle}>
-            The situation room compresses CGI into one executive operating
-            picture.
+            The Situation Room compresses operational direction into one
+            live continuity picture.
           </h2>
 
           <div style={styles.situationList}>
@@ -426,12 +511,12 @@ function SituationRoomContent() {
 
             <SituationItem
               title="Required Action"
-              body={report.requiredExecutiveAction}
+              body={trajectory.trajectoryRecommendation}
             />
 
             <SituationItem
               title="Required Evidence"
-              body={report.requiredEvidence}
+              body={trajectory.trajectoryEvidence}
             />
 
             <SituationItem
@@ -442,30 +527,76 @@ function SituationRoomContent() {
         </section>
 
         <section style={styles.card}>
-          <p style={styles.sectionKicker}>
-            Copy-Ready Situation Report
-          </p>
+          <p style={styles.sectionKicker}>Copy-Ready Situation Report</p>
 
           <h2 style={styles.cardTitle}>
-            Executive continuity situation package.
+            Operational continuity situation package.
           </h2>
 
-          <pre style={styles.summaryBox}>{report.copyReadyReport}</pre>
+          <pre style={styles.summaryBox}>
+            {buildSituationReport({
+              trajectory,
+              briefing,
+              historyReview,
+              report,
+            })}
+          </pre>
         </section>
       </div>
     </main>
   )
 }
 
+function buildSituationReport(input: {
+  trajectory: ReturnType<typeof buildCGIContinuityTrajectory>
+  briefing: ReturnType<typeof buildCGIExecutiveBriefing>
+  historyReview: ReturnType<typeof reviewCGIExecutiveHistory>
+  report: ReturnType<typeof buildCGIExecutiveReportPackage>
+}) {
+  return [
+    'TSINAXA CGI Situation Room Report',
+    '',
+    `Trajectory: ${input.trajectory.trajectory}`,
+    `Momentum: ${input.trajectory.momentum}`,
+    `Direction: ${input.trajectory.trajectoryDirection}`,
+    '',
+    `Commander Question: ${input.trajectory.commanderQuestion}`,
+    '',
+    `Operational Meaning: ${input.trajectory.trajectoryExplanation}`,
+    '',
+    `Risk: ${input.trajectory.trajectoryRisk}`,
+    '',
+    `Recommendation: ${input.trajectory.trajectoryRecommendation}`,
+    '',
+    `Watch Next: ${input.trajectory.watchNext}`,
+    '',
+    `Executive Meaning: ${input.trajectory.executiveMeaning}`,
+    '',
+    `Continuity Posture: ${input.briefing.synthesis.synthesisPosture}`,
+    '',
+    `Dominant Concern: ${input.briefing.dominantConcern}`,
+    '',
+    `History Direction: ${input.historyReview.direction}`,
+    '',
+    `Continuity Drift Detected: ${
+      input.historyReview.continuityDriftDetected ? 'YES' : 'NO'
+    }`,
+    '',
+    `Report Classification: ${input.report.classification}`,
+  ].join('\n')
+}
+
 function getReviewValue(
   review: PersistedSituationReview,
-  key: string,
+  key: string
 ): string | null {
   const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
 
   const value =
     review[key] ??
     review[snakeKey] ??
+    review.rawPayload?.trajectory?.[key] ??
+    review.raw_payload?.trajectory?.[key] ??
     review.rawPayload?.report?.[key] ??
     review.raw_payload?.report?.[key] ??
     null
@@ -603,8 +734,7 @@ const styles: Record<string, CSSProperties> = {
 
   heroCard: {
     display: 'grid',
-    gridTemplateColumns:
-      'minmax(0, 1.35fr) minmax(260px, 0.65fr)',
+    gridTemplateColumns: 'minmax(0, 1.35fr) minmax(260px, 0.65fr)',
     gap: '16px',
     background: '#020617',
     border: '1px solid #67e8f9',
@@ -612,6 +742,18 @@ const styles: Record<string, CSSProperties> = {
     padding: '24px',
     marginBottom: '16px',
     boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
+  },
+
+  trajectoryPanel: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.35fr) minmax(260px, 0.65fr)',
+    gap: '16px',
+    background: '#082f49',
+    border: '1px solid #0ea5e9',
+    borderRadius: '22px',
+    padding: '20px',
+    marginBottom: '16px',
+    boxSizing: 'border-box',
   },
 
   actionPanel: {
