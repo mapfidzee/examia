@@ -5,6 +5,7 @@ import type { CSSProperties } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
+import { buildCGIDemoScenario } from '@/lib/cgiDemoScenarioEngine'
 import { supabase } from '../../lib/supabase'
 
 type BeneficiaryCase = {
@@ -62,6 +63,28 @@ type PanelRow = {
   label: string
   value: number
   detail: string
+}
+
+type CoordinationPatternType =
+  | 'ISOLATED_SYNCHRONIZATION'
+  | 'REPEATED_COORDINATION_STRAIN'
+  | 'SHARED_DEPENDENCY_VISIBLE'
+  | 'DISTRIBUTED_PRESSURE'
+  | 'ENTERPRISE_PATTERN'
+
+type CoordinationPatternReading = {
+  patternType: CoordinationPatternType
+  patternName: string
+  patternMeaning: string
+  sharedOwnershipVisible: boolean
+  sharedInstitutionVisible: boolean
+  sharedResponderVisible: boolean
+  sharedRegionVisible: boolean
+  crossSiteEscalationRequired: boolean
+  enterpriseExposure: string
+  executiveMeaning: string
+  crossSiteQuestion: string
+  requiredSynchronizationEvidence: string
 }
 
 type CoordinationReading = {
@@ -125,6 +148,9 @@ function CoordinationContent() {
   const [interventions, setInterventions] = useState<CaseIntervention[]>([])
   const [outcomes, setOutcomes] = useState<CaseOutcome[]>([])
   const [message, setMessage] = useState('')
+
+  const pilotScenario = buildCGIDemoScenario('FUEL_LOGISTICS_CHAIN_PROOF')
+  const pilotThread = pilotScenario.pilotThread
 
   useEffect(() => {
     loadCoordinationData()
@@ -214,6 +240,20 @@ function CoordinationContent() {
     stalledCases.length * 2 +
     recurrenceCases.length * 2
 
+  const coordinationPattern = buildCoordinationPatternReading({
+    cases,
+    institutions,
+    responders,
+    routingActions,
+    recurrenceCases: recurrenceCases.length,
+    stalledCases: stalledCases.length,
+    escalatedCases: escalatedCases.length,
+    criticalCases: criticalCases.length,
+    coordinationVisibleCases: coordinationVisibleCases.length,
+    interventionCoverage,
+    outcomeCoverage,
+  })
+
   const coordinationReading = buildCoordinationReading({
     totalCases: cases.length,
     activeCases: activeCases.length,
@@ -229,6 +269,7 @@ function CoordinationContent() {
     outcomeCoverage,
     stabilizationRate,
     coordinationPressure,
+    coordinationPattern,
   })
 
   const regionRows = useMemo(
@@ -278,16 +319,30 @@ function CoordinationContent() {
         <section style={styles.hero}>
           <p style={styles.kicker}>TSINAXA CGI • COORDINATION</p>
 
-          <h1 style={styles.title}>Coordination Synchronization</h1>
+          <h1 style={styles.title}>Coordination Synchronization Intelligence</h1>
 
           <p style={styles.subtitle}>
-            Synchronize ownership, routing, responder capacity, institutional load,
-            evidence maturity, and recovery readiness before continuity moves to
-            Cross-Site, Executive Center, Audit, or Stability Board.
+            Synchronize ownership, routing, responder capacity, institutional
+            load, evidence maturity, recovery readiness, and shared dependency
+            before continuity moves to Cross-Site, Situation Room, Executive
+            Center, Audit, or Stability Board.
           </p>
         </section>
 
         {message && <div style={styles.message}>{message}</div>}
+
+        <section style={styles.heroCard}>
+          <div>
+            <p style={styles.sectionKicker}>Enterprise Synchronization Pattern</p>
+            <h2 style={styles.heroTitle}>{coordinationPattern.patternName}</h2>
+            <p style={styles.bodyText}>{coordinationPattern.patternMeaning}</p>
+          </div>
+
+          <div style={styles.statusBox}>
+            <p style={styles.statusLabel}>Pattern Type</p>
+            <p style={styles.statusValue}>{coordinationPattern.patternType}</p>
+          </div>
+        </section>
 
         <section style={styles.heroCard}>
           <div>
@@ -304,7 +359,7 @@ function CoordinationContent() {
 
         <section style={styles.chainPanel}>
           <ChainStep label="Command" value="Decides movement" />
-          <ChainStep label="Coordination" value="Synchronizes ownership" active />
+          <ChainStep label="Coordination" value="Synchronizes pattern" active />
           <ChainStep
             label="Cross-Site"
             value={coordinationReading.crossSiteRequired ? 'Required' : 'Conditional'}
@@ -328,6 +383,53 @@ function CoordinationContent() {
           <Metric label="Safeguarding Flags" value={safeguardingCases.length} />
           <Metric label="Intervention Coverage" value={interventionCoverage} suffix="%" />
           <Metric label="Outcome Coverage" value={outcomeCoverage} suffix="%" />
+        </section>
+
+        <section style={styles.requirementGrid}>
+          <RequirementCard
+            label="Shared Ownership"
+            active={coordinationPattern.sharedOwnershipVisible}
+            body="Shows whether multiple cases or routing actions are converging around the same ownership structure."
+          />
+
+          <RequirementCard
+            label="Shared Institution"
+            active={coordinationPattern.sharedInstitutionVisible}
+            body="Shows whether institutional load may be creating a distributed coordination pattern."
+          />
+
+          <RequirementCard
+            label="Shared Responder"
+            active={coordinationPattern.sharedResponderVisible}
+            body="Shows whether responder concentration may be weakening continuity confidence."
+          />
+
+          <RequirementCard
+            label="Cross-Site"
+            active={coordinationPattern.crossSiteEscalationRequired}
+            body="Shows whether synchronization pressure should move into enterprise pattern review."
+          />
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Cross-Site Handoff Question</p>
+          <h2 style={styles.sectionTitle}>{coordinationPattern.crossSiteQuestion}</h2>
+          <p style={styles.panelNote}>{coordinationPattern.enterpriseExposure}</p>
+
+          <div style={styles.priorityGrid}>
+            <PriorityItem
+              title="Executive Meaning"
+              body={coordinationPattern.executiveMeaning}
+            />
+            <PriorityItem
+              title="Synchronization Evidence"
+              body={coordinationPattern.requiredSynchronizationEvidence}
+            />
+            <PriorityItem
+              title="Pilot Chain Context"
+              body={pilotThread.executiveThesis}
+            />
+          </div>
         </section>
 
         <section style={styles.requirementGrid}>
@@ -387,6 +489,7 @@ function CoordinationContent() {
             <pre style={styles.summaryBox}>
               {coordinationBrief({
                 reading: coordinationReading,
+                pattern: coordinationPattern,
                 totalCases: cases.length,
                 activeCases: activeCases.length,
                 stabilizedCases: stabilizedCases.length,
@@ -439,14 +542,90 @@ function CoordinationContent() {
           <strong>COORDINATION SYNCHRONIZATION</strong>
           <span>
             Command decides movement. Coordination synchronizes ownership,
-            routing, capacity, evidence, and response responsibility before
-            continuity can safely move to Cross-Site, Executive Center, Audit,
-            Recovery, or Stability Board.
+            routing, capacity, evidence, shared dependency, and response
+            responsibility before continuity can safely move to Cross-Site,
+            Situation Room, Executive Center, Audit, Recovery, or Stability
+            Board.
           </span>
         </section>
       </div>
     </main>
   )
+}
+
+function buildCoordinationPatternReading(input: {
+  cases: BeneficiaryCase[]
+  institutions: Institution[]
+  responders: Responder[]
+  routingActions: RoutingAction[]
+  recurrenceCases: number
+  stalledCases: number
+  escalatedCases: number
+  criticalCases: number
+  coordinationVisibleCases: number
+  interventionCoverage: number
+  outcomeCoverage: number
+}): CoordinationPatternReading {
+  const sharedRegionVisible = hasRepeatedValue(
+    input.cases.map((item) => item.region || 'Region not recorded'),
+  )
+
+  const sharedInstitutionVisible = hasRepeatedValue(
+    input.cases.map((item) => item.institution_name || 'Institution not recorded'),
+  )
+
+  const sharedResponderVisible = hasRepeatedValue(
+    input.routingActions.map(
+      (item) => item.assigned_responder_id || 'Responder not recorded',
+    ),
+  )
+
+  const sharedOwnershipVisible = hasRepeatedValue(
+    input.routingActions.map((item) => item.institution_id || 'Institution not recorded'),
+  )
+
+  const evidenceWeak =
+    input.interventionCoverage < 50 || input.outcomeCoverage < 40
+
+  const enterpriseSignal =
+    input.criticalCases > 0 ||
+    input.escalatedCases > 0 ||
+    input.recurrenceCases > 0 ||
+    input.coordinationVisibleCases > 2
+
+  let patternType: CoordinationPatternType = 'ISOLATED_SYNCHRONIZATION'
+
+  if (enterpriseSignal && (sharedInstitutionVisible || sharedResponderVisible)) {
+    patternType = 'ENTERPRISE_PATTERN'
+  } else if (sharedOwnershipVisible || sharedInstitutionVisible) {
+    patternType = 'SHARED_DEPENDENCY_VISIBLE'
+  } else if (input.recurrenceCases > 0 || input.stalledCases > 1) {
+    patternType = 'REPEATED_COORDINATION_STRAIN'
+  } else if (input.coordinationVisibleCases > 2 || sharedRegionVisible) {
+    patternType = 'DISTRIBUTED_PRESSURE'
+  }
+
+  const crossSiteEscalationRequired =
+    patternType === 'ENTERPRISE_PATTERN' ||
+    patternType === 'SHARED_DEPENDENCY_VISIBLE' ||
+    patternType === 'DISTRIBUTED_PRESSURE'
+
+  return {
+    patternType,
+    patternName: buildPatternName(patternType),
+    patternMeaning: buildPatternMeaning(patternType, evidenceWeak),
+    sharedOwnershipVisible,
+    sharedInstitutionVisible,
+    sharedResponderVisible,
+    sharedRegionVisible,
+    crossSiteEscalationRequired,
+    enterpriseExposure: buildEnterpriseExposure(patternType),
+    executiveMeaning: buildPatternExecutiveMeaning(patternType),
+    crossSiteQuestion: buildCrossSiteQuestion(patternType),
+    requiredSynchronizationEvidence: buildRequiredSynchronizationEvidence(
+      patternType,
+    ),
+  }
 }
 
 function buildCoordinationReading(input: {
@@ -464,6 +643,7 @@ function buildCoordinationReading(input: {
   outcomeCoverage: number
   stabilizationRate: number
   coordinationPressure: number
+  coordinationPattern: CoordinationPatternReading
 }): CoordinationReading {
   if (input.totalCases === 0) {
     return {
@@ -483,6 +663,31 @@ function buildCoordinationReading(input: {
       evidenceStandard: 'Routine monitoring evidence only.',
       requiredAction: 'Maintain coordination readiness.',
       continuityRisk: 'No active coordination risk is visible.',
+    }
+  }
+
+  if (input.coordinationPattern.crossSiteEscalationRequired) {
+    return {
+      status: 'CROSS_SITE_COORDINATION_REQUIRED',
+      commandQuestion:
+        'Has coordination revealed a pattern larger than one site or operational lane?',
+      chainPosition:
+        'Coordination is preparing continuity for Cross-Site Review.',
+      synchronizationMeaning:
+        input.coordinationPattern.patternMeaning,
+      nextDestination: 'Cross-Site Review',
+      handoffReason:
+        'Cross-site review must determine whether instability is isolated, repeated, distributed, or structurally shared across operational environments.',
+      coordinationRequired: true,
+      crossSiteRequired: true,
+      executiveReviewRequired: true,
+      auditRequired: true,
+      continuityHistoryRequired: true,
+      evidenceStandard:
+        input.coordinationPattern.requiredSynchronizationEvidence,
+      requiredAction: 'Move synchronized pattern evidence to Cross-Site Review.',
+      continuityRisk:
+        'Failure to review across sites may allow a distributed continuity pattern to look like isolated cases.',
     }
   }
 
@@ -512,31 +717,6 @@ function buildCoordinationReading(input: {
       requiredAction: 'Move coordinated pressure to Executive Center.',
       continuityRisk:
         'Failure to escalate may allow executive-relevant instability to remain operationally buried.',
-    }
-  }
-
-  if (input.recurrenceCases > 0 || input.coordinationVisibleCases > 2) {
-    return {
-      status: 'CROSS_SITE_COORDINATION_REQUIRED',
-      commandQuestion:
-        'Has coordination revealed a pattern larger than one site or operational lane?',
-      chainPosition:
-        'Coordination is preparing continuity for Cross-Site Review.',
-      synchronizationMeaning:
-        'Repeated, distributed, or multi-site coordination pressure may no longer be isolated.',
-      nextDestination: 'Cross-Site Review',
-      handoffReason:
-        'Cross-site review must determine whether instability is isolated, repeated, or distributed across operational environments.',
-      coordinationRequired: true,
-      crossSiteRequired: true,
-      executiveReviewRequired: true,
-      auditRequired: true,
-      continuityHistoryRequired: true,
-      evidenceStandard:
-        'Preserve affected region, institution, responder load, recurrence signal, routing strain, and synchronization gaps.',
-      requiredAction: 'Move synchronized evidence to Cross-Site Review.',
-      continuityRisk:
-        'Failure to review across sites may allow a distributed continuity pattern to look like isolated cases.',
     }
   }
 
@@ -622,6 +802,7 @@ function buildCoordinationReading(input: {
 
 function coordinationBrief(input: {
   reading: CoordinationReading
+  pattern: CoordinationPatternReading
   totalCases: number
   activeCases: number
   stabilizedCases: number
@@ -649,11 +830,23 @@ ${input.reading.commandQuestion}
 Coordination Status:
 ${input.reading.status}
 
+Enterprise Synchronization Pattern:
+${input.pattern.patternName}
+
+Pattern Type:
+${input.pattern.patternType}
+
+Pattern Meaning:
+${input.pattern.patternMeaning}
+
 Lifecycle Position:
 ${input.reading.chainPosition}
 
 Next Governed Destination:
 ${input.reading.nextDestination}
+
+Cross-Site Question:
+${input.pattern.crossSiteQuestion}
 
 Handoff Reason:
 ${input.reading.handoffReason}
@@ -686,9 +879,148 @@ ${input.reading.evidenceStandard}
 Continuity Risk:
 ${input.reading.continuityRisk}
 
+Executive Meaning:
+${input.pattern.executiveMeaning}
+
 Governance-Safe Meaning:
-Coordination does not assign blame. It synchronizes ownership, routing, responder capacity, institutional load, evidence maturity, and recovery readiness so continuity does not move forward on weak or invisible foundations.
+Coordination does not assign blame. It synchronizes ownership, routing, responder capacity, institutional load, evidence maturity, recovery readiness, and shared dependency so continuity does not move forward on weak or invisible foundations.
   `.trim()
+}
+
+function hasRepeatedValue(items: string[]) {
+  const normalized = items.filter(
+    (item) =>
+      item &&
+      !item.toLowerCase().includes('not recorded') &&
+      item.trim().length > 0,
+  )
+
+  return new Set(normalized).size < normalized.length && normalized.length > 1
+}
+
+function buildPatternName(patternType: CoordinationPatternType) {
+  if (patternType === 'ENTERPRISE_PATTERN') {
+    return 'Enterprise Synchronization Pattern'
+  }
+
+  if (patternType === 'SHARED_DEPENDENCY_VISIBLE') {
+    return 'Shared Dependency Coordination Pattern'
+  }
+
+  if (patternType === 'DISTRIBUTED_PRESSURE') {
+    return 'Distributed Coordination Pressure'
+  }
+
+  if (patternType === 'REPEATED_COORDINATION_STRAIN') {
+    return 'Repeated Coordination Strain'
+  }
+
+  return 'Isolated Coordination Synchronization'
+}
+
+function buildPatternMeaning(
+  patternType: CoordinationPatternType,
+  evidenceWeak: boolean,
+) {
+  if (patternType === 'ENTERPRISE_PATTERN') {
+    return 'Coordination is revealing a pattern that may be larger than one site, owner, routing lane, or operational unit.'
+  }
+
+  if (patternType === 'SHARED_DEPENDENCY_VISIBLE') {
+    return 'Multiple records appear to share institution, responder, ownership, or routing dependency. Cross-Site should determine whether this is structural exposure.'
+  }
+
+  if (patternType === 'DISTRIBUTED_PRESSURE') {
+    return 'Coordination pressure appears across multiple records or regions and should not be treated as an isolated operational queue.'
+  }
+
+  if (patternType === 'REPEATED_COORDINATION_STRAIN') {
+    return 'Repeated or stalled coordination signals indicate that routing or ownership may be weakening continuity confidence.'
+  }
+
+  return evidenceWeak
+    ? 'The signal appears isolated, but evidence remains weak and should mature before continuity trust is restored.'
+    : 'Coordination appears isolated and can remain under proportional synchronization watch.'
+}
+
+function buildEnterpriseExposure(patternType: CoordinationPatternType) {
+  if (patternType === 'ENTERPRISE_PATTERN') {
+    return 'A coordination pattern may be moving from operational synchronization into enterprise continuity exposure.'
+  }
+
+  if (patternType === 'SHARED_DEPENDENCY_VISIBLE') {
+    return 'A shared dependency may be causing multiple records to inherit the same continuity weakness.'
+  }
+
+  if (patternType === 'DISTRIBUTED_PRESSURE') {
+    return 'Pressure is distributed enough that Cross-Site may need to confirm whether the signal is structural.'
+  }
+
+  if (patternType === 'REPEATED_COORDINATION_STRAIN') {
+    return 'Repeated coordination strain may become structural if ownership, routing, and evidence remain unresolved.'
+  }
+
+  return 'No enterprise exposure is currently dominant.'
+}
+
+function buildPatternExecutiveMeaning(patternType: CoordinationPatternType) {
+  if (patternType === 'ENTERPRISE_PATTERN') {
+    return 'Leadership should not treat the signal as an isolated coordination workload. It may represent enterprise continuity exposure.'
+  }
+
+  if (patternType === 'SHARED_DEPENDENCY_VISIBLE') {
+    return 'Leadership should know whether the same dependency is creating repeated continuity weakness across different records or sites.'
+  }
+
+  if (patternType === 'DISTRIBUTED_PRESSURE') {
+    return 'Leadership may need visibility if distributed pressure begins weakening recovery credibility.'
+  }
+
+  if (patternType === 'REPEATED_COORDINATION_STRAIN') {
+    return 'Repeated coordination strain should remain visible because unresolved ownership can create false recovery confidence.'
+  }
+
+  return 'Leadership does not need escalation unless the isolated signal begins repeating, spreading, or weakening evidence maturity.'
+}
+
+function buildCrossSiteQuestion(patternType: CoordinationPatternType) {
+  if (patternType === 'ENTERPRISE_PATTERN') {
+    return 'Is this coordination pressure becoming a cross-site enterprise continuity pattern?'
+  }
+
+  if (patternType === 'SHARED_DEPENDENCY_VISIBLE') {
+    return 'Are multiple sites or records inheriting the same dependency weakness?'
+  }
+
+  if (patternType === 'DISTRIBUTED_PRESSURE') {
+    return 'Is pressure distributed across operational environments or still isolated?'
+  }
+
+  if (patternType === 'REPEATED_COORDINATION_STRAIN') {
+    return 'Is repeated coordination strain evidence of structural ownership weakness?'
+  }
+
+  return 'Can coordination remain local without cross-site review?'
+}
+
+function buildRequiredSynchronizationEvidence(patternType: CoordinationPatternType) {
+  if (patternType === 'ENTERPRISE_PATTERN') {
+    return 'Preserve affected records, shared owner, shared institution, shared responder, routing lane, region, recurrence evidence, intervention coverage, outcome coverage, and cross-site handoff rationale.'
+  }
+
+  if (patternType === 'SHARED_DEPENDENCY_VISIBLE') {
+    return 'Preserve shared dependency, institution load, responder concentration, routing owner, evidence maturity, and reason for cross-site review.'
+  }
+
+  if (patternType === 'DISTRIBUTED_PRESSURE') {
+    return 'Preserve affected regions, case statuses, routing load, intervention evidence, outcome evidence, and distribution pattern.'
+  }
+
+  if (patternType === 'REPEATED_COORDINATION_STRAIN') {
+    return 'Preserve stalled routing, ownership clarity gaps, recurrence indicators, responder capacity, and outcome evidence.'
+  }
+
+  return 'Preserve routing ownership, evidence maturity, intervention record, outcome record, and reason for continued coordination watch.'
 }
 
 function groupedRows(items: string[]): PanelRow[] {
