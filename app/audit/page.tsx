@@ -5,6 +5,7 @@ import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
+import { buildCGIDemoScenario } from '@/lib/cgiDemoScenarioEngine'
 import { supabase } from '../../lib/supabase'
 
 type AuditDetails = Record<string, unknown>
@@ -57,6 +58,7 @@ type ChainReconstructionPosture =
   | 'PARTIAL CHAIN RECONSTRUCTION'
   | 'CHAIN RECONSTRUCTION ACTIVE'
   | 'EXECUTIVE CHAIN RECONSTRUCTABLE'
+  | 'PILOT CHAIN RECONSTRUCTABLE'
 
 type EvidenceSummary = {
   total: number
@@ -163,38 +165,25 @@ const PROVENANCE_STAGES = [
     terms: ['CROSS-SITE', '/CROSS-SITE', 'ENTERPRISE PATTERN'],
   },
   {
+    label: 'Situation Room',
+    terms: ['SITUATION ROOM', '/SITUATION-ROOM', 'TRAJECTORY'],
+  },
+  {
     label: 'Executive Center',
     terms: ['EXECUTIVE CENTER', '/EXECUTIVE-CENTER', 'EXECUTIVE'],
+  },
+  {
+    label: 'Executive Report',
+    terms: ['EXECUTIVE REPORT', '/EXECUTIVE-REPORT', 'BOARD REPORT'],
+  },
+  {
+    label: 'Memory Board',
+    terms: ['MEMORY BOARD', '/CGI-MEMORY-BOARD', 'INSTITUTIONAL MEMORY'],
   },
   { label: 'Audit', terms: ['AUDIT', '/AUDIT', 'RECONSTRUCTION'] },
 ]
 
-const CHAIN_STAGES = [
-  {
-    label: 'Recovery',
-    terms: ['RECOVERY', '/RECOVERY', 'DURABILITY', 'FRAGILE_RECOVERY'],
-  },
-  {
-    label: 'Command',
-    terms: ['COMMAND', '/COMMAND', 'COMMAND WATCH', 'ESCALATION'],
-  },
-  {
-    label: 'Coordination',
-    terms: ['COORDINATION', '/COORDINATION', 'SYNCHRONIZATION'],
-  },
-  {
-    label: 'Cross-Site',
-    terms: ['CROSS-SITE', '/CROSS-SITE', 'ENTERPRISE PATTERN'],
-  },
-  {
-    label: 'Executive Center',
-    terms: ['EXECUTIVE CENTER', '/EXECUTIVE-CENTER', 'EXECUTIVE'],
-  },
-  {
-    label: 'Audit',
-    terms: ['AUDIT', '/AUDIT', 'RECONSTRUCTION', 'RECONSTRUCTABLE'],
-  },
-]
+const CHAIN_STAGES = PROVENANCE_STAGES
 
 export default function AuditPage() {
   return (
@@ -217,6 +206,9 @@ function GovernanceEvidenceLedger() {
   const [routeFilter, setRouteFilter] = useState('ALL')
   const [maturityFilter, setMaturityFilter] = useState('ALL')
   const [search, setSearch] = useState('')
+
+  const featured = buildCGIDemoScenario('FUEL_LOGISTICS_CHAIN_PROOF')
+  const pilotThread = featured.pilotThread
 
   useEffect(() => {
     loadAuditLogs()
@@ -271,22 +263,18 @@ function GovernanceEvidenceLedger() {
   }, [logs, severityFilter, actorFilter, routeFilter, maturityFilter, search])
 
   const summary = useMemo(() => buildEvidenceSummary(filteredLogs), [filteredLogs])
-
   const provenance = useMemo(
     () => buildEvidenceProvenance(filteredLogs),
     [filteredLogs],
   )
-
   const chainReconstruction = useMemo(
     () => buildChainReconstruction(filteredLogs),
     [filteredLogs],
   )
-
   const evidenceGaps = useMemo(
     () => buildEvidenceGapDashboard(filteredLogs),
     [filteredLogs],
   )
-
   const auditMemory = useMemo(
     () => buildAuditMemory(filteredLogs),
     [filteredLogs],
@@ -328,10 +316,10 @@ function GovernanceEvidenceLedger() {
           <h1 style={styles.title}>Continuity Reconstruction Audit</h1>
 
           <p style={styles.subtitle}>
-            Final evidence seal for reconstructing lifecycle movement,
-            governance action, recovery credibility, command decisions,
-            coordination synchronization, cross-site exposure, executive
-            visibility, memory preservation, and continuity accountability.
+            Final evidence seal proving whether visible instability can be
+            reconstructed from request through recovery, command, coordination,
+            cross-site interpretation, executive report, memory board, and
+            audit preservation.
           </p>
 
           <section style={styles.doctrinePanel}>
@@ -349,9 +337,87 @@ function GovernanceEvidenceLedger() {
 
         {error && <section style={styles.errorBox}>{error}</section>}
 
+        <section style={styles.pilotHero}>
+          <div>
+            <p style={styles.sectionKicker}>Pilot Audit Subject</p>
+
+            <h2 style={styles.heroTitle}>{pilotThread.scenarioName}</h2>
+
+            <p style={styles.heroMeaning}>
+              Audit confirms whether the full pilot story remains
+              reconstructable as evidence, memory, executive report, and
+              governance meaning.
+            </p>
+          </div>
+
+          <div style={styles.questionBox}>
+            <p style={styles.metricLabel}>Audit Verdict</p>
+
+            <p style={styles.questionText}>PILOT CHAIN RECONSTRUCTABLE</p>
+          </div>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Executive Demonstration Reconstruction</p>
+
+          <h2 style={styles.cardTitle}>
+            One instability. One chain. One memory. One audit trail.
+          </h2>
+
+          <p style={styles.bodyText}>{pilotThread.executiveThesis}</p>
+
+          <div style={styles.pilotChainList}>
+            {pilotThread.chain.map((stage, index) => (
+              <article
+                key={`${stage.stage}-${stage.title}`}
+                style={styles.pilotChainItem}
+              >
+                <p style={styles.panelKicker}>
+                  Step {index + 1} • {formatLabel(stage.stage)}
+                </p>
+
+                <h3 style={styles.pilotStageTitle}>{stage.title}</h3>
+
+                <p style={styles.panelText}>{stage.executiveFinding}</p>
+
+                <p style={styles.evidenceText}>{stage.evidencePreserved}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section style={styles.gridThree}>
+          {pilotThread.sites.map((site) => (
+            <SignalCard
+              key={site.siteName}
+              title={site.siteName}
+              value={site.posture}
+              body={site.finding}
+            />
+          ))}
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Pilot Audit Memory</p>
+
+          <h2 style={styles.cardTitle}>
+            The institutional lesson remains attached to the evidence chain.
+          </h2>
+
+          <p style={styles.bodyText}>{pilotThread.executiveMemory}</p>
+
+          <div style={styles.gapGrid}>
+            {pilotThread.auditReconstruction.map((item) => (
+              <article key={item} style={styles.gapCard}>
+                <p style={styles.panelBody}>{item}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
         <section style={styles.heroCard}>
           <div>
-            <p style={styles.sectionKicker}>Evidence Integrity Posture</p>
+            <p style={styles.sectionKicker}>Live Evidence Integrity Posture</p>
 
             <h2 style={styles.heroTitle}>{summary.evidencePosture}</h2>
 
@@ -359,19 +425,18 @@ function GovernanceEvidenceLedger() {
           </div>
 
           <div style={styles.questionBox}>
-            <p style={styles.metricLabel}>Audit Question</p>
+            <p style={styles.metricLabel}>Live Audit Question</p>
 
             <p style={styles.questionText}>
-              Can leadership reconstruct how continuity moved from recovery
-              through command, coordination, cross-site review, executive
-              synthesis, and audit preservation?
+              Can leadership reconstruct the live continuity chain from the
+              available ledger records?
             </p>
           </div>
         </section>
 
         <section style={styles.chainHero}>
           <div>
-            <p style={styles.sectionKicker}>Continuity Chain Reconstruction</p>
+            <p style={styles.sectionKicker}>Live Chain Reconstruction</p>
 
             <h2 style={styles.cardTitle}>{chainReconstruction.posture}</h2>
 
@@ -494,8 +559,9 @@ function GovernanceEvidenceLedger() {
 
           <p style={styles.bodyText}>
             Evidence gaps show where lifecycle credibility may weaken if
-            decisions, actions, recovery, coordination, cross-site review, audit
-            reconstruction, or executive review are not preserved.
+            decisions, actions, recovery, coordination, cross-site review,
+            executive reporting, memory preservation, or audit reconstruction
+            are not preserved.
           </p>
 
           <div style={styles.gapGrid}>
@@ -917,7 +983,6 @@ function buildEvidenceSummary(logs: AuditLog[]): EvidenceSummary {
     executiveTrustScore,
     high,
     critical,
-    evidencePosture,
   })
 
   return {
@@ -1004,14 +1069,27 @@ function buildChainReconstruction(logs: AuditLog[]): ChainReconstruction {
 
   const activeStages = stages.filter((stage) => stage.count > 0).length
   const missingStages = stages.filter((stage) => stage.count === 0)
-  const executiveStage = stages.find((stage) => stage.label === 'Executive Center')
+  const executiveReportStage = stages.find(
+    (stage) => stage.label === 'Executive Report',
+  )
+  const memoryBoardStage = stages.find((stage) => stage.label === 'Memory Board')
   const auditStage = stages.find((stage) => stage.label === 'Audit')
 
   let posture: ChainReconstructionPosture = 'CHAIN NOT YET RECONSTRUCTABLE'
 
   if (activeStages >= CHAIN_STAGES.length) {
     posture = 'EXECUTIVE CHAIN RECONSTRUCTABLE'
-  } else if (activeStages >= 4 && executiveStage && executiveStage.count > 0) {
+  } else if (
+    activeStages >= 8 &&
+    executiveReportStage &&
+    executiveReportStage.count > 0 &&
+    memoryBoardStage &&
+    memoryBoardStage.count > 0 &&
+    auditStage &&
+    auditStage.count > 0
+  ) {
+    posture = 'PILOT CHAIN RECONSTRUCTABLE'
+  } else if (activeStages >= 6) {
     posture = 'CHAIN RECONSTRUCTION ACTIVE'
   } else if (activeStages > 0) {
     posture = 'PARTIAL CHAIN RECONSTRUCTION'
@@ -1025,22 +1103,26 @@ function buildChainReconstruction(logs: AuditLog[]): ChainReconstruction {
   return {
     posture,
     chainQuestion:
-      'Can Audit reconstruct how continuity moved through Recovery, Command, Coordination, Cross-Site, Executive Center, and Audit?',
+      'Can Audit reconstruct the full CGI chain from Request through Executive Report, Memory Board, and Audit?',
     reconstructionMeaning: buildChainReconstructionMeaning(posture),
     weakestLink,
     nextAuditAction: buildNextAuditAction(posture, weakestLink),
     requiredEvidence: buildRequiredChainEvidence(missingStages),
     chainTrust:
-      auditStage && auditStage.count > 0 && executiveStage && executiveStage.count > 0
-        ? 'EXECUTIVE AND AUDIT LINK VISIBLE'
-        : 'EXECUTIVE-AUDIT LINK NEEDS STRENGTHENING',
+      auditStage && auditStage.count > 0
+        ? 'AUDIT LINK VISIBLE'
+        : 'AUDIT LINK NEEDS STRENGTHENING',
     stages,
   }
 }
 
 function buildChainReconstructionMeaning(posture: ChainReconstructionPosture) {
   if (posture === 'EXECUTIVE CHAIN RECONSTRUCTABLE') {
-    return 'Audit can reconstruct the full governed continuity chain from recovery through executive synthesis and audit preservation.'
+    return 'Audit can reconstruct the full governed continuity chain from request through executive report, memory board, and audit preservation.'
+  }
+
+  if (posture === 'PILOT CHAIN RECONSTRUCTABLE') {
+    return 'Audit can reconstruct the executive pilot chain sufficiently for institutional demonstration, even if some live ledger stages still need stronger evidence.'
   }
 
   if (posture === 'CHAIN RECONSTRUCTION ACTIVE') {
@@ -1058,7 +1140,10 @@ function buildNextAuditAction(
   posture: ChainReconstructionPosture,
   weakestLink: string,
 ) {
-  if (posture === 'EXECUTIVE CHAIN RECONSTRUCTABLE') {
+  if (
+    posture === 'EXECUTIVE CHAIN RECONSTRUCTABLE' ||
+    posture === 'PILOT CHAIN RECONSTRUCTABLE'
+  ) {
     return 'Preserve current reconstruction depth and continue monitoring for recurring evidence gaps.'
   }
 
@@ -1070,7 +1155,7 @@ function buildNextAuditAction(
     return `Do not treat continuity proof as complete. Preserve additional lifecycle evidence for: ${weakestLink}.`
   }
 
-  return 'Begin preserving chain evidence from recovery, command, coordination, cross-site review, executive synthesis, and audit reconstruction.'
+  return 'Begin preserving chain evidence from request, triage, case governance, routing, intervention, outcome, recovery, command, coordination, cross-site review, executive report, memory board, and audit reconstruction.'
 }
 
 function buildRequiredChainEvidence(missingStages: ChainStage[]) {
@@ -1085,6 +1170,21 @@ function buildRequiredChainEvidence(missingStages: ChainStage[]) {
 
 function buildEvidenceGapDashboard(logs: AuditLog[]): EvidenceGapItem[] {
   return [
+    {
+      label: 'Missing Request Evidence',
+      count: countMissingStage(logs, ['REQUEST']),
+      meaning: 'Entry visibility may be difficult to reconstruct.',
+    },
+    {
+      label: 'Missing Triage Evidence',
+      count: countMissingStage(logs, ['TRIAGE']),
+      meaning: 'Eligibility decision may be difficult to reconstruct.',
+    },
+    {
+      label: 'Missing Routing Evidence',
+      count: countMissingStage(logs, ['ROUTING']),
+      meaning: 'Ownership direction may be difficult to reconstruct.',
+    },
     {
       label: 'Missing Intervention Evidence',
       count: countMissingStage(logs, ['INTERVENTION', 'INTERVENTIONS']),
@@ -1101,29 +1201,14 @@ function buildEvidenceGapDashboard(logs: AuditLog[]): EvidenceGapItem[] {
       meaning: 'Recovery durability may not yet be auditable.',
     },
     {
-      label: 'Missing Coordination Evidence',
-      count: countMissingStage(logs, ['COORDINATION', 'SYNCHRONIZATION']),
-      meaning: 'Ownership or routing synchronization may be difficult to reconstruct.',
+      label: 'Missing Executive Report',
+      count: countMissingStage(logs, ['EXECUTIVE REPORT', '/EXECUTIVE-REPORT']),
+      meaning: 'Board-ready executive interpretation may not yet be auditable.',
     },
     {
-      label: 'Missing Cross-Site Evidence',
-      count: countMissingStage(logs, ['CROSS-SITE', 'ENTERPRISE PATTERN']),
-      meaning: 'Distributed continuity exposure may not yet be reconstructable.',
-    },
-    {
-      label: 'Missing Accountability Trail',
-      count: logs.filter((log) => getActor(log) === 'Actor not recorded').length,
-      meaning: 'Some records do not preserve actor context.',
-    },
-    {
-      label: 'Missing Executive Review',
-      count: countMissingStage(logs, ['EXECUTIVE', 'COMMAND']),
-      meaning: 'Executive or command review may not yet be traceable.',
-    },
-    {
-      label: 'Missing Audit Reconstruction',
-      count: countMissingStage(logs, ['AUDIT', 'RECONSTRUCTION']),
-      meaning: 'Final reconstruction evidence may not yet be preserved.',
+      label: 'Missing Memory Board',
+      count: countMissingStage(logs, ['MEMORY BOARD', 'INSTITUTIONAL MEMORY']),
+      meaning: 'Institutional lesson preservation may not yet be auditable.',
     },
   ]
 }
@@ -1248,7 +1333,6 @@ function buildInstitutionalCredibility(input: {
   executiveTrustScore: number
   high: number
   critical: number
-  evidencePosture: EvidencePosture
 }): CredibilityReading {
   if (input.total === 0) return 'CREDIBILITY NOT ESTABLISHED'
   if (input.critical > 0) return 'CREDIBILITY COMPROMISED'
@@ -1282,14 +1366,16 @@ function safeText(value: unknown, fallback = 'Not recorded') {
   return String(value)
 }
 
+function formatLabel(value: string) {
+  return value.replaceAll('_', ' ')
+}
+
 function formatDate(value?: string | null) {
   if (!value) return 'Not recorded'
 
   const date = new Date(value)
 
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
+  if (Number.isNaN(date.getTime())) return value
 
   return date.toLocaleString()
 }
@@ -1535,12 +1621,8 @@ function buildEvidenceGap(input: {
   const gaps: string[] = []
 
   if (input.institutionScoped < input.total) gaps.push('institution scope')
-  if (input.visibilityClassified < input.total) {
-    gaps.push('visibility classification')
-  }
-  if (input.linkedSnapshots < input.total) {
-    gaps.push('linked lifecycle snapshots')
-  }
+  if (input.visibilityClassified < input.total) gaps.push('visibility classification')
+  if (input.linkedSnapshots < input.total) gaps.push('linked lifecycle snapshots')
   if (input.executiveReconstructable === 0) {
     gaps.push('executive reconstruction depth')
   }
@@ -1565,6 +1647,24 @@ function MetricCard({ title, value }: { title: string; value: number }) {
     <article style={styles.metricCard}>
       <p style={styles.metricLabel}>{title}</p>
       <p style={styles.metricValue}>{value}</p>
+    </article>
+  )
+}
+
+function SignalCard({
+  title,
+  value,
+  body,
+}: {
+  title: string
+  value: string
+  body: string
+}) {
+  return (
+    <article style={styles.signalCard}>
+      <p style={styles.metricLabel}>{title}</p>
+      <p style={styles.signalValue}>{value}</p>
+      <p style={styles.panelBody}>{body}</p>
     </article>
   )
 }
@@ -1746,6 +1846,16 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: '24px',
     fontSize: '13px',
   },
+  pilotHero: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.35fr) minmax(280px, 0.65fr)',
+    gap: '24px',
+    background: 'linear-gradient(135deg, rgba(214,178,94,0.13), #030303)',
+    border: `1px solid ${gold}`,
+    borderRadius: '22px',
+    padding: '24px',
+    marginBottom: '24px',
+  },
   heroCard: {
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1.35fr) minmax(280px, 0.65fr)',
@@ -1765,30 +1875,6 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: '22px',
     padding: '24px',
     marginBottom: '24px',
-  },
-  chainGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
-    gap: '12px',
-    marginBottom: '24px',
-  },
-  chainStageCard: {
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '14px',
-    minHeight: '150px',
-  },
-  chainStageMissing: {
-    border: '1px solid rgba(248,113,113,0.45)',
-    background: 'rgba(127,29,29,0.18)',
-  },
-  chainStageValue: {
-    color: gold,
-    fontSize: '30px',
-    fontWeight: 950,
-    margin: '10px 0 4px',
-    lineHeight: 1,
   },
   sectionKicker: {
     color: mutedGold,
@@ -1823,6 +1909,51 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.25,
     margin: '10px 0 0',
     fontWeight: 900,
+  },
+  gridThree: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: '16px',
+    marginBottom: '24px',
+  },
+  signalCard: {
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '16px',
+    padding: '16px',
+    minHeight: '140px',
+  },
+  signalValue: {
+    color: gold,
+    fontSize: '24px',
+    fontWeight: 950,
+    margin: '12px 0 0',
+    lineHeight: 1.1,
+    overflowWrap: 'anywhere',
+  },
+  chainGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+    gap: '12px',
+    marginBottom: '24px',
+  },
+  chainStageCard: {
+    background: '#15110a',
+    border: `1px solid ${softLine}`,
+    borderRadius: '16px',
+    padding: '14px',
+    minHeight: '150px',
+  },
+  chainStageMissing: {
+    border: '1px solid rgba(248,113,113,0.45)',
+    background: 'rgba(127,29,29,0.18)',
+  },
+  chainStageValue: {
+    color: gold,
+    fontSize: '30px',
+    fontWeight: 950,
+    margin: '10px 0 4px',
+    lineHeight: 1,
   },
   reconstructionPanel: {
     display: 'grid',
@@ -1930,6 +2061,31 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.65,
     margin: 0,
   },
+  pilotChainList: {
+    display: 'grid',
+    gap: '14px',
+    marginTop: '18px',
+  },
+  pilotChainItem: {
+    background: '#15110a',
+    border: `1px solid ${softLine}`,
+    borderRadius: '16px',
+    padding: '16px',
+  },
+  pilotStageTitle: {
+    color: '#fff8e7',
+    fontSize: '21px',
+    margin: '8px 0',
+  },
+  evidenceText: {
+    color: '#f8e7b8',
+    borderTop: `1px solid ${softLine}`,
+    fontSize: '13px',
+    lineHeight: 1.6,
+    margin: '12px 0 0',
+    paddingTop: '12px',
+    fontWeight: 800,
+  },
   infoList: {
     display: 'grid',
     gap: '10px',
@@ -1994,7 +2150,7 @@ const styles: Record<string, CSSProperties> = {
     border: `1px solid ${softLine}`,
     borderRadius: '16px',
     padding: '14px',
-    minHeight: '140px',
+    minHeight: '120px',
   },
   gapValue: {
     color: gold,
@@ -2254,35 +2410,35 @@ const styles: Record<string, CSSProperties> = {
   },
   emptyText: {
     color: '#cfc7b5',
-    lineHeight: 1.6,
+    lineHeight: 1.55,
     margin: 0,
-    fontWeight: 700,
+    fontSize: '13px',
   },
   principleCard: {
     display: 'grid',
-    gridTemplateColumns: '90px minmax(0, 1fr)',
-    gap: '24px',
-    alignItems: 'center',
+    gridTemplateColumns: '70px 1fr',
+    gap: '18px',
     background: panelBlack,
     border: `1px solid ${softLine}`,
     borderRadius: '22px',
-    padding: '24px',
+    padding: '22px',
   },
   principleIcon: {
-    width: '76px',
-    height: '76px',
-    borderRadius: '999px',
-    border: `1px solid ${softLine}`,
     display: 'grid',
     placeItems: 'center',
+    width: '56px',
+    height: '56px',
+    borderRadius: '18px',
+    background: 'rgba(214,178,94,0.14)',
     color: gold,
-    fontSize: '34px',
-    fontWeight: 900,
+    fontSize: '30px',
+    fontWeight: 950,
   },
   principleText: {
-    color: '#cfc7b5',
-    lineHeight: 1.65,
-    margin: '10px 0 0',
-    fontSize: '14px',
+    color: '#fff8e7',
+    fontSize: '18px',
+    lineHeight: 1.5,
+    margin: '8px 0 0',
+    fontWeight: 850,
   },
 }
