@@ -6,11 +6,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import InfrastructureNav from '@/components/InfrastructureNav'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
-import { buildCGIContinuitySnapshot } from '@/lib/cgiContinuitySnapshotEngine'
-import { reviewCGIExecutiveHistory } from '@/lib/cgiExecutiveHistoryEngine'
-import { buildCGIExecutiveReportPackage } from '@/lib/cgiExecutiveReportingEngine'
-import { buildCGIContinuityTrajectory } from '@/lib/cgiContinuityTrajectoryEngine'
-import { buildCGIInstitutionalMemory } from '@/lib/cgiInstitutionalMemoryEngine'
+import { buildCGIDemoScenario } from '@/lib/cgiDemoScenarioEngine'
 import {
   loadCGIExecutiveReports,
   saveCGIExecutiveReport,
@@ -37,100 +33,10 @@ function ExecutiveReportContent() {
   const [loadingReports, setLoadingReports] = useState(false)
   const [reportMessage, setReportMessage] = useState('')
 
-  const snapshots = [
-    buildCGIContinuitySnapshot({
-      pressurePosture: 'WATCHED',
-      trajectoryPosture: 'WATCHED',
-      predictivePosture: 'WATCHED',
-      recoveryPosture: 'WATCHED',
-      reliabilityPosture: 'WATCHED',
-      evidenceVerified: true,
-      accountabilityActive: true,
-      structuralMemoryVisible: false,
-    }),
-    buildCGIContinuitySnapshot({
-      pressurePosture: 'ELEVATED',
-      trajectoryPosture: 'WATCHED',
-      predictivePosture: 'ELEVATED',
-      recoveryPosture: 'WATCHED',
-      reliabilityPosture: 'ELEVATED',
-      evidenceVerified: false,
-      accountabilityActive: true,
-      structuralMemoryVisible: true,
-    }),
-    buildCGIContinuitySnapshot({
-      pressurePosture: 'ELEVATED',
-      trajectoryPosture: 'ELEVATED',
-      predictivePosture: 'ELEVATED',
-      recoveryPosture: 'WATCHED',
-      reliabilityPosture: 'ELEVATED',
-      evidenceVerified: false,
-      accountabilityActive: true,
-      structuralMemoryVisible: true,
-    }),
-  ]
+  const featured = buildCGIDemoScenario('FUEL_LOGISTICS_CHAIN_PROOF')
+  const pilotThread = featured.pilotThread
 
-  const latestSnapshot = snapshots[snapshots.length - 1]
-  const historyReview = reviewCGIExecutiveHistory(snapshots)
-
-  const report = buildCGIExecutiveReportPackage({
-    classification: 'BOARD_CONTINUITY_SUMMARY',
-    latestSnapshot,
-    historyReview,
-  })
-
-  const trajectory = buildCGIContinuityTrajectory({
-    continuityCondition: 'FRAGILE_RECOVERY',
-    continuityConfidence: 'FRAGILE',
-    survivabilityPressure: 'ELEVATED',
-    recoveryCredibility: 'PARTIAL',
-    recurrenceSeverity: 'RECURRING',
-    executivePosture: 'VERIFY',
-    openCases: 4,
-    escalatedCases: 1,
-    repeatedInstabilityCount: 3,
-    unresolvedCriticalCount: 0,
-    recoveryFailures: 1,
-    verifiedRecoveries: 1,
-    coordinationIssues: 2,
-    averageUnresolvedDays: 6,
-    crossSiteSignals: 1,
-    commandReviews: 1,
-    auditGaps: 1,
-  })
-
-  const institutionalMemory = buildCGIInstitutionalMemory({
-    historicalRecords: snapshots.length,
-    recurringInstabilityCount: historyReview.continuityDriftDetected ? 2 : 1,
-    recoveryFailureCount: report.requiredEvidence.toUpperCase().includes('GAP') ? 1 : 0,
-    verifiedRecoveryCount: report.requiredEvidence.toUpperCase().includes('VERIFIED') ? 1 : 0,
-    commandInterventionCount: report.requiredExecutiveAction
-      .toUpperCase()
-      .includes('COMMAND')
-      ? 1
-      : 0,
-    coordinationIssueCount: report.requiredExecutiveAction
-      .toUpperCase()
-      .includes('COORDIN')
-      ? 1
-      : 0,
-    crossSiteSignalCount: report.classification.includes('CROSS_SITE') ? 1 : 0,
-    executiveReviewCount: report.requiredExecutiveAction
-      .toUpperCase()
-      .includes('EXECUTIVE')
-      ? 1
-      : 0,
-    auditReconstructionCount: report.requiredEvidence
-      .toUpperCase()
-      .includes('AUDIT')
-      ? 1
-      : 0,
-    survivabilityThreatCount: historyReview.survivabilityConcernPersisting
-      ? 1
-      : 0,
-    unresolvedMemoryGaps: report.requiredEvidence.toUpperCase().includes('GAP') ? 1 : 0,
-    lastKnownPattern: report.dominantConcern,
-  })
+  const executiveReport = buildPilotExecutiveReport(featured)
 
   async function loadReports() {
     try {
@@ -159,32 +65,21 @@ function ExecutiveReportContent() {
       setSaveMessage('Saving executive continuity report...')
 
       await saveCGIExecutiveReport({
-        reportClassification: report.classification,
-        reportTitle: 'Executive Continuity Intelligence Report',
-        currentContinuityPosture: report.currentContinuityPosture,
-        historyDirection: report.historyDirection,
-        continuityDriftDetected: report.continuityDriftDetected,
-        survivabilityConcernPersisting:
-          report.survivabilityConcernPersisting,
-        dominantConcern: report.dominantConcern,
-        requiredExecutiveAction: trajectory.trajectoryRecommendation,
-        requiredEvidence: institutionalMemory.evidenceToPreserve,
-        executiveSummary: buildExecutiveSummary({
-          report,
-          trajectory,
-          institutionalMemory,
-        }),
-        copyReadyReport: buildCopyReadyIntelligenceReport({
-          report,
-          trajectory,
-          institutionalMemory,
-        }),
+        reportClassification: executiveReport.classification,
+        reportTitle: executiveReport.title,
+        currentContinuityPosture: executiveReport.currentPosture,
+        historyDirection: executiveReport.trajectory,
+        continuityDriftDetected: true,
+        survivabilityConcernPersisting: true,
+        dominantConcern: executiveReport.dominantConcern,
+        requiredExecutiveAction: executiveReport.requiredExecutiveAction,
+        requiredEvidence: executiveReport.requiredEvidence,
+        executiveSummary: executiveReport.executiveSummary,
+        copyReadyReport: executiveReport.copyReadyReport,
         rawPayload: {
-          report,
-          trajectory,
-          institutionalMemory,
-          latestSnapshot,
-          historyReview,
+          featured,
+          pilotThread,
+          executiveReport,
           savedFrom: '/executive-report',
         },
       })
@@ -210,76 +105,151 @@ function ExecutiveReportContent() {
           <h1 style={styles.title}>Executive Continuity Intelligence Report</h1>
 
           <p style={styles.subtitle}>
-            Board-ready continuity intelligence package combining current
-            posture, history direction, trajectory, institutional memory,
-            survivability persistence, required action, required evidence, and
-            audit-ready interpretation.
+            Board-ready continuity report for one governed instability moving
+            from request to recovery, command visibility, executive
+            interpretation, institutional memory, and audit reconstruction.
           </p>
         </section>
 
         <section style={styles.heroCard}>
           <div>
-            <p style={styles.sectionKicker}>Report Classification</p>
+            <p style={styles.sectionKicker}>Report Subject</p>
 
-            <h2 style={styles.heroTitle}>{report.classification}</h2>
+            <h2 style={styles.heroTitle}>{pilotThread.scenarioName}</h2>
 
-            <p style={styles.heroMeaning}>
-              {buildExecutiveSummary({
-                report,
-                trajectory,
-                institutionalMemory,
-              })}
-            </p>
+            <p style={styles.heroMeaning}>{executiveReport.executiveSummary}</p>
           </div>
 
           <div style={styles.statusBox}>
             <p style={styles.statusLabel}>Current Posture</p>
-
-            <p style={styles.statusValue}>
-              {report.currentContinuityPosture}
-            </p>
+            <p style={styles.statusValue}>{executiveReport.currentPosture}</p>
           </div>
         </section>
 
         <section style={styles.gridThree}>
           <SignalCard
+            title="Case ID"
+            value={pilotThread.caseId}
+            body="The governed continuity event used for this executive report."
+          />
+
+          <SignalCard
             title="Trajectory"
-            value={trajectory.trajectory}
-            body={trajectory.trajectoryDirection}
+            value={executiveReport.trajectory}
+            body="Continuity direction remains under executive interpretation."
           />
 
           <SignalCard
-            title="Memory Posture"
-            value={institutionalMemory.memoryPosture}
-            body={institutionalMemory.memoryMeaning}
-          />
-
-          <SignalCard
-            title="Memory Domain"
-            value={institutionalMemory.dominantMemoryDomain}
-            body="The strongest institutional memory domain influencing this report."
+            title="Report Classification"
+            value={executiveReport.classification}
+            body="This report is designed for leadership interpretation and board-ready review."
           />
         </section>
 
         <section style={styles.card}>
-          <p style={styles.sectionKicker}>Executive Intelligence Reading</p>
+          <p style={styles.sectionKicker}>Executive Decision</p>
 
-          <h2 style={styles.cardTitle}>{trajectory.commanderQuestion}</h2>
+          <h2 style={styles.cardTitle}>{executiveReport.executiveDecision}</h2>
 
-          <p style={styles.bodyText}>{trajectory.executiveMeaning}</p>
+          <p style={styles.bodyText}>{executiveReport.leadershipMeaning}</p>
 
           <div style={styles.priorityGrid}>
-            <PriorityItem title="Trajectory Risk" body={trajectory.trajectoryRisk} />
-
             <PriorityItem
-              title="Memory Risk"
-              body={institutionalMemory.memoryRisk}
+              title="Dominant Concern"
+              body={executiveReport.dominantConcern}
             />
 
             <PriorityItem
-              title="Continuity Learning"
-              body={institutionalMemory.continuityLearning}
+              title="Required Executive Action"
+              body={executiveReport.requiredExecutiveAction}
             />
+
+            <PriorityItem
+              title="Required Evidence"
+              body={executiveReport.requiredEvidence}
+            />
+          </div>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Continuity Chain Reconstruction</p>
+
+          <h2 style={styles.cardTitle}>
+            The full chain remains visible inside the report.
+          </h2>
+
+          <div style={styles.chainList}>
+            {pilotThread.chain.map((stage, index) => (
+              <article
+                key={`${stage.stage}-${stage.title}`}
+                style={styles.chainItem}
+              >
+                <div>
+                  <p style={styles.panelKicker}>
+                    Step {index + 1} • {formatLabel(stage.stage)}
+                  </p>
+
+                  <h3 style={styles.chainTitle}>{stage.title}</h3>
+                </div>
+
+                <div style={styles.chainGrid}>
+                  <MiniBlock
+                    title="Continuity Question"
+                    body={stage.continuityQuestion}
+                  />
+
+                  <MiniBlock
+                    title="Executive Finding"
+                    body={stage.executiveFinding}
+                  />
+
+                  <MiniBlock
+                    title="Evidence Preserved"
+                    body={stage.evidencePreserved}
+                  />
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section style={styles.gridTwo}>
+          <Panel title="Cross-Site Meaning">
+            <p style={styles.panelText}>
+              The disruption did not remain isolated. North Operations, South
+              Operations, and East Operations exposed a shared logistics
+              dependency pattern requiring executive continuity interpretation.
+            </p>
+
+            <div style={styles.siteGrid}>
+              {pilotThread.sites.map((site) => (
+                <PriorityItem
+                  key={site.siteName}
+                  title={`${site.siteName} • ${site.posture}`}
+                  body={site.finding}
+                />
+              ))}
+            </div>
+          </Panel>
+
+          <Panel title="Institutional Memory">
+            <p style={styles.panelText}>{pilotThread.executiveMemory}</p>
+          </Panel>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Audit Reconstruction</p>
+
+          <h2 style={styles.cardTitle}>
+            The report preserves the audit trail leadership may need later.
+          </h2>
+
+          <div style={styles.auditGrid}>
+            {pilotThread.auditReconstruction.map((item) => (
+              <div key={item} style={styles.auditItem}>
+                {item}
+              </div>
+            ))}
           </div>
         </section>
 
@@ -292,10 +262,9 @@ function ExecutiveReportContent() {
             </h2>
 
             <p style={styles.actionText}>
-              Saving the report creates an institutional record that can later
-              support history review, board summaries, continuity audits,
-              trajectory comparison, institutional memory, and stabilization
-              evidence.
+              Saving the report creates a reconstructable executive record for
+              continuity history, institutional memory, board review, and audit
+              verification.
             </p>
 
             {saveMessage && <p style={styles.saveMessage}>{saveMessage}</p>}
@@ -344,79 +313,13 @@ function ExecutiveReportContent() {
           </button>
         </section>
 
-        <section style={styles.gridThree}>
-          <SignalCard
-            title="History Direction"
-            value={report.historyDirection}
-            body="Shows whether continuity posture is improving, holding, worsening, or still lacking sufficient history."
-          />
-
-          <SignalCard
-            title="Continuity Drift"
-            value={report.continuityDriftDetected ? 'YES' : 'NO'}
-            body="Indicates whether continuity posture is degrading or exposure is persisting across snapshots."
-          />
-
-          <SignalCard
-            title="Survivability Persistence"
-            value={report.survivabilityConcernPersisting ? 'YES' : 'NO'}
-            body="Indicates whether elevated or critical exposure is persisting across the executive continuity record."
-          />
-        </section>
-
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Required Executive Action</p>
-
-          <h2 style={styles.cardTitle}>
-            {trajectory.trajectoryRecommendation}
-          </h2>
-
-          <p style={styles.bodyText}>
-            CGI reporting is designed to preserve continuity meaning across
-            time, not merely summarize operational activity.
-          </p>
-
-          <div style={styles.priorityGrid}>
-            <PriorityItem
-              title="Dominant Concern"
-              body={report.dominantConcern}
-            />
-
-            <PriorityItem
-              title="Required Evidence"
-              body={institutionalMemory.evidenceToPreserve}
-            />
-
-            <PriorityItem title="Generated" body={report.generatedAt} />
-          </div>
-        </section>
-
         <section style={styles.gridTwo}>
-          <Panel title="Trajectory Interpretation">
-            <p style={styles.panelText}>{trajectory.trajectoryExplanation}</p>
-            <p style={styles.panelText}>{trajectory.watchNext}</p>
+          <Panel title="Copy-Ready Board Report">
+            <pre style={styles.compactPre}>{executiveReport.copyReadyReport}</pre>
           </Panel>
 
-          <Panel title="Institutional Memory Requirement">
-            <p style={styles.panelText}>
-              {institutionalMemory.memoryPersistenceRequirement}
-            </p>
-          </Panel>
-        </section>
-
-        <section style={styles.gridTwo}>
-          <Panel title="Original Report Package">
-            <pre style={styles.compactPre}>{report.copyReadyReport}</pre>
-          </Panel>
-
-          <Panel title="Executive Intelligence Package">
-            <pre style={styles.compactPre}>
-              {buildCopyReadyIntelligenceReport({
-                report,
-                trajectory,
-                institutionalMemory,
-              })}
-            </pre>
+          <Panel title="Executive Report Summary">
+            <pre style={styles.compactPre}>{executiveReport.copyReadySummary}</pre>
           </Panel>
         </section>
 
@@ -493,90 +396,106 @@ function ExecutiveReportContent() {
             )}
           </div>
         </section>
-
-        <section style={styles.gridTwo}>
-          {report.reportSections.map((section) => (
-            <Panel key={section.label} title={section.label}>
-              <pre style={styles.compactPre}>{section.content}</pre>
-            </Panel>
-          ))}
-        </section>
-
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Copy-Ready Report</p>
-
-          <h2 style={styles.cardTitle}>
-            Standardized executive continuity intelligence package.
-          </h2>
-
-          <pre style={styles.summaryBox}>
-            {buildCopyReadyIntelligenceReport({
-              report,
-              trajectory,
-              institutionalMemory,
-            })}
-          </pre>
-        </section>
       </div>
     </main>
   )
 }
 
-function buildExecutiveSummary(input: {
-  report: ReturnType<typeof buildCGIExecutiveReportPackage>
-  trajectory: ReturnType<typeof buildCGIContinuityTrajectory>
-  institutionalMemory: ReturnType<typeof buildCGIInstitutionalMemory>
-}) {
-  return [
-    input.report.executiveSummary,
-    `Trajectory is ${input.trajectory.trajectory}: ${input.trajectory.trajectoryDirection}`,
-    `Institutional memory posture is ${input.institutionalMemory.memoryPosture} in the ${input.institutionalMemory.dominantMemoryDomain} domain.`,
-    input.institutionalMemory.memoryMeaning,
-  ].join(' ')
-}
+function buildPilotExecutiveReport(
+  featured: ReturnType<typeof buildCGIDemoScenario>,
+) {
+  const pilotThread = featured.pilotThread
 
-function buildCopyReadyIntelligenceReport(input: {
-  report: ReturnType<typeof buildCGIExecutiveReportPackage>
-  trajectory: ReturnType<typeof buildCGIContinuityTrajectory>
-  institutionalMemory: ReturnType<typeof buildCGIInstitutionalMemory>
-}) {
-  return [
+  const executiveSummary =
+    'Repeated fuel logistics disruption was governed as a continuity event, not treated as isolated operational noise. CGI preserved the chain from first report through executive interpretation, institutional memory, and audit reconstruction.'
+
+  const executiveDecision =
+    'Leadership should treat the disruption as a cross-site continuity vulnerability until durability evidence confirms that supplier concentration risk no longer threatens operational reliability.'
+
+  const leadershipMeaning =
+    'Recovery occurred, but recovery alone is not closure. The report preserves why command visibility, coordination, cross-site interpretation, evidence, and institutional memory must remain attached before continuity trust is restored.'
+
+  const dominantConcern =
+    'Supplier concentration created cross-site continuity exposure while recovery remained uneven.'
+
+  const requiredExecutiveAction =
+    'Maintain executive visibility, confirm supplier resilience, preserve audit evidence, and require durability confirmation before reducing continuity posture.'
+
+  const requiredEvidence =
+    'Request record, triage decision, case history, routing owner, intervention actions, outcome verification, recovery evidence, command rationale, cross-site pattern, executive report, memory statement, and audit trace.'
+
+  const copyReadySummary = [
+    'TSINAXA CGI Executive Report Summary',
+    '',
+    `Case: ${pilotThread.scenarioName}`,
+    `Case ID: ${pilotThread.caseId}`,
+    `Current Posture: ${featured.derivation.executivePosture}`,
+    '',
+    `Executive Summary: ${executiveSummary}`,
+    '',
+    `Executive Decision: ${executiveDecision}`,
+    '',
+    `Leadership Meaning: ${leadershipMeaning}`,
+  ].join('\n')
+
+  const copyReadyReport = [
     'TSINAXA CGI Executive Continuity Intelligence Report',
     '',
-    `Report Classification: ${input.report.classification}`,
-    `Current Continuity Posture: ${input.report.currentContinuityPosture}`,
-    `History Direction: ${input.report.historyDirection}`,
-    `Continuity Drift Detected: ${
-      input.report.continuityDriftDetected ? 'YES' : 'NO'
-    }`,
-    `Survivability Concern Persisting: ${
-      input.report.survivabilityConcernPersisting ? 'YES' : 'NO'
-    }`,
+    `Report Classification: PILOT_CHAIN_EXECUTIVE_REPORT`,
+    `Case ID: ${pilotThread.caseId}`,
+    `Report Subject: ${pilotThread.scenarioName}`,
+    `Current Continuity Posture: ${featured.derivation.executivePosture}`,
+    `Continuity Condition: ${featured.derivation.continuityCondition}`,
+    `Recovery Credibility: ${featured.derivation.recoveryCredibility}`,
+    `Recurrence Severity: ${featured.derivation.recurrenceSeverity}`,
     '',
-    `Trajectory: ${input.trajectory.trajectory}`,
-    `Momentum: ${input.trajectory.momentum}`,
-    `Direction: ${input.trajectory.trajectoryDirection}`,
-    `Commander Question: ${input.trajectory.commanderQuestion}`,
-    `Trajectory Risk: ${input.trajectory.trajectoryRisk}`,
-    `Watch Next: ${input.trajectory.watchNext}`,
+    `Executive Thesis: ${pilotThread.executiveThesis}`,
     '',
-    `Institutional Memory Posture: ${input.institutionalMemory.memoryPosture}`,
-    `Dominant Memory Domain: ${input.institutionalMemory.dominantMemoryDomain}`,
-    `Executive Memory Question: ${input.institutionalMemory.executiveQuestion}`,
-    `Continuity Learning: ${input.institutionalMemory.continuityLearning}`,
-    `Memory Risk: ${input.institutionalMemory.memoryRisk}`,
+    `Executive Summary: ${executiveSummary}`,
     '',
-    `Dominant Concern: ${input.report.dominantConcern}`,
-    `Required Executive Action: ${input.trajectory.trajectoryRecommendation}`,
-    `Required Evidence: ${input.institutionalMemory.evidenceToPreserve}`,
+    `Executive Decision: ${executiveDecision}`,
     '',
-    `Executive Summary: ${buildExecutiveSummary(input)}`,
+    `Dominant Concern: ${dominantConcern}`,
+    '',
+    `Required Executive Action: ${requiredExecutiveAction}`,
+    '',
+    `Required Evidence: ${requiredEvidence}`,
+    '',
+    'Continuity Chain:',
+    ...pilotThread.chain.map(
+      (stage, index) =>
+        `${index + 1}. ${formatLabel(stage.stage)} — ${stage.executiveFinding}`,
+    ),
+    '',
+    `Institutional Memory: ${pilotThread.executiveMemory}`,
+    '',
+    'Audit Reconstruction:',
+    ...pilotThread.auditReconstruction.map((item) => `- ${item}`),
   ].join('\n')
+
+  return {
+    classification: 'PILOT_CHAIN_EXECUTIVE_REPORT',
+    title: 'Executive Continuity Intelligence Report',
+    currentPosture: featured.derivation.executivePosture,
+    trajectory: 'ELEVATED WATCH',
+    executiveSummary,
+    executiveDecision,
+    leadershipMeaning,
+    dominantConcern,
+    requiredExecutiveAction,
+    requiredEvidence,
+    copyReadySummary,
+    copyReadyReport,
+  }
+}
+
+function formatLabel(value: string): string {
+  return value.replaceAll('_', ' ')
 }
 
 function getReportValue(
   report: PersistedExecutiveReport,
-  key: string
+  key: string,
 ): string | null {
   const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
 
@@ -585,25 +504,21 @@ function getReportValue(
     report[snakeKey] ??
     report.rawPayload?.report?.[key] ??
     report.raw_payload?.report?.[key] ??
+    report.rawPayload?.executiveReport?.[key] ??
+    report.raw_payload?.executiveReport?.[key] ??
     null
 
-  if (value === null || value === undefined) {
-    return null
-  }
+  if (value === null || value === undefined) return null
 
   return String(value)
 }
 
 function formatDate(value: string | null) {
-  if (!value) {
-    return 'Date not recorded'
-  }
+  if (!value) return 'Date not recorded'
 
   const date = new Date(value)
 
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
+  if (Number.isNaN(date.getTime())) return value
 
   return date.toLocaleString()
 }
@@ -620,9 +535,7 @@ function SignalCard({
   return (
     <article style={styles.signalCard}>
       <p style={styles.panelKicker}>{title}</p>
-
       <h3 style={styles.signalValue}>{value}</h3>
-
       <p style={styles.panelBody}>{body}</p>
     </article>
   )
@@ -638,9 +551,17 @@ function PriorityItem({
   return (
     <article style={styles.priorityItem}>
       <p style={styles.panelKicker}>{title}</p>
-
       <p style={styles.priorityBody}>{body}</p>
     </article>
+  )
+}
+
+function MiniBlock({ title, body }: { title: string; body: string }) {
+  return (
+    <div style={styles.miniBlock}>
+      <p style={styles.panelKicker}>{title}</p>
+      <p style={styles.panelBody}>{body}</p>
+    </div>
   )
 }
 
@@ -654,7 +575,6 @@ function Panel({
   return (
     <section style={styles.panel}>
       <p style={styles.panelKicker}>{title}</p>
-
       <div style={styles.panelBody}>{children}</div>
     </section>
   )
@@ -691,7 +611,7 @@ const styles: Record<string, CSSProperties> = {
   },
   subtitle: {
     color: '#cbd5e1',
-    maxWidth: '820px',
+    maxWidth: '860px',
     lineHeight: 1.65,
     fontSize: '16px',
     margin: 0,
@@ -706,63 +626,6 @@ const styles: Record<string, CSSProperties> = {
     padding: '24px',
     marginBottom: '16px',
     boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
-  },
-  actionPanel: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1fr) auto',
-    gap: '16px',
-    alignItems: 'center',
-    background: '#082f49',
-    border: '1px solid #0ea5e9',
-    borderRadius: '22px',
-    padding: '18px',
-    marginBottom: '16px',
-    boxSizing: 'border-box',
-  },
-  actionTitle: {
-    color: '#f8fafc',
-    fontSize: '22px',
-    lineHeight: 1.2,
-    margin: '8px 0',
-  },
-  actionText: {
-    color: '#cbd5e1',
-    lineHeight: 1.55,
-    margin: 0,
-    maxWidth: '760px',
-  },
-  saveMessage: {
-    color: '#cffafe',
-    fontWeight: 900,
-    margin: '12px 0 0',
-  },
-  primaryButton: {
-    border: 'none',
-    borderRadius: '14px',
-    background: '#67e8f9',
-    color: '#082f49',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: 900,
-    minHeight: '48px',
-    padding: '0 18px',
-    whiteSpace: 'nowrap',
-  },
-  secondaryButton: {
-    border: '1px solid #67e8f9',
-    borderRadius: '14px',
-    background: '#0f172a',
-    color: '#cffafe',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: 900,
-    minHeight: '48px',
-    padding: '0 18px',
-    whiteSpace: 'nowrap',
-  },
-  disabledButton: {
-    cursor: 'not-allowed',
-    opacity: 0.65,
   },
   sectionKicker: {
     color: '#94a3b8',
@@ -855,7 +718,7 @@ const styles: Record<string, CSSProperties> = {
     color: '#cbd5e1',
     lineHeight: 1.7,
     margin: 0,
-    maxWidth: '880px',
+    maxWidth: '900px',
   },
   priorityGrid: {
     display: 'grid',
@@ -876,12 +739,40 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 700,
     overflowWrap: 'anywhere',
   },
+  chainList: {
+    display: 'grid',
+    gap: '14px',
+    marginTop: '16px',
+  },
+  chainItem: {
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '18px',
+    padding: '16px',
+  },
+  chainTitle: {
+    color: '#f8fafc',
+    fontSize: '22px',
+    lineHeight: 1.2,
+    margin: '8px 0 14px',
+  },
+  chainGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: '12px',
+  },
+  miniBlock: {
+    background: '#020617',
+    border: '1px solid #1e293b',
+    borderRadius: '14px',
+    padding: '12px',
+  },
   panel: {
     background: '#0f172a',
     border: '1px solid #334155',
     borderRadius: '18px',
     padding: '16px',
-    minHeight: '260px',
+    minHeight: '220px',
     boxSizing: 'border-box',
     overflow: 'hidden',
   },
@@ -904,6 +795,83 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.7,
     margin: '0 0 12px',
   },
+  siteGrid: {
+    display: 'grid',
+    gap: '12px',
+    marginTop: '16px',
+  },
+  auditGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: '12px',
+    marginTop: '16px',
+  },
+  auditItem: {
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '14px',
+    color: '#e2e8f0',
+    fontSize: '13px',
+    lineHeight: 1.5,
+    padding: '12px',
+  },
+  actionPanel: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1fr) auto',
+    gap: '16px',
+    alignItems: 'center',
+    background: '#082f49',
+    border: '1px solid #0ea5e9',
+    borderRadius: '22px',
+    padding: '18px',
+    marginBottom: '16px',
+    boxSizing: 'border-box',
+  },
+  actionTitle: {
+    color: '#f8fafc',
+    fontSize: '22px',
+    lineHeight: 1.2,
+    margin: '8px 0',
+  },
+  actionText: {
+    color: '#cbd5e1',
+    lineHeight: 1.55,
+    margin: 0,
+    maxWidth: '760px',
+  },
+  saveMessage: {
+    color: '#cffafe',
+    fontWeight: 900,
+    margin: '12px 0 0',
+  },
+  primaryButton: {
+    border: 'none',
+    borderRadius: '14px',
+    background: '#67e8f9',
+    color: '#082f49',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 900,
+    minHeight: '48px',
+    padding: '0 18px',
+    whiteSpace: 'nowrap',
+  },
+  secondaryButton: {
+    border: '1px solid #67e8f9',
+    borderRadius: '14px',
+    background: '#0f172a',
+    color: '#cffafe',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 900,
+    minHeight: '48px',
+    padding: '0 18px',
+    whiteSpace: 'nowrap',
+  },
+  disabledButton: {
+    cursor: 'not-allowed',
+    opacity: 0.65,
+  },
   compactPre: {
     whiteSpace: 'pre-wrap',
     background: '#020617',
@@ -915,18 +883,6 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '13px',
     overflowX: 'auto',
     margin: 0,
-  },
-  summaryBox: {
-    whiteSpace: 'pre-wrap',
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '16px',
-    padding: '16px',
-    color: '#e2e8f0',
-    lineHeight: 1.55,
-    minHeight: '260px',
-    fontSize: '14px',
-    overflowX: 'auto',
   },
   archiveList: {
     display: 'grid',
