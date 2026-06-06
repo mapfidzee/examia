@@ -6,6 +6,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import InfrastructureNav from '@/components/InfrastructureNav'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
+import { buildCGIDemoScenario } from '@/lib/cgiDemoScenarioEngine'
 import { buildCGIExecutiveMemoryBoard } from '@/lib/cgiExecutiveMemoryBoardEngine'
 import { buildCGIInstitutionalMemory } from '@/lib/cgiInstitutionalMemoryEngine'
 import type { CGIHistoricalContinuitySnapshot } from '@/lib/cgiHistoricalContinuityEngine'
@@ -47,6 +48,9 @@ function CGIMemoryBoardContent() {
   const [message, setMessage] = useState('Loading executive memory board...')
   const [loading, setLoading] = useState(false)
 
+  const featured = buildCGIDemoScenario('FUEL_LOGISTICS_CHAIN_PROOF')
+  const pilotThread = featured.pilotThread
+
   useEffect(() => {
     loadMemoryBoard()
   }, [])
@@ -62,7 +66,7 @@ function CGIMemoryBoardContent() {
       setMessage(
         records.length === 0
           ? 'No continuity memory records found yet.'
-          : 'Executive memory board loaded.'
+          : 'Executive memory board loaded.',
       )
     } catch (error) {
       console.error(error)
@@ -74,7 +78,7 @@ function CGIMemoryBoardContent() {
 
   const board = useMemo(
     () => buildCGIExecutiveMemoryBoard(snapshots),
-    [snapshots]
+    [snapshots],
   )
 
   const institutionalMemory = useMemo(
@@ -82,46 +86,46 @@ function CGIMemoryBoardContent() {
       buildCGIInstitutionalMemory({
         historicalRecords: snapshots.length,
         recurringInstabilityCount: snapshots.filter((item) =>
-          String(item.recurrence_severity || '').toUpperCase().includes('RECUR')
+          String(item.recurrence_severity || '').toUpperCase().includes('RECUR'),
         ).length,
         recoveryFailureCount: snapshots.filter((item) =>
           String(item.recovery_credibility || '')
             .toUpperCase()
-            .includes('UNVERIFIED')
+            .includes('UNVERIFIED'),
         ).length,
         verifiedRecoveryCount: snapshots.filter((item) =>
-          Boolean(item.evidence_verified)
+          Boolean(item.evidence_verified),
         ).length,
         commandInterventionCount: snapshots.filter((item) =>
-          String(item.required_action || '').toUpperCase().includes('COMMAND')
+          String(item.required_action || '').toUpperCase().includes('COMMAND'),
         ).length,
         coordinationIssueCount: snapshots.filter((item) =>
-          String(item.required_action || '').toUpperCase().includes('COORDIN')
+          String(item.required_action || '').toUpperCase().includes('COORDIN'),
         ).length,
         crossSiteSignalCount: snapshots.filter((item) =>
-          String(item.source_route || '').toUpperCase().includes('CROSS')
+          String(item.source_route || '').toUpperCase().includes('CROSS'),
         ).length,
         executiveReviewCount: snapshots.filter((item) =>
           String(item.executive_reading || '')
             .toUpperCase()
-            .includes('EXECUTIVE')
+            .includes('EXECUTIVE'),
         ).length,
         auditReconstructionCount: snapshots.filter((item) =>
-          String(item.required_evidence || '').toUpperCase().includes('AUDIT')
+          String(item.required_evidence || '').toUpperCase().includes('AUDIT'),
         ).length,
         survivabilityThreatCount: snapshots.filter((item) =>
           String(item.survivability_pressure || '')
             .toUpperCase()
-            .includes('SEVERE')
+            .includes('SEVERE'),
         ).length,
         unresolvedMemoryGaps: snapshots.filter((item) => !item.evidence_verified)
           .length,
         lastKnownPattern:
           snapshots[0]?.dominant_concern ||
           snapshots[0]?.executive_reading ||
-          'No dominant remembered pattern has been recorded yet.',
+          pilotThread.executiveMemory,
       }),
-    [snapshots]
+    [snapshots, pilotThread.executiveMemory],
   )
 
   return (
@@ -135,10 +139,9 @@ function CGIMemoryBoardContent() {
           <h1 style={styles.title}>Executive Continuity Memory Board</h1>
 
           <p style={styles.subtitle}>
-            Governed executive memory surface for compressing persisted CGI
-            continuity meaning into board-level posture, institutional memory,
-            recurrence visibility, survivability exposure, evidence
-            credibility, and stabilization credibility.
+            Institutional memory surface preserving what happened, what kept
+            returning, what leadership learned, what evidence must remain
+            attached, and why visible recovery must not erase structural memory.
           </p>
         </section>
 
@@ -146,7 +149,139 @@ function CGIMemoryBoardContent() {
 
         <section style={styles.heroCard}>
           <div>
-            <p style={styles.sectionKicker}>Board-Level Memory Reading</p>
+            <p style={styles.sectionKicker}>Pilot Memory Subject</p>
+
+            <h2 style={styles.heroTitle}>{pilotThread.scenarioName}</h2>
+
+            <p style={styles.heroMeaning}>{pilotThread.executiveMemory}</p>
+          </div>
+
+          <div style={styles.statusBox}>
+            <p style={styles.statusLabel}>Memory Posture</p>
+
+            <p style={styles.statusValue}>STRUCTURAL MEMORY ACTIVE</p>
+          </div>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>What The Institution Must Remember</p>
+
+          <h2 style={styles.cardTitle}>
+            Supplier concentration created cross-site continuity exposure.
+          </h2>
+
+          <p style={styles.bodyText}>
+            The disruption was not preserved as a closed incident. CGI preserves
+            it as an institutional lesson: recovery can occur before the
+            structural vulnerability has been removed.
+          </p>
+
+          <div style={styles.gridThreeInline}>
+            <SignalCard
+              title="Remembered Vulnerability"
+              value="Supplier Concentration"
+              body="A shared dependency exposed multiple operational sites to the same continuity weakness."
+            />
+
+            <SignalCard
+              title="Remembered Pattern"
+              value="Cross-Site Exposure"
+              body="North, South, and East operations did not carry equal risk, but they shared the same structural dependency."
+            />
+
+            <SignalCard
+              title="Remembered Rule"
+              value="Recovery Is Not Closure"
+              body="Durability evidence must remain attached after visible recovery."
+            />
+          </div>
+        </section>
+
+        <section style={styles.gridThree}>
+          {pilotThread.sites.map((site) => (
+            <SignalCard
+              key={site.siteName}
+              title={site.siteName}
+              value={site.posture}
+              body={site.finding}
+            />
+          ))}
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Memory Chain</p>
+
+          <h2 style={styles.cardTitle}>
+            The lesson remains attached to the full continuity chain.
+          </h2>
+
+          <div style={styles.memoryChain}>
+            {pilotThread.chain.map((stage, index) => (
+              <article
+                key={`${stage.stage}-${stage.title}`}
+                style={styles.memoryChainItem}
+              >
+                <p style={styles.panelKicker}>
+                  Step {index + 1} • {formatLabel(stage.stage)}
+                </p>
+
+                <h3 style={styles.memoryTitle}>{stage.title}</h3>
+
+                <p style={styles.memoryBody}>{stage.executiveFinding}</p>
+
+                <p style={styles.evidenceText}>{stage.evidencePreserved}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Audit Memory</p>
+
+          <h2 style={styles.cardTitle}>
+            Memory remains useful because the chain can be reconstructed.
+          </h2>
+
+          <div style={styles.auditGrid}>
+            {pilotThread.auditReconstruction.map((item) => (
+              <div key={item} style={styles.auditItem}>
+                {item}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section style={styles.actionPanel}>
+          <div>
+            <p style={styles.sectionKicker}>Live Memory Compression</p>
+
+            <h2 style={styles.actionTitle}>
+              Compress persisted continuity records into executive memory.
+            </h2>
+
+            <p style={styles.actionText}>
+              This board combines the pilot memory thread with persisted
+              continuity snapshots so CGI can show both the canonical lesson and
+              the live institutional memory state.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={loadMemoryBoard}
+            disabled={loading}
+            style={{
+              ...styles.primaryButton,
+              ...(loading ? styles.disabledButton : {}),
+            }}
+          >
+            {loading ? 'Refreshing...' : 'Refresh Memory'}
+          </button>
+        </section>
+
+        <section style={styles.heroCard}>
+          <div>
+            <p style={styles.sectionKicker}>Live Board-Level Memory Reading</p>
 
             <h2 style={styles.heroTitle}>{board.boardPostureLabel}</h2>
 
@@ -180,35 +315,6 @@ function CGIMemoryBoardContent() {
               {institutionalMemory.dominantMemoryDomain}
             </p>
           </div>
-        </section>
-
-        <section style={styles.actionPanel}>
-          <div>
-            <p style={styles.sectionKicker}>Live Memory Compression</p>
-
-            <h2 style={styles.actionTitle}>
-              Compress governed continuity memory into executive meaning.
-            </h2>
-
-            <p style={styles.actionText}>
-              This board now combines executive memory compression with
-              institutional memory intelligence, so CGI can show what happened,
-              what keeps returning, what must not be forgotten, and what
-              evidence must remain attached to future continuity decisions.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={loadMemoryBoard}
-            disabled={loading}
-            style={{
-              ...styles.primaryButton,
-              ...(loading ? styles.disabledButton : {}),
-            }}
-          >
-            {loading ? 'Refreshing...' : 'Refresh Memory'}
-          </button>
         </section>
 
         <section style={styles.gridThree}>
@@ -252,7 +358,7 @@ function CGIMemoryBoardContent() {
         </section>
 
         <section style={styles.card}>
-          <p style={styles.sectionKicker}>What CGI Remembers</p>
+          <p style={styles.sectionKicker}>What CGI Remembers Live</p>
 
           <h2 style={styles.cardTitle}>
             The organization must not forget what weakened continuity before.
@@ -321,26 +427,6 @@ function CGIMemoryBoardContent() {
           />
         </section>
 
-        <section style={styles.gridThree}>
-          <SignalCard
-            title="Memory Pressure"
-            value={board.institutionalMemoryPressure}
-            body="Institutional pressure carried by persisted continuity memory."
-          />
-
-          <SignalCard
-            title="Persistence Severity"
-            value={board.continuityPersistenceSeverity}
-            body="Severity of continuity persistence across historical memory."
-          />
-
-          <SignalCard
-            title="Snapshot Count"
-            value={String(board.historicalReview.snapshotCount)}
-            body="Number of continuity snapshots compressed into the board reading."
-          />
-        </section>
-
         <section style={styles.card}>
           <p style={styles.sectionKicker}>Dominant Board Concern</p>
 
@@ -386,70 +472,6 @@ function CGIMemoryBoardContent() {
         </section>
 
         <section style={styles.card}>
-          <p style={styles.sectionKicker}>Executive Compression Summary</p>
-
-          <h2 style={styles.cardTitle}>
-            CGI memory compresses continuity history into leadership meaning.
-          </h2>
-
-          <p style={styles.bodyText}>
-            {board.compression.executiveCompressionSummary}
-          </p>
-        </section>
-
-        <section style={styles.gridTwo}>
-          <Panel title="Historical Review">
-            <div style={styles.infoList}>
-              <Info
-                label="Direction"
-                value={board.historicalReview.directionLabel}
-              />
-              <Info
-                label="Trend"
-                value={board.historicalReview.historicalTrendLabel}
-              />
-              <Info
-                label="Recovery"
-                value={board.historicalReview.recoveryTrajectoryLabel}
-              />
-              <Info
-                label="Stabilization"
-                value={board.historicalReview.stabilizationCredibilityLabel}
-              />
-              <Info
-                label="Current Posture"
-                value={board.historicalReview.currentPosture}
-              />
-            </div>
-          </Panel>
-
-          <Panel title="Memory Visibility">
-            <div style={styles.infoList}>
-              <Info
-                label="Stabilization Visible"
-                value={board.stabilizationCredibilityVisible ? 'YES' : 'NO'}
-              />
-              <Info
-                label="Survivability Visible"
-                value={board.survivabilityExposureVisible ? 'YES' : 'NO'}
-              />
-              <Info
-                label="Recurrence Visible"
-                value={board.recurrencePatternVisible ? 'YES' : 'NO'}
-              />
-              <Info
-                label="Evidence Gap Visible"
-                value={board.evidenceGapVisible ? 'YES' : 'NO'}
-              />
-              <Info
-                label="Stabilization Credible"
-                value={board.compression.stabilizationCredible ? 'YES' : 'NO'}
-              />
-            </div>
-          </Panel>
-        </section>
-
-        <section style={styles.card}>
           <p style={styles.sectionKicker}>Memory Doctrine Statement</p>
 
           <h2 style={styles.cardTitle}>
@@ -476,7 +498,7 @@ function CGIMemoryBoardContent() {
                 <MemoryItem
                   key={snapshot.id}
                   title={`${snapshot.continuity_posture} • ${formatDate(
-                    snapshot.created_at
+                    snapshot.created_at,
                   )}`}
                   body={
                     snapshot.executive_reading ||
@@ -493,14 +515,16 @@ function CGIMemoryBoardContent() {
   )
 }
 
+function formatLabel(value: string) {
+  return value.replaceAll('_', ' ')
+}
+
 function formatDate(value: string) {
   if (!value) return 'Not recorded'
 
   const date = new Date(value)
 
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
+  if (Number.isNaN(date.getTime())) return value
 
   return date.toLocaleString()
 }
@@ -554,16 +578,6 @@ function Panel({
 
       <div style={styles.panelBody}>{children}</div>
     </section>
-  )
-}
-
-function Info({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={styles.infoRow}>
-      <span style={styles.infoLabel}>{label}</span>
-
-      <strong style={styles.infoValue}>{value}</strong>
-    </div>
   )
 }
 
@@ -763,6 +777,41 @@ const styles: Record<string, CSSProperties> = {
     margin: 0,
     maxWidth: '880px',
   },
+  memoryChain: {
+    display: 'grid',
+    gap: '14px',
+    marginTop: '16px',
+  },
+  memoryChainItem: {
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '18px',
+    padding: '16px',
+  },
+  evidenceText: {
+    color: '#a5f3fc',
+    borderTop: '1px solid #334155',
+    lineHeight: 1.6,
+    margin: '12px 0 0',
+    paddingTop: '12px',
+    fontSize: '13px',
+    fontWeight: 800,
+  },
+  auditGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: '12px',
+    marginTop: '16px',
+  },
+  auditItem: {
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '14px',
+    color: '#e2e8f0',
+    fontSize: '13px',
+    lineHeight: 1.5,
+    padding: '12px',
+  },
   memoryList: {
     display: 'grid',
     gap: '12px',
@@ -810,31 +859,6 @@ const styles: Record<string, CSSProperties> = {
     color: '#cbd5e1',
     lineHeight: 1.7,
     margin: 0,
-  },
-  infoList: {
-    display: 'grid',
-    gap: '10px',
-    marginTop: '14px',
-  },
-  infoRow: {
-    display: 'grid',
-    gridTemplateColumns: '160px minmax(0, 1fr)',
-    gap: '12px',
-    background: '#020617',
-    border: '1px solid #1e293b',
-    borderRadius: '14px',
-    padding: '12px',
-    alignItems: 'start',
-  },
-  infoLabel: {
-    color: '#94a3b8',
-    fontWeight: 800,
-    fontSize: '12px',
-  },
-  infoValue: {
-    color: '#f8fafc',
-    lineHeight: 1.45,
-    overflowWrap: 'anywhere',
   },
   emptyText: {
     color: '#94a3b8',
