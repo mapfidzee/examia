@@ -25,11 +25,7 @@ function Section({
       <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">
         {eyebrow}
       </p>
-
-      <h2 className="mt-3 text-3xl font-bold tracking-tight">
-        {title}
-      </h2>
-
+      <h2 className="mt-3 text-3xl font-bold tracking-tight">{title}</h2>
       <div className="mt-5 space-y-4 text-lg leading-8 text-zinc-300">
         {children}
       </div>
@@ -52,32 +48,6 @@ function BulletList({ items }: { items: string[] }) {
   )
 }
 
-function IntelligenceCard({
-  title,
-  question,
-  meaning,
-}: {
-  title: string
-  question: string
-  meaning: string
-}) {
-  return (
-    <div className="rounded-3xl border border-zinc-800 bg-black p-6">
-      <p className="text-sm uppercase tracking-[0.25em] text-zinc-500">
-        {title}
-      </p>
-
-      <h3 className="mt-4 text-2xl font-semibold leading-tight">
-        {question}
-      </h3>
-
-      <p className="mt-4 text-base leading-7 text-zinc-400">
-        {meaning}
-      </p>
-    </div>
-  )
-}
-
 function BriefingCard({
   label,
   value,
@@ -90,17 +60,14 @@ function BriefingCard({
       <p className="text-sm uppercase tracking-[0.25em] text-zinc-500">
         {label}
       </p>
-
-      <p className="mt-4 text-xl font-semibold leading-8 text-white">
-        {value}
-      </p>
+      <p className="mt-4 text-xl font-semibold leading-8 text-white">{value}</p>
     </div>
   )
 }
 
 export default function CGIBriefPage() {
-  const pilotPackage =
-    buildCGIInstitutionalPilotPackage('CONTROLLED_PILOT')
+  const pilotPackage = buildCGIInstitutionalPilotPackage('CONTROLLED_PILOT')
+  const pilotThread = pilotPackage.pilotScenarioThread
 
   const briefing = buildCGIExecutiveBriefing({
     pressurePosture: 'ELEVATED',
@@ -114,16 +81,16 @@ export default function CGIBriefPage() {
   })
 
   const postureFormat = formatCGIExecutivePosture(
-    briefing.synthesis.synthesisPosture
+    briefing.synthesis.synthesisPosture,
   )
 
   const evidenceLanguage = formatCGIEvidenceLanguage(
     false,
-    briefing.synthesis.synthesisPosture
+    briefing.synthesis.synthesisPosture,
   )
 
   const survivabilityLanguage = formatCGISurvivabilityLanguage(
-    briefing.synthesis.synthesisPosture
+    briefing.synthesis.synthesisPosture,
   )
 
   const governanceSafeLanguage = formatCGIGovernanceSafeLanguage()
@@ -141,21 +108,122 @@ export default function CGIBriefPage() {
           </h1>
 
           <p className="mt-6 max-w-4xl text-xl leading-9 text-zinc-300">
-            CGI compresses pressure, trajectory, predictive warning,
-            recovery credibility, and continuity trustworthiness into one
-            synchronized executive reading.
+            CGI proves that visible instability can be governed from first
+            report through recovery, command visibility, executive
+            interpretation, institutional memory, and audit reconstruction.
           </p>
 
           <div className="mt-8 rounded-3xl border border-zinc-800 bg-black p-6">
             <p className="text-sm uppercase tracking-[0.25em] text-zinc-500">
               Core Executive Question
             </p>
-
             <p className="mt-3 text-3xl font-semibold leading-tight">
               {briefing.coreQuestion}
             </p>
           </div>
         </header>
+
+        <Section
+          eyebrow="Pilot Chain Proof"
+          title={pilotThread.scenarioName}
+        >
+          <p>{pilotThread.scenarioSummary}</p>
+
+          <div className="rounded-3xl border border-amber-800 bg-amber-950/20 p-6 text-2xl font-semibold leading-relaxed text-amber-100">
+            {pilotThread.doctrine}
+          </div>
+
+          <div className="rounded-3xl border border-zinc-800 bg-black p-6">
+            <p className="text-sm uppercase tracking-[0.25em] text-zinc-500">
+              Executive Thesis
+            </p>
+            <p className="mt-3 text-2xl font-semibold leading-relaxed text-white">
+              {pilotThread.executiveThesis}
+            </p>
+          </div>
+        </Section>
+
+        <Section
+          eyebrow="One Instability. One Chain."
+          title="The full CGI lifecycle is now demonstrable."
+        >
+          <div className="grid gap-4 md:grid-cols-3">
+            {pilotThread.sites.map((site) => (
+              <div
+                key={site.siteName}
+                className="rounded-3xl border border-zinc-800 bg-black p-6"
+              >
+                <p className="text-sm uppercase tracking-[0.25em] text-zinc-500">
+                  {site.siteName}
+                </p>
+                <p className="mt-3 text-3xl font-bold text-amber-300">
+                  {site.posture}
+                </p>
+                <p className="mt-4 text-base leading-7 text-zinc-400">
+                  {site.finding}
+                </p>
+              </div>
+            ))}
+          </div>
+        </Section>
+
+        <Section
+          eyebrow="Continuity Chain"
+          title="Request to Audit Reconstruction"
+        >
+          <div className="space-y-4">
+            {pilotThread.chain.map((stage, index) => (
+              <article
+                key={`${stage.stage}-${stage.title}`}
+                className="rounded-3xl border border-zinc-800 bg-black p-6"
+              >
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <p className="text-sm uppercase tracking-[0.25em] text-zinc-500">
+                      Step {index + 1} • {stage.stage}
+                    </p>
+                    <h3 className="mt-2 text-2xl font-bold text-white">
+                      {stage.title}
+                    </h3>
+                  </div>
+
+                  <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-amber-300">
+                    Evidence Preserved
+                  </div>
+                </div>
+
+                <div className="mt-5 grid gap-4 md:grid-cols-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                      Continuity Question
+                    </p>
+                    <p className="mt-2 leading-7 text-zinc-300">
+                      {stage.continuityQuestion}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                      Executive Finding
+                    </p>
+                    <p className="mt-2 leading-7 text-zinc-300">
+                      {stage.executiveFinding}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                      Evidence
+                    </p>
+                    <p className="mt-2 leading-7 text-zinc-300">
+                      {stage.evidencePreserved}
+                    </p>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </Section>
 
         <section className="rounded-3xl border border-cyan-900 bg-cyan-950/30 p-8">
           <p className="text-sm uppercase tracking-[0.3em] text-cyan-300">
@@ -179,17 +247,14 @@ export default function CGIBriefPage() {
               label="Dominant Concern"
               value={briefing.dominantConcern}
             />
-
             <BriefingCard
               label="Synthesis Posture"
               value={briefing.synthesis.synthesisPosture}
             />
-
             <BriefingCard
               label="Required Executive Action"
               value={briefing.requiredExecutiveAction}
             />
-
             <BriefingCard
               label="Required Evidence"
               value={briefing.requiredEvidence}
@@ -199,71 +264,22 @@ export default function CGIBriefPage() {
 
         <Section
           eyebrow="Executive Problem"
-          title="Most institutions can see activity. Few can interpret continuity credibility."
+          title="Most institutions can see activity. Few can reconstruct continuity credibility."
         >
           <p>
             Events, tickets, dashboards, alerts, and workflows can show that
             something happened.
           </p>
-
           <p>
-            They do not always show whether the institution is still capable of
-            stabilizing itself reliably under pressure.
+            They do not always prove whether stabilization held, whether the
+            risk returned, whether evidence remained attached, or whether
+            leadership can reconstruct the chain later.
           </p>
-
-          <div className="rounded-3xl border border-zinc-800 bg-black p-6 text-2xl font-semibold leading-relaxed text-white">
-            CGI exists to interpret whether visible recovery is becoming
-            durable continuity — or whether instability is returning beneath
-            apparent resolution.
-          </div>
-        </Section>
-
-        <Section
-          eyebrow="Synthesis Layer"
-          title="CGI turns separate intelligence surfaces into one executive continuity posture."
-        >
-          <div className="grid gap-5 md:grid-cols-2">
-            <IntelligenceCard
-              title="Pressure"
-              question="Is operational pressure weakening survivability?"
-              meaning="Pressure intelligence shows whether accumulated strain is beginning to threaten continuity protection."
-            />
-
-            <IntelligenceCard
-              title="Trajectory"
-              question="Is continuity stabilizing, holding, or degrading?"
-              meaning="Trajectory intelligence shows the direction of continuity movement across persisted memory."
-            />
-
-            <IntelligenceCard
-              title="Predictive Warning"
-              question="What pressure may become visible next?"
-              meaning="Early-warning intelligence identifies continuity risk before disruption becomes fully visible."
-            />
-
-            <IntelligenceCard
-              title="Recovery"
-              question="Is recovery credible or only temporarily contained?"
-              meaning="Recovery governance checks whether visible improvement is becoming durable stabilization."
-            />
-
-            <IntelligenceCard
-              title="Reliability"
-              question="Can stabilization still be trusted?"
-              meaning="Trustworthiness intelligence evaluates whether continuity credibility can hold under sustained pressure."
-            />
-
-            <IntelligenceCard
-              title="Executive Action"
-              question="What must leadership protect now?"
-              meaning="Command intelligence compresses the condition into executive posture, required action, and evidence need."
-            />
-          </div>
         </Section>
 
         <Section
           eyebrow="Standardized Executive Language"
-          title="CGI now uses shared synthesis, posture, evidence, and survivability language."
+          title="CGI uses shared synthesis, posture, evidence, and survivability language."
         >
           <BulletList
             items={[
@@ -277,109 +293,28 @@ export default function CGIBriefPage() {
         </Section>
 
         <Section
-          eyebrow="Core Doctrine"
-          title="Visible recovery is not the same as durable stabilization."
-        >
-          <p>CGI does not govern events alone.</p>
-
-          <p>
-            CGI governs continuity credibility after instability becomes
-            visible.
-          </p>
-
-          <p>
-            The system tracks whether recovery is holding, whether pressure is
-            accumulating, whether recurrence is returning, and whether
-            leadership has enough evidence to trust stabilization.
-          </p>
-        </Section>
-
-        <Section
-          eyebrow="Executive Outputs"
-          title="CGI compresses operational instability into calm command visibility."
-        >
-          <BulletList
-            items={[
-              'Continuity condition',
-              'Pressure posture',
-              'Trajectory direction',
-              'Predictive early-warning posture',
-              'Recovery credibility',
-              'Continuity trustworthiness',
-              'Survivability pressure',
-              'Structural memory signals',
-              'Accountability status',
-              'Required executive action',
-              'Required stabilization evidence',
-            ]}
-          />
-        </Section>
-
-        <Section
-          eyebrow="Structural Memory"
-          title="CGI remembers what ordinary dashboards often forget."
-        >
-          <p>Most systems move on when an item appears closed.</p>
-
-          <p>
-            CGI preserves recurrence, reburn, fragile recovery, unresolved
-            pressure, repeated escalation, and survivability strain across
-            time.
-          </p>
-
-          <div className="rounded-3xl border border-zinc-800 bg-black p-6">
-            <p className="text-sm uppercase tracking-[0.25em] text-zinc-500">
-              CGI Principle
-            </p>
-
-            <p className="mt-3 text-2xl font-semibold leading-relaxed">
-              Repeated instability is often structural weakness — not temporary
-              difficulty.
-            </p>
-          </div>
-        </Section>
-
-        <Section
-          eyebrow="Generated Executive Brief"
-          title="Standardized copy-ready continuity briefing"
-        >
-          <pre className="whitespace-pre-wrap rounded-3xl border border-zinc-800 bg-black p-6 text-base leading-8 text-zinc-300">
-            {briefing.copyReadyBrief}
-          </pre>
-        </Section>
-
-        <Section
           eyebrow="Pilot Structure"
           title="Controlled Institutional Pilot"
         >
           <div className="grid gap-5 md:grid-cols-2">
-            <div className="rounded-3xl border border-zinc-800 bg-black p-6">
-              <p className="text-sm uppercase tracking-[0.25em] text-zinc-500">
-                Pilot Duration
-              </p>
-
-              <p className="mt-3 text-3xl font-semibold">
-                {pilotPackage.pilotDuration}
-              </p>
-            </div>
-
-            <div className="rounded-3xl border border-zinc-800 bg-black p-6">
-              <p className="text-sm uppercase tracking-[0.25em] text-zinc-500">
-                Pilot Range
-              </p>
-
-              <p className="mt-3 text-3xl font-semibold">
-                {pilotPackage.pilotPriceRange}
-              </p>
-            </div>
+            <BriefingCard
+              label="Pilot Duration"
+              value={pilotPackage.pilotDuration}
+            />
+            <BriefingCard
+              label="Pilot Range"
+              value={pilotPackage.pilotPriceRange}
+            />
           </div>
 
-          <p>
-            The pilot evaluates how CGI interprets visible instability,
-            recovery credibility, recurrence, pressure, accountability,
-            trajectory, and executive stabilization risk inside a
-            continuity-sensitive environment.
-          </p>
+          <p>{pilotPackage.pilotPromise}</p>
+        </Section>
+
+        <Section
+          eyebrow="What CGI Demonstrates"
+          title="The pilot is now chain-proof, not dashboard-proof."
+        >
+          <BulletList items={pilotPackage.whatCGIDemonstrates} />
         </Section>
 
         <Section
@@ -404,47 +339,48 @@ export default function CGIBriefPage() {
         </Section>
 
         <Section
-          eyebrow="Expansion Readiness"
-          title="The synthesis layer now supports institutional expansion."
+          eyebrow="Institutional Memory"
+          title="The lesson survives after visible pressure fades."
         >
-          <BulletList
-            items={[
-              'Executive command centers',
-              'Cross-site continuity coordination',
-              'Institutional survivability monitoring',
-              'Executive briefing automation',
-              'Continuity trustworthiness boards',
-              'Governance intelligence layers',
-            ]}
-          />
+          <div className="rounded-3xl border border-zinc-800 bg-black p-6 text-2xl font-semibold leading-relaxed text-white">
+            {pilotThread.executiveMemory}
+          </div>
+        </Section>
+
+        <Section
+          eyebrow="Audit Reconstruction"
+          title="The chain remains reconstructable."
+        >
+          <BulletList items={pilotThread.auditReconstruction} />
+        </Section>
+
+        <Section
+          eyebrow="Generated Executive Brief"
+          title="Standardized copy-ready continuity briefing"
+        >
+          <pre className="whitespace-pre-wrap rounded-3xl border border-zinc-800 bg-black p-6 text-base leading-8 text-zinc-300">
+            {briefing.copyReadyBrief}
+          </pre>
         </Section>
 
         <Section
           eyebrow="Closing Position"
           title="CGI is executive continuity intelligence infrastructure."
         >
-          <p>
-            CGI does not compete with ordinary operational dashboards.
-          </p>
-
-          <p>
-            CGI governs continuity credibility under pressure.
-          </p>
-
+          <p>CGI does not compete with ordinary operational dashboards.</p>
+          <p>CGI governs continuity credibility under pressure.</p>
           <p>
             It helps institutions determine whether stabilization is truly
-            holding — or whether instability is returning beneath apparent
-            recovery.
+            holding, whether recurrence is returning, and whether the chain can
+            still be reconstructed.
           </p>
 
           <div className="rounded-3xl border border-zinc-800 bg-black p-6">
             <p className="text-sm uppercase tracking-[0.25em] text-zinc-500">
-              Executive Positioning
+              Closing Offer
             </p>
-
             <p className="mt-3 text-2xl font-semibold leading-relaxed">
-              TSINAXA CGI is an Executive Continuity Intelligence
-              Infrastructure for institutions operating under pressure.
+              {pilotPackage.closingOffer}
             </p>
           </div>
         </Section>
