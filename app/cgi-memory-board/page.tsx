@@ -7,6 +7,7 @@ import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import InfrastructureNav from '@/components/InfrastructureNav'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { buildCGIExecutiveMemoryBoard } from '@/lib/cgiExecutiveMemoryBoardEngine'
+import { buildCGIInstitutionalMemory } from '@/lib/cgiInstitutionalMemoryEngine'
 import type { CGIHistoricalContinuitySnapshot } from '@/lib/cgiHistoricalContinuityEngine'
 import { loadCGIContinuitySnapshots } from '@/lib/cgiPersistenceEngine'
 
@@ -32,11 +33,7 @@ type PersistedContinuitySnapshot = CGIHistoricalContinuitySnapshot & {
 export default function CGIMemoryBoardPage() {
   return (
     <GovernanceRouteGuard
-      allowedRoles={[
-        'SUPER_ADMIN',
-        'COMMAND_ADMIN',
-        'GOVERNANCE_OFFICER',
-      ]}
+      allowedRoles={['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']}
     >
       <CGIGovernanceShell>
         <CGIMemoryBoardContent />
@@ -80,6 +77,53 @@ function CGIMemoryBoardContent() {
     [snapshots]
   )
 
+  const institutionalMemory = useMemo(
+    () =>
+      buildCGIInstitutionalMemory({
+        historicalRecords: snapshots.length,
+        recurringInstabilityCount: snapshots.filter((item) =>
+          String(item.recurrence_severity || '').toUpperCase().includes('RECUR')
+        ).length,
+        recoveryFailureCount: snapshots.filter((item) =>
+          String(item.recovery_credibility || '')
+            .toUpperCase()
+            .includes('UNVERIFIED')
+        ).length,
+        verifiedRecoveryCount: snapshots.filter((item) =>
+          Boolean(item.evidence_verified)
+        ).length,
+        commandInterventionCount: snapshots.filter((item) =>
+          String(item.required_action || '').toUpperCase().includes('COMMAND')
+        ).length,
+        coordinationIssueCount: snapshots.filter((item) =>
+          String(item.required_action || '').toUpperCase().includes('COORDIN')
+        ).length,
+        crossSiteSignalCount: snapshots.filter((item) =>
+          String(item.source_route || '').toUpperCase().includes('CROSS')
+        ).length,
+        executiveReviewCount: snapshots.filter((item) =>
+          String(item.executive_reading || '')
+            .toUpperCase()
+            .includes('EXECUTIVE')
+        ).length,
+        auditReconstructionCount: snapshots.filter((item) =>
+          String(item.required_evidence || '').toUpperCase().includes('AUDIT')
+        ).length,
+        survivabilityThreatCount: snapshots.filter((item) =>
+          String(item.survivability_pressure || '')
+            .toUpperCase()
+            .includes('SEVERE')
+        ).length,
+        unresolvedMemoryGaps: snapshots.filter((item) => !item.evidence_verified)
+          .length,
+        lastKnownPattern:
+          snapshots[0]?.dominant_concern ||
+          snapshots[0]?.executive_reading ||
+          'No dominant remembered pattern has been recorded yet.',
+      }),
+    [snapshots]
+  )
+
   return (
     <main style={styles.page}>
       <div style={styles.container}>
@@ -92,8 +136,9 @@ function CGIMemoryBoardContent() {
 
           <p style={styles.subtitle}>
             Governed executive memory surface for compressing persisted CGI
-            continuity meaning into board-level posture, urgency, escalation,
-            evidence, recurrence, survivability, and stabilization credibility.
+            continuity meaning into board-level posture, institutional memory,
+            recurrence visibility, survivability exposure, evidence
+            credibility, and stabilization credibility.
           </p>
         </section>
 
@@ -115,6 +160,28 @@ function CGIMemoryBoardContent() {
           </div>
         </section>
 
+        <section style={styles.heroCard}>
+          <div>
+            <p style={styles.sectionKicker}>Institutional Memory Reading</p>
+
+            <h2 style={styles.heroTitle}>
+              {institutionalMemory.memoryPosture}
+            </h2>
+
+            <p style={styles.heroMeaning}>
+              {institutionalMemory.memoryMeaning}
+            </p>
+          </div>
+
+          <div style={styles.statusBox}>
+            <p style={styles.statusLabel}>Memory Domain</p>
+
+            <p style={styles.statusValue}>
+              {institutionalMemory.dominantMemoryDomain}
+            </p>
+          </div>
+        </section>
+
         <section style={styles.actionPanel}>
           <div>
             <p style={styles.sectionKicker}>Live Memory Compression</p>
@@ -124,9 +191,10 @@ function CGIMemoryBoardContent() {
             </h2>
 
             <p style={styles.actionText}>
-              This board uses the CGI executive memory board engine to unify
-              historical review, executive compression, survivability exposure,
-              recurrence visibility, and evidence credibility.
+              This board now combines executive memory compression with
+              institutional memory intelligence, so CGI can show what happened,
+              what keeps returning, what must not be forgotten, and what
+              evidence must remain attached to future continuity decisions.
             </p>
           </div>
 
@@ -161,6 +229,56 @@ function CGIMemoryBoardContent() {
             value={board.escalationRequired ? 'YES' : 'NO'}
             body="Indicates whether memory compression requires continued executive visibility."
           />
+        </section>
+
+        <section style={styles.gridThree}>
+          <SignalCard
+            title="Institutional Memory"
+            value={institutionalMemory.memoryPosture}
+            body="Shows whether CGI memory is absent, emerging, active, structural, or critical."
+          />
+
+          <SignalCard
+            title="Dominant Domain"
+            value={institutionalMemory.dominantMemoryDomain}
+            body="The continuity domain carrying the strongest remembered significance."
+          />
+
+          <SignalCard
+            title="Memory Risk"
+            value={institutionalMemory.memoryRisk}
+            body="The risk created if institutional memory is ignored."
+          />
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>What CGI Remembers</p>
+
+          <h2 style={styles.cardTitle}>
+            The organization must not forget what weakened continuity before.
+          </h2>
+
+          <p style={styles.bodyText}>{institutionalMemory.memoryNarrative}</p>
+
+          <div style={styles.gridThreeInline}>
+            <SignalCard
+              title="Executive Question"
+              value={institutionalMemory.executiveQuestion}
+              body="The leadership question created by institutional memory."
+            />
+
+            <SignalCard
+              title="Continuity Learning"
+              value={institutionalMemory.continuityLearning}
+              body="What CGI has learned from preserved continuity records."
+            />
+
+            <SignalCard
+              title="Evidence To Preserve"
+              value={institutionalMemory.evidenceToPreserve}
+              body="The proof that should remain attached to future decisions."
+            />
+          </div>
         </section>
 
         <section style={styles.gridThree}>
@@ -238,6 +356,20 @@ function CGIMemoryBoardContent() {
 
           <Panel title="Required Board Evidence">
             <p style={styles.panelText}>{board.requiredBoardEvidence}</p>
+          </Panel>
+        </section>
+
+        <section style={styles.gridTwo}>
+          <Panel title="Memory Recommendation">
+            <p style={styles.panelText}>
+              {institutionalMemory.memoryRecommendation}
+            </p>
+          </Panel>
+
+          <Panel title="Memory Persistence Requirement">
+            <p style={styles.panelText}>
+              {institutionalMemory.memoryPersistenceRequirement}
+            </p>
           </Panel>
         </section>
 
@@ -581,6 +713,12 @@ const styles: Record<string, CSSProperties> = {
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
     gap: '14px',
     marginBottom: '16px',
+  },
+  gridThreeInline: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: '14px',
+    marginTop: '16px',
   },
   gridTwo: {
     display: 'grid',
