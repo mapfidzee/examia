@@ -6,6 +6,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import InfrastructureNav from '@/components/InfrastructureNav'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
+import { buildCGIDemoScenario } from '@/lib/cgiDemoScenarioEngine'
 import { buildCGIExecutiveBriefing } from '@/lib/cgiExecutiveBriefingGenerator'
 import {
   formatCGIExecutivePosture,
@@ -30,9 +31,27 @@ type SiteContinuityProfile = {
   evidenceVerified: boolean
   accountabilityActive: boolean
   structuralMemoryVisible: boolean
+  continuityFinding: string
+  sharedDependency: string
+  recoveryMeaning: string
 }
 
 type PersistedSiteContinuityProfile = Record<string, any>
+
+type CrossSitePattern = {
+  patternName: string
+  patternType: string
+  affectedSites: string[]
+  dominantSite: string
+  sharedDependency: string
+  enterpriseExposure: string
+  recoveryPattern: string
+  commandMeaning: string
+  coordinationMeaning: string
+  executiveMeaning: string
+  nextGovernedDestination: string
+  evidenceStandard: string
+}
 
 type CrossSiteDecision = {
   chainPosition: string
@@ -47,8 +66,25 @@ type CrossSiteDecision = {
 
 const sites: SiteContinuityProfile[] = [
   {
-    siteName: 'North Unit',
+    siteName: 'North Operations Site',
     region: 'Primary Operations',
+    pressurePosture: 'ELEVATED',
+    trajectoryPosture: 'WATCHED',
+    predictivePosture: 'ELEVATED',
+    recoveryPosture: 'WATCHED',
+    reliabilityPosture: 'ELEVATED',
+    evidenceVerified: true,
+    accountabilityActive: true,
+    structuralMemoryVisible: true,
+    continuityFinding:
+      'Fuel availability has been restored, but continuity confidence remains under observation.',
+    sharedDependency: 'Shared regional fuel supplier',
+    recoveryMeaning:
+      'North is stabilizing, but recovery confidence still depends on whether supplier exposure is resolved.',
+  },
+  {
+    siteName: 'South Operations Site',
+    region: 'Secondary Operations',
     pressurePosture: 'ELEVATED',
     trajectoryPosture: 'ELEVATED',
     predictivePosture: 'ELEVATED',
@@ -57,21 +93,14 @@ const sites: SiteContinuityProfile[] = [
     evidenceVerified: false,
     accountabilityActive: true,
     structuralMemoryVisible: true,
+    continuityFinding:
+      'Routing delay exposed dependence on the same supplier chain that affected North.',
+    sharedDependency: 'Shared regional fuel supplier',
+    recoveryMeaning:
+      'South appears partially recovered, but evidence remains weaker than the operational claim.',
   },
   {
-    siteName: 'South Unit',
-    region: 'Secondary Operations',
-    pressurePosture: 'WATCHED',
-    trajectoryPosture: 'WATCHED',
-    predictivePosture: 'WATCHED',
-    recoveryPosture: 'WATCHED',
-    reliabilityPosture: 'WATCHED',
-    evidenceVerified: true,
-    accountabilityActive: true,
-    structuralMemoryVisible: false,
-  },
-  {
-    siteName: 'East Unit',
+    siteName: 'East Operations Site',
     region: 'High Demand Operations',
     pressurePosture: 'CRITICAL',
     trajectoryPosture: 'ELEVATED',
@@ -81,6 +110,11 @@ const sites: SiteContinuityProfile[] = [
     evidenceVerified: false,
     accountabilityActive: true,
     structuralMemoryVisible: true,
+    continuityFinding:
+      'Recurring fuel delays continue to threaten operational continuity and regional reliability.',
+    sharedDependency: 'Shared regional fuel supplier',
+    recoveryMeaning:
+      'East remains the dominant continuity exposure because recurrence signals are still visible.',
   },
 ]
 
@@ -103,12 +137,18 @@ function strongestSite(sitesToReview: SiteContinuityProfile[]) {
   })[0]
 }
 
-function buildCrossSiteDecision(
+function buildCrossSitePattern(
   siteBriefings: {
     site: SiteContinuityProfile
     briefing: ReturnType<typeof buildCGIExecutiveBriefing>
   }[],
-): CrossSiteDecision {
+): CrossSitePattern {
+  const affectedSites = siteBriefings.map(({ site }) => site.siteName)
+  const dominant = strongestSite(siteBriefings.map(({ site }) => site))
+  const sharedDependencies = Array.from(
+    new Set(siteBriefings.map(({ site }) => site.sharedDependency)),
+  )
+
   const criticalSites = siteBriefings.filter(
     ({ briefing }) => briefing.synthesis.synthesisPosture === 'CRITICAL',
   ).length
@@ -117,93 +157,118 @@ function buildCrossSiteDecision(
     ({ briefing }) => briefing.synthesis.synthesisPosture === 'ELEVATED',
   ).length
 
-  const memorySites = siteBriefings.filter(
-    ({ site }) => site.structuralMemoryVisible,
-  ).length
-
   const evidenceGaps = siteBriefings.filter(
     ({ site }) => !site.evidenceVerified,
   ).length
 
-  const accountabilityGaps = siteBriefings.filter(
-    ({ site }) => !site.accountabilityActive,
+  const recoveryGaps = siteBriefings.filter(({ site }) =>
+    ['WATCHED', 'ELEVATED', 'CRITICAL'].includes(site.recoveryPosture),
   ).length
 
-  if (criticalSites > 0) {
+  const patternType =
+    criticalSites > 0
+      ? 'ENTERPRISE EXPOSURE'
+      : elevatedSites >= 2
+        ? 'DISTRIBUTED CONTINUITY PATTERN'
+        : evidenceGaps > 0
+          ? 'EVIDENCE-WEAK CROSS-SITE PATTERN'
+          : 'MONITORED CROSS-SITE PATTERN'
+
+  return {
+    patternName: 'Supplier Concentration Fuel Logistics Pattern',
+    patternType,
+    affectedSites,
+    dominantSite: dominant.siteName,
+    sharedDependency: sharedDependencies.join(', '),
+    enterpriseExposure:
+      'A repeated fuel logistics disruption is no longer only a site issue. It reveals shared supplier dependency across operational sites.',
+    recoveryPattern:
+      recoveryGaps > 1
+        ? 'Recovery is uneven. At least two sites still require watch, elevated monitoring, or durability confirmation.'
+        : 'Recovery is improving, but memory and evidence must remain attached.',
+    commandMeaning:
+      criticalSites > 0
+        ? 'Command visibility should remain elevated because one site still carries critical continuity exposure.'
+        : 'Command watch should remain available while cross-site evidence matures.',
+    coordinationMeaning:
+      'Coordination must confirm supplier alternatives, site-level recovery evidence, ownership, and continuity capacity before confidence is restored.',
+    executiveMeaning:
+      'Leadership should treat the pattern as enterprise continuity exposure until supplier concentration risk, recurrence risk, and recovery durability are proven across all affected sites.',
+    nextGovernedDestination:
+      criticalSites > 0 || elevatedSites >= 2
+        ? 'Executive Center'
+        : evidenceGaps > 0
+          ? 'Coordination Center'
+          : 'Audit Reconstruction',
+    evidenceStandard:
+      'Preserve affected sites, shared dependency, site posture, recovery status, command meaning, coordination need, evidence maturity, and institutional memory statement.',
+  }
+}
+
+function buildCrossSiteDecision(pattern: CrossSitePattern): CrossSiteDecision {
+  if (pattern.patternType === 'ENTERPRISE EXPOSURE') {
     return {
       chainPosition:
-        'Coordination has escalated into cross-site continuity review.',
-      crossSitePattern:
-        'Critical continuity pressure is visible in at least one operational site.',
+        'Coordination has escalated into cross-site enterprise exposure review.',
+      crossSitePattern: pattern.patternName,
       crossSiteReason:
-        'Cross-site review is required because one site carries enough survivability exposure to affect enterprise continuity confidence.',
+        'Cross-site review is required because one site carries critical continuity pressure while other sites share the same supplier dependency.',
       nextGovernedDestination: 'Executive Center',
       executiveReviewRequired: true,
       auditRequired: true,
       continuityHistoryRequired: true,
-      evidenceStandard:
-        'Preserve site posture, pressure driver, recovery credibility, evidence status, accountability ownership, and executive review rationale.',
+      evidenceStandard: pattern.evidenceStandard,
     }
   }
 
-  if (elevatedSites >= 2 || memorySites >= 2) {
+  if (pattern.patternType === 'DISTRIBUTED CONTINUITY PATTERN') {
     return {
       chainPosition:
         'Coordination has revealed a repeated or distributed continuity pattern.',
-      crossSitePattern:
-        'Multiple sites are carrying elevated pressure, structural memory, or recovery uncertainty.',
+      crossSitePattern: pattern.patternName,
       crossSiteReason:
         'Cross-site governance is required because the instability may no longer be isolated to one site.',
-      nextGovernedDestination: 'Continuity History',
+      nextGovernedDestination: 'Situation Room',
       executiveReviewRequired: true,
       auditRequired: true,
       continuityHistoryRequired: true,
-      evidenceStandard:
-        'Preserve recurrence pattern, affected sites, shared pressure indicators, recovery posture, and memory impact.',
+      evidenceStandard: pattern.evidenceStandard,
     }
   }
 
-  if (evidenceGaps > 0 || accountabilityGaps > 0) {
+  if (pattern.patternType === 'EVIDENCE-WEAK CROSS-SITE PATTERN') {
     return {
       chainPosition:
-        'Cross-site review is holding because evidence or ownership remains incomplete.',
-      crossSitePattern:
-        'Continuity exposure is visible, but evidence or accountability is not mature enough for trust restoration.',
+        'Cross-site review is holding because evidence remains incomplete.',
+      crossSitePattern: pattern.patternName,
       crossSiteReason:
-        'The system must not allow weak evidence to become executive confidence.',
+        'The system must not allow weak evidence to become enterprise continuity confidence.',
       nextGovernedDestination: 'Coordination Center',
       executiveReviewRequired: false,
       auditRequired: true,
       continuityHistoryRequired: false,
-      evidenceStandard:
-        'Strengthen evidence verification, accountability ownership, site posture explanation, and recovery credibility before escalation.',
+      evidenceStandard: pattern.evidenceStandard,
     }
   }
 
   return {
     chainPosition:
       'Cross-site review is stable and can remain under monitored enterprise visibility.',
-    crossSitePattern:
-      'No concentrated cross-site instability pattern is currently dominant.',
+    crossSitePattern: pattern.patternName,
     crossSiteReason:
       'Cross-site review remains useful for memory preservation and comparative continuity awareness.',
     nextGovernedDestination: 'Audit Reconstruction',
     executiveReviewRequired: false,
     auditRequired: true,
     continuityHistoryRequired: false,
-    evidenceStandard:
-      'Preserve a clean enterprise continuity snapshot and continue routine comparison across sites.',
+    evidenceStandard: pattern.evidenceStandard,
   }
 }
 
 export default function CrossSitePage() {
   return (
     <GovernanceRouteGuard
-      allowedRoles={[
-        'SUPER_ADMIN',
-        'COMMAND_ADMIN',
-        'GOVERNANCE_OFFICER',
-      ]}
+      allowedRoles={['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']}
     >
       <CGIGovernanceShell>
         <CrossSiteContent />
@@ -219,6 +284,9 @@ function CrossSiteContent() {
   const [loadingProfiles, setLoadingProfiles] = useState(false)
   const [profileMessage, setProfileMessage] = useState('')
 
+  const pilotScenario = buildCGIDemoScenario('FUEL_LOGISTICS_CHAIN_PROOF')
+  const pilotThread = pilotScenario.pilotThread
+
   const siteBriefings = useMemo(
     () =>
       sites.map((site) => ({
@@ -230,7 +298,8 @@ function CrossSiteContent() {
 
   const dominantSite = strongestSite(sites)
   const dominantBriefing = buildCGIExecutiveBriefing(dominantSite)
-  const crossSiteDecision = buildCrossSiteDecision(siteBriefings)
+  const crossSitePattern = buildCrossSitePattern(siteBriefings)
+  const crossSiteDecision = buildCrossSiteDecision(crossSitePattern)
 
   const executivePosture = formatCGIExecutivePosture(
     dominantBriefing.synthesis.synthesisPosture,
@@ -315,7 +384,9 @@ function CrossSiteContent() {
             rawPayload: {
               site,
               briefing,
+              crossSitePattern,
               crossSiteDecision,
+              pilotThread,
               savedFrom: '/cross-site',
             },
           })
@@ -343,10 +414,53 @@ function CrossSiteContent() {
           <h1 style={styles.title}>Cross-Site Continuity Intelligence</h1>
 
           <p style={styles.subtitle}>
-            Enterprise continuity bridge for detecting whether instability is
-            isolated, distributed, recurring, evidence-weak, or executive
-            significant across operational sites.
+            Enterprise continuity layer for identifying whether visible
+            instability is isolated, distributed, recurring, evidence-weak, or
+            structurally shared across operational sites.
           </p>
+        </section>
+
+        <section style={styles.heroCard}>
+          <div>
+            <p style={styles.sectionKicker}>Cross-Site Pattern</p>
+
+            <h2 style={styles.heroTitle}>{crossSitePattern.patternName}</h2>
+
+            <p style={styles.heroMeaning}>
+              {crossSitePattern.enterpriseExposure}
+            </p>
+          </div>
+
+          <div style={styles.statusBox}>
+            <p style={styles.statusLabel}>Pattern Type</p>
+
+            <p style={styles.statusValue}>{crossSitePattern.patternType}</p>
+          </div>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Pilot Chain Context</p>
+
+          <h2 style={styles.cardTitle}>{pilotThread.scenarioName}</h2>
+
+          <p style={styles.bodyText}>{pilotThread.scenarioSummary}</p>
+
+          <div style={styles.priorityGrid}>
+            <PriorityItem
+              title="Shared Dependency"
+              body={crossSitePattern.sharedDependency}
+            />
+
+            <PriorityItem
+              title="Dominant Site"
+              body={crossSitePattern.dominantSite}
+            />
+
+            <PriorityItem
+              title="Affected Sites"
+              body={crossSitePattern.affectedSites.join(', ')}
+            />
+          </div>
         </section>
 
         <section style={styles.heroCard}>
@@ -370,10 +484,13 @@ function CrossSiteContent() {
         </section>
 
         <section style={styles.chainPanel}>
-          <ChainStep label="Recovery" value="Verified or fragile recovery" />
-          <ChainStep label="Command" value="Decision gate" />
-          <ChainStep label="Coordination" value="Synchronization layer" />
-          <ChainStep label="Cross-Site" value="Enterprise pattern review" />
+          <ChainStep label="Recovery" value="Uneven durability" />
+          <ChainStep label="Command" value={crossSitePattern.commandMeaning} />
+          <ChainStep
+            label="Coordination"
+            value={crossSitePattern.coordinationMeaning}
+          />
+          <ChainStep label="Cross-Site" value={crossSitePattern.patternType} />
           <ChainStep
             label="Next"
             value={crossSiteDecision.nextGovernedDestination}
@@ -407,11 +524,13 @@ function CrossSiteContent() {
         </section>
 
         <section style={styles.card}>
-          <p style={styles.sectionKicker}>Cross-Site Pattern</p>
+          <p style={styles.sectionKicker}>Enterprise Exposure Meaning</p>
 
-          <h2 style={styles.cardTitle}>{crossSiteDecision.crossSitePattern}</h2>
+          <h2 style={styles.cardTitle}>
+            {crossSitePattern.executiveMeaning}
+          </h2>
 
-          <p style={styles.bodyText}>{crossSiteDecision.crossSiteReason}</p>
+          <p style={styles.bodyText}>{crossSitePattern.recoveryPattern}</p>
 
           <div style={styles.priorityGrid}>
             <PriorityItem
@@ -448,13 +567,13 @@ function CrossSiteContent() {
             <p style={styles.sectionKicker}>Persistence Action</p>
 
             <h2 style={styles.actionTitle}>
-              Preserve site continuity profiles as institutional memory.
+              Preserve cross-site pattern intelligence as institutional memory.
             </h2>
 
             <p style={styles.actionText}>
               Saving the profile set creates durable cross-site continuity
-              records for posture, coordination need, evidence status,
-              accountability, structural memory, and next governed destination.
+              records for site posture, shared dependency, recovery pattern,
+              coordination need, evidence status, and next governed destination.
             </p>
 
             {saveMessage && <p style={styles.saveMessage}>{saveMessage}</p>}
@@ -539,6 +658,43 @@ function CrossSiteContent() {
         </section>
 
         <section style={styles.card}>
+          <p style={styles.sectionKicker}>Site Continuity Board</p>
+
+          <h2 style={styles.cardTitle}>
+            Continuity exposure must be interpreted as pattern, not just
+            posture.
+          </h2>
+
+          <div style={styles.siteList}>
+            {siteBriefings.map(({ site, briefing }) => (
+              <article key={site.siteName} style={styles.siteCard}>
+                <div>
+                  <p style={styles.siteRegion}>{site.region}</p>
+
+                  <h3 style={styles.siteTitle}>{site.siteName}</h3>
+
+                  <p style={styles.siteMeaning}>
+                    {site.continuityFinding}
+                  </p>
+
+                  <p style={styles.siteMemory}>
+                    {site.recoveryMeaning}
+                  </p>
+                </div>
+
+                <div style={styles.siteStatus}>
+                  <p style={styles.statusLabel}>Posture</p>
+
+                  <p style={styles.sitePosture}>
+                    {briefing.synthesis.synthesisPosture}
+                  </p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section style={styles.card}>
           <p style={styles.sectionKicker}>Persisted Site Profile Archive</p>
 
           <h2 style={styles.cardTitle}>
@@ -612,38 +768,6 @@ function CrossSiteContent() {
           </div>
         </section>
 
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Site Continuity Board</p>
-
-          <h2 style={styles.cardTitle}>
-            Continuity exposure must be compared across sites.
-          </h2>
-
-          <div style={styles.siteList}>
-            {siteBriefings.map(({ site, briefing }) => (
-              <article key={site.siteName} style={styles.siteCard}>
-                <div>
-                  <p style={styles.siteRegion}>{site.region}</p>
-
-                  <h3 style={styles.siteTitle}>{site.siteName}</h3>
-
-                  <p style={styles.siteMeaning}>
-                    {briefing.executiveSummary}
-                  </p>
-                </div>
-
-                <div style={styles.siteStatus}>
-                  <p style={styles.statusLabel}>Posture</p>
-
-                  <p style={styles.sitePosture}>
-                    {briefing.synthesis.synthesisPosture}
-                  </p>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
         <section style={styles.gridTwo}>
           <Panel title="Survivability Concentration">
             Cross-site survivability becomes a leadership issue when the same
@@ -653,8 +777,9 @@ function CrossSiteContent() {
 
           <Panel title="Cross-Site Governance Meaning">
             This view does not compare people or assign blame. It compares
-            continuity exposure, structural memory, stabilization evidence, and
-            survivability pressure across operational environments.
+            continuity exposure, structural memory, stabilization evidence,
+            shared dependency, and survivability pressure across operational
+            environments.
           </Panel>
         </section>
       </div>
@@ -675,23 +800,17 @@ function getProfileValue(
     profile.raw_payload?.[key] ??
     null
 
-  if (value === null || value === undefined) {
-    return null
-  }
+  if (value === null || value === undefined) return null
 
   return String(value)
 }
 
 function formatDate(value: string | null) {
-  if (!value) {
-    return 'Date not recorded'
-  }
+  if (!value) return 'Date not recorded'
 
   const date = new Date(value)
 
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
+  if (Number.isNaN(date.getTime())) return value
 
   return date.toLocaleString()
 }
@@ -815,11 +934,11 @@ const styles: Record<string, CSSProperties> = {
     border: '1px solid #0ea5e9',
     borderRadius: '16px',
     padding: '14px',
-    minHeight: '96px',
+    minHeight: '120px',
   },
   chainValue: {
     color: '#e0f2fe',
-    fontSize: '14px',
+    fontSize: '13px',
     fontWeight: 900,
     lineHeight: 1.35,
     margin: '10px 0 0',
@@ -920,7 +1039,7 @@ const styles: Record<string, CSSProperties> = {
   },
   statusValue: {
     color: '#cffafe',
-    fontSize: '30px',
+    fontSize: '26px',
     lineHeight: 1.1,
     margin: 0,
     fontWeight: 900,
@@ -1021,6 +1140,14 @@ const styles: Record<string, CSSProperties> = {
     color: '#cbd5e1',
     lineHeight: 1.6,
     margin: 0,
+  },
+  siteMemory: {
+    color: '#a5f3fc',
+    borderTop: '1px solid #334155',
+    lineHeight: 1.55,
+    margin: '12px 0 0',
+    paddingTop: '12px',
+    fontWeight: 800,
   },
   siteStatus: {
     background: '#083344',
