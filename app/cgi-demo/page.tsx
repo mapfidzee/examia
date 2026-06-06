@@ -26,9 +26,7 @@ function Panel({
         <h3 className="mt-2 text-xl font-semibold text-white">{value}</h3>
       ) : null}
       {children ? (
-        <div className="mt-3 text-sm leading-6 text-zinc-300">
-          {children}
-        </div>
+        <div className="mt-3 text-sm leading-6 text-zinc-300">{children}</div>
       ) : null}
     </section>
   )
@@ -54,11 +52,8 @@ export default function CGIDemoPage() {
             Executive Continuity Intelligence Demo
           </h1>
           <p className="mt-4 max-w-3xl text-lg leading-8 text-zinc-300">
-            CGI now demonstrates one visible instability moving through the full
-            continuity chain: request, triage, case governance, routing,
-            intervention, outcomes, recovery, command, coordination, cross-site
-            interpretation, situation room, executive center, executive report,
-            memory board, and audit reconstruction.
+            One visible instability is followed from first report to executive
+            interpretation, institutional memory, and audit reconstruction.
           </p>
         </header>
 
@@ -66,7 +61,7 @@ export default function CGIDemoPage() {
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="text-sm uppercase tracking-[0.3em] text-amber-300">
-                Featured Pilot Scenario
+                Pilot Continuity Event
               </p>
               <h2 className="mt-3 text-3xl font-bold">
                 {featured.scenarioTitle}
@@ -158,14 +153,77 @@ export default function CGIDemoPage() {
           </div>
         </section>
 
+        <section className="rounded-3xl border border-emerald-900 bg-emerald-950/20 p-8">
+          <p className="text-sm uppercase tracking-[0.3em] text-emerald-300">
+            Final Executive Position
+          </p>
+          <h2 className="mt-3 text-3xl font-bold">
+            The fuel disruption was not treated as isolated operational noise.
+          </h2>
+          <div className="mt-6 grid gap-5 md:grid-cols-2">
+            <Panel title="Executive Conclusion">
+              Operational fuel disruption propagated across three sites,
+              required command visibility, generated coordination pressure,
+              revealed supplier concentration risk, and became institutional
+              memory.
+            </Panel>
+            <Panel title="Continuity Judgment">
+              Recovery occurred, but durability could not be assumed until
+              recurrence risk, cross-site exposure, evidence, and audit
+              reconstruction remained attached.
+            </Panel>
+            <Panel title="Leadership Meaning">
+              Leadership is not being asked to react to a dashboard. Leadership
+              is being shown where continuity trust is strong, where it is
+              fragile, and what must remain visible.
+            </Panel>
+            <Panel title="Institutional Result">
+              The institution restored continuity confidence without erasing the
+              structural lesson that created the disruption.
+            </Panel>
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-zinc-800 bg-zinc-950 p-8">
+          <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">
+            Institutional Memory
+          </p>
+          <h2 className="mt-3 text-2xl font-bold">
+            The lesson survives after visible pressure fades.
+          </h2>
+          <p className="mt-4 max-w-4xl leading-8 text-zinc-300">
+            {pilotThread.executiveMemory}
+          </p>
+        </section>
+
+        <section className="rounded-3xl border border-zinc-800 bg-zinc-950 p-8">
+          <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">
+            Audit Reconstruction
+          </p>
+          <h2 className="mt-3 text-2xl font-bold">
+            The continuity chain remains reconstructable.
+          </h2>
+
+          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {pilotThread.auditReconstruction.map((item) => (
+              <div
+                key={item}
+                className="rounded-2xl border border-zinc-800 bg-black p-5 text-sm leading-6 text-zinc-300"
+              >
+                {item}
+              </div>
+            ))}
+          </div>
+        </section>
+
         <section className="rounded-3xl border border-zinc-800 bg-zinc-950 p-8">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">
-                Intelligence Reading
+                Supporting Intelligence Reading
               </p>
               <h2 className="mt-3 text-3xl font-bold">
-                CGI still derives executive continuity intelligence.
+                CGI derives continuity intelligence behind the proof.
               </h2>
             </div>
             <div className="rounded-2xl border border-zinc-700 px-5 py-4">
@@ -236,7 +294,7 @@ export default function CGIDemoPage() {
 
         <section className="rounded-3xl border border-zinc-800 bg-zinc-950 p-8">
           <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">
-            Executive Walkthrough
+            Supporting Walkthrough
           </p>
           <h2 className="mt-3 text-3xl font-bold">
             {walkthrough.walkthroughTitle}
@@ -294,38 +352,6 @@ export default function CGIDemoPage() {
             <Panel title="Executive Takeaway">
               {walkthrough.executiveTakeaway}
             </Panel>
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-zinc-800 bg-zinc-950 p-8">
-          <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">
-            Institutional Memory
-          </p>
-          <h2 className="mt-3 text-2xl font-bold">
-            The lesson survives after visible pressure fades.
-          </h2>
-          <p className="mt-4 max-w-4xl leading-8 text-zinc-300">
-            {pilotThread.executiveMemory}
-          </p>
-        </section>
-
-        <section className="rounded-3xl border border-zinc-800 bg-zinc-950 p-8">
-          <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">
-            Audit Reconstruction
-          </p>
-          <h2 className="mt-3 text-2xl font-bold">
-            The continuity chain remains reconstructable.
-          </h2>
-
-          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {pilotThread.auditReconstruction.map((item) => (
-              <div
-                key={item}
-                className="rounded-2xl border border-zinc-800 bg-black p-5 text-sm leading-6 text-zinc-300"
-              >
-                {item}
-              </div>
-            ))}
           </div>
         </section>
 
