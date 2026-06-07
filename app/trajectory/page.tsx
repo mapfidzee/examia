@@ -45,6 +45,56 @@ type Interpretation = {
   action: string
 }
 
+type EnterpriseTrajectoryPosture =
+  | 'TRAJECTORY STRENGTHENING'
+  | 'TRAJECTORY HOLDING'
+  | 'TRAJECTORY DRIFTING'
+  | 'TRAJECTORY REVERSING'
+  | 'TRAJECTORY EXECUTIVE RISK'
+  | 'INSUFFICIENT TRAJECTORY MEMORY'
+
+type TrajectoryDestination =
+  | 'TOWARD STABILITY'
+  | 'TOWARD FRAGILE RECOVERY'
+  | 'TOWARD RECURRENCE'
+  | 'TOWARD ESCALATION'
+  | 'TOWARD SURVIVABILITY THREAT'
+  | 'DESTINATION UNCERTAIN'
+
+type TrajectoryVelocity =
+  | 'ACCELERATING RECOVERY'
+  | 'STABLE MOVEMENT'
+  | 'SLOW DRIFT'
+  | 'RAPID DETERIORATION'
+  | 'VOLATILE TRANSITION'
+  | 'INSUFFICIENT VELOCITY MEMORY'
+
+type TrajectoryConfidence =
+  | 'HIGH CONFIDENCE'
+  | 'MODERATE CONFIDENCE'
+  | 'WEAK CONFIDENCE'
+  | 'INSUFFICIENT EVIDENCE'
+
+type EnterpriseTrajectoryIntelligence = {
+  posture: EnterpriseTrajectoryPosture
+  destination: TrajectoryDestination
+  velocity: TrajectoryVelocity
+  confidence: TrajectoryConfidence
+  executiveHorizon: string
+  trajectoryQuestion: string
+  thesis: string
+  destinationReason: string
+  commandImplication: string
+  pressureImplication: string
+  reliabilityImplication: string
+  predictiveImplication: string
+  evidenceRequirement: string
+  memoryRequirement: string
+  executiveAction: string
+  boardWarning: string
+  copyReadyBrief: string
+}
+
 const SAMPLE_LIMIT = 120
 
 export default function TrajectoryPage() {
@@ -64,7 +114,7 @@ function TrajectoryContent() {
   }, [])
 
   async function loadTrajectoryMetrics() {
-    setMessage('Loading continuity trajectory memory...')
+    setMessage('Loading enterprise trajectory memory...')
 
     const { data, error } = await supabase
       .from('cgi_operational_metrics')
@@ -74,19 +124,19 @@ function TrajectoryContent() {
 
     if (error) {
       console.error(error)
-      setMessage('Continuity trajectory memory could not be loaded.')
+      setMessage('Enterprise trajectory memory could not be loaded.')
       return
     }
 
     setMetrics(data || [])
-    setMessage('Continuity trajectory memory loaded.')
+    setMessage('Enterprise trajectory memory loaded.')
   }
 
   const trajectory = useMemo(() => {
     const ordered = [...metrics].sort(
       (a, b) =>
         new Date(a.created_at).getTime() -
-        new Date(b.created_at).getTime()
+        new Date(b.created_at).getTime(),
     )
 
     const latest = ordered[ordered.length - 1] || null
@@ -95,51 +145,47 @@ function TrajectoryContent() {
     const recentWindow = ordered.slice(-5)
 
     const trajectoryRisk = average(
-      ordered.map((item) => item.trajectory_risk)
+      ordered.map((item) => item.trajectory_risk),
     )
 
-    const drift = average(
-      ordered.map((item) => item.continuity_drift)
-    )
+    const drift = average(ordered.map((item) => item.continuity_drift))
 
     const escalationMomentum = average(
-      ordered.map((item) => item.escalation_momentum)
+      ordered.map((item) => item.escalation_momentum),
     )
 
     const recoveryDirection = average(
-      ordered.map((item) => item.recovery_direction)
+      ordered.map((item) => item.recovery_direction),
     )
 
     const stabilizationTrend = average(
-      ordered.map((item) => item.stabilization_trend)
+      ordered.map((item) => item.stabilization_trend),
     )
 
     const unresolvedMomentum = average(
-      ordered.map((item) => item.unresolved_momentum)
+      ordered.map((item) => item.unresolved_momentum),
     )
 
     const continuityIntegrity = average(
-      ordered.map((item) => item.continuity_integrity_score)
+      ordered.map((item) => item.continuity_integrity_score),
     )
 
     const stabilizationConfidence = average(
-      ordered.map((item) => item.stabilization_confidence_score)
+      ordered.map((item) => item.stabilization_confidence_score),
     )
 
     const reliability = average(
-      ordered.map((item) => item.recovery_reliability_score)
+      ordered.map((item) => item.recovery_reliability_score),
     )
 
     const survivability = average(
-      ordered.map((item) => item.operational_survivability_score)
+      ordered.map((item) => item.operational_survivability_score),
     )
 
-    const propagation = average(
-      ordered.map((item) => item.propagation_risk)
-    )
+    const propagation = average(ordered.map((item) => item.propagation_risk))
 
     const memoryRisk = average(
-      ordered.map((item) => item.structural_memory_risk)
+      ordered.map((item) => item.structural_memory_risk),
     )
 
     const earlyPressure = average(
@@ -151,8 +197,8 @@ function TrajectoryContent() {
           item.unresolved_momentum,
           100 - item.recovery_direction,
           100 - item.stabilization_trend,
-        ])
-      )
+        ]),
+      ),
     )
 
     const recentPressure = average(
@@ -164,8 +210,8 @@ function TrajectoryContent() {
           item.unresolved_momentum,
           100 - item.recovery_direction,
           100 - item.stabilization_trend,
-        ])
-      )
+        ]),
+      ),
     )
 
     const trajectoryPressureMovement =
@@ -178,8 +224,8 @@ function TrajectoryContent() {
           item.stabilization_trend,
           item.recovery_reliability_score,
           item.operational_survivability_score,
-        ])
-      )
+        ]),
+      ),
     )
 
     const recentStabilization = average(
@@ -189,8 +235,8 @@ function TrajectoryContent() {
           item.stabilization_trend,
           item.recovery_reliability_score,
           item.operational_survivability_score,
-        ])
-      )
+        ]),
+      ),
     )
 
     const stabilizationMovement =
@@ -217,8 +263,8 @@ function TrajectoryContent() {
           item.unresolved_momentum,
           100 - item.recovery_direction,
           100 - item.stabilization_trend,
-        ])
-      )
+        ]),
+      ),
     )
 
     const directionStrength = average([
@@ -275,13 +321,35 @@ function TrajectoryContent() {
     const unresolvedPosture = interpretUnresolved(unresolvedMomentum)
     const volatilityPosture = interpretVolatility(trajectoryVolatility)
     const movementPosture = interpretMovement(
-      trajectoryPressureMovement || latestTrajectoryMovement
+      trajectoryPressureMovement || latestTrajectoryMovement,
     )
     const historyDepth = interpretHistory(ordered.length)
 
-    const executiveSummary = `${trajectoryPosture.meaning} The dominant continuity direction driver is ${dominantDriver}. ${driftPosture.meaning} ${stabilizationPosture.meaning}`
+    const enterprise = buildEnterpriseTrajectoryIntelligence({
+      recordCount: ordered.length,
+      directionStrength,
+      deteriorationLoad,
+      trajectoryRisk,
+      drift,
+      escalationMomentum,
+      unresolvedMomentum,
+      recoveryDirection,
+      stabilizationTrend,
+      reliability,
+      survivability,
+      propagation,
+      memoryRisk,
+      trajectoryPressureMovement,
+      stabilizationMovement,
+      latestTrajectoryMovement,
+      trajectoryVolatility,
+      dominantDriver,
+    })
+
+    const executiveSummary = `${enterprise.thesis} ${trajectoryPosture.meaning} The dominant continuity direction driver is ${dominantDriver}.`
 
     const actionCue = compactAction([
+      enterprise.executiveAction,
       trajectoryPosture.action,
       driftPosture.action,
       deteriorationSignal.action,
@@ -290,6 +358,7 @@ function TrajectoryContent() {
 
     return {
       latest,
+      enterprise,
       trajectoryPosture,
       directionPosture,
       driftPosture,
@@ -323,7 +392,7 @@ function TrajectoryContent() {
           : 'WATCHED',
 
     predictivePosture: trajectory.volatilityPosture.posture.includes(
-      'VOLATILE'
+      'VOLATILE',
     )
       ? 'CRITICAL'
       : trajectory.volatilityPosture.posture.includes('VARIATION')
@@ -348,84 +417,50 @@ function TrajectoryContent() {
   })
 
   const synchronizedPosture = formatCGIExecutivePosture(
-    synchronizedBriefing.synthesis.synthesisPosture
+    synchronizedBriefing.synthesis.synthesisPosture,
   )
 
   const synchronizedEvidence = formatCGIEvidenceLanguage(
     false,
-    synchronizedBriefing.synthesis.synthesisPosture
+    synchronizedBriefing.synthesis.synthesisPosture,
   )
 
   const synchronizedSurvivability = formatCGISurvivabilityLanguage(
-    synchronizedBriefing.synthesis.synthesisPosture
+    synchronizedBriefing.synthesis.synthesisPosture,
   )
 
   const synchronizedGovernance = formatCGIGovernanceSafeLanguage()
 
-  const brief = `
-TSINAXA CGI TRAJECTORY INTELLIGENCE BRIEF
-
-Continuity Direction:
-${trajectory.trajectoryPosture.posture}
-
-Synchronized Executive Posture:
-${synchronizedPosture.label}
-
-Direction Strength:
-${trajectory.directionPosture.posture}
-
-Continuity Drift:
-${trajectory.driftPosture.posture}
-
-Deterioration Signal:
-${trajectory.deteriorationSignal.posture}
-
-Recovery Direction:
-${trajectory.recoveryPosture.posture}
-
-Stabilization Movement:
-${trajectory.stabilizationPosture.posture}
-
-Momentum State:
-${trajectory.momentumPosture.posture}
-
-Unresolved Momentum:
-${trajectory.unresolvedPosture.posture}
-
-Trajectory Volatility:
-${trajectory.volatilityPosture.posture}
-
-Dominant Continuity Driver:
-${trajectory.dominantDriver}
-
-Executive Interpretation:
-${synchronizedBriefing.executiveSummary}
-
-Executive Action:
-${synchronizedPosture.actionLanguage}
-
-Evidence Requirement:
-${synchronizedEvidence}
-
-Survivability Language:
-${synchronizedSurvivability}
-
-Governance-Safe Meaning:
-${synchronizedGovernance}
-  `.trim()
+  const brief = buildTrajectoryBrief({
+    enterprise: trajectory.enterprise,
+    synchronizedPosture: synchronizedPosture.label,
+    evidence: synchronizedEvidence,
+    survivability: synchronizedSurvivability,
+    governance: synchronizedGovernance,
+    dominantDriver: trajectory.dominantDriver,
+    direction: trajectory.trajectoryPosture.posture,
+    directionStrength: trajectory.directionPosture.posture,
+    drift: trajectory.driftPosture.posture,
+    deterioration: trajectory.deteriorationSignal.posture,
+    recovery: trajectory.recoveryPosture.posture,
+    stabilization: trajectory.stabilizationPosture.posture,
+    momentum: trajectory.momentumPosture.posture,
+    unresolved: trajectory.unresolvedPosture.posture,
+    volatility: trajectory.volatilityPosture.posture,
+  })
 
   return (
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.header}>
-          <p style={styles.kicker}>TSINAXA CGI • TRAJECTORY INTELLIGENCE</p>
+          <p style={styles.kicker}>TSINAXA CGI • ENTERPRISE TRAJECTORY</p>
 
-          <h1 style={styles.title}>Continuity Direction Intelligence</h1>
+          <h1 style={styles.title}>Enterprise Trajectory Intelligence</h1>
 
           <p style={styles.subtitle}>
-            Executive visibility into whether continuity is stabilizing,
-            holding, drifting, or deteriorating across persisted operational
-            memory.
+            Executive visibility into whether continuity is strengthening,
+            holding, drifting, reversing, or heading toward executive risk
+            across persisted institutional memory.
           </p>
         </section>
 
@@ -433,23 +468,73 @@ ${synchronizedGovernance}
 
         <section style={styles.heroCard}>
           <div>
-            <p style={styles.sectionKicker}>Continuity Direction</p>
+            <p style={styles.sectionKicker}>Enterprise Trajectory Thesis</p>
 
             <h2 style={styles.heroPosture}>
-              {trajectory.trajectoryPosture.posture}
+              {trajectory.enterprise.posture}
             </h2>
 
-            <p style={styles.heroMeaning}>
-              {synchronizedBriefing.executiveSummary}
-            </p>
+            <p style={styles.heroMeaning}>{trajectory.enterprise.thesis}</p>
           </div>
 
           <div style={styles.actionBox}>
-            <p style={styles.actionLabel}>Executive Action</p>
+            <p style={styles.actionLabel}>Expected Destination</p>
             <p style={styles.actionText}>
-              {synchronizedPosture.actionLanguage}
+              {trajectory.enterprise.destination}
             </p>
           </div>
+        </section>
+
+        <section style={styles.questionCard}>
+          <div>
+            <p style={styles.sectionKicker}>Executive Trajectory Question</p>
+
+            <h2 style={styles.cardTitle}>
+              {trajectory.enterprise.trajectoryQuestion}
+            </h2>
+
+            <p style={styles.bodyText}>
+              {trajectory.enterprise.destinationReason}
+            </p>
+          </div>
+
+          <div style={styles.questionStack}>
+            <MiniBlock title="Velocity" value={trajectory.enterprise.velocity} />
+            <MiniBlock
+              title="Confidence"
+              value={trajectory.enterprise.confidence}
+            />
+            <MiniBlock
+              title="Executive Horizon"
+              value={trajectory.enterprise.executiveHorizon}
+            />
+          </div>
+        </section>
+
+        <section style={styles.gridFour}>
+          <ExecutiveCard
+            title="Command"
+            value={trajectory.enterprise.commandImplication}
+            body="How Command should treat trajectory movement."
+          />
+
+          <ExecutiveCard
+            title="Pressure"
+            value={trajectory.enterprise.pressureImplication}
+            body="How current direction relates to pressure accumulation."
+          />
+
+          <ExecutiveCard
+            title="Reliability"
+            value={trajectory.enterprise.reliabilityImplication}
+            body="Whether repeated stabilization can be trusted."
+          />
+
+          <ExecutiveCard
+            title="Predictive"
+            value={trajectory.enterprise.predictiveImplication}
+            body="What the predictive layer should watch next."
+          />
         </section>
 
         <section style={styles.card}>
@@ -503,8 +588,8 @@ ${synchronizedGovernance}
             value={trajectory.dominantDriver}
           />
           <CompactCard
-            title="Synchronized Posture"
-            value={synchronizedBriefing.synthesis.synthesisPosture}
+            title="Movement"
+            value={trajectory.movementPosture.posture}
           />
           <CompactCard
             title="Trajectory Volatility"
@@ -513,6 +598,26 @@ ${synchronizedGovernance}
         </section>
 
         <section style={styles.twoColumn}>
+          <Panel title="Enterprise Movement Requirements">
+            <Info
+              label="Executive Action"
+              value={trajectory.enterprise.executiveAction}
+            />
+            <Info
+              label="Evidence"
+              value={trajectory.enterprise.evidenceRequirement}
+            />
+            <Info
+              label="Memory"
+              value={trajectory.enterprise.memoryRequirement}
+            />
+            <Info
+              label="Board Warning"
+              value={trajectory.enterprise.boardWarning}
+            />
+            <Info label="Action Cue" value={trajectory.actionCue} />
+          </Panel>
+
           <Panel title="Latest Continuity Context">
             <Info
               label="Continuity State"
@@ -541,29 +646,6 @@ ${synchronizedGovernance}
               }
             />
           </Panel>
-
-          <Panel title="Trajectory Reading">
-            <Info
-              label="Continuity Direction"
-              value={trajectory.trajectoryPosture.posture}
-            />
-            <Info
-              label="Continuity Drift"
-              value={trajectory.driftPosture.posture}
-            />
-            <Info
-              label="Deterioration Signal"
-              value={trajectory.deteriorationSignal.posture}
-            />
-            <Info
-              label="Dominant Driver"
-              value={trajectory.dominantDriver}
-            />
-            <Info
-              label="Current Direction"
-              value={trajectory.directionPosture.posture}
-            />
-          </Panel>
         </section>
 
         <section style={styles.card}>
@@ -571,7 +653,7 @@ ${synchronizedGovernance}
             <div>
               <h2 style={styles.cardTitle}>Recent Continuity Memory Trail</h2>
               <p style={styles.cardNote}>
-                Recent snapshots are shown as continuity direction readings,
+                Recent snapshots are shown as enterprise trajectory readings,
                 not personal performance judgments.
               </p>
             </div>
@@ -640,12 +722,542 @@ ${synchronizedGovernance}
         </section>
 
         <section style={styles.card}>
-          <h2 style={styles.cardTitle}>Generated Trajectory Brief</h2>
+          <p style={styles.sectionKicker}>Copy-Ready Trajectory Brief</p>
+          <h2 style={styles.cardTitle}>
+            What future continuity posture is becoming increasingly probable?
+          </h2>
           <pre style={styles.summaryBox}>{brief}</pre>
         </section>
       </div>
     </main>
   )
+}
+
+function buildEnterpriseTrajectoryIntelligence(input: {
+  recordCount: number
+  directionStrength: number
+  deteriorationLoad: number
+  trajectoryRisk: number
+  drift: number
+  escalationMomentum: number
+  unresolvedMomentum: number
+  recoveryDirection: number
+  stabilizationTrend: number
+  reliability: number
+  survivability: number
+  propagation: number
+  memoryRisk: number
+  trajectoryPressureMovement: number
+  stabilizationMovement: number
+  latestTrajectoryMovement: number
+  trajectoryVolatility: number
+  dominantDriver: string
+}): EnterpriseTrajectoryIntelligence {
+  const posture = deriveEnterpriseTrajectoryPosture(input)
+  const destination = deriveTrajectoryDestination(input)
+  const velocity = deriveTrajectoryVelocity(input)
+  const confidence = deriveTrajectoryConfidence(input)
+
+  const trajectoryQuestion =
+    'What future continuity posture is becoming increasingly probable?'
+
+  const destinationReason = deriveDestinationReason(destination, input)
+  const executiveHorizon = deriveExecutiveHorizon(destination, velocity, input)
+
+  const commandImplication = deriveCommandImplication(posture, destination)
+  const pressureImplication = derivePressureImplication(destination, input)
+  const reliabilityImplication = deriveReliabilityImplication(destination, input)
+  const predictiveImplication = derivePredictiveImplication(destination, velocity)
+
+  const evidenceRequirement =
+    'Preserve trajectory direction, pressure movement, drift, deterioration, unresolved momentum, recovery direction, stabilization movement, dominant driver, and executive horizon.'
+
+  const memoryRequirement =
+    input.recordCount < 3
+      ? 'Continue saving trajectory snapshots before making a strong direction claim.'
+      : 'Preserve trajectory memory so future executive readings can reconstruct when direction began changing.'
+
+  const executiveAction = deriveExecutiveAction(posture, destination)
+  const boardWarning = deriveBoardWarning(posture, destination)
+
+  const thesis = `${posture}: trajectory is ${velocity.toLowerCase()} and appears ${destination.toLowerCase()}. ${destinationReason}`
+
+  const copyReadyBrief = [
+    'TSINAXA CGI ENTERPRISE TRAJECTORY BRIEF',
+    '',
+    `Trajectory Question: ${trajectoryQuestion}`,
+    '',
+    `Enterprise Trajectory Posture: ${posture}`,
+    '',
+    `Trajectory Velocity: ${velocity}`,
+    '',
+    `Probable Destination: ${destination}`,
+    '',
+    `Trajectory Confidence: ${confidence}`,
+    '',
+    `Executive Horizon: ${executiveHorizon}`,
+    '',
+    `Trajectory Thesis: ${thesis}`,
+    '',
+    `Destination Reason: ${destinationReason}`,
+    '',
+    `Dominant Driver: ${input.dominantDriver}`,
+    '',
+    `Command Implication: ${commandImplication}`,
+    '',
+    `Pressure Implication: ${pressureImplication}`,
+    '',
+    `Reliability Implication: ${reliabilityImplication}`,
+    '',
+    `Predictive Implication: ${predictiveImplication}`,
+    '',
+    `Evidence Requirement: ${evidenceRequirement}`,
+    '',
+    `Memory Requirement: ${memoryRequirement}`,
+    '',
+    `Board Warning: ${boardWarning}`,
+    '',
+    `Executive Action: ${executiveAction}`,
+  ].join('\n')
+
+  return {
+    posture,
+    destination,
+    velocity,
+    confidence,
+    executiveHorizon,
+    trajectoryQuestion,
+    thesis,
+    destinationReason,
+    commandImplication,
+    pressureImplication,
+    reliabilityImplication,
+    predictiveImplication,
+    evidenceRequirement,
+    memoryRequirement,
+    executiveAction,
+    boardWarning,
+    copyReadyBrief,
+  }
+}
+
+function deriveEnterpriseTrajectoryPosture(input: {
+  recordCount: number
+  directionStrength: number
+  deteriorationLoad: number
+  trajectoryRisk: number
+  drift: number
+  escalationMomentum: number
+  unresolvedMomentum: number
+  recoveryDirection: number
+  stabilizationTrend: number
+  reliability: number
+  survivability: number
+  memoryRisk: number
+  trajectoryVolatility: number
+}): EnterpriseTrajectoryPosture {
+  if (input.recordCount < 3) return 'INSUFFICIENT TRAJECTORY MEMORY'
+
+  if (
+    input.trajectoryRisk >= 70 ||
+    input.deteriorationLoad >= 70 ||
+    input.survivability < 40 ||
+    input.escalationMomentum >= 70
+  ) {
+    return 'TRAJECTORY EXECUTIVE RISK'
+  }
+
+  if (
+    input.drift >= 60 ||
+    input.unresolvedMomentum >= 65 ||
+    input.recoveryDirection < 45 ||
+    input.stabilizationTrend < 45
+  ) {
+    return 'TRAJECTORY REVERSING'
+  }
+
+  if (
+    input.memoryRisk >= 55 ||
+    input.trajectoryVolatility >= 25 ||
+    input.directionStrength < 55
+  ) {
+    return 'TRAJECTORY DRIFTING'
+  }
+
+  if (input.directionStrength >= 70 && input.deteriorationLoad < 45) {
+    return 'TRAJECTORY STRENGTHENING'
+  }
+
+  return 'TRAJECTORY HOLDING'
+}
+
+function deriveTrajectoryDestination(input: {
+  recordCount: number
+  deteriorationLoad: number
+  trajectoryRisk: number
+  drift: number
+  escalationMomentum: number
+  unresolvedMomentum: number
+  recoveryDirection: number
+  stabilizationTrend: number
+  reliability: number
+  survivability: number
+  memoryRisk: number
+}): TrajectoryDestination {
+  if (input.recordCount < 3) return 'DESTINATION UNCERTAIN'
+
+  if (
+    input.survivability < 40 ||
+    input.deteriorationLoad >= 70 ||
+    input.trajectoryRisk >= 75
+  ) {
+    return 'TOWARD SURVIVABILITY THREAT'
+  }
+
+  if (input.escalationMomentum >= 65 || input.unresolvedMomentum >= 65) {
+    return 'TOWARD ESCALATION'
+  }
+
+  if (input.memoryRisk >= 60 || input.drift >= 55) {
+    return 'TOWARD RECURRENCE'
+  }
+
+  if (
+    input.recoveryDirection < 55 ||
+    input.stabilizationTrend < 55 ||
+    input.reliability < 60
+  ) {
+    return 'TOWARD FRAGILE RECOVERY'
+  }
+
+  return 'TOWARD STABILITY'
+}
+
+function deriveTrajectoryVelocity(input: {
+  recordCount: number
+  trajectoryPressureMovement: number
+  stabilizationMovement: number
+  latestTrajectoryMovement: number
+  trajectoryVolatility: number
+}): TrajectoryVelocity {
+  if (input.recordCount < 3) return 'INSUFFICIENT VELOCITY MEMORY'
+
+  if (input.trajectoryVolatility >= 30) return 'VOLATILE TRANSITION'
+
+  if (
+    input.trajectoryPressureMovement >= 12 ||
+    input.latestTrajectoryMovement >= 12
+  ) {
+    return 'RAPID DETERIORATION'
+  }
+
+  if (
+    input.stabilizationMovement >= 10 &&
+    input.trajectoryPressureMovement <= 0
+  ) {
+    return 'ACCELERATING RECOVERY'
+  }
+
+  if (input.trajectoryPressureMovement >= 5) return 'SLOW DRIFT'
+
+  return 'STABLE MOVEMENT'
+}
+
+function deriveTrajectoryConfidence(input: {
+  recordCount: number
+  trajectoryVolatility: number
+  directionStrength: number
+  deteriorationLoad: number
+}): TrajectoryConfidence {
+  if (input.recordCount < 3) return 'INSUFFICIENT EVIDENCE'
+  if (input.trajectoryVolatility >= 30) return 'WEAK CONFIDENCE'
+  if (input.recordCount < 10) return 'MODERATE CONFIDENCE'
+
+  if (
+    input.directionStrength >= 70 ||
+    input.deteriorationLoad >= 65
+  ) {
+    return 'HIGH CONFIDENCE'
+  }
+
+  return 'MODERATE CONFIDENCE'
+}
+
+function deriveDestinationReason(
+  destination: TrajectoryDestination,
+  input: {
+    dominantDriver: string
+    recoveryDirection: number
+    stabilizationTrend: number
+    escalationMomentum: number
+    unresolvedMomentum: number
+    drift: number
+    memoryRisk: number
+    survivability: number
+  },
+) {
+  if (destination === 'TOWARD STABILITY') {
+    return 'Recovery, survivability, and stabilization are strong enough to suggest movement toward stability.'
+  }
+
+  if (destination === 'TOWARD FRAGILE RECOVERY') {
+    return 'Recovery or stabilization remains too weak for durable confidence.'
+  }
+
+  if (destination === 'TOWARD RECURRENCE') {
+    return 'Drift or structural memory risk suggests the same instability may return.'
+  }
+
+  if (destination === 'TOWARD ESCALATION') {
+    return 'Escalation or unresolved momentum is strong enough to threaten continuity direction.'
+  }
+
+  if (destination === 'TOWARD SURVIVABILITY THREAT') {
+    return 'Survivability or deterioration pressure is severe enough to threaten institutional continuity.'
+  }
+
+  return `Trajectory destination remains uncertain. Dominant driver: ${input.dominantDriver}.`
+}
+
+function deriveExecutiveHorizon(
+  destination: TrajectoryDestination,
+  velocity: TrajectoryVelocity,
+  input: {
+    trajectoryVolatility: number
+    escalationMomentum: number
+    unresolvedMomentum: number
+  },
+) {
+  if (destination === 'TOWARD SURVIVABILITY THREAT') {
+    return 'Executive survivability risk may become visible unless action improves immediately.'
+  }
+
+  if (destination === 'TOWARD ESCALATION') {
+    return 'Escalation risk may increase if unresolved momentum remains active.'
+  }
+
+  if (destination === 'TOWARD RECURRENCE') {
+    return 'Recurrence risk is increasing and should remain visible to Memory Board.'
+  }
+
+  if (destination === 'TOWARD FRAGILE RECOVERY') {
+    return 'Recovery may continue, but durability is not yet credible.'
+  }
+
+  if (velocity === 'ACCELERATING RECOVERY') {
+    return 'Recovery is likely to strengthen if evidence and memory remain attached.'
+  }
+
+  if (input.trajectoryVolatility >= 30) {
+    return 'Trajectory may swing quickly; predictive monitoring should stay active.'
+  }
+
+  return 'Continuity direction is likely to remain stable under continued monitoring.'
+}
+
+function deriveCommandImplication(
+  posture: EnterpriseTrajectoryPosture,
+  destination: TrajectoryDestination,
+) {
+  if (
+    posture === 'TRAJECTORY EXECUTIVE RISK' ||
+    destination === 'TOWARD SURVIVABILITY THREAT'
+  ) {
+    return 'Command must hold executive visibility.'
+  }
+
+  if (
+    posture === 'TRAJECTORY REVERSING' ||
+    destination === 'TOWARD ESCALATION'
+  ) {
+    return 'Command should prepare escalation review.'
+  }
+
+  if (destination === 'TOWARD RECURRENCE') {
+    return 'Command should preserve recurrence visibility.'
+  }
+
+  if (destination === 'TOWARD STABILITY') {
+    return 'Command can reduce posture cautiously if evidence remains attached.'
+  }
+
+  return 'Command should maintain proportional watch.'
+}
+
+function derivePressureImplication(
+  destination: TrajectoryDestination,
+  input: {
+    trajectoryPressureMovement: number
+    unresolvedMomentum: number
+  },
+) {
+  if (
+    destination === 'TOWARD ESCALATION' ||
+    input.trajectoryPressureMovement > 8 ||
+    input.unresolvedMomentum >= 60
+  ) {
+    return 'Pressure is moving against continuity direction.'
+  }
+
+  if (destination === 'TOWARD STABILITY') {
+    return 'Pressure appears compatible with stabilization.'
+  }
+
+  return 'Pressure should remain visible until direction strengthens.'
+}
+
+function deriveReliabilityImplication(
+  destination: TrajectoryDestination,
+  input: {
+    reliability: number
+    recoveryDirection: number
+    stabilizationTrend: number
+  },
+) {
+  if (
+    destination === 'TOWARD STABILITY' &&
+    input.reliability >= 70 &&
+    input.recoveryDirection >= 70
+  ) {
+    return 'Repeated stabilization is becoming more trustworthy.'
+  }
+
+  if (
+    destination === 'TOWARD FRAGILE RECOVERY' ||
+    input.stabilizationTrend < 55
+  ) {
+    return 'Reliability cannot yet be trusted as durable.'
+  }
+
+  return 'Reliability should remain under confirmation monitoring.'
+}
+
+function derivePredictiveImplication(
+  destination: TrajectoryDestination,
+  velocity: TrajectoryVelocity,
+) {
+  if (
+    destination === 'TOWARD SURVIVABILITY THREAT' ||
+    velocity === 'RAPID DETERIORATION' ||
+    velocity === 'VOLATILE TRANSITION'
+  ) {
+    return 'Predictive warning should remain active.'
+  }
+
+  if (destination === 'TOWARD RECURRENCE') {
+    return 'Predictive layer should watch for reburn and repeated instability.'
+  }
+
+  return 'Predictive layer should continue proportional monitoring.'
+}
+
+function deriveExecutiveAction(
+  posture: EnterpriseTrajectoryPosture,
+  destination: TrajectoryDestination,
+) {
+  if (
+    posture === 'TRAJECTORY EXECUTIVE RISK' ||
+    destination === 'TOWARD SURVIVABILITY THREAT'
+  ) {
+    return 'Escalate trajectory review and preserve executive evidence immediately.'
+  }
+
+  if (
+    posture === 'TRAJECTORY REVERSING' ||
+    destination === 'TOWARD ESCALATION'
+  ) {
+    return 'Prepare command escalation and require direction evidence.'
+  }
+
+  if (destination === 'TOWARD RECURRENCE') {
+    return 'Preserve recurrence memory and extend trajectory monitoring.'
+  }
+
+  if (destination === 'TOWARD STABILITY') {
+    return 'Continue confirmation monitoring before reducing visibility.'
+  }
+
+  return 'Continue trajectory memory building.'
+}
+
+function deriveBoardWarning(
+  posture: EnterpriseTrajectoryPosture,
+  destination: TrajectoryDestination,
+) {
+  if (destination === 'TOWARD STABILITY') {
+    return 'Do not declare stability until trajectory evidence is attached.'
+  }
+
+  if (destination === 'TOWARD FRAGILE RECOVERY') {
+    return 'Do not confuse forward movement with durable stabilization.'
+  }
+
+  if (destination === 'TOWARD RECURRENCE') {
+    return 'Do not treat repeated direction drift as isolated noise.'
+  }
+
+  if (
+    posture === 'TRAJECTORY EXECUTIVE RISK' ||
+    destination === 'TOWARD SURVIVABILITY THREAT'
+  ) {
+    return 'Do not allow trajectory risk to remain below executive visibility.'
+  }
+
+  return 'Do not make strong trajectory claims without sufficient memory.'
+}
+
+function buildTrajectoryBrief(input: {
+  enterprise: EnterpriseTrajectoryIntelligence
+  synchronizedPosture: string
+  evidence: string
+  survivability: string
+  governance: string
+  dominantDriver: string
+  direction: string
+  directionStrength: string
+  drift: string
+  deterioration: string
+  recovery: string
+  stabilization: string
+  momentum: string
+  unresolved: string
+  volatility: string
+}) {
+  return [
+    input.enterprise.copyReadyBrief,
+    '',
+    'SYNCHRONIZED CGI READING',
+    '',
+    `Synchronized Executive Posture: ${input.synchronizedPosture}`,
+    '',
+    `Evidence Requirement: ${input.evidence}`,
+    '',
+    `Survivability Language: ${input.survivability}`,
+    '',
+    `Governance-Safe Meaning: ${input.governance}`,
+    '',
+    'SUPPORTING TRAJECTORY SIGNALS',
+    '',
+    `Continuity Direction: ${input.direction}`,
+    '',
+    `Direction Strength: ${input.directionStrength}`,
+    '',
+    `Continuity Drift: ${input.drift}`,
+    '',
+    `Deterioration Signal: ${input.deterioration}`,
+    '',
+    `Recovery Direction: ${input.recovery}`,
+    '',
+    `Stabilization Movement: ${input.stabilization}`,
+    '',
+    `Momentum State: ${input.momentum}`,
+    '',
+    `Unresolved Momentum: ${input.unresolved}`,
+    '',
+    `Trajectory Volatility: ${input.volatility}`,
+    '',
+    `Dominant Continuity Driver: ${input.dominantDriver}`,
+  ].join('\n')
 }
 
 function average(values: number[]) {
@@ -947,6 +1559,33 @@ function CompactCard({ title, value }: { title: string; value: string }) {
   )
 }
 
+function ExecutiveCard({
+  title,
+  value,
+  body,
+}: {
+  title: string
+  value: string
+  body: string
+}) {
+  return (
+    <article style={styles.executiveCard}>
+      <p style={styles.cardKicker}>{title}</p>
+      <h3 style={styles.executiveValue}>{value}</h3>
+      <p style={styles.postureMeaning}>{body}</p>
+    </article>
+  )
+}
+
+function MiniBlock({ title, value }: { title: string; value: string }) {
+  return (
+    <article style={styles.miniBlock}>
+      <p style={styles.cardKicker}>{title}</p>
+      <h3 style={styles.miniValue}>{value}</h3>
+    </article>
+  )
+}
+
 function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section style={styles.card}>
@@ -996,7 +1635,7 @@ const styles: Record<string, CSSProperties> = {
   },
   subtitle: {
     color: '#cbd5e1',
-    maxWidth: '760px',
+    maxWidth: '820px',
     lineHeight: 1.65,
     fontSize: '16px',
     margin: 0,
@@ -1012,7 +1651,7 @@ const styles: Record<string, CSSProperties> = {
   },
   heroCard: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.4fr) minmax(260px, 0.6fr)',
+    gridTemplateColumns: 'minmax(0, 1.35fr) minmax(260px, 0.65fr)',
     gap: '16px',
     background: '#020617',
     border: '1px solid #a78bfa',
@@ -1020,6 +1659,21 @@ const styles: Record<string, CSSProperties> = {
     padding: '22px',
     marginBottom: '16px',
     boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
+  },
+  questionCard: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.15fr) minmax(320px, 0.85fr)',
+    gap: '16px',
+    background: '#020617',
+    border: '1px solid #facc15',
+    borderRadius: '24px',
+    padding: '22px',
+    marginBottom: '16px',
+    boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
+  },
+  questionStack: {
+    display: 'grid',
+    gap: '12px',
   },
   sectionKicker: {
     color: '#94a3b8',
@@ -1061,7 +1715,14 @@ const styles: Record<string, CSSProperties> = {
     color: '#ede9fe',
     lineHeight: 1.55,
     margin: 0,
-    fontSize: '14px',
+    fontSize: '16px',
+    fontWeight: 900,
+  },
+  gridFour: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: '14px',
+    marginBottom: '16px',
   },
   postureGrid: {
     display: 'grid',
@@ -1076,6 +1737,21 @@ const styles: Record<string, CSSProperties> = {
     padding: '16px',
     minHeight: '150px',
     boxSizing: 'border-box',
+  },
+  executiveCard: {
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '18px',
+    padding: '16px',
+    minHeight: '160px',
+    boxSizing: 'border-box',
+  },
+  executiveValue: {
+    color: '#f8fafc',
+    fontSize: '18px',
+    lineHeight: 1.2,
+    margin: '10px 0 8px',
+    overflowWrap: 'anywhere',
   },
   cardKicker: {
     color: '#94a3b8',
@@ -1115,6 +1791,18 @@ const styles: Record<string, CSSProperties> = {
     margin: '10px 0 0',
     color: '#f8fafc',
     overflowWrap: 'anywhere',
+  },
+  miniBlock: {
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '16px',
+    padding: '14px',
+  },
+  miniValue: {
+    color: '#f8fafc',
+    fontSize: '16px',
+    lineHeight: 1.35,
+    margin: '10px 0 0',
   },
   twoColumn: {
     display: 'grid',
