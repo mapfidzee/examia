@@ -14,6 +14,50 @@ import {
 
 type PersistedExecutiveReport = Record<string, any>
 
+type StabilityDecision =
+  | 'DO_NOT_TRUST_STABILITY'
+  | 'CONDITIONAL_STABILITY'
+  | 'STABILITY_ABSORPTION_READY'
+
+type StabilityBoardEligibility =
+  | 'NOT_ELIGIBLE'
+  | 'CONDITIONALLY_ELIGIBLE'
+  | 'READY_FOR_ABSORPTION'
+
+type ExecutiveConclusionReport = {
+  classification: string
+  title: string
+  caseId: string
+  subject: string
+  currentPosture: string
+  trajectory: string
+  trustReading: string
+  stabilityDecision: StabilityDecision
+  stabilityBoardEligibility: StabilityBoardEligibility
+  enterpriseConclusion: string
+  institutionalStabilityDecision: string
+  ceoSentence: string
+  boardBrief: string
+  executiveRecommendation: string
+  primaryVulnerability: string
+  secondaryVulnerability: string
+  dominantConcern: string
+  requiredExecutiveAction: string
+  requiredEvidence: string
+  memoryTransfer: {
+    structuralLesson: string
+    recurrenceRisk: string
+    durabilityStatus: string
+    evidenceStatus: string
+    institutionalLearning: string
+  }
+  auditConfidence: string
+  auditMeaning: string
+  executiveSummary: string
+  copyReadySummary: string
+  copyReadyReport: string
+}
+
 export default function ExecutiveReportPage() {
   return (
     <GovernanceRouteGuard
@@ -35,8 +79,7 @@ function ExecutiveReportContent() {
 
   const featured = buildCGIDemoScenario('FUEL_LOGISTICS_CHAIN_PROOF')
   const pilotThread = featured.pilotThread
-
-  const executiveReport = buildPilotExecutiveReport(featured)
+  const executiveReport = buildExecutiveConclusionReport(featured)
 
   async function loadReports() {
     try {
@@ -62,7 +105,7 @@ function ExecutiveReportContent() {
   async function handleSaveReport() {
     try {
       setSaving(true)
-      setSaveMessage('Saving executive continuity report...')
+      setSaveMessage('Saving executive continuity conclusion...')
 
       await saveCGIExecutiveReport({
         reportClassification: executiveReport.classification,
@@ -80,15 +123,19 @@ function ExecutiveReportContent() {
           featured,
           pilotThread,
           executiveReport,
+          stabilityDecision: executiveReport.stabilityDecision,
+          stabilityBoardEligibility:
+            executiveReport.stabilityBoardEligibility,
+          memoryTransfer: executiveReport.memoryTransfer,
           savedFrom: '/executive-report',
         },
       })
 
-      setSaveMessage('Executive continuity report saved.')
+      setSaveMessage('Executive continuity conclusion saved.')
       await loadReports()
     } catch (error) {
       console.error(error)
-      setSaveMessage('Executive continuity report could not be saved.')
+      setSaveMessage('Executive continuity conclusion could not be saved.')
     } finally {
       setSaving(false)
     }
@@ -102,35 +149,66 @@ function ExecutiveReportContent() {
         <section style={styles.header}>
           <p style={styles.kicker}>TSINAXA CGI • EXECUTIVE REPORT</p>
 
-          <h1 style={styles.title}>Executive Continuity Intelligence Report</h1>
+          <h1 style={styles.title}>Institutional Continuity Conclusion</h1>
 
           <p style={styles.subtitle}>
-            Board-ready continuity report for one governed instability moving
-            from request to recovery, command visibility, executive
-            interpretation, institutional memory, and audit reconstruction.
+            Board-ready conclusion layer converting the full CGI continuity
+            chain into a stability decision, CEO sentence, executive
+            recommendation, memory transfer package, and audit confidence.
           </p>
         </section>
 
         <section style={styles.heroCard}>
           <div>
-            <p style={styles.sectionKicker}>Report Subject</p>
+            <p style={styles.sectionKicker}>Enterprise Continuity Conclusion</p>
 
-            <h2 style={styles.heroTitle}>{pilotThread.scenarioName}</h2>
+            <h2 style={styles.heroTitle}>
+              {executiveReport.stabilityDecision}
+            </h2>
 
-            <p style={styles.heroMeaning}>{executiveReport.executiveSummary}</p>
+            <p style={styles.heroMeaning}>
+              {executiveReport.enterpriseConclusion}
+            </p>
           </div>
 
           <div style={styles.statusBox}>
-            <p style={styles.statusLabel}>Current Posture</p>
-            <p style={styles.statusValue}>{executiveReport.currentPosture}</p>
+            <p style={styles.statusLabel}>CEO Sentence</p>
+            <p style={styles.statusValue}>{executiveReport.ceoSentence}</p>
+          </div>
+        </section>
+
+        <section style={styles.decisionCard}>
+          <div>
+            <p style={styles.sectionKicker}>Institutional Stability Decision</p>
+
+            <h2 style={styles.cardTitle}>
+              {executiveReport.institutionalStabilityDecision}
+            </h2>
+
+            <p style={styles.bodyText}>{executiveReport.boardBrief}</p>
+          </div>
+
+          <div style={styles.decisionStack}>
+            <PriorityItem
+              title="Trust Reading"
+              body={executiveReport.trustReading}
+            />
+            <PriorityItem
+              title="Stability Board Eligibility"
+              body={executiveReport.stabilityBoardEligibility}
+            />
+            <PriorityItem
+              title="Audit Confidence"
+              body={executiveReport.auditConfidence}
+            />
           </div>
         </section>
 
         <section style={styles.gridThree}>
           <SignalCard
             title="Case ID"
-            value={pilotThread.caseId}
-            body="The governed continuity event used for this executive report."
+            value={executiveReport.caseId}
+            body="The governed continuity event used for this conclusion."
           />
 
           <SignalCard
@@ -142,73 +220,123 @@ function ExecutiveReportContent() {
           <SignalCard
             title="Report Classification"
             value={executiveReport.classification}
-            body="This report is designed for leadership interpretation and board-ready review."
+            body="This report is designed as an institutional conclusion, not a dashboard summary."
           />
         </section>
 
         <section style={styles.card}>
-          <p style={styles.sectionKicker}>Executive Decision</p>
+          <p style={styles.sectionKicker}>Executive Recommendation</p>
 
-          <h2 style={styles.cardTitle}>{executiveReport.executiveDecision}</h2>
+          <h2 style={styles.cardTitle}>
+            {executiveReport.executiveRecommendation}
+          </h2>
 
-          <p style={styles.bodyText}>{executiveReport.leadershipMeaning}</p>
+          <p style={styles.bodyText}>{executiveReport.executiveSummary}</p>
 
           <div style={styles.priorityGrid}>
             <PriorityItem
+              title="Primary Vulnerability"
+              body={executiveReport.primaryVulnerability}
+            />
+
+            <PriorityItem
+              title="Secondary Vulnerability"
+              body={executiveReport.secondaryVulnerability}
+            />
+
+            <PriorityItem
               title="Dominant Concern"
               body={executiveReport.dominantConcern}
-            />
-
-            <PriorityItem
-              title="Required Executive Action"
-              body={executiveReport.requiredExecutiveAction}
-            />
-
-            <PriorityItem
-              title="Required Evidence"
-              body={executiveReport.requiredEvidence}
             />
           </div>
         </section>
 
         <section style={styles.card}>
-          <p style={styles.sectionKicker}>Continuity Chain Reconstruction</p>
+          <p style={styles.sectionKicker}>Stability Board Readiness</p>
 
           <h2 style={styles.cardTitle}>
-            The full chain remains visible inside the report.
+            Can this instability move toward institutional stability absorption?
           </h2>
 
-          <div style={styles.chainList}>
+          <div style={styles.gridThree}>
+            <PriorityItem
+              title="Eligibility"
+              body={executiveReport.stabilityBoardEligibility}
+            />
+
+            <PriorityItem
+              title="Decision"
+              body={executiveReport.stabilityDecision}
+            />
+
+            <PriorityItem
+              title="Required Action"
+              body={executiveReport.requiredExecutiveAction}
+            />
+          </div>
+
+          <p style={styles.bodyText}>
+            Stability Board movement is not a visual downgrade. It is a governed
+            absorption decision. CGI should only allow movement when durability,
+            evidence, recurrence memory, and audit reconstructability remain
+            attached.
+          </p>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Memory Transfer Package</p>
+
+          <h2 style={styles.cardTitle}>
+            What must survive after the executive report?
+          </h2>
+
+          <div style={styles.memoryGrid}>
+            <PriorityItem
+              title="Structural Lesson"
+              body={executiveReport.memoryTransfer.structuralLesson}
+            />
+
+            <PriorityItem
+              title="Recurrence Risk"
+              body={executiveReport.memoryTransfer.recurrenceRisk}
+            />
+
+            <PriorityItem
+              title="Durability Status"
+              body={executiveReport.memoryTransfer.durabilityStatus}
+            />
+
+            <PriorityItem
+              title="Evidence Status"
+              body={executiveReport.memoryTransfer.evidenceStatus}
+            />
+
+            <PriorityItem
+              title="Institutional Learning"
+              body={executiveReport.memoryTransfer.institutionalLearning}
+            />
+
+            <PriorityItem
+              title="Memory Destination"
+              body="CGI Memory Board"
+            />
+          </div>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Continuity Chain Evidence</p>
+
+          <h2 style={styles.cardTitle}>
+            The conclusion remains reconstructable without turning the report
+            into another audit page.
+          </h2>
+
+          <div style={styles.chainCompact}>
             {pilotThread.chain.map((stage, index) => (
-              <article
-                key={`${stage.stage}-${stage.title}`}
-                style={styles.chainItem}
-              >
-                <div>
-                  <p style={styles.panelKicker}>
-                    Step {index + 1} • {formatLabel(stage.stage)}
-                  </p>
-
-                  <h3 style={styles.chainTitle}>{stage.title}</h3>
-                </div>
-
-                <div style={styles.chainGrid}>
-                  <MiniBlock
-                    title="Continuity Question"
-                    body={stage.continuityQuestion}
-                  />
-
-                  <MiniBlock
-                    title="Executive Finding"
-                    body={stage.executiveFinding}
-                  />
-
-                  <MiniBlock
-                    title="Evidence Preserved"
-                    body={stage.evidencePreserved}
-                  />
-                </div>
-              </article>
+              <div key={`${stage.stage}-${stage.title}`} style={styles.chainPill}>
+                <span style={styles.chainNumber}>{index + 1}</span>
+                <span>{formatLabel(stage.stage)}</span>
+              </div>
             ))}
           </div>
         </section>
@@ -232,25 +360,9 @@ function ExecutiveReportContent() {
             </div>
           </Panel>
 
-          <Panel title="Institutional Memory">
-            <p style={styles.panelText}>{pilotThread.executiveMemory}</p>
+          <Panel title="Audit Meaning">
+            <p style={styles.panelText}>{executiveReport.auditMeaning}</p>
           </Panel>
-        </section>
-
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Audit Reconstruction</p>
-
-          <h2 style={styles.cardTitle}>
-            The report preserves the audit trail leadership may need later.
-          </h2>
-
-          <div style={styles.auditGrid}>
-            {pilotThread.auditReconstruction.map((item) => (
-              <div key={item} style={styles.auditItem}>
-                {item}
-              </div>
-            ))}
-          </div>
         </section>
 
         <section style={styles.actionPanel}>
@@ -258,13 +370,13 @@ function ExecutiveReportContent() {
             <p style={styles.sectionKicker}>Persistence Action</p>
 
             <h2 style={styles.actionTitle}>
-              Preserve this executive report as continuity memory.
+              Preserve this executive conclusion as continuity memory.
             </h2>
 
             <p style={styles.actionText}>
-              Saving the report creates a reconstructable executive record for
-              continuity history, institutional memory, board review, and audit
-              verification.
+              Saving this conclusion creates a reconstructable executive record
+              for continuity history, institutional memory, board review, and
+              audit verification.
             </p>
 
             {saveMessage && <p style={styles.saveMessage}>{saveMessage}</p>}
@@ -279,7 +391,7 @@ function ExecutiveReportContent() {
               ...(saving ? styles.disabledButton : {}),
             }}
           >
-            {saving ? 'Saving...' : 'Save Report'}
+            {saving ? 'Saving...' : 'Save Conclusion'}
           </button>
         </section>
 
@@ -292,9 +404,9 @@ function ExecutiveReportContent() {
             </h2>
 
             <p style={styles.actionText}>
-              This completes the report memory loop by allowing CGI to generate,
-              save, retrieve, and display executive continuity records from
-              Supabase.
+              CGI can retrieve prior executive conclusions to support continuity
+              memory, board review, institutional learning, and audit
+              reconstruction.
             </p>
 
             {reportMessage && <p style={styles.saveMessage}>{reportMessage}</p>}
@@ -314,11 +426,11 @@ function ExecutiveReportContent() {
         </section>
 
         <section style={styles.gridTwo}>
-          <Panel title="Copy-Ready Board Report">
+          <Panel title="Copy-Ready Board Conclusion">
             <pre style={styles.compactPre}>{executiveReport.copyReadyReport}</pre>
           </Panel>
 
-          <Panel title="Executive Report Summary">
+          <Panel title="Executive Summary">
             <pre style={styles.compactPre}>{executiveReport.copyReadySummary}</pre>
           </Panel>
         </section>
@@ -401,19 +513,37 @@ function ExecutiveReportContent() {
   )
 }
 
-function buildPilotExecutiveReport(
+function buildExecutiveConclusionReport(
   featured: ReturnType<typeof buildCGIDemoScenario>,
-) {
+): ExecutiveConclusionReport {
   const pilotThread = featured.pilotThread
 
-  const executiveSummary =
-    'Repeated fuel logistics disruption was governed as a continuity event, not treated as isolated operational noise. CGI preserved the chain from first report through executive interpretation, institutional memory, and audit reconstruction.'
+  const classification = 'INSTITUTIONAL_CONTINUITY_CONCLUSION_REPORT'
+  const title = 'Institutional Continuity Conclusion Report'
+  const trustReading = 'CONDITIONALLY TRUSTED'
+  const stabilityDecision: StabilityDecision = 'CONDITIONAL_STABILITY'
+  const stabilityBoardEligibility: StabilityBoardEligibility =
+    'CONDITIONALLY_ELIGIBLE'
 
-  const executiveDecision =
-    'Leadership should treat the disruption as a cross-site continuity vulnerability until durability evidence confirms that supplier concentration risk no longer threatens operational reliability.'
+  const enterpriseConclusion =
+    'Recovery is visible, but continuity confidence remains conditional because supplier concentration continues to create cross-site exposure.'
 
-  const leadershipMeaning =
-    'Recovery occurred, but recovery alone is not closure. The report preserves why command visibility, coordination, cross-site interpretation, evidence, and institutional memory must remain attached before continuity trust is restored.'
+  const institutionalStabilityDecision =
+    'Conditional stability may be acknowledged, but full trust should not be restored until supplier resilience, recovery durability, and audit evidence remain attached.'
+
+  const ceoSentence =
+    'Visible recovery occurred, but executive confidence should remain restricted until supplier dependency risk is materially reduced.'
+
+  const boardBrief =
+    'The institution should treat the fuel logistics disruption as a continuity dependency exposure, not only a resolved logistics delay. Operations improved, but the structural lesson remains active because multiple sites depended on the same supplier chain.'
+
+  const executiveRecommendation =
+    'Maintain cross-site monitoring, preserve supplier concentration as institutional memory, and require durability evidence before posture reduction.'
+
+  const primaryVulnerability = 'Supplier concentration exposure'
+
+  const secondaryVulnerability =
+    'Uneven recovery durability and recurrence memory risk'
 
   const dominantConcern =
     'Supplier concentration created cross-site continuity exposure while recovery remained uneven.'
@@ -422,38 +552,73 @@ function buildPilotExecutiveReport(
     'Maintain executive visibility, confirm supplier resilience, preserve audit evidence, and require durability confirmation before reducing continuity posture.'
 
   const requiredEvidence =
-    'Request record, triage decision, case history, routing owner, intervention actions, outcome verification, recovery evidence, command rationale, cross-site pattern, executive report, memory statement, and audit trace.'
+    'Request record, triage decision, case history, routing owner, intervention actions, outcome verification, recovery evidence, command rationale, coordination handoff, cross-site pattern, situation room reading, executive center thesis, executive report, memory statement, and audit trace.'
+
+  const memoryTransfer = {
+    structuralLesson:
+      'Supplier concentration created enterprise exposure across North, South, and East operations.',
+    recurrenceRisk:
+      'Moderate. Recurrence remains possible until supplier alternatives and durability evidence are proven.',
+    durabilityStatus:
+      'Partial. Recovery is visible, but durability remains conditional.',
+    evidenceStatus:
+      'Evidence must remain attached until stability absorption is approved.',
+    institutionalLearning:
+      'The institution must not confuse restored availability with resilient continuity.',
+  }
+
+  const auditConfidence =
+    'YES. The conclusion can be reconstructed from request through audit.'
+
+  const auditMeaning =
+    'Audit must preserve the conclusion path without forcing the executive report to repeat every operational detail. The report should retain enough chain evidence to prove why the institutional decision was made.'
+
+  const executiveSummary =
+    'Repeated fuel logistics disruption was governed as a continuity event, not treated as isolated operational noise. CGI preserved the chain from first report through recovery, command visibility, coordination, cross-site interpretation, situation room synthesis, executive center thesis, institutional conclusion, memory transfer, and audit reconstruction.'
 
   const copyReadySummary = [
     'TSINAXA CGI Executive Report Summary',
     '',
     `Case: ${pilotThread.scenarioName}`,
     `Case ID: ${pilotThread.caseId}`,
-    `Current Posture: ${featured.derivation.executivePosture}`,
+    `Trust Reading: ${trustReading}`,
+    `Stability Decision: ${stabilityDecision}`,
+    `Stability Board Eligibility: ${stabilityBoardEligibility}`,
     '',
-    `Executive Summary: ${executiveSummary}`,
+    `Enterprise Continuity Conclusion: ${enterpriseConclusion}`,
     '',
-    `Executive Decision: ${executiveDecision}`,
+    `CEO Sentence: ${ceoSentence}`,
     '',
-    `Leadership Meaning: ${leadershipMeaning}`,
+    `Executive Recommendation: ${executiveRecommendation}`,
+    '',
+    `Board Brief: ${boardBrief}`,
   ].join('\n')
 
   const copyReadyReport = [
-    'TSINAXA CGI Executive Continuity Intelligence Report',
+    'TSINAXA CGI Institutional Continuity Conclusion Report',
     '',
-    `Report Classification: PILOT_CHAIN_EXECUTIVE_REPORT`,
+    `Report Classification: ${classification}`,
     `Case ID: ${pilotThread.caseId}`,
     `Report Subject: ${pilotThread.scenarioName}`,
     `Current Continuity Posture: ${featured.derivation.executivePosture}`,
     `Continuity Condition: ${featured.derivation.continuityCondition}`,
-    `Recovery Credibility: ${featured.derivation.recoveryCredibility}`,
-    `Recurrence Severity: ${featured.derivation.recurrenceSeverity}`,
+    `Trust Reading: ${trustReading}`,
+    `Stability Decision: ${stabilityDecision}`,
+    `Stability Board Eligibility: ${stabilityBoardEligibility}`,
     '',
-    `Executive Thesis: ${pilotThread.executiveThesis}`,
+    `Enterprise Continuity Conclusion: ${enterpriseConclusion}`,
     '',
-    `Executive Summary: ${executiveSummary}`,
+    `Institutional Stability Decision: ${institutionalStabilityDecision}`,
     '',
-    `Executive Decision: ${executiveDecision}`,
+    `CEO Sentence: ${ceoSentence}`,
+    '',
+    `Board Brief: ${boardBrief}`,
+    '',
+    `Executive Recommendation: ${executiveRecommendation}`,
+    '',
+    `Primary Vulnerability: ${primaryVulnerability}`,
+    '',
+    `Secondary Vulnerability: ${secondaryVulnerability}`,
     '',
     `Dominant Concern: ${dominantConcern}`,
     '',
@@ -461,29 +626,48 @@ function buildPilotExecutiveReport(
     '',
     `Required Evidence: ${requiredEvidence}`,
     '',
-    'Continuity Chain:',
+    'Memory Transfer Package:',
+    `- Structural Lesson: ${memoryTransfer.structuralLesson}`,
+    `- Recurrence Risk: ${memoryTransfer.recurrenceRisk}`,
+    `- Durability Status: ${memoryTransfer.durabilityStatus}`,
+    `- Evidence Status: ${memoryTransfer.evidenceStatus}`,
+    `- Institutional Learning: ${memoryTransfer.institutionalLearning}`,
+    '',
+    `Audit Confidence: ${auditConfidence}`,
+    '',
+    `Audit Meaning: ${auditMeaning}`,
+    '',
+    'Continuity Chain Evidence:',
     ...pilotThread.chain.map(
       (stage, index) =>
         `${index + 1}. ${formatLabel(stage.stage)} — ${stage.executiveFinding}`,
     ),
-    '',
-    `Institutional Memory: ${pilotThread.executiveMemory}`,
-    '',
-    'Audit Reconstruction:',
-    ...pilotThread.auditReconstruction.map((item) => `- ${item}`),
   ].join('\n')
 
   return {
-    classification: 'PILOT_CHAIN_EXECUTIVE_REPORT',
-    title: 'Executive Continuity Intelligence Report',
+    classification,
+    title,
+    caseId: pilotThread.caseId,
+    subject: pilotThread.scenarioName,
     currentPosture: featured.derivation.executivePosture,
     trajectory: 'ELEVATED WATCH',
-    executiveSummary,
-    executiveDecision,
-    leadershipMeaning,
+    trustReading,
+    stabilityDecision,
+    stabilityBoardEligibility,
+    enterpriseConclusion,
+    institutionalStabilityDecision,
+    ceoSentence,
+    boardBrief,
+    executiveRecommendation,
+    primaryVulnerability,
+    secondaryVulnerability,
     dominantConcern,
     requiredExecutiveAction,
     requiredEvidence,
+    memoryTransfer,
+    auditConfidence,
+    auditMeaning,
+    executiveSummary,
     copyReadySummary,
     copyReadyReport,
   }
@@ -556,15 +740,6 @@ function PriorityItem({
   )
 }
 
-function MiniBlock({ title, body }: { title: string; body: string }) {
-  return (
-    <div style={styles.miniBlock}>
-      <p style={styles.panelKicker}>{title}</p>
-      <p style={styles.panelBody}>{body}</p>
-    </div>
-  )
-}
-
 function Panel({
   title,
   children,
@@ -618,7 +793,7 @@ const styles: Record<string, CSSProperties> = {
   },
   heroCard: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.35fr) minmax(240px, 0.65fr)',
+    gridTemplateColumns: 'minmax(0, 1.35fr) minmax(260px, 0.65fr)',
     gap: '16px',
     background: '#020617',
     border: '1px solid #67e8f9',
@@ -626,6 +801,21 @@ const styles: Record<string, CSSProperties> = {
     padding: '24px',
     marginBottom: '16px',
     boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
+  },
+  decisionCard: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.1fr) minmax(300px, 0.9fr)',
+    gap: '16px',
+    background: '#020617',
+    border: '1px solid #facc15',
+    borderRadius: '26px',
+    padding: '24px',
+    marginBottom: '16px',
+    boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
+  },
+  decisionStack: {
+    display: 'grid',
+    gap: '12px',
   },
   sectionKicker: {
     color: '#94a3b8',
@@ -666,8 +856,8 @@ const styles: Record<string, CSSProperties> = {
   },
   statusValue: {
     color: '#cffafe',
-    fontSize: '30px',
-    lineHeight: 1.1,
+    fontSize: '22px',
+    lineHeight: 1.25,
     margin: 0,
     fontWeight: 900,
   },
@@ -693,7 +883,7 @@ const styles: Record<string, CSSProperties> = {
   },
   signalValue: {
     color: '#f8fafc',
-    fontSize: '24px',
+    fontSize: '22px',
     lineHeight: 1.15,
     margin: '10px 0',
     overflowWrap: 'anywhere',
@@ -739,33 +929,41 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 700,
     overflowWrap: 'anywhere',
   },
-  chainList: {
-    display: 'grid',
-    gap: '14px',
-    marginTop: '16px',
-  },
-  chainItem: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '16px',
-  },
-  chainTitle: {
-    color: '#f8fafc',
-    fontSize: '22px',
-    lineHeight: 1.2,
-    margin: '8px 0 14px',
-  },
-  chainGrid: {
+  memoryGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
     gap: '12px',
+    marginTop: '16px',
   },
-  miniBlock: {
-    background: '#020617',
-    border: '1px solid #1e293b',
-    borderRadius: '14px',
-    padding: '12px',
+  chainCompact: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '10px',
+    marginTop: '16px',
+  },
+  chainPill: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    background: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '999px',
+    color: '#e2e8f0',
+    fontSize: '13px',
+    fontWeight: 800,
+    padding: '8px 12px',
+  },
+  chainNumber: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '22px',
+    height: '22px',
+    borderRadius: '999px',
+    background: '#083344',
+    color: '#67e8f9',
+    fontSize: '12px',
+    fontWeight: 900,
   },
   panel: {
     background: '#0f172a',
@@ -799,21 +997,6 @@ const styles: Record<string, CSSProperties> = {
     display: 'grid',
     gap: '12px',
     marginTop: '16px',
-  },
-  auditGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '12px',
-    marginTop: '16px',
-  },
-  auditItem: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '14px',
-    color: '#e2e8f0',
-    fontSize: '13px',
-    lineHeight: 1.5,
-    padding: '12px',
   },
   actionPanel: {
     display: 'grid',
