@@ -4,15 +4,14 @@ import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
-import InfrastructureNav from '@/components/InfrastructureNav'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { buildCGIDemoScenario } from '@/lib/cgiDemoScenarioEngine'
 import { buildCGIExecutiveBriefing } from '@/lib/cgiExecutiveBriefingGenerator'
 import {
-  formatCGIExecutivePosture,
   formatCGIEvidenceLanguage,
-  formatCGISurvivabilityLanguage,
+  formatCGIExecutivePosture,
   formatCGIGovernanceSafeLanguage,
+  formatCGISurvivabilityLanguage,
 } from '@/lib/cgiExecutivePostureFormatter'
 import {
   loadCGISiteContinuityProfiles,
@@ -36,14 +35,27 @@ type SiteContinuityProfile = {
   recoveryMeaning: string
 }
 
-type PersistedSiteContinuityProfile = Record<string, any>
+type PersistedSiteContinuityProfile = Record<string, unknown>
+
+type CrossSiteMaturity =
+  | 'ISOLATED INSTABILITY'
+  | 'REPEATED INSTABILITY'
+  | 'SHARED DEPENDENCY'
+  | 'STRUCTURAL FRAGILITY'
+  | 'ENTERPRISE EXPOSURE'
+
+type SiteBriefing = {
+  site: SiteContinuityProfile
+  briefing: ReturnType<typeof buildCGIExecutiveBriefing>
+}
 
 type CrossSitePattern = {
   patternName: string
-  patternType: string
+  maturity: CrossSiteMaturity
   affectedSites: string[]
   dominantSite: string
   sharedDependency: string
+  executiveQuestion: string
   enterpriseExposure: string
   recoveryPattern: string
   commandMeaning: string
@@ -51,14 +63,17 @@ type CrossSitePattern = {
   executiveMeaning: string
   nextGovernedDestination: string
   evidenceStandard: string
+  boardWarning: string
+  requiredAction: string
 }
 
 type CrossSiteDecision = {
   chainPosition: string
-  crossSitePattern: string
   crossSiteReason: string
   nextGovernedDestination: string
   executiveReviewRequired: boolean
+  situationRoomRequired: boolean
+  coordinationRequired: boolean
   auditRequired: boolean
   continuityHistoryRequired: boolean
   evidenceStandard: string
@@ -125,146 +140,6 @@ const postureWeight: Record<CGIRouteSynthesisPosture, number> = {
   CRITICAL: 4,
 }
 
-function strongestSite(sitesToReview: SiteContinuityProfile[]) {
-  return [...sitesToReview].sort((a, b) => {
-    const aBrief = buildCGIExecutiveBriefing(a)
-    const bBrief = buildCGIExecutiveBriefing(b)
-
-    return (
-      postureWeight[bBrief.synthesis.synthesisPosture] -
-      postureWeight[aBrief.synthesis.synthesisPosture]
-    )
-  })[0]
-}
-
-function buildCrossSitePattern(
-  siteBriefings: {
-    site: SiteContinuityProfile
-    briefing: ReturnType<typeof buildCGIExecutiveBriefing>
-  }[],
-): CrossSitePattern {
-  const affectedSites = siteBriefings.map(({ site }) => site.siteName)
-  const dominant = strongestSite(siteBriefings.map(({ site }) => site))
-  const sharedDependencies = Array.from(
-    new Set(siteBriefings.map(({ site }) => site.sharedDependency)),
-  )
-
-  const criticalSites = siteBriefings.filter(
-    ({ briefing }) => briefing.synthesis.synthesisPosture === 'CRITICAL',
-  ).length
-
-  const elevatedSites = siteBriefings.filter(
-    ({ briefing }) => briefing.synthesis.synthesisPosture === 'ELEVATED',
-  ).length
-
-  const evidenceGaps = siteBriefings.filter(
-    ({ site }) => !site.evidenceVerified,
-  ).length
-
-  const recoveryGaps = siteBriefings.filter(({ site }) =>
-    ['WATCHED', 'ELEVATED', 'CRITICAL'].includes(site.recoveryPosture),
-  ).length
-
-  const patternType =
-    criticalSites > 0
-      ? 'ENTERPRISE EXPOSURE'
-      : elevatedSites >= 2
-        ? 'DISTRIBUTED CONTINUITY PATTERN'
-        : evidenceGaps > 0
-          ? 'EVIDENCE-WEAK CROSS-SITE PATTERN'
-          : 'MONITORED CROSS-SITE PATTERN'
-
-  return {
-    patternName: 'Supplier Concentration Fuel Logistics Pattern',
-    patternType,
-    affectedSites,
-    dominantSite: dominant.siteName,
-    sharedDependency: sharedDependencies.join(', '),
-    enterpriseExposure:
-      'A repeated fuel logistics disruption is no longer only a site issue. It reveals shared supplier dependency across operational sites.',
-    recoveryPattern:
-      recoveryGaps > 1
-        ? 'Recovery is uneven. At least two sites still require watch, elevated monitoring, or durability confirmation.'
-        : 'Recovery is improving, but memory and evidence must remain attached.',
-    commandMeaning:
-      criticalSites > 0
-        ? 'Command visibility should remain elevated because one site still carries critical continuity exposure.'
-        : 'Command watch should remain available while cross-site evidence matures.',
-    coordinationMeaning:
-      'Coordination must confirm supplier alternatives, site-level recovery evidence, ownership, and continuity capacity before confidence is restored.',
-    executiveMeaning:
-      'Leadership should treat the pattern as enterprise continuity exposure until supplier concentration risk, recurrence risk, and recovery durability are proven across all affected sites.',
-    nextGovernedDestination:
-      criticalSites > 0 || elevatedSites >= 2
-        ? 'Executive Center'
-        : evidenceGaps > 0
-          ? 'Coordination Center'
-          : 'Audit Reconstruction',
-    evidenceStandard:
-      'Preserve affected sites, shared dependency, site posture, recovery status, command meaning, coordination need, evidence maturity, and institutional memory statement.',
-  }
-}
-
-function buildCrossSiteDecision(pattern: CrossSitePattern): CrossSiteDecision {
-  if (pattern.patternType === 'ENTERPRISE EXPOSURE') {
-    return {
-      chainPosition:
-        'Coordination has escalated into cross-site enterprise exposure review.',
-      crossSitePattern: pattern.patternName,
-      crossSiteReason:
-        'Cross-site review is required because one site carries critical continuity pressure while other sites share the same supplier dependency.',
-      nextGovernedDestination: 'Executive Center',
-      executiveReviewRequired: true,
-      auditRequired: true,
-      continuityHistoryRequired: true,
-      evidenceStandard: pattern.evidenceStandard,
-    }
-  }
-
-  if (pattern.patternType === 'DISTRIBUTED CONTINUITY PATTERN') {
-    return {
-      chainPosition:
-        'Coordination has revealed a repeated or distributed continuity pattern.',
-      crossSitePattern: pattern.patternName,
-      crossSiteReason:
-        'Cross-site governance is required because the instability may no longer be isolated to one site.',
-      nextGovernedDestination: 'Situation Room',
-      executiveReviewRequired: true,
-      auditRequired: true,
-      continuityHistoryRequired: true,
-      evidenceStandard: pattern.evidenceStandard,
-    }
-  }
-
-  if (pattern.patternType === 'EVIDENCE-WEAK CROSS-SITE PATTERN') {
-    return {
-      chainPosition:
-        'Cross-site review is holding because evidence remains incomplete.',
-      crossSitePattern: pattern.patternName,
-      crossSiteReason:
-        'The system must not allow weak evidence to become enterprise continuity confidence.',
-      nextGovernedDestination: 'Coordination Center',
-      executiveReviewRequired: false,
-      auditRequired: true,
-      continuityHistoryRequired: false,
-      evidenceStandard: pattern.evidenceStandard,
-    }
-  }
-
-  return {
-    chainPosition:
-      'Cross-site review is stable and can remain under monitored enterprise visibility.',
-    crossSitePattern: pattern.patternName,
-    crossSiteReason:
-      'Cross-site review remains useful for memory preservation and comparative continuity awareness.',
-    nextGovernedDestination: 'Audit Reconstruction',
-    executiveReviewRequired: false,
-    auditRequired: true,
-    continuityHistoryRequired: false,
-    evidenceStandard: pattern.evidenceStandard,
-  }
-}
-
 export default function CrossSitePage() {
   return (
     <GovernanceRouteGuard
@@ -287,7 +162,7 @@ function CrossSiteContent() {
   const pilotScenario = buildCGIDemoScenario('FUEL_LOGISTICS_CHAIN_PROOF')
   const pilotThread = pilotScenario.pilotThread
 
-  const siteBriefings = useMemo(
+  const siteBriefings = useMemo<SiteBriefing[]>(
     () =>
       sites.map((site) => ({
         site,
@@ -329,32 +204,33 @@ function CrossSiteContent() {
   ).length
 
   const evidenceGaps = sites.filter((site) => !site.evidenceVerified).length
-
-  async function loadSiteProfiles() {
-    try {
-      setLoadingProfiles(true)
-      setProfileMessage('Loading persisted site continuity profiles...')
-
-      const loadedProfiles = await loadCGISiteContinuityProfiles()
-
-      setProfiles(Array.isArray(loadedProfiles) ? loadedProfiles : [])
-      setProfileMessage('Site continuity profile archive loaded.')
-    } catch (error) {
-      console.error(error)
-      setProfileMessage('Site continuity profile archive could not be loaded.')
-    } finally {
-      setLoadingProfiles(false)
-    }
-  }
+  const affectedSites = crossSitePattern.affectedSites.length
 
   useEffect(() => {
     loadSiteProfiles()
   }, [])
 
+  async function loadSiteProfiles() {
+    try {
+      setLoadingProfiles(true)
+      setProfileMessage('Loading enterprise cross-site memory...')
+
+      const loadedProfiles = await loadCGISiteContinuityProfiles()
+
+      setProfiles(Array.isArray(loadedProfiles) ? loadedProfiles : [])
+      setProfileMessage('Enterprise cross-site memory loaded.')
+    } catch (error) {
+      console.error(error)
+      setProfileMessage('Enterprise cross-site memory could not be loaded.')
+    } finally {
+      setLoadingProfiles(false)
+    }
+  }
+
   async function handleSaveSiteProfiles() {
     try {
       setSaving(true)
-      setSaveMessage('Saving cross-site continuity profiles...')
+      setSaveMessage('Saving enterprise cross-site memory...')
 
       await Promise.all(
         siteBriefings.map(({ site, briefing }) => {
@@ -393,11 +269,11 @@ function CrossSiteContent() {
         }),
       )
 
-      setSaveMessage('Cross-site continuity profiles saved.')
+      setSaveMessage('Enterprise cross-site memory saved.')
       await loadSiteProfiles()
     } catch (error) {
       console.error(error)
-      setSaveMessage('Cross-site continuity profiles could not be saved.')
+      setSaveMessage('Enterprise cross-site memory could not be saved.')
     } finally {
       setSaving(false)
     }
@@ -406,177 +282,182 @@ function CrossSiteContent() {
   return (
     <main style={styles.page}>
       <div style={styles.container}>
-        <InfrastructureNav />
-
-        <section style={styles.header}>
-          <p style={styles.kicker}>TSINAXA CGI • CROSS-SITE</p>
-
-          <h1 style={styles.title}>Cross-Site Continuity Intelligence</h1>
-
-          <p style={styles.subtitle}>
-            Enterprise continuity layer for identifying whether visible
-            instability is isolated, distributed, recurring, evidence-weak, or
-            structurally shared across operational sites.
-          </p>
-        </section>
-
-        <section style={styles.heroCard}>
+        <section style={styles.hero}>
           <div>
-            <p style={styles.sectionKicker}>Cross-Site Pattern</p>
+            <p style={styles.kicker}>TSINAXA CGI • ENTERPRISE CROSS-SITE</p>
 
-            <h2 style={styles.heroTitle}>{crossSitePattern.patternName}</h2>
+            <h1 style={styles.title}>Enterprise Cross-Site Intelligence</h1>
 
-            <p style={styles.heroMeaning}>
+            <p style={styles.subtitle}>
+              Cross-Site determines whether visible instability is isolated,
+              repeated, shared, structural, or enterprise-wide. It protects CGI
+              from treating distributed continuity risk as a local site problem.
+            </p>
+          </div>
+
+          <div style={styles.statusBox}>
+            <p style={styles.statusLabel}>CROSS-SITE MATURITY</p>
+            <p style={styles.statusValue}>{crossSitePattern.maturity}</p>
+            <p style={styles.statusMeaning}>
               {crossSitePattern.enterpriseExposure}
             </p>
           </div>
-
-          <div style={styles.statusBox}>
-            <p style={styles.statusLabel}>Pattern Type</p>
-
-            <p style={styles.statusValue}>{crossSitePattern.patternType}</p>
-          </div>
         </section>
 
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Pilot Chain Context</p>
+        {(saveMessage || profileMessage) && (
+          <div style={styles.message}>{saveMessage || profileMessage}</div>
+        )}
 
-          <h2 style={styles.cardTitle}>{pilotThread.scenarioName}</h2>
+        <section style={styles.commandDeck}>
+          <div style={styles.primaryCard}>
+            <p style={styles.sectionKicker}>Executive Cross-Site Question</p>
 
-          <p style={styles.bodyText}>{pilotThread.scenarioSummary}</p>
+            <h2 style={styles.commandTitle}>
+              {crossSitePattern.executiveQuestion}
+            </h2>
 
-          <div style={styles.priorityGrid}>
-            <PriorityItem
-              title="Shared Dependency"
-              body={crossSitePattern.sharedDependency}
-            />
-
-            <PriorityItem
-              title="Dominant Site"
-              body={crossSitePattern.dominantSite}
-            />
-
-            <PriorityItem
-              title="Affected Sites"
-              body={crossSitePattern.affectedSites.join(', ')}
-            />
-          </div>
-        </section>
-
-        <section style={styles.heroCard}>
-          <div>
-            <p style={styles.sectionKicker}>Cross-Site Chain Position</p>
-
-            <h2 style={styles.heroTitle}>{crossSiteDecision.chainPosition}</h2>
-
-            <p style={styles.heroMeaning}>
-              {crossSiteDecision.crossSiteReason}
+            <p style={styles.primaryText}>
+              Cross-Site compares site posture, shared dependency, evidence
+              maturity, recovery durability, recurrence visibility, command
+              meaning, coordination need, and structural memory before the chain
+              moves to Situation Room, Executive Center, or Audit.
             </p>
+
+            <div style={styles.commandMetaGrid}>
+              <MiniStat label="Pattern" value={crossSitePattern.patternName} />
+              <MiniStat label="Dominant Site" value={crossSitePattern.dominantSite} />
+              <MiniStat label="Affected Sites" value={String(affectedSites)} />
+              <MiniStat
+                label="Next"
+                value={crossSiteDecision.nextGovernedDestination}
+              />
+            </div>
           </div>
 
-          <div style={styles.statusBox}>
-            <p style={styles.statusLabel}>Next Destination</p>
+          <div style={styles.consequenceCard}>
+            <p style={styles.sectionKicker}>Board Warning</p>
 
-            <p style={styles.statusValue}>
-              {crossSiteDecision.nextGovernedDestination}
-            </p>
+            <h2 style={styles.consequenceTitle}>
+              Local recovery can hide enterprise fragility.
+            </h2>
+
+            <p style={styles.bodyText}>{crossSitePattern.boardWarning}</p>
           </div>
         </section>
 
-        <section style={styles.chainPanel}>
-          <ChainStep label="Recovery" value="Uneven durability" />
-          <ChainStep label="Command" value={crossSitePattern.commandMeaning} />
-          <ChainStep
-            label="Coordination"
-            value={crossSitePattern.coordinationMeaning}
+        <section style={styles.metricsGrid}>
+          <Metric label="Critical Sites" value={criticalSites} />
+          <Metric label="Elevated Sites" value={elevatedSites} />
+          <Metric label="Affected Sites" value={affectedSites} />
+          <Metric label="Evidence Gaps" value={evidenceGaps} />
+          <Metric label="Memory Sites" value={structuralMemorySites} />
+          <Metric label="Profiles Saved" value={profiles.length} />
+        </section>
+
+        <section style={styles.gridFour}>
+          <ExecutiveCard
+            title="Instability Scope"
+            value={crossSitePattern.maturity}
+            body="Whether visible instability remains local or is becoming structural."
           />
-          <ChainStep label="Cross-Site" value={crossSitePattern.patternType} />
-          <ChainStep
-            label="Next"
-            value={crossSiteDecision.nextGovernedDestination}
+
+          <ExecutiveCard
+            title="Shared Dependency"
+            value={crossSitePattern.sharedDependency}
+            body="The dependency that may be linking multiple operational sites."
+          />
+
+          <ExecutiveCard
+            title="Recovery Pattern"
+            value={crossSitePattern.recoveryPattern}
+            body="Whether recovery is becoming durable across sites or remaining uneven."
+          />
+
+          <ExecutiveCard
+            title="Executive Meaning"
+            value={crossSitePattern.executiveMeaning}
+            body="What leadership should understand before trusting continuity."
           />
         </section>
 
         <section style={styles.gridFour}>
-          <SignalCard
-            title="Critical Sites"
-            value={String(criticalSites)}
-            body="Sites currently requiring direct executive continuity attention."
+          <GateCard
+            title="Coordination"
+            active={crossSiteDecision.coordinationRequired}
+            body="Whether coordination must repair ownership, alternatives, or evidence."
           />
 
-          <SignalCard
-            title="Elevated Sites"
-            value={String(elevatedSites)}
-            body="Sites where continuity exposure remains active and must stay under review."
+          <GateCard
+            title="Situation Room"
+            active={crossSiteDecision.situationRoomRequired}
+            body="Whether the pattern must enter the enterprise operating picture."
           />
 
-          <SignalCard
-            title="Memory Sites"
-            value={String(structuralMemorySites)}
-            body="Sites where prior instability remains relevant to current continuity interpretation."
+          <GateCard
+            title="Executive Review"
+            active={crossSiteDecision.executiveReviewRequired}
+            body="Whether leadership synthesis is required before continuity trust returns."
           />
 
-          <SignalCard
-            title="Evidence Gaps"
-            value={String(evidenceGaps)}
-            body="Sites where continuity confidence cannot be fully trusted yet."
+          <GateCard
+            title="Audit"
+            active={crossSiteDecision.auditRequired}
+            body="Whether cross-site meaning must remain reconstructable."
           />
         </section>
 
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Enterprise Exposure Meaning</p>
+        <section style={styles.memoryPanel}>
+          <p style={styles.sectionKicker}>Cross-Site Memory</p>
 
-          <h2 style={styles.cardTitle}>
-            {crossSitePattern.executiveMeaning}
+          <h2 style={styles.panelTitle}>
+            The institution must remember whether instability was isolated,
+            repeated, shared, structural, or enterprise-wide.
           </h2>
 
-          <p style={styles.bodyText}>{crossSitePattern.recoveryPattern}</p>
-
-          <div style={styles.priorityGrid}>
-            <PriorityItem
-              title="Executive Review"
-              body={
-                crossSiteDecision.executiveReviewRequired
-                  ? 'Required before continuity trust can be restored.'
-                  : 'Not required yet. Continue governed visibility.'
-              }
-            />
-
-            <PriorityItem
-              title="Audit"
-              body={
-                crossSiteDecision.auditRequired
-                  ? 'Required. Cross-site meaning must remain reconstructable.'
-                  : 'Not required by current posture.'
-              }
-            />
-
-            <PriorityItem
-              title="Continuity History"
-              body={
-                crossSiteDecision.continuityHistoryRequired
-                  ? 'Required. Pattern memory must be preserved.'
-                  : 'Not required beyond routine memory preservation.'
-              }
-            />
+          <div style={styles.memoryGrid}>
+            <MiniStat label="Dominant Site" value={crossSitePattern.dominantSite} />
+            <MiniStat label="Dependency" value={crossSitePattern.sharedDependency} />
+            <MiniStat label="Required Action" value={crossSitePattern.requiredAction} />
+            <MiniStat label="Evidence" value={crossSitePattern.evidenceStandard} />
           </div>
+        </section>
+
+        <section style={styles.gridTwo}>
+          <Panel title="Enterprise Movement Requirements">
+            <Info label="Required Action" value={crossSitePattern.requiredAction} />
+            <Info label="Chain Position" value={crossSiteDecision.chainPosition} />
+            <Info
+              label="Cross-Site Reason"
+              value={crossSiteDecision.crossSiteReason}
+            />
+            <Info
+              label="Next Destination"
+              value={crossSiteDecision.nextGovernedDestination}
+            />
+          </Panel>
+
+          <Panel title="Evidence + Governance Standard">
+            <Info label="Evidence" value={evidenceLanguage} />
+            <Info label="Survivability" value={survivabilityLanguage} />
+            <Info label="Governance" value={governanceLanguage} />
+            <Info label="Reconstruction" value={crossSiteDecision.evidenceStandard} />
+          </Panel>
         </section>
 
         <section style={styles.actionPanel}>
           <div>
-            <p style={styles.sectionKicker}>Persistence Action</p>
+            <p style={styles.sectionKicker}>Cross-Site Memory Save</p>
 
             <h2 style={styles.actionTitle}>
-              Preserve cross-site pattern intelligence as institutional memory.
+              Preserve enterprise cross-site memory.
             </h2>
 
             <p style={styles.actionText}>
-              Saving the profile set creates durable cross-site continuity
-              records for site posture, shared dependency, recovery pattern,
-              coordination need, evidence status, and next governed destination.
+              Save the current cross-site interpretation, dependency pattern,
+              dominant site, recovery meaning, executive meaning, and
+              survivability posture so the institution can reconstruct how
+              enterprise continuity exposure emerged.
             </p>
-
-            {saveMessage && <p style={styles.saveMessage}>{saveMessage}</p>}
           </div>
 
           <button
@@ -588,7 +469,7 @@ function CrossSiteContent() {
               ...(saving ? styles.disabledButton : {}),
             }}
           >
-            {saving ? 'Saving...' : 'Save Site Profiles'}
+            {saving ? 'Saving...' : 'Save Cross-Site Memory'}
           </button>
         </section>
 
@@ -597,17 +478,14 @@ function CrossSiteContent() {
             <p style={styles.sectionKicker}>Cross-Site Memory Retrieval</p>
 
             <h2 style={styles.actionTitle}>
-              Retrieve persisted site continuity profiles.
+              Retrieve persisted cross-site memory.
             </h2>
 
             <p style={styles.actionText}>
-              CGI can reconstruct which sites repeatedly stabilize,
-              deteriorate, escalate, or carry structural memory across time.
+              Retrieve site continuity profiles to reconstruct which sites
+              repeatedly stabilize, deteriorate, escalate, or carry structural
+              memory across time.
             </p>
-
-            {profileMessage && (
-              <p style={styles.saveMessage}>{profileMessage}</p>
-            )}
           </div>
 
           <button
@@ -623,81 +501,38 @@ function CrossSiteContent() {
           </button>
         </section>
 
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Enterprise Action Posture</p>
+        <section style={styles.gridThree}>
+          {siteBriefings.map(({ site, briefing }) => (
+            <article key={site.siteName} style={styles.siteCard}>
+              <p style={styles.sectionKicker}>{site.region}</p>
 
-          <h2 style={styles.cardTitle}>{executivePosture.headline}</h2>
+              <h3 style={styles.siteTitle}>{site.siteName}</h3>
 
-          <p style={styles.bodyText}>{executivePosture.actionLanguage}</p>
+              <div style={styles.siteMeta}>
+                <MiniStat
+                  label="Posture"
+                  value={briefing.synthesis.synthesisPosture}
+                />
 
-          <div style={styles.priorityGrid}>
-            <PriorityItem title="Evidence" body={evidenceLanguage} />
+                <MiniStat
+                  label="Evidence"
+                  value={site.evidenceVerified ? 'VERIFIED' : 'GAP'}
+                />
+              </div>
 
-            <PriorityItem
-              title="Survivability"
-              body={survivabilityLanguage}
-            />
+              <p style={styles.siteBody}>{site.continuityFinding}</p>
 
-            <PriorityItem
-              title="Governance Meaning"
-              body={governanceLanguage}
-            />
-          </div>
+              <p style={styles.siteRecovery}>
+                <strong>Recovery Meaning:</strong> {site.recoveryMeaning}
+              </p>
+            </article>
+          ))}
         </section>
 
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Cross-Site Evidence Standard</p>
+        <section style={styles.panel}>
+          <p style={styles.sectionKicker}>Persisted Cross-Site Memory</p>
 
-          <h2 style={styles.cardTitle}>
-            Cross-site meaning must remain reconstructable.
-          </h2>
-
-          <p style={styles.bodyText}>
-            {crossSiteDecision.evidenceStandard}
-          </p>
-        </section>
-
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Site Continuity Board</p>
-
-          <h2 style={styles.cardTitle}>
-            Continuity exposure must be interpreted as pattern, not just
-            posture.
-          </h2>
-
-          <div style={styles.siteList}>
-            {siteBriefings.map(({ site, briefing }) => (
-              <article key={site.siteName} style={styles.siteCard}>
-                <div>
-                  <p style={styles.siteRegion}>{site.region}</p>
-
-                  <h3 style={styles.siteTitle}>{site.siteName}</h3>
-
-                  <p style={styles.siteMeaning}>
-                    {site.continuityFinding}
-                  </p>
-
-                  <p style={styles.siteMemory}>
-                    {site.recoveryMeaning}
-                  </p>
-                </div>
-
-                <div style={styles.siteStatus}>
-                  <p style={styles.statusLabel}>Posture</p>
-
-                  <p style={styles.sitePosture}>
-                    {briefing.synthesis.synthesisPosture}
-                  </p>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Persisted Site Profile Archive</p>
-
-          <h2 style={styles.cardTitle}>
+          <h2 style={styles.panelTitle}>
             Site continuity profiles retrieved from Supabase.
           </h2>
 
@@ -711,19 +546,18 @@ function CrossSiteContent() {
             ) : (
               profiles.map((item, index) => (
                 <article
-                  key={item.id ?? `${getProfileValue(item, 'createdAt')}-${index}`}
+                  key={`${getProfileValue(item, 'createdAt') ?? 'profile'}-${index}`}
                   style={styles.archiveItem}
                 >
                   <div style={styles.archiveHeader}>
                     <div>
-                      <p style={styles.panelKicker}>
+                      <p style={styles.metricLabel}>
                         {getProfileValue(item, 'continuityPosture') ??
                           'SITE_PROFILE'}
                       </p>
 
                       <h3 style={styles.archiveTitle}>
-                        {getProfileValue(item, 'siteName') ??
-                          'Unnamed Site'}
+                        {getProfileValue(item, 'siteName') ?? 'Unnamed Site'}
                       </h3>
                     </div>
 
@@ -733,25 +567,22 @@ function CrossSiteContent() {
                   </div>
 
                   <div style={styles.archiveGrid}>
-                    <PriorityItem
-                      title="Region"
-                      body={
-                        getProfileValue(item, 'region') ??
-                        'Not recorded'
-                      }
+                    <Info
+                      label="Region"
+                      value={getProfileValue(item, 'region') ?? 'Not recorded'}
                     />
 
-                    <PriorityItem
-                      title="Coordination Need"
-                      body={
+                    <Info
+                      label="Coordination"
+                      value={
                         getProfileValue(item, 'coordinationNeed') ??
                         'Not recorded'
                       }
                     />
 
-                    <PriorityItem
-                      title="Evidence Verified"
-                      body={
+                    <Info
+                      label="Evidence"
+                      value={
                         getProfileValue(item, 'evidenceVerified') ??
                         'Not recorded'
                       }
@@ -768,23 +599,373 @@ function CrossSiteContent() {
           </div>
         </section>
 
-        <section style={styles.gridTwo}>
-          <Panel title="Survivability Concentration">
-            Cross-site survivability becomes a leadership issue when the same
-            pressure pattern appears across multiple sites or when one site
-            carries disproportionate continuity exposure.
-          </Panel>
+        <section style={styles.orderPanel}>
+          <p style={styles.sectionKicker}>Copy-Ready Cross-Site Brief</p>
 
-          <Panel title="Cross-Site Governance Meaning">
-            This view does not compare people or assign blame. It compares
-            continuity exposure, structural memory, stabilization evidence,
-            shared dependency, and survivability pressure across operational
-            environments.
-          </Panel>
+          <h2 style={styles.panelTitle}>
+            Is instability isolated or becoming enterprise-wide?
+          </h2>
+
+          <pre style={styles.summaryBox}>
+            {buildCrossSiteBrief({
+              pattern: crossSitePattern,
+              decision: crossSiteDecision,
+              criticalSites,
+              elevatedSites,
+              evidenceGaps,
+              structuralMemorySites,
+              pilotScenario: pilotThread.scenarioName,
+            })}
+          </pre>
+        </section>
+
+        <section style={styles.doctrineCard}>
+          <strong>ENTERPRISE CROSS-SITE DOCTRINE</strong>
+
+          <span>
+            Coordination synchronizes dependency. Cross-Site determines whether
+            instability is isolated, repeated, shared, structural, or
+            enterprise-wide. Situation Room interprets operating condition.
+            Executive Center governs institutional meaning. Memory preserves
+            continuity truth. Audit reconstructs the chain. Local recovery must
+            never hide enterprise fragility.
+          </span>
         </section>
       </div>
     </main>
   )
+}
+
+function strongestSite(siteProfiles: SiteContinuityProfile[]): SiteContinuityProfile {
+  return [...siteProfiles].sort((a, b) => siteRiskScore(b) - siteRiskScore(a))[0]
+}
+
+function siteRiskScore(site: SiteContinuityProfile) {
+  return (
+    postureWeight[site.pressurePosture] +
+    postureWeight[site.trajectoryPosture] +
+    postureWeight[site.predictivePosture] +
+    postureWeight[site.recoveryPosture] +
+    postureWeight[site.reliabilityPosture] +
+    (site.evidenceVerified ? 0 : 2) +
+    (site.structuralMemoryVisible ? 1 : 0)
+  )
+}
+
+function buildCrossSitePattern(siteBriefings: SiteBriefing[]): CrossSitePattern {
+  const affectedSites = siteBriefings.map(({ site }) => site.siteName)
+  const dominant = strongestSite(siteBriefings.map(({ site }) => site))
+
+  const dependencies = Array.from(
+    new Set(siteBriefings.map(({ site }) => site.sharedDependency)),
+  )
+
+  const criticalSites = siteBriefings.filter(
+    ({ briefing }) => briefing.synthesis.synthesisPosture === 'CRITICAL',
+  ).length
+
+  const elevatedSites = siteBriefings.filter(
+    ({ briefing }) => briefing.synthesis.synthesisPosture === 'ELEVATED',
+  ).length
+
+  const evidenceGaps = siteBriefings.filter(({ site }) => !site.evidenceVerified)
+    .length
+
+  const sharedDependencyVisible =
+    dependencies.length === 1 && dependencies[0].trim().length > 0
+
+  const maturity = deriveCrossSiteMaturity({
+    criticalSites,
+    elevatedSites,
+    evidenceGaps,
+    sharedDependencyVisible,
+    affectedSites: affectedSites.length,
+  })
+
+  return {
+    patternName: 'Supplier Concentration Fuel Logistics Pattern',
+    maturity,
+    affectedSites,
+    dominantSite: dominant.siteName,
+    sharedDependency: dependencies.join(', '),
+    executiveQuestion: 'Is instability isolated or becoming enterprise-wide?',
+    enterpriseExposure: deriveEnterpriseExposure(maturity),
+    recoveryPattern: deriveRecoveryPattern(maturity, evidenceGaps),
+    commandMeaning: deriveCommandMeaning(maturity),
+    coordinationMeaning:
+      'Coordination must confirm alternatives, ownership, site-level recovery evidence, and continuity capacity before cross-site confidence is restored.',
+    executiveMeaning: deriveExecutiveMeaning(maturity),
+    nextGovernedDestination:
+      maturity === 'ENTERPRISE EXPOSURE' || maturity === 'STRUCTURAL FRAGILITY'
+        ? 'Executive Center'
+        : maturity === 'SHARED DEPENDENCY'
+          ? 'Situation Room'
+          : maturity === 'REPEATED INSTABILITY'
+            ? 'Coordination Center'
+            : 'Audit Reconstruction',
+    evidenceStandard:
+      'Preserve affected sites, shared dependency, site posture, recovery status, command meaning, coordination need, evidence maturity, recurrence signals, and institutional memory statement.',
+    boardWarning:
+      'Do not allow local stabilization to conceal shared dependency, structural fragility, or enterprise continuity exposure.',
+    requiredAction: deriveRequiredAction(maturity),
+  }
+}
+
+function deriveCrossSiteMaturity(input: {
+  criticalSites: number
+  elevatedSites: number
+  evidenceGaps: number
+  sharedDependencyVisible: boolean
+  affectedSites: number
+}): CrossSiteMaturity {
+  if (input.criticalSites > 0 && input.sharedDependencyVisible) {
+    return 'ENTERPRISE EXPOSURE'
+  }
+
+  if (input.criticalSites > 0 || input.elevatedSites >= 2) {
+    return 'STRUCTURAL FRAGILITY'
+  }
+
+  if (input.sharedDependencyVisible && input.affectedSites > 1) {
+    return 'SHARED DEPENDENCY'
+  }
+
+  if (input.evidenceGaps > 0 || input.elevatedSites > 0) {
+    return 'REPEATED INSTABILITY'
+  }
+
+  return 'ISOLATED INSTABILITY'
+}
+
+function buildCrossSiteDecision(pattern: CrossSitePattern): CrossSiteDecision {
+  if (pattern.maturity === 'ENTERPRISE EXPOSURE') {
+    return {
+      chainPosition:
+        'Coordination has escalated into cross-site enterprise exposure review.',
+      crossSiteReason:
+        'Cross-site review is required because one site carries critical continuity pressure while other sites share the same dependency.',
+      nextGovernedDestination: 'Executive Center',
+      executiveReviewRequired: true,
+      situationRoomRequired: true,
+      coordinationRequired: true,
+      auditRequired: true,
+      continuityHistoryRequired: true,
+      evidenceStandard: pattern.evidenceStandard,
+    }
+  }
+
+  if (pattern.maturity === 'STRUCTURAL FRAGILITY') {
+    return {
+      chainPosition:
+        'Cross-site review has identified structural fragility across operational sites.',
+      crossSiteReason:
+        'The instability may no longer be isolated because multiple sites show elevated pressure, evidence gaps, or recovery weakness.',
+      nextGovernedDestination: 'Situation Room',
+      executiveReviewRequired: true,
+      situationRoomRequired: true,
+      coordinationRequired: true,
+      auditRequired: true,
+      continuityHistoryRequired: true,
+      evidenceStandard: pattern.evidenceStandard,
+    }
+  }
+
+  if (pattern.maturity === 'SHARED DEPENDENCY') {
+    return {
+      chainPosition:
+        'Cross-site review has identified shared dependency requiring enterprise interpretation.',
+      crossSiteReason:
+        'Multiple sites appear connected by the same operational dependency.',
+      nextGovernedDestination: 'Situation Room',
+      executiveReviewRequired: false,
+      situationRoomRequired: true,
+      coordinationRequired: true,
+      auditRequired: true,
+      continuityHistoryRequired: true,
+      evidenceStandard: pattern.evidenceStandard,
+    }
+  }
+
+  if (pattern.maturity === 'REPEATED INSTABILITY') {
+    return {
+      chainPosition:
+        'Cross-site review is holding repeated instability under coordination watch.',
+      crossSiteReason:
+        'Evidence gaps or repeated pressure remain visible, but enterprise exposure is not yet proven.',
+      nextGovernedDestination: 'Coordination Center',
+      executiveReviewRequired: false,
+      situationRoomRequired: false,
+      coordinationRequired: true,
+      auditRequired: true,
+      continuityHistoryRequired: false,
+      evidenceStandard: pattern.evidenceStandard,
+    }
+  }
+
+  return {
+    chainPosition:
+      'Cross-site review is stable and can remain under monitored enterprise visibility.',
+    crossSiteReason:
+      'Current comparison does not prove repeated, shared, structural, or enterprise-wide instability.',
+    nextGovernedDestination: 'Audit Reconstruction',
+    executiveReviewRequired: false,
+    situationRoomRequired: false,
+    coordinationRequired: false,
+    auditRequired: true,
+    continuityHistoryRequired: false,
+    evidenceStandard: pattern.evidenceStandard,
+  }
+}
+
+function deriveEnterpriseExposure(maturity: CrossSiteMaturity) {
+  if (maturity === 'ENTERPRISE EXPOSURE') {
+    return 'Instability is no longer safely interpretable as local. Shared dependency and critical posture create enterprise continuity exposure.'
+  }
+
+  if (maturity === 'STRUCTURAL FRAGILITY') {
+    return 'The pattern suggests structural fragility because multiple sites carry elevated pressure, evidence weakness, or recovery uncertainty.'
+  }
+
+  if (maturity === 'SHARED DEPENDENCY') {
+    return 'Multiple sites appear linked by the same dependency. The risk may be systemic even if only one site is visibly severe.'
+  }
+
+  if (maturity === 'REPEATED INSTABILITY') {
+    return 'Instability is repeating or evidence remains weak. Cross-site visibility should remain active until recurrence is disproven.'
+  }
+
+  return 'Current site comparison does not prove enterprise exposure.'
+}
+
+function deriveRecoveryPattern(maturity: CrossSiteMaturity, evidenceGaps: number) {
+  if (maturity === 'ENTERPRISE EXPOSURE' || maturity === 'STRUCTURAL FRAGILITY') {
+    return 'Recovery is uneven and cannot be trusted as durable until all affected sites preserve evidence of stabilization.'
+  }
+
+  if (maturity === 'SHARED DEPENDENCY') {
+    return 'Recovery may appear local, but the shared dependency must be resolved before confidence is restored.'
+  }
+
+  if (evidenceGaps > 0) {
+    return 'Recovery evidence remains incomplete and should not be treated as institutional stability.'
+  }
+
+  return 'Recovery appears contained, but cross-site memory should remain preserved.'
+}
+
+function deriveCommandMeaning(maturity: CrossSiteMaturity) {
+  if (maturity === 'ENTERPRISE EXPOSURE') {
+    return 'Command visibility should remain elevated because site-level recovery may not protect enterprise continuity.'
+  }
+
+  if (maturity === 'STRUCTURAL FRAGILITY') {
+    return 'Command should watch structural weakness until coordination and site-level evidence mature.'
+  }
+
+  if (maturity === 'SHARED DEPENDENCY') {
+    return 'Command should understand the dependency before releasing continuity confidence.'
+  }
+
+  return 'Command can remain available without immediate escalation.'
+}
+
+function deriveExecutiveMeaning(maturity: CrossSiteMaturity) {
+  if (maturity === 'ENTERPRISE EXPOSURE') {
+    return 'Leadership should treat the pattern as enterprise continuity exposure until dependency risk, recurrence risk, and recovery durability are proven across all affected sites.'
+  }
+
+  if (maturity === 'STRUCTURAL FRAGILITY') {
+    return 'Leadership should understand that site-level issues may be connected by structural weakness rather than isolated events.'
+  }
+
+  if (maturity === 'SHARED DEPENDENCY') {
+    return 'Leadership should know that multiple sites may inherit the same continuity weakness.'
+  }
+
+  if (maturity === 'REPEATED INSTABILITY') {
+    return 'Leadership does not need full escalation yet, but repeated instability should remain visible.'
+  }
+
+  return 'Leadership can treat the current signal as local unless recurrence, shared dependency, or evidence weakness appears.'
+}
+
+function deriveRequiredAction(maturity: CrossSiteMaturity) {
+  if (maturity === 'ENTERPRISE EXPOSURE') {
+    return 'Escalate to Executive Center and preserve cross-site memory for audit reconstruction.'
+  }
+
+  if (maturity === 'STRUCTURAL FRAGILITY') {
+    return 'Move to Situation Room for enterprise operating picture interpretation.'
+  }
+
+  if (maturity === 'SHARED DEPENDENCY') {
+    return 'Move to Situation Room and require coordination evidence on the shared dependency.'
+  }
+
+  if (maturity === 'REPEATED INSTABILITY') {
+    return 'Return to Coordination Center until recurrence, evidence, and ownership are clarified.'
+  }
+
+  return 'Preserve audit memory and continue monitored visibility.'
+}
+
+function buildCrossSiteBrief(input: {
+  pattern: CrossSitePattern
+  decision: CrossSiteDecision
+  criticalSites: number
+  elevatedSites: number
+  evidenceGaps: number
+  structuralMemorySites: number
+  pilotScenario: string
+}) {
+  return [
+    'TSINAXA CGI ENTERPRISE CROSS-SITE INTELLIGENCE BRIEF',
+    '',
+    `Pilot Scenario: ${input.pilotScenario}`,
+    '',
+    `Executive Question: ${input.pattern.executiveQuestion}`,
+    '',
+    `Cross-Site Maturity: ${input.pattern.maturity}`,
+    '',
+    `Pattern: ${input.pattern.patternName}`,
+    '',
+    `Affected Sites: ${input.pattern.affectedSites.join(', ')}`,
+    '',
+    `Dominant Site: ${input.pattern.dominantSite}`,
+    '',
+    `Shared Dependency: ${input.pattern.sharedDependency}`,
+    '',
+    `Critical Sites: ${input.criticalSites}`,
+    '',
+    `Elevated Sites: ${input.elevatedSites}`,
+    '',
+    `Evidence Gaps: ${input.evidenceGaps}`,
+    '',
+    `Memory Sites: ${input.structuralMemorySites}`,
+    '',
+    `Enterprise Exposure: ${input.pattern.enterpriseExposure}`,
+    '',
+    `Recovery Pattern: ${input.pattern.recoveryPattern}`,
+    '',
+    `Command Meaning: ${input.pattern.commandMeaning}`,
+    '',
+    `Coordination Meaning: ${input.pattern.coordinationMeaning}`,
+    '',
+    `Executive Meaning: ${input.pattern.executiveMeaning}`,
+    '',
+    `Chain Position: ${input.decision.chainPosition}`,
+    '',
+    `Next Destination: ${input.decision.nextGovernedDestination}`,
+    '',
+    `Required Action: ${input.pattern.requiredAction}`,
+    '',
+    `Evidence Standard: ${input.pattern.evidenceStandard}`,
+    '',
+    `Board Warning: ${input.pattern.boardWarning}`,
+    '',
+    'Governance-Safe Meaning:',
+    'Cross-Site determines whether visible instability remains local, repeated, shared, structural, or enterprise-wide before continuity meaning enters Situation Room, Executive Center, Memory Board, or Audit.',
+  ].join('\n')
 }
 
 function getProfileValue(
@@ -796,13 +977,25 @@ function getProfileValue(
   const value =
     profile[key] ??
     profile[snakeKey] ??
-    profile.rawPayload?.[key] ??
-    profile.raw_payload?.[key] ??
+    getNestedRecord(profile, 'rawPayload')?.[key] ??
+    getNestedRecord(profile, 'raw_payload')?.[key] ??
     null
 
   if (value === null || value === undefined) return null
-
   return String(value)
+}
+
+function getNestedRecord(
+  value: PersistedSiteContinuityProfile,
+  key: string,
+): Record<string, unknown> | null {
+  const nested = value[key]
+
+  if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
+    return nested as Record<string, unknown>
+  }
+
+  return null
 }
 
 function formatDate(value: string | null) {
@@ -815,16 +1008,25 @@ function formatDate(value: string | null) {
   return date.toLocaleString()
 }
 
-function ChainStep({ label, value }: { label: string; value: string }) {
+function Metric({ label, value }: { label: string; value: number }) {
   return (
-    <article style={styles.chainStep}>
-      <p style={styles.panelKicker}>{label}</p>
-      <p style={styles.chainValue}>{value}</p>
+    <article style={styles.metricCard}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.metricValue}>{String(value)}</p>
     </article>
   )
 }
 
-function SignalCard({
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <article style={styles.miniStat}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.miniValue}>{value}</p>
+    </article>
+  )
+}
+
+function ExecutiveCard({
   title,
   value,
   body,
@@ -834,402 +1036,476 @@ function SignalCard({
   body: string
 }) {
   return (
-    <article style={styles.signalCard}>
-      <p style={styles.panelKicker}>{title}</p>
-
-      <h3 style={styles.signalValue}>{value}</h3>
-
+    <article style={styles.panelCard}>
+      <p style={styles.sectionKicker}>{title}</p>
+      <h3 style={styles.cardValue}>{value}</h3>
       <p style={styles.panelBody}>{body}</p>
     </article>
   )
 }
 
-function PriorityItem({
+function GateCard({
   title,
+  active,
   body,
 }: {
   title: string
+  active: boolean
   body: string
 }) {
   return (
-    <article style={styles.priorityItem}>
-      <p style={styles.panelKicker}>{title}</p>
-
-      <p style={styles.priorityBody}>{body}</p>
+    <article
+      style={{
+        ...styles.panelCard,
+        ...(active ? styles.activePanelCard : {}),
+      }}
+    >
+      <p style={styles.sectionKicker}>{title}</p>
+      <h3 style={styles.cardValue}>{active ? 'REQUIRED' : 'WATCH'}</h3>
+      <p style={styles.panelBody}>{body}</p>
     </article>
   )
 }
 
-function Panel({
-  title,
-  children,
-}: {
-  title: string
-  children: ReactNode
-}) {
+function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section style={styles.panel}>
-      <p style={styles.panelKicker}>{title}</p>
-
-      <div style={styles.panelBody}>{children}</div>
+      <p style={styles.sectionKicker}>{title}</p>
+      <div style={styles.infoList}>{children}</div>
     </section>
+  )
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={styles.infoRow}>
+      <span style={styles.infoLabel}>{label}</span>
+      <strong style={styles.infoValue}>{value}</strong>
+    </div>
   )
 }
 
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    color: 'white',
-    overflowX: 'hidden',
+    background:
+      'radial-gradient(circle at top left, rgba(201, 162, 39, 0.14), transparent 34%), linear-gradient(135deg, #050505 0%, #0B0B0B 45%, #111111 100%)',
+    color: '#FFFFFF',
+    padding: '40px 24px 72px',
   },
   container: {
-    width: '100%',
-    maxWidth: '1120px',
+    width: 'min(1440px, 100%)',
     margin: '0 auto',
-    padding: '0 20px 48px',
-    boxSizing: 'border-box',
+    display: 'grid',
+    gap: 24,
   },
-  header: {
-    marginBottom: '20px',
-    paddingTop: '4px',
+  hero: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.45fr) minmax(320px, 0.75fr)',
+    gap: 24,
+    padding: 32,
+    border: '1px solid rgba(201, 162, 39, 0.34)',
+    borderRadius: 28,
+    background:
+      'linear-gradient(135deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018))',
+    boxShadow: '0 28px 80px rgba(0,0,0,0.38)',
   },
   kicker: {
-    color: '#67e8f9',
-    fontSize: '12px',
-    fontWeight: 900,
-    letterSpacing: '2px',
     margin: 0,
+    color: '#C9A227',
+    fontSize: 12,
+    fontWeight: 900,
+    letterSpacing: '0.22em',
+    textTransform: 'uppercase',
   },
   title: {
-    fontSize: 'clamp(34px, 5vw, 52px)',
-    lineHeight: 1.05,
-    margin: '10px 0',
+    margin: '14px 0 0',
+    fontSize: 'clamp(2.3rem, 5vw, 5rem)',
+    lineHeight: 0.95,
+    letterSpacing: '-0.07em',
+    fontWeight: 950,
   },
   subtitle: {
-    color: '#cbd5e1',
-    maxWidth: '820px',
-    lineHeight: 1.65,
-    fontSize: '16px',
+    maxWidth: 880,
+    margin: '18px 0 0',
+    color: '#C8CDD4',
+    fontSize: 17,
+    lineHeight: 1.8,
+  },
+  statusBox: {
+    border: '1px solid rgba(201, 162, 39, 0.5)',
+    borderRadius: 24,
+    padding: 24,
+    background:
+      'linear-gradient(180deg, rgba(201,162,39,0.18), rgba(0,0,0,0.38))',
+  },
+  statusLabel: {
     margin: 0,
+    color: '#D7B84C',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.2em',
   },
-  heroCard: {
+  statusValue: {
+    margin: '16px 0 0',
+    fontSize: 30,
+    fontWeight: 950,
+    letterSpacing: '-0.04em',
+    lineHeight: 1.05,
+    overflowWrap: 'anywhere',
+  },
+  statusMeaning: {
+    margin: '12px 0 0',
+    color: '#ECE7D7',
+    fontSize: 14,
+    lineHeight: 1.7,
+  },
+  message: {
+    padding: '14px 18px',
+    borderRadius: 16,
+    color: '#D7B84C',
+    background: 'rgba(201,162,39,0.1)',
+    border: '1px solid rgba(201,162,39,0.22)',
+    fontWeight: 800,
+  },
+  commandDeck: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.35fr) minmax(240px, 0.65fr)',
-    gap: '16px',
-    background: '#020617',
-    border: '1px solid #67e8f9',
-    borderRadius: '26px',
-    padding: '24px',
-    marginBottom: '16px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
+    gridTemplateColumns: '1.4fr 0.8fr',
+    gap: 24,
   },
-  chainPanel: {
+  primaryCard: {
+    padding: 30,
+    borderRadius: 28,
+    background: '#FFFFFF',
+    color: '#0B0B0B',
+    border: '1px solid rgba(255,255,255,0.12)',
+  },
+  consequenceCard: {
+    padding: 30,
+    borderRadius: 28,
+    background: 'rgba(0,0,0,0.38)',
+    border: '1px solid rgba(201,162,39,0.28)',
+  },
+  sectionKicker: {
+    margin: 0,
+    color: '#C9A227',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.18em',
+    textTransform: 'uppercase',
+  },
+  commandTitle: {
+    margin: '14px 0',
+    fontSize: 'clamp(1.8rem, 3vw, 3.2rem)',
+    lineHeight: 1.05,
+    letterSpacing: '-0.05em',
+    fontWeight: 950,
+  },
+  primaryText: {
+    margin: 0,
+    color: '#4A4A4A',
+    lineHeight: 1.7,
+    fontSize: 14,
+  },
+  consequenceTitle: {
+    margin: '14px 0',
+    fontSize: 28,
+    lineHeight: 1.1,
+    letterSpacing: '-0.04em',
+  },
+  bodyText: {
+    margin: '8px 0 0',
+    color: '#AEB6C2',
+    lineHeight: 1.7,
+    fontSize: 14,
+  },
+  commandMetaGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-    gap: '12px',
-    marginBottom: '16px',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 24,
   },
-  chainStep: {
-    background: '#082f49',
-    border: '1px solid #0ea5e9',
-    borderRadius: '16px',
-    padding: '14px',
-    minHeight: '120px',
+  metricsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+    gap: 14,
   },
-  chainValue: {
-    color: '#e0f2fe',
-    fontSize: '13px',
-    fontWeight: 900,
-    lineHeight: 1.35,
+  metricCard: {
+    padding: 18,
+    borderRadius: 20,
+    background: 'rgba(255,255,255,0.055)',
+    border: '1px solid rgba(255,255,255,0.1)',
+  },
+  metricLabel: {
+    margin: 0,
+    color: '#858D98',
+    fontSize: 10,
+    fontWeight: 950,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+  },
+  metricValue: {
     margin: '10px 0 0',
+    color: '#FFFFFF',
+    fontSize: 28,
+    fontWeight: 950,
+    lineHeight: 1.15,
+  },
+  miniStat: {
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(255,255,255,0.055)',
+    border: '1px solid rgba(255,255,255,0.09)',
+  },
+  miniValue: {
+    margin: '8px 0 0',
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: 850,
+    lineHeight: 1.45,
+    overflowWrap: 'anywhere',
+  },
+  gridFour: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 16,
+  },
+  gridThree: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: 16,
+  },
+  gridTwo: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 16,
+  },
+  panel: {
+    padding: 28,
+    borderRadius: 28,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.1)',
+  },
+  panelCard: {
+    padding: 22,
+    borderRadius: 22,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.09)',
+    minHeight: 150,
+  },
+  activePanelCard: {
+    background:
+      'linear-gradient(135deg, rgba(201,162,39,0.14), rgba(255,255,255,0.035))',
+    border: '1px solid rgba(201,162,39,0.38)',
+  },
+  panelTitle: {
+    margin: '12px 0 0',
+    fontSize: 26,
+    lineHeight: 1.15,
+    letterSpacing: '-0.045em',
+  },
+  cardValue: {
+    margin: '12px 0 0',
+    color: '#FFFFFF',
+    fontSize: 19,
+    lineHeight: 1.25,
+    overflowWrap: 'anywhere',
+  },
+  panelBody: {
+    marginTop: 10,
+    color: '#AEB6C2',
+    fontSize: 14,
+    lineHeight: 1.65,
+  },
+  memoryPanel: {
+    padding: 28,
+    borderRadius: 28,
+    background:
+      'linear-gradient(135deg, rgba(201,162,39,0.13), rgba(255,255,255,0.035))',
+    border: '1px solid rgba(201,162,39,0.32)',
+  },
+  memoryGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 20,
+  },
+  infoList: {
+    display: 'grid',
+    gap: 10,
+    marginTop: 18,
+  },
+  infoRow: {
+    display: 'grid',
+    gridTemplateColumns: '170px minmax(0, 1fr)',
+    gap: 12,
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(0,0,0,0.22)',
+    border: '1px solid rgba(255,255,255,0.08)',
+  },
+  infoLabel: {
+    color: '#858D98',
+    fontWeight: 900,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+  },
+  infoValue: {
+    color: '#FFFFFF',
+    lineHeight: 1.5,
+    overflowWrap: 'anywhere',
   },
   actionPanel: {
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1fr) auto',
-    gap: '16px',
+    gap: 16,
     alignItems: 'center',
-    background: '#082f49',
-    border: '1px solid #0ea5e9',
-    borderRadius: '22px',
-    padding: '18px',
-    marginBottom: '16px',
-    boxSizing: 'border-box',
+    padding: 28,
+    borderRadius: 28,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(201,162,39,0.24)',
   },
   actionTitle: {
-    color: '#f8fafc',
-    fontSize: '22px',
-    lineHeight: 1.2,
-    margin: '8px 0',
+    margin: '12px 0 0',
+    color: '#FFFFFF',
+    fontSize: 26,
+    lineHeight: 1.15,
+    letterSpacing: '-0.04em',
   },
   actionText: {
-    color: '#cbd5e1',
-    lineHeight: 1.55,
-    margin: 0,
-    maxWidth: '760px',
-  },
-  saveMessage: {
-    color: '#cffafe',
-    fontWeight: 900,
     margin: '12px 0 0',
+    color: '#AEB6C2',
+    lineHeight: 1.7,
+    maxWidth: 820,
   },
   primaryButton: {
     border: 'none',
-    borderRadius: '14px',
-    background: '#67e8f9',
-    color: '#082f49',
+    borderRadius: 999,
+    padding: '14px 22px',
+    background: '#C9A227',
+    color: '#090909',
+    fontWeight: 950,
     cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: 900,
-    minHeight: '48px',
-    padding: '0 18px',
     whiteSpace: 'nowrap',
   },
   secondaryButton: {
-    border: '1px solid #67e8f9',
-    borderRadius: '14px',
-    background: '#0f172a',
-    color: '#cffafe',
+    border: '1px solid rgba(201,162,39,0.34)',
+    borderRadius: 999,
+    padding: '14px 22px',
+    background: 'rgba(201,162,39,0.1)',
+    color: '#F8F6F1',
+    fontWeight: 950,
     cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: 900,
-    minHeight: '48px',
-    padding: '0 18px',
     whiteSpace: 'nowrap',
   },
   disabledButton: {
     cursor: 'not-allowed',
     opacity: 0.65,
   },
-  sectionKicker: {
-    color: '#94a3b8',
-    fontWeight: 900,
-    letterSpacing: '0.14em',
-    textTransform: 'uppercase',
-    margin: 0,
-    fontSize: '12px',
-  },
-  heroTitle: {
-    color: '#a5f3fc',
-    fontSize: 'clamp(30px, 4vw, 46px)',
-    lineHeight: 1,
-    margin: '10px 0 14px',
-    letterSpacing: '-0.04em',
-  },
-  heroMeaning: {
-    color: '#e0f2fe',
-    lineHeight: 1.65,
-    margin: 0,
-    maxWidth: '760px',
-    fontSize: '16px',
-  },
-  statusBox: {
-    background: '#083344',
-    border: '1px solid #22d3ee',
-    borderRadius: '20px',
-    padding: '18px',
-    alignSelf: 'stretch',
-  },
-  statusLabel: {
-    color: '#67e8f9',
-    fontWeight: 900,
-    margin: '0 0 10px',
-    fontSize: '12px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.12em',
-  },
-  statusValue: {
-    color: '#cffafe',
-    fontSize: '26px',
-    lineHeight: 1.1,
-    margin: 0,
-    fontWeight: 900,
-  },
-  gridFour: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '14px',
-    marginBottom: '16px',
-  },
-  gridTwo: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '16px',
-    marginBottom: '16px',
-  },
-  signalCard: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '16px',
-    minHeight: '150px',
-    boxSizing: 'border-box',
-  },
-  signalValue: {
-    color: '#f8fafc',
-    fontSize: '30px',
-    lineHeight: 1.15,
-    margin: '10px 0',
-  },
-  card: {
-    background: '#020617',
-    border: '1px solid #1e293b',
-    borderRadius: '22px',
-    padding: '20px',
-    marginBottom: '16px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.24)',
-    boxSizing: 'border-box',
-    overflow: 'hidden',
-  },
-  cardTitle: {
-    color: '#f8fafc',
-    fontSize: '26px',
-    lineHeight: 1.15,
-    margin: '10px 0 10px',
-  },
-  bodyText: {
-    color: '#cbd5e1',
-    lineHeight: 1.7,
-    margin: 0,
-    maxWidth: '880px',
-  },
-  priorityGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '12px',
-    marginTop: '16px',
-  },
-  priorityItem: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '16px',
-    padding: '14px',
-  },
-  priorityBody: {
-    color: '#e2e8f0',
-    lineHeight: 1.55,
-    margin: '10px 0 0',
-    fontWeight: 700,
-  },
-  siteList: {
-    display: 'grid',
-    gap: '12px',
-    marginTop: '16px',
-  },
   siteCard: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1fr) minmax(160px, 0.25fr)',
-    gap: '16px',
-    alignItems: 'start',
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '16px',
-  },
-  siteRegion: {
-    color: '#94a3b8',
-    fontSize: '12px',
-    fontWeight: 800,
-    margin: 0,
+    padding: 24,
+    borderRadius: 24,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.1)',
   },
   siteTitle: {
-    color: '#f8fafc',
-    fontSize: '24px',
-    margin: '8px 0',
+    margin: '12px 0',
+    color: '#FFFFFF',
+    fontSize: 24,
+    lineHeight: 1.15,
   },
-  siteMeaning: {
-    color: '#cbd5e1',
-    lineHeight: 1.6,
+  siteMeta: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 10,
+    marginBottom: 16,
+  },
+  siteBody: {
     margin: 0,
+    color: '#AEB6C2',
+    lineHeight: 1.65,
   },
-  siteMemory: {
-    color: '#a5f3fc',
-    borderTop: '1px solid #334155',
-    lineHeight: 1.55,
-    margin: '12px 0 0',
-    paddingTop: '12px',
-    fontWeight: 800,
-  },
-  siteStatus: {
-    background: '#083344',
-    border: '1px solid #164e63',
-    borderRadius: '16px',
-    padding: '14px',
-  },
-  sitePosture: {
-    color: '#cffafe',
-    fontSize: '20px',
-    lineHeight: 1.1,
-    margin: 0,
-    fontWeight: 900,
-  },
-  panel: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '16px',
-    minHeight: '150px',
-    boxSizing: 'border-box',
-  },
-  panelKicker: {
-    color: '#94a3b8',
-    fontSize: '12px',
-    fontWeight: 900,
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
-    margin: 0,
-  },
-  panelBody: {
-    color: '#cbd5e1',
-    fontSize: '14px',
-    lineHeight: 1.6,
-    marginTop: '10px',
+  siteRecovery: {
+    margin: '14px 0 0',
+    paddingTop: 14,
+    borderTop: '1px solid rgba(255,255,255,0.08)',
+    color: '#ECE7D7',
+    lineHeight: 1.65,
   },
   archiveList: {
     display: 'grid',
-    gap: '14px',
-    marginTop: '16px',
+    gap: 14,
+    marginTop: 20,
   },
   archiveItem: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '16px',
+    padding: 20,
+    borderRadius: 22,
+    background: 'rgba(0,0,0,0.24)',
+    border: '1px solid rgba(255,255,255,0.09)',
   },
   archiveHeader: {
     display: 'flex',
     justifyContent: 'space-between',
-    gap: '14px',
+    gap: 14,
     alignItems: 'flex-start',
-    marginBottom: '14px',
+    marginBottom: 14,
   },
   archiveTitle: {
-    color: '#f8fafc',
-    fontSize: '20px',
+    color: '#FFFFFF',
+    fontSize: 20,
     lineHeight: 1.2,
     margin: '8px 0 0',
   },
   archiveDate: {
-    color: '#a5f3fc',
-    fontWeight: 800,
-    fontSize: '13px',
+    color: '#D7B84C',
+    fontWeight: 850,
+    fontSize: 13,
     lineHeight: 1.4,
     margin: 0,
     textAlign: 'right',
-    minWidth: '180px',
+    minWidth: 180,
   },
   archiveGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '12px',
+    gap: 12,
   },
   archiveSummary: {
-    color: '#cbd5e1',
+    color: '#AEB6C2',
     lineHeight: 1.65,
     margin: '14px 0 0',
   },
   emptyText: {
-    color: '#cbd5e1',
+    color: '#AEB6C2',
     lineHeight: 1.6,
     margin: 0,
+  },
+  orderPanel: {
+    padding: 28,
+    borderRadius: 28,
+    background: '#FFFFFF',
+    color: '#0B0B0B',
+  },
+  summaryBox: {
+    marginTop: 20,
+    padding: 22,
+    borderRadius: 20,
+    background: '#0A0A0A',
+    color: '#F8F6F1',
+    whiteSpace: 'pre-wrap',
+    fontSize: 13,
+    lineHeight: 1.7,
+    overflowX: 'auto',
+  },
+  doctrineCard: {
+    display: 'grid',
+    gap: 10,
+    padding: 24,
+    borderRadius: 24,
+    background: '#050505',
+    border: '1px solid rgba(201,162,39,0.42)',
+    color: '#FFFFFF',
+    lineHeight: 1.7,
   },
 }
