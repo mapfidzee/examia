@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
-import InfrastructureNav from '@/components/InfrastructureNav'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { buildCGIDemoScenario } from '@/lib/cgiDemoScenarioEngine'
 import { buildCGIExecutiveBriefing } from '@/lib/cgiExecutiveBriefingGenerator'
@@ -17,10 +16,10 @@ import {
   saveCGISituationReview,
 } from '@/lib/cgiPersistenceEngine'
 import {
-  formatCGIExecutivePosture,
   formatCGIEvidenceLanguage,
-  formatCGISurvivabilityLanguage,
+  formatCGIExecutivePosture,
   formatCGIGovernanceSafeLanguage,
+  formatCGISurvivabilityLanguage,
 } from '@/lib/cgiExecutivePostureFormatter'
 
 type PersistedSituationReview = Record<string, any>
@@ -39,6 +38,9 @@ type EnterpriseOperatingPicture = {
   executiveMeaning: string
   nextDestination: string
   evidenceStandard: string
+  boardWarning: string
+  requiredAction: string
+  watchNext: string
 }
 
 export default function SituationRoomPage() {
@@ -131,10 +133,10 @@ function SituationRoomContent() {
   const historyReview = reviewCGIExecutiveHistory(snapshots)
 
   const report = buildCGIExecutiveReportPackage({
-  classification: 'CROSS_SITE_COORDINATION_REPORT',
-  latestSnapshot,
-  historyReview,
-})
+    classification: 'CROSS_SITE_COORDINATION_REPORT',
+    latestSnapshot,
+    historyReview,
+  })
 
   const operatingPicture = buildEnterpriseOperatingPicture({
     pilotThread,
@@ -161,15 +163,15 @@ function SituationRoomContent() {
   async function loadSituationReviews() {
     try {
       setLoadingReviews(true)
-      setReviewMessage('Loading persisted situation reviews...')
+      setReviewMessage('Loading enterprise situation memory...')
 
       const loadedReviews = await loadCGISituationReviews()
 
       setReviews(Array.isArray(loadedReviews) ? loadedReviews : [])
-      setReviewMessage('Situation review archive loaded.')
+      setReviewMessage('Enterprise situation memory loaded.')
     } catch (error) {
       console.error(error)
-      setReviewMessage('Situation review archive could not be loaded.')
+      setReviewMessage('Enterprise situation memory could not be loaded.')
     } finally {
       setLoadingReviews(false)
     }
@@ -182,7 +184,7 @@ function SituationRoomContent() {
   async function handleSaveSituationReview() {
     try {
       setSaving(true)
-      setSaveMessage('Saving executive situation review...')
+      setSaveMessage('Saving enterprise situation review...')
 
       await saveCGISituationReview({
         situationTitle: 'Enterprise Continuity Situation Room',
@@ -193,7 +195,7 @@ function SituationRoomContent() {
         historyDirection: historyReview.direction,
         continuityDriftDetected: historyReview.continuityDriftDetected,
         reportClassification: report.classification,
-        requiredExecutiveAction: trajectory.trajectoryRecommendation,
+        requiredExecutiveAction: operatingPicture.requiredAction,
         requiredEvidence: operatingPicture.evidenceStandard,
         copyReadySituationReport: buildSituationReport({
           operatingPicture,
@@ -215,11 +217,11 @@ function SituationRoomContent() {
         },
       })
 
-      setSaveMessage('Executive situation review saved.')
+      setSaveMessage('Enterprise situation review saved.')
       await loadSituationReviews()
     } catch (error) {
       console.error(error)
-      setSaveMessage('Executive situation review could not be saved.')
+      setSaveMessage('Enterprise situation review could not be saved.')
     } finally {
       setSaving(false)
     }
@@ -228,217 +230,189 @@ function SituationRoomContent() {
   return (
     <main style={styles.page}>
       <div style={styles.container}>
-        <InfrastructureNav />
-
-        <section style={styles.header}>
-          <p style={styles.kicker}>TSINAXA CGI • SITUATION ROOM</p>
-
-          <h1 style={styles.title}>Enterprise Continuity Situation Room</h1>
-
-          <p style={styles.subtitle}>
-            Enterprise operating picture for fusing pressure, trajectory,
-            predictive warning, recovery credibility, reliability, command,
-            coordination, cross-site exposure, executive meaning, and audit
-            evidence into one live continuity reading.
-          </p>
-        </section>
-
-        <section style={styles.heroCard}>
+        <section style={styles.hero}>
           <div>
-            <p style={styles.sectionKicker}>Enterprise Operating Picture</p>
+            <p style={styles.kicker}>TSINAXA CGI • ENTERPRISE SITUATION ROOM</p>
 
-            <h2 style={styles.heroTitle}>{operatingPicture.posture}</h2>
+            <h1 style={styles.title}>
+              Enterprise Continuity Situation Intelligence
+            </h1>
 
-            <p style={styles.heroMeaning}>{operatingPicture.executiveMeaning}</p>
+            <p style={styles.subtitle}>
+              Situation Room fuses pressure, trajectory, predictive warning,
+              recovery durability, reliability confidence, command visibility,
+              coordination exposure, cross-site intelligence, executive meaning,
+              and audit evidence into one operating condition.
+            </p>
           </div>
 
           <div style={styles.statusBox}>
-            <p style={styles.statusLabel}>Operating Question</p>
-
-            <p style={styles.statusQuestion}>
-              {operatingPicture.operatingQuestion}
+            <p style={styles.statusLabel}>CONTINUITY CONDITION</p>
+            <p style={styles.statusValue}>{operatingPicture.posture}</p>
+            <p style={styles.statusMeaning}>
+              {operatingPicture.executiveMeaning}
             </p>
           </div>
         </section>
 
-        <section style={styles.chainPanel}>
-          <ChainStep label="Recovery" value="Uneven durability" />
-          <ChainStep label="Command" value="Elevated visibility" />
-          <ChainStep label="Coordination" value="Shared dependency" />
-          <ChainStep label="Cross-Site" value="Enterprise exposure" />
-          <ChainStep label="Situation Room" value="Operating picture" active />
-          <ChainStep label="Next" value={operatingPicture.nextDestination} />
-        </section>
+        <section style={styles.commandDeck}>
+          <div style={styles.primaryCard}>
+            <p style={styles.sectionKicker}>Executive Situation Question</p>
 
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Pilot Chain Context</p>
+            <h2 style={styles.commandTitle}>
+              {operatingPicture.operatingQuestion}
+            </h2>
 
-          <h2 style={styles.cardTitle}>{pilotThread.scenarioName}</h2>
+            <p style={styles.primaryText}>
+              The current condition is determined through pressure, trajectory,
+              predictive warning, recovery durability, reliability confidence,
+              command visibility, coordination exposure, and cross-site
+              intelligence.
+            </p>
 
-          <p style={styles.bodyText}>{pilotThread.scenarioSummary}</p>
-
-          <div style={styles.priorityGrid}>
-            <PriorityItem
-              title="Pressure"
-              body={operatingPicture.pressureReading}
-            />
-            <PriorityItem
-              title="Trajectory"
-              body={operatingPicture.trajectoryReading}
-            />
-            <PriorityItem
-              title="Predictive"
-              body={operatingPicture.predictiveReading}
-            />
+            <div style={styles.commandMetaGrid}>
+              <MiniStat label="Posture" value={operatingPicture.posture} />
+              <MiniStat label="History" value={historyReview.direction} />
+              <MiniStat
+                label="Continuity Drift"
+                value={historyReview.continuityDriftDetected ? 'YES' : 'NO'}
+              />
+              <MiniStat label="Next" value={operatingPicture.nextDestination} />
+            </div>
           </div>
+
+          <div style={styles.consequenceCard}>
+            <p style={styles.sectionKicker}>Board Warning</p>
+
+            <h2 style={styles.consequenceTitle}>
+              Do not separate signals that converge into one condition.
+            </h2>
+
+            <p style={styles.bodyText}>{operatingPicture.boardWarning}</p>
+          </div>
+        </section>
+                <section style={styles.metricsGrid}>
+          <Metric label="Pressure" value="ELEVATED" />
+          <Metric label="Trajectory" value={trajectory.trajectory} />
+          <Metric label="Predictive" value="ELEVATED" />
+          <Metric label="Recovery" value="PARTIAL" />
+          <Metric label="Reliability" value="ELEVATED" />
+          <Metric label="Cross-Site" value="VISIBLE" />
         </section>
 
         <section style={styles.gridFour}>
-          <SignalCard
+                   <ExecutiveCard
             title="Pressure"
             value="ELEVATED"
             body={operatingPicture.pressureReading}
           />
 
-          <SignalCard
+          <ExecutiveCard
             title="Trajectory"
             value={trajectory.trajectory}
             body={operatingPicture.trajectoryReading}
           />
 
-          <SignalCard
-            title="Predictive Warning"
+          <ExecutiveCard
+            title="Predictive"
             value="ELEVATED"
             body={operatingPicture.predictiveReading}
           />
 
-          <SignalCard
-            title="Reliability"
-            value="ELEVATED"
-            body={operatingPicture.reliabilityReading}
-          />
-        </section>
-
-        <section style={styles.gridFour}>
-          <SignalCard
+          <ExecutiveCard
             title="Recovery"
             value="PARTIAL"
             body={operatingPicture.recoveryReading}
           />
+        </section>
 
-          <SignalCard
+        <section style={styles.gridFour}>
+          <ExecutiveCard
+            title="Reliability"
+            value="ELEVATED"
+            body={operatingPicture.reliabilityReading}
+          />
+
+          <ExecutiveCard
             title="Command"
             value="ELEVATED"
             body={operatingPicture.commandReading}
           />
 
-          <SignalCard
+          <ExecutiveCard
             title="Coordination"
             value="REQUIRED"
             body={operatingPicture.coordinationReading}
           />
 
-          <SignalCard
+          <ExecutiveCard
             title="Cross-Site"
             value="VISIBLE"
             body={operatingPicture.crossSiteReading}
           />
         </section>
 
-        <section style={styles.trajectoryPanel}>
-          <div>
-            <p style={styles.sectionKicker}>Trajectory Reading</p>
+        <section style={styles.memoryPanel}>
+          <p style={styles.sectionKicker}>Executive Meaning</p>
 
-            <h2 style={styles.cardTitle}>{trajectory.momentum}</h2>
-
-            <p style={styles.bodyText}>{trajectory.trajectoryExplanation}</p>
-          </div>
-
-          <div style={styles.statusBox}>
-            <p style={styles.statusLabel}>Watch Next</p>
-
-            <p style={styles.statusQuestion}>{trajectory.watchNext}</p>
-          </div>
-        </section>
-
-        <section style={styles.gridFour}>
-          <SignalCard
-            title="Momentum"
-            value={trajectory.momentum}
-            body="Operational movement pressure behind the current situation."
-          />
-
-          <SignalCard
-            title="History Direction"
-            value={historyReview.direction}
-            body="Whether continuity is improving, holding, worsening, or not yet historically mature."
-          />
-
-          <SignalCard
-            title="Continuity Drift"
-            value={historyReview.continuityDriftDetected ? 'YES' : 'NO'}
-            body="Whether continuity degradation or exposure persistence requires leadership review."
-          />
-
-          <SignalCard
-            title="Next Destination"
-            value={operatingPicture.nextDestination}
-            body="The next governed executive movement from the Situation Room."
-          />
-        </section>
-
-        <section style={styles.gridThree}>
-          <Panel title="Situation Room">
-            What is happening institution-wide right now, where continuity is
-            heading, and what must remain visible.
-          </Panel>
-
-          <Panel title="Executive Center">
-            What leadership must understand and what decision posture is
-            required.
-          </Panel>
-
-          <Panel title="Audit">
-            Whether the operating picture, evidence, and movement can be
-            reconstructed later.
-          </Panel>
-        </section>
-
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Enterprise Evidence Standard</p>
-
-          <h2 style={styles.cardTitle}>
-            The operating picture must remain reconstructable.
+          <h2 style={styles.panelTitle}>
+            What does this continuity condition mean?
           </h2>
 
-          <p style={styles.bodyText}>{operatingPicture.evidenceStandard}</p>
-
-          <div style={styles.priorityGrid}>
-            <PriorityItem title="Risk" body={trajectory.trajectoryRisk} />
-            <PriorityItem
-              title="Recommendation"
-              body={trajectory.trajectoryRecommendation}
+          <div style={styles.memoryGrid}>
+            <MiniStat
+              label="Required Action"
+              value={operatingPicture.requiredAction}
             />
-            <PriorityItem
-              title="Executive Meaning"
-              body={trajectory.executiveMeaning}
+
+            <MiniStat label="Watch Next" value={operatingPicture.watchNext} />
+
+            <MiniStat
+              label="Dominant Concern"
+              value={briefing.dominantConcern}
+            />
+
+            <MiniStat
+              label="Executive Posture"
+              value={executivePosture.label}
             />
           </div>
+        </section>
+
+        <section style={styles.gridTwo}>
+          <Panel title="Continuity Evidence Standard">
+            <Info label="Evidence" value={evidenceLanguage} />
+            <Info label="Survivability" value={survivabilityLanguage} />
+            <Info label="Governance" value={governanceLanguage} />
+            <Info
+              label="Reconstruction"
+              value={operatingPicture.evidenceStandard}
+            />
+          </Panel>
+
+          <Panel title="Operating Picture Movement">
+            <Info label="Momentum" value={trajectory.momentum} />
+            <Info label="History Direction" value={historyReview.direction} />
+            <Info
+              label="Continuity Drift"
+              value={historyReview.continuityDriftDetected ? 'YES' : 'NO'}
+            />
+            <Info label="Next Destination" value={operatingPicture.nextDestination} />
+          </Panel>
         </section>
 
         <section style={styles.actionPanel}>
           <div>
-            <p style={styles.sectionKicker}>Persistence Action</p>
+            <p style={styles.sectionKicker}>Situation Memory</p>
 
             <h2 style={styles.actionTitle}>
-              Preserve this situation review as enterprise operating memory.
+              Preserve this operating picture as enterprise continuity memory.
             </h2>
 
             <p style={styles.actionText}>
-              Saving the situation review creates a durable institutional record
-              of enterprise posture, trajectory direction, command visibility,
-              coordination pressure, cross-site exposure, required evidence, and
-              executive meaning.
+              Saving the situation review preserves posture, movement,
+              convergence, evidence standard, executive meaning, required action,
+              and audit reconstruction memory.
             </p>
 
             {saveMessage && <p style={styles.saveMessage}>{saveMessage}</p>}
@@ -462,13 +436,13 @@ function SituationRoomContent() {
             <p style={styles.sectionKicker}>Situation Memory Retrieval</p>
 
             <h2 style={styles.actionTitle}>
-              Retrieve persisted executive situation reviews.
+              Retrieve persisted enterprise situation reviews.
             </h2>
 
             <p style={styles.actionText}>
-              CGI can reconstruct historical operating pictures, continuity
-              drift, trajectory direction, required actions, and survivability
-              interpretation across time.
+              CGI can reconstruct operating pictures, continuity drift,
+              trajectory direction, required actions, and executive meaning
+              across time.
             </p>
 
             {reviewMessage && <p style={styles.saveMessage}>{reviewMessage}</p>}
@@ -487,28 +461,21 @@ function SituationRoomContent() {
           </button>
         </section>
 
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Executive Action</p>
+        <section style={styles.panel}>
+          <div style={styles.cardHeader}>
+            <div>
+              <p style={styles.sectionKicker}>Enterprise Situation Memory</p>
 
-          <h2 style={styles.cardTitle}>{executivePosture.headline}</h2>
+              <h2 style={styles.panelTitle}>
+                Persisted operating pictures
+              </h2>
 
-          <p style={styles.bodyText}>{executivePosture.actionLanguage}</p>
-
-          <div style={styles.priorityGrid}>
-            <PriorityItem title="Evidence" body={evidenceLanguage} />
-            <PriorityItem title="Survivability" body={survivabilityLanguage} />
-            <PriorityItem title="Governance Meaning" body={governanceLanguage} />
+              <p style={styles.bodyText}>
+                Situation memory preserves prior enterprise operating
+                conditions so continuity decisions remain reconstructable.
+              </p>
+            </div>
           </div>
-        </section>
-
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Persisted Situation Archive</p>
-
-          <h2 style={styles.cardTitle}>
-            Executive situation reviews retrieved from Supabase.
-          </h2>
-
-          <p style={styles.bodyText}>Review Count: {reviews.length}</p>
 
           <div style={styles.archiveList}>
             {reviews.length === 0 ? (
@@ -523,14 +490,14 @@ function SituationRoomContent() {
                 >
                   <div style={styles.archiveHeader}>
                     <div>
-                      <p style={styles.panelKicker}>
+                      <p style={styles.metricLabel}>
                         {getReviewValue(item, 'reportClassification') ??
                           'SITUATION_REVIEW'}
                       </p>
 
                       <h3 style={styles.archiveTitle}>
                         {getReviewValue(item, 'situationTitle') ??
-                          'Executive Continuity Situation Room'}
+                          'Enterprise Continuity Situation Room'}
                       </h3>
                     </div>
 
@@ -540,25 +507,25 @@ function SituationRoomContent() {
                   </div>
 
                   <div style={styles.archiveGrid}>
-                    <PriorityItem
-                      title="Situation Posture"
-                      body={
+                    <Info
+                      label="Situation Posture"
+                      value={
                         getReviewValue(item, 'situationPosture') ??
                         'Not recorded'
                       }
                     />
 
-                    <PriorityItem
-                      title="History Direction"
-                      body={
+                    <Info
+                      label="History Direction"
+                      value={
                         getReviewValue(item, 'historyDirection') ??
                         'Not recorded'
                       }
                     />
 
-                    <PriorityItem
-                      title="Required Action"
-                      body={
+                    <Info
+                      label="Required Action"
+                      value={
                         getReviewValue(item, 'requiredExecutiveAction') ??
                         'Not recorded'
                       }
@@ -574,43 +541,11 @@ function SituationRoomContent() {
             )}
           </div>
         </section>
+                <section style={styles.orderPanel}>
+          <p style={styles.sectionKicker}>Copy-Ready Situation Brief</p>
 
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Situation Priorities</p>
-
-          <h2 style={styles.cardTitle}>
-            The Situation Room compresses the enterprise operating picture into
-            leadership-ready priorities.
-          </h2>
-
-          <div style={styles.situationList}>
-            <SituationItem
-              title="Dominant Concern"
-              body={briefing.dominantConcern}
-            />
-
-            <SituationItem
-              title="Required Action"
-              body={trajectory.trajectoryRecommendation}
-            />
-
-            <SituationItem
-              title="Required Evidence"
-              body={operatingPicture.evidenceStandard}
-            />
-
-            <SituationItem
-              title="History Meaning"
-              body={historyReview.executiveMeaning}
-            />
-          </div>
-        </section>
-
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Copy-Ready Situation Report</p>
-
-          <h2 style={styles.cardTitle}>
-            Enterprise continuity situation package.
+          <h2 style={styles.panelTitle}>
+            Can the institution explain its current continuity condition?
           </h2>
 
           <pre style={styles.summaryBox}>
@@ -623,6 +558,18 @@ function SituationRoomContent() {
               pilotThread,
             })}
           </pre>
+        </section>
+
+        <section style={styles.doctrineCard}>
+          <strong>ENTERPRISE SITUATION DOCTRINE</strong>
+
+          <span>
+            The Situation Room is the enterprise continuity convergence layer.
+            Pressure, trajectory, predictive warning, recovery durability,
+            reliability confidence, command visibility, coordination exposure,
+            cross-site intelligence, executive meaning, and audit evidence
+            converge here before executive interpretation occurs.
+          </span>
         </section>
       </div>
     </main>
@@ -638,13 +585,12 @@ function buildEnterpriseOperatingPicture(input: {
   return {
     posture: 'ENTERPRISE CONTINUITY WATCH',
     operatingQuestion:
-      'Can leadership trust continuity while recovery is uneven and cross-site exposure remains visible?',
+      'Can the institution explain its current continuity condition?',
     pressureReading:
       'Operational pressure remains elevated because fuel logistics disruption has affected multiple sites.',
-    trajectoryReading:
-      input.trajectory.trajectoryDirection,
+    trajectoryReading: input.trajectory.trajectoryDirection,
     predictiveReading:
-      'Predictive warning remains elevated because supplier concentration can produce recurrence before full recovery durability is proven.',
+      'Predictive warning remains elevated because supplier concentration can produce recurrence before recovery durability is proven.',
     recoveryReading:
       'Recovery is visible but uneven. North is stabilizing, South remains under watch, and East still carries recurrence exposure.',
     reliabilityReading:
@@ -655,11 +601,14 @@ function buildEnterpriseOperatingPicture(input: {
       'Coordination must synchronize ownership, routing, supplier alternatives, evidence, and site-level recovery proof.',
     crossSiteReading:
       'Cross-site intelligence shows shared supplier dependency and enterprise continuity exposure.',
-    executiveMeaning:
-      input.pilotThread.executiveThesis,
+    executiveMeaning: input.pilotThread.executiveThesis,
     nextDestination: 'Executive Center',
     evidenceStandard:
-      'Preserve pressure reading, trajectory direction, predictive warning, recovery status, command posture, coordination need, cross-site pattern, executive meaning, required action, and audit reconstruction trail.',
+      'Preserve pressure reading, trajectory direction, predictive warning, recovery status, reliability posture, command posture, coordination need, cross-site pattern, executive meaning, required action, and audit reconstruction trail.',
+    boardWarning:
+      'Do not separate pressure, trajectory, prediction, recovery, reliability, command, coordination, and cross-site exposure when they are converging into one institutional condition.',
+    requiredAction: input.trajectory.trajectoryRecommendation,
+    watchNext: input.trajectory.watchNext,
   }
 }
 
@@ -672,18 +621,20 @@ function buildSituationReport(input: {
   pilotThread: ReturnType<typeof buildCGIDemoScenario>['pilotThread']
 }) {
   return [
-    'TSINAXA CGI Enterprise Situation Room Report',
+    'TSINAXA CGI ENTERPRISE SITUATION ROOM BRIEF',
     '',
     `Pilot Scenario: ${input.pilotThread.scenarioName}`,
     '',
-    `Enterprise Posture: ${input.operatingPicture.posture}`,
+    `Continuity Condition: ${input.operatingPicture.posture}`,
     '',
-    `Operating Question: ${input.operatingPicture.operatingQuestion}`,
+    `Executive Situation Question: ${input.operatingPicture.operatingQuestion}`,
     '',
     `Pressure Reading: ${input.operatingPicture.pressureReading}`,
     '',
     `Trajectory: ${input.trajectory.trajectory}`,
+    '',
     `Momentum: ${input.trajectory.momentum}`,
+    '',
     `Direction: ${input.trajectory.trajectoryDirection}`,
     '',
     `Predictive Reading: ${input.operatingPicture.predictiveReading}`,
@@ -698,15 +649,9 @@ function buildSituationReport(input: {
     '',
     `Cross-Site Reading: ${input.operatingPicture.crossSiteReading}`,
     '',
-    `Commander Question: ${input.trajectory.commanderQuestion}`,
+    `Required Action: ${input.operatingPicture.requiredAction}`,
     '',
-    `Operational Meaning: ${input.trajectory.trajectoryExplanation}`,
-    '',
-    `Risk: ${input.trajectory.trajectoryRisk}`,
-    '',
-    `Recommendation: ${input.trajectory.trajectoryRecommendation}`,
-    '',
-    `Watch Next: ${input.trajectory.watchNext}`,
+    `Watch Next: ${input.operatingPicture.watchNext}`,
     '',
     `Executive Meaning: ${input.operatingPicture.executiveMeaning}`,
     '',
@@ -721,6 +666,8 @@ function buildSituationReport(input: {
     }`,
     '',
     `Evidence Standard: ${input.operatingPicture.evidenceStandard}`,
+    '',
+    `Board Warning: ${input.operatingPicture.boardWarning}`,
     '',
     `Report Classification: ${input.report.classification}`,
   ].join('\n')
@@ -744,43 +691,35 @@ function getReviewValue(
     null
 
   if (value === null || value === undefined) return null
-
   return String(value)
 }
 
 function formatDate(value: string | null) {
   if (!value) return 'Date not recorded'
-
   const date = new Date(value)
-
   if (Number.isNaN(date.getTime())) return value
-
   return date.toLocaleString()
 }
 
-function ChainStep({
-  label,
-  value,
-  active,
-}: {
-  label: string
-  value: string
-  active?: boolean
-}) {
+function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <article
-      style={{
-        ...styles.chainStep,
-        ...(active ? styles.chainStepActive : {}),
-      }}
-    >
-      <p style={styles.panelKicker}>{label}</p>
-      <p style={styles.chainValue}>{value}</p>
+    <article style={styles.metricCard}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.metricValue}>{value}</p>
     </article>
   )
 }
 
-function SignalCard({
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <article style={styles.miniStat}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.miniValue}>{value}</p>
+    </article>
+  )
+}
+
+function ExecutiveCard({
   title,
   value,
   body,
@@ -790,406 +729,416 @@ function SignalCard({
   body: string
 }) {
   return (
-    <article style={styles.signalCard}>
-      <p style={styles.panelKicker}>{title}</p>
-      <h3 style={styles.signalValue}>{value}</h3>
+    <article style={styles.panelCard}>
+      <p style={styles.sectionKicker}>{title}</p>
+      <h3 style={styles.cardValue}>{value}</h3>
       <p style={styles.panelBody}>{body}</p>
     </article>
   )
 }
 
-function PriorityItem({
-  title,
-  body,
-}: {
-  title: string
-  body: string
-}) {
-  return (
-    <article style={styles.priorityItem}>
-      <p style={styles.panelKicker}>{title}</p>
-      <p style={styles.priorityBody}>{body}</p>
-    </article>
-  )
-}
-
-function SituationItem({
-  title,
-  body,
-}: {
-  title: string
-  body: string
-}) {
-  return (
-    <article style={styles.situationItem}>
-      <p style={styles.panelKicker}>{title}</p>
-      <p style={styles.situationBody}>{body}</p>
-    </article>
-  )
-}
-
-function Panel({
-  title,
-  children,
-}: {
-  title: string
-  children: ReactNode
-}) {
+function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section style={styles.panel}>
-      <p style={styles.panelKicker}>{title}</p>
-      <div style={styles.panelBody}>{children}</div>
+      <p style={styles.sectionKicker}>{title}</p>
+      <div style={styles.infoList}>{children}</div>
     </section>
+  )
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={styles.infoRow}>
+      <span style={styles.infoLabel}>{label}</span>
+      <strong style={styles.infoValue}>{value}</strong>
+    </div>
   )
 }
 
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    color: 'white',
-    overflowX: 'hidden',
+    background:
+      'radial-gradient(circle at top left, rgba(201, 162, 39, 0.14), transparent 34%), linear-gradient(135deg, #050505 0%, #0B0B0B 45%, #111111 100%)',
+    color: '#FFFFFF',
+    padding: '40px 24px 72px',
   },
   container: {
-    width: '100%',
-    maxWidth: '1180px',
+    width: 'min(1440px, 100%)',
     margin: '0 auto',
-    padding: '0 20px 48px',
-    boxSizing: 'border-box',
+    display: 'grid',
+    gap: 24,
   },
-  header: {
-    marginBottom: '20px',
-    paddingTop: '4px',
+  hero: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.45fr) minmax(320px, 0.75fr)',
+    gap: 24,
+    padding: 32,
+    border: '1px solid rgba(201, 162, 39, 0.34)',
+    borderRadius: 28,
+    background:
+      'linear-gradient(135deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018))',
+    boxShadow: '0 28px 80px rgba(0,0,0,0.38)',
   },
   kicker: {
-    color: '#67e8f9',
-    fontSize: '12px',
-    fontWeight: 900,
-    letterSpacing: '2px',
     margin: 0,
+    color: '#C9A227',
+    fontSize: 12,
+    fontWeight: 900,
+    letterSpacing: '0.22em',
+    textTransform: 'uppercase',
   },
   title: {
-    fontSize: 'clamp(36px, 5vw, 56px)',
-    lineHeight: 1.05,
-    margin: '10px 0',
+    margin: '14px 0 0',
+    fontSize: 'clamp(2.3rem, 5vw, 5rem)',
+    lineHeight: 0.95,
+    letterSpacing: '-0.07em',
+    fontWeight: 950,
   },
   subtitle: {
-    color: '#cbd5e1',
-    maxWidth: '880px',
-    lineHeight: 1.65,
-    fontSize: '16px',
+    maxWidth: 880,
+    margin: '18px 0 0',
+    color: '#C8CDD4',
+    fontSize: 17,
+    lineHeight: 1.8,
+  },
+  statusBox: {
+    border: '1px solid rgba(201, 162, 39, 0.5)',
+    borderRadius: 24,
+    padding: 24,
+    background:
+      'linear-gradient(180deg, rgba(201,162,39,0.18), rgba(0,0,0,0.38))',
+  },
+  statusLabel: {
     margin: 0,
+    color: '#D7B84C',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.2em',
   },
-  heroCard: {
+  statusValue: {
+    margin: '16px 0 0',
+    fontSize: 30,
+    fontWeight: 950,
+    letterSpacing: '-0.04em',
+    lineHeight: 1.05,
+  },
+  statusMeaning: {
+    margin: '12px 0 0',
+    color: '#ECE7D7',
+    fontSize: 14,
+    lineHeight: 1.7,
+  },
+  commandDeck: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.35fr) minmax(260px, 0.65fr)',
-    gap: '16px',
-    background: '#020617',
-    border: '1px solid #67e8f9',
-    borderRadius: '26px',
-    padding: '24px',
-    marginBottom: '16px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
+    gridTemplateColumns: '1.4fr 0.8fr',
+    gap: 24,
   },
-  chainPanel: {
+  primaryCard: {
+    padding: 30,
+    borderRadius: 28,
+    background: '#FFFFFF',
+    color: '#0B0B0B',
+    border: '1px solid rgba(255,255,255,0.12)',
+  },
+  consequenceCard: {
+    padding: 30,
+    borderRadius: 28,
+    background: 'rgba(0,0,0,0.38)',
+    border: '1px solid rgba(201,162,39,0.28)',
+  },
+  sectionKicker: {
+    margin: 0,
+    color: '#C9A227',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.18em',
+    textTransform: 'uppercase',
+  },
+  commandTitle: {
+    margin: '14px 0',
+    fontSize: 'clamp(1.8rem, 3vw, 3.2rem)',
+    lineHeight: 1.05,
+    letterSpacing: '-0.05em',
+    fontWeight: 950,
+  },
+  primaryText: {
+    margin: 0,
+    color: '#4A4A4A',
+    lineHeight: 1.7,
+    fontSize: 14,
+  },
+  consequenceTitle: {
+    margin: '14px 0',
+    fontSize: 28,
+    lineHeight: 1.1,
+    letterSpacing: '-0.04em',
+  },
+  bodyText: {
+    margin: '8px 0 0',
+    color: '#AEB6C2',
+    lineHeight: 1.7,
+    fontSize: 14,
+  },
+  commandMetaGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 24,
+  },
+  metricsGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
-    gap: '12px',
-    marginBottom: '16px',
+    gap: 14,
   },
-  chainStep: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '16px',
-    padding: '14px',
-    minHeight: '110px',
+  metricCard: {
+    padding: 18,
+    borderRadius: 20,
+    background: 'rgba(255,255,255,0.055)',
+    border: '1px solid rgba(255,255,255,0.1)',
   },
-  chainStepActive: {
-    background: '#083344',
-    border: '1px solid #22d3ee',
+  metricLabel: {
+    margin: 0,
+    color: '#858D98',
+    fontSize: 10,
+    fontWeight: 950,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
   },
-  chainValue: {
-    color: '#e0f2fe',
-    fontSize: '13px',
-    fontWeight: 900,
-    lineHeight: 1.35,
+  metricValue: {
     margin: '10px 0 0',
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: 950,
+    lineHeight: 1.15,
+    overflowWrap: 'anywhere',
   },
-  trajectoryPanel: {
+  miniStat: {
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(255,255,255,0.055)',
+    border: '1px solid rgba(255,255,255,0.09)',
+  },
+  miniValue: {
+    margin: '8px 0 0',
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: 850,
+    lineHeight: 1.45,
+    overflowWrap: 'anywhere',
+  },
+  gridFour: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.35fr) minmax(260px, 0.65fr)',
-    gap: '16px',
-    background: '#082f49',
-    border: '1px solid #0ea5e9',
-    borderRadius: '22px',
-    padding: '20px',
-    marginBottom: '16px',
-    boxSizing: 'border-box',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 16,
+  },
+  gridTwo: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 16,
+  },
+  panel: {
+    padding: 28,
+    borderRadius: 28,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.1)',
+  },
+  panelCard: {
+    padding: 22,
+    borderRadius: 22,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.09)',
+    minHeight: 150,
+  },
+  panelTitle: {
+    margin: '12px 0 0',
+    fontSize: 26,
+    lineHeight: 1.15,
+    letterSpacing: '-0.045em',
+  },
+  cardValue: {
+    margin: '12px 0 0',
+    color: '#FFFFFF',
+    fontSize: 19,
+    lineHeight: 1.25,
+    overflowWrap: 'anywhere',
+  },
+  panelBody: {
+    marginTop: 10,
+    color: '#AEB6C2',
+    fontSize: 14,
+    lineHeight: 1.65,
+  },
+  memoryPanel: {
+    padding: 28,
+    borderRadius: 28,
+    background:
+      'linear-gradient(135deg, rgba(201,162,39,0.13), rgba(255,255,255,0.035))',
+    border: '1px solid rgba(201,162,39,0.32)',
+  },
+  memoryGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 20,
+  },
+  infoList: {
+    display: 'grid',
+    gap: 10,
+    marginTop: 18,
+  },
+  infoRow: {
+    display: 'grid',
+    gridTemplateColumns: '170px minmax(0, 1fr)',
+    gap: 12,
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(0,0,0,0.22)',
+    border: '1px solid rgba(255,255,255,0.08)',
+  },
+  infoLabel: {
+    color: '#858D98',
+    fontWeight: 900,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+  },
+  infoValue: {
+    color: '#FFFFFF',
+    lineHeight: 1.5,
+    overflowWrap: 'anywhere',
   },
   actionPanel: {
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1fr) auto',
-    gap: '16px',
+    gap: 16,
     alignItems: 'center',
-    background: '#082f49',
-    border: '1px solid #0ea5e9',
-    borderRadius: '22px',
-    padding: '18px',
-    marginBottom: '16px',
-    boxSizing: 'border-box',
+    padding: 28,
+    borderRadius: 28,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(201,162,39,0.24)',
   },
   actionTitle: {
-    color: '#f8fafc',
-    fontSize: '22px',
-    lineHeight: 1.2,
-    margin: '8px 0',
+    margin: '12px 0 0',
+    color: '#FFFFFF',
+    fontSize: 26,
+    lineHeight: 1.15,
+    letterSpacing: '-0.04em',
   },
   actionText: {
-    color: '#cbd5e1',
-    lineHeight: 1.55,
-    margin: 0,
-    maxWidth: '760px',
+    margin: '12px 0 0',
+    color: '#AEB6C2',
+    lineHeight: 1.7,
+    maxWidth: 820,
   },
   saveMessage: {
-    color: '#cffafe',
+    color: '#D7B84C',
     fontWeight: 900,
     margin: '12px 0 0',
   },
   primaryButton: {
     border: 'none',
-    borderRadius: '14px',
-    background: '#67e8f9',
-    color: '#082f49',
+    borderRadius: 999,
+    padding: '14px 22px',
+    background: '#C9A227',
+    color: '#090909',
+    fontWeight: 950,
     cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: 900,
-    minHeight: '48px',
-    padding: '0 18px',
     whiteSpace: 'nowrap',
   },
   secondaryButton: {
-    border: '1px solid #67e8f9',
-    borderRadius: '14px',
-    background: '#0f172a',
-    color: '#cffafe',
+    border: '1px solid rgba(201,162,39,0.34)',
+    borderRadius: 999,
+    padding: '14px 22px',
+    background: 'rgba(201,162,39,0.1)',
+    color: '#F8F6F1',
+    fontWeight: 950,
     cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: 900,
-    minHeight: '48px',
-    padding: '0 18px',
     whiteSpace: 'nowrap',
   },
   disabledButton: {
     cursor: 'not-allowed',
     opacity: 0.65,
   },
-  sectionKicker: {
-    color: '#94a3b8',
-    fontWeight: 900,
-    letterSpacing: '0.14em',
-    textTransform: 'uppercase',
-    margin: 0,
-    fontSize: '12px',
-  },
-  heroTitle: {
-    color: '#a5f3fc',
-    fontSize: 'clamp(34px, 5vw, 56px)',
-    lineHeight: 1,
-    margin: '10px 0 14px',
-    letterSpacing: '-0.04em',
-  },
-  heroMeaning: {
-    color: '#e0f2fe',
-    lineHeight: 1.65,
-    margin: 0,
-    maxWidth: '760px',
-    fontSize: '16px',
-  },
-  statusBox: {
-    background: '#083344',
-    border: '1px solid #22d3ee',
-    borderRadius: '20px',
-    padding: '18px',
-    alignSelf: 'stretch',
-  },
-  statusLabel: {
-    color: '#67e8f9',
-    fontWeight: 900,
-    margin: '0 0 10px',
-    fontSize: '12px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.12em',
-  },
-  statusQuestion: {
-    color: '#cffafe',
-    fontSize: '22px',
-    lineHeight: 1.3,
-    margin: 0,
-    fontWeight: 900,
-  },
-  gridFour: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '14px',
-    marginBottom: '16px',
-  },
-  gridThree: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '14px',
-    marginBottom: '16px',
-  },
-  signalCard: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '16px',
-    minHeight: '160px',
-    boxSizing: 'border-box',
-  },
-  signalValue: {
-    color: '#f8fafc',
-    fontSize: '22px',
-    lineHeight: 1.15,
-    margin: '10px 0',
-    overflowWrap: 'anywhere',
-  },
-  card: {
-    background: '#020617',
-    border: '1px solid #1e293b',
-    borderRadius: '22px',
-    padding: '20px',
-    marginBottom: '16px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.24)',
-    boxSizing: 'border-box',
-    overflow: 'hidden',
-  },
-  cardTitle: {
-    color: '#f8fafc',
-    fontSize: '26px',
-    lineHeight: 1.15,
-    margin: '10px 0 10px',
-  },
-  bodyText: {
-    color: '#cbd5e1',
-    lineHeight: 1.7,
-    margin: 0,
-    maxWidth: '900px',
-  },
-  priorityGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '12px',
-    marginTop: '16px',
-  },
-  priorityItem: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '16px',
-    padding: '14px',
-  },
-  priorityBody: {
-    color: '#e2e8f0',
-    lineHeight: 1.55,
-    margin: '10px 0 0',
-    fontWeight: 700,
-  },
-  panel: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '16px',
-    minHeight: '150px',
-    boxSizing: 'border-box',
-  },
-  panelKicker: {
-    color: '#94a3b8',
-    fontSize: '12px',
-    fontWeight: 900,
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
-    margin: 0,
-  },
-  panelBody: {
-    color: '#cbd5e1',
-    fontSize: '14px',
-    lineHeight: 1.6,
-    marginTop: '10px',
-  },
-  situationList: {
-    display: 'grid',
-    gap: '12px',
-    marginTop: '16px',
-  },
-  situationItem: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '16px',
-  },
-  situationBody: {
-    color: '#e2e8f0',
-    lineHeight: 1.6,
-    margin: '10px 0 0',
-    fontWeight: 700,
-  },
-  summaryBox: {
-    whiteSpace: 'pre-wrap',
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '16px',
-    padding: '16px',
-    color: '#e2e8f0',
-    lineHeight: 1.55,
-    minHeight: '260px',
-    fontSize: '14px',
-    overflowX: 'auto',
+  cardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: 16,
+    alignItems: 'flex-start',
   },
   archiveList: {
     display: 'grid',
-    gap: '14px',
-    marginTop: '16px',
+    gap: 14,
+    marginTop: 20,
   },
   archiveItem: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '16px',
+    padding: 20,
+    borderRadius: 22,
+    background: 'rgba(0,0,0,0.24)',
+    border: '1px solid rgba(255,255,255,0.09)',
   },
   archiveHeader: {
     display: 'flex',
     justifyContent: 'space-between',
-    gap: '14px',
+    gap: 14,
     alignItems: 'flex-start',
-    marginBottom: '14px',
+    marginBottom: 14,
   },
   archiveTitle: {
-    color: '#f8fafc',
-    fontSize: '20px',
+    color: '#FFFFFF',
+    fontSize: 20,
     lineHeight: 1.2,
     margin: '8px 0 0',
   },
   archiveDate: {
-    color: '#a5f3fc',
-    fontWeight: 800,
-    fontSize: '13px',
+    color: '#D7B84C',
+    fontWeight: 850,
+    fontSize: 13,
     lineHeight: 1.4,
     margin: 0,
     textAlign: 'right',
-    minWidth: '180px',
+    minWidth: 180,
   },
   archiveGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '12px',
+    gap: 12,
   },
   archiveSummary: {
-    color: '#cbd5e1',
+    color: '#AEB6C2',
     lineHeight: 1.65,
     margin: '14px 0 0',
   },
   emptyText: {
-    color: '#cbd5e1',
+    color: '#AEB6C2',
     lineHeight: 1.6,
     margin: 0,
+  },
+  orderPanel: {
+    padding: 28,
+    borderRadius: 28,
+    background: '#FFFFFF',
+    color: '#0B0B0B',
+  },
+  summaryBox: {
+    marginTop: 20,
+    padding: 22,
+    borderRadius: 20,
+    background: '#0A0A0A',
+    color: '#F8F6F1',
+    whiteSpace: 'pre-wrap',
+    fontSize: 13,
+    lineHeight: 1.7,
+    overflowX: 'auto',
+  },
+  doctrineCard: {
+    display: 'grid',
+    gap: 10,
+    padding: 24,
+    borderRadius: 24,
+    background: '#050505',
+    border: '1px solid rgba(201,162,39,0.42)',
+    color: '#FFFFFF',
+    lineHeight: 1.7,
   },
 }
