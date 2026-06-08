@@ -7,10 +7,10 @@ import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { interpretReliability } from '@/lib/cgi/interpreters/interpretReliability'
 import { buildCGIExecutiveBriefing } from '@/lib/cgiExecutiveBriefingGenerator'
 import {
-  formatCGIExecutivePosture,
   formatCGIEvidenceLanguage,
-  formatCGISurvivabilityLanguage,
+  formatCGIExecutivePosture,
   formatCGIGovernanceSafeLanguage,
+  formatCGISurvivabilityLanguage,
 } from '@/lib/cgiExecutivePostureFormatter'
 import { supabase } from '../../lib/supabase'
 
@@ -63,30 +63,38 @@ type EnterpriseReliabilityIntelligence = {
   latest: CgiOperationalMetric | null
   enterprisePosture: EnterpriseReliabilityPosture
   trustDecision: ReliabilityTrustDecision
+
   reliabilityQuestion: string
   enterpriseReliabilityThesis: string
   institutionalMeaning: string
+
   reliabilityPattern: string
   reliabilityThreat: string
   reliabilityConfidence: string
   reliabilityForecast: string
+
   commandImplication: string
   executiveReportImplication: string
   memoryBoardImplication: string
   auditImplication: string
+
   evidenceRequirement: string
   boardWarning: string
   executiveAction: string
+
   reliabilityInterpretation: ReturnType<typeof interpretReliability>
+
   survivabilityMeaning: Interpretation
   continuityMeaning: Interpretation
   driftMeaning: Interpretation
   unresolvedMeaning: Interpretation
   volatilityMeaning: Interpretation
   historyDepth: Interpretation
+
   dominantWeakness: string
   synchronizedExecutiveSummary: string
   actionCue: string
+
   scores: {
     reliability: number
     survivability: number
@@ -102,6 +110,7 @@ type EnterpriseReliabilityIntelligence = {
     unresolvedCases: number
     overdueCases: number
   }
+
   copyReadyBrief: string
 }
 
@@ -203,119 +212,110 @@ function ReliabilityContent() {
   )
 
   const synchronizedGovernance = formatCGIGovernanceSafeLanguage()
-
-  return (
+    return (
     <main style={styles.page}>
       <div style={styles.container}>
-        <section style={styles.header}>
-          <p style={styles.kicker}>
-            TSINAXA CGI • ENTERPRISE RELIABILITY
-          </p>
+        <section style={styles.hero}>
+          <div>
+            <p style={styles.kicker}>TSINAXA CGI • ENTERPRISE RELIABILITY</p>
+            <h1 style={styles.title}>Enterprise Reliability Intelligence</h1>
+            <p style={styles.subtitle}>
+              Reliability determines whether the institution can stabilize
+              repeatedly under pressure. CGI does not treat one visible recovery
+              as proof that continuity can be trusted.
+            </p>
+          </div>
 
-          <h1 style={styles.title}>Enterprise Reliability Intelligence</h1>
-
-          <p style={styles.subtitle}>
-            Enterprise reliability determines whether the institution can
-            repeatedly stabilize visible instability, not merely recover once.
-            It sits between Recovery, Command, Executive Report, Memory Board,
-            and Audit.
-          </p>
+          <div style={styles.statusBox}>
+            <p style={styles.statusLabel}>RELIABILITY POSTURE</p>
+            <p style={styles.statusValue}>{intelligence.enterprisePosture}</p>
+            <p style={styles.statusMeaning}>
+              {intelligence.enterpriseReliabilityThesis}
+            </p>
+          </div>
         </section>
 
         {message && <div style={styles.message}>{message}</div>}
 
-        <section style={styles.heroCard}>
-          <div>
-            <p style={styles.sectionKicker}>Enterprise Reliability Thesis</p>
-
-            <h2 style={styles.heroPosture}>
-              {intelligence.enterprisePosture}
+        <section style={styles.commandDeck}>
+          <div style={styles.primaryCard}>
+            <p style={styles.sectionKicker}>Executive Reliability Question</p>
+            <h2 style={styles.commandTitle}>
+              {intelligence.reliabilityQuestion}
             </h2>
+            <p style={styles.primaryText}>{intelligence.institutionalMeaning}</p>
 
-            <p style={styles.heroMeaning}>
-              {intelligence.enterpriseReliabilityThesis}
-            </p>
+            <div style={styles.commandMetaGrid}>
+              <MiniStat label="Trust Decision" value={intelligence.trustDecision} />
+              <MiniStat
+                label="Reliability Confidence"
+                value={intelligence.reliabilityConfidence}
+              />
+              <MiniStat
+                label="Dominant Weakness"
+                value={intelligence.dominantWeakness}
+              />
+              <MiniStat label="Memory" value={intelligence.historyDepth.posture} />
+            </div>
           </div>
 
-          <div style={styles.actionBox}>
-            <p style={styles.actionLabel}>Trust Decision</p>
-
-            <p style={styles.actionText}>{intelligence.trustDecision}</p>
+          <div style={styles.consequenceCard}>
+            <p style={styles.sectionKicker}>Board Warning</p>
+            <h2 style={styles.consequenceTitle}>
+              Do not confuse recovery with repeatability.
+            </h2>
+            <p style={styles.bodyText}>{intelligence.boardWarning}</p>
           </div>
         </section>
 
-        <section style={styles.thesisCard}>
-          <div>
-            <p style={styles.sectionKicker}>Executive Reliability Question</p>
-
-            <h2 style={styles.cardTitle}>
-              {intelligence.reliabilityQuestion}
-            </h2>
-
-            <p style={styles.bodyText}>{intelligence.institutionalMeaning}</p>
-          </div>
-
-          <div style={styles.thesisStack}>
-            <MiniBlock
-              title="Reliability Pattern"
-              value={intelligence.reliabilityPattern}
-            />
-
-            <MiniBlock
-              title="Reliability Threat"
-              value={intelligence.reliabilityThreat}
-            />
-
-            <MiniBlock
-              title="Reliability Forecast"
-              value={intelligence.reliabilityForecast}
-            />
-          </div>
+        <section style={styles.metricsGrid}>
+          <Metric label="Reliability" value={String(intelligence.scores.reliability)} />
+          <Metric label="Survivability" value={String(intelligence.scores.survivability)} />
+          <Metric label="Continuity" value={String(intelligence.scores.continuity)} />
+          <Metric label="Memory Risk" value={String(intelligence.scores.memoryRisk)} />
+          <Metric label="Drift" value={String(intelligence.scores.drift)} />
+          <Metric label="Volatility" value={String(intelligence.scores.volatility)} />
         </section>
 
         <section style={styles.gridFour}>
           <ExecutiveCard
-            title="Reliability Confidence"
-            value={intelligence.reliabilityConfidence}
-            body="Can repeated stabilization be trusted?"
+            title="Reliability Pattern"
+            value={intelligence.reliabilityPattern}
+            body="How stabilization is behaving across reviewed memory."
           />
 
           <ExecutiveCard
-            title="Command Implication"
-            value={intelligence.commandImplication}
-            body="How Command should treat the reliability posture."
+            title="Reliability Threat"
+            value={intelligence.reliabilityThreat}
+            body="The main reason repeated stabilization cannot be assumed."
           />
 
           <ExecutiveCard
-            title="Executive Report"
-            value={intelligence.executiveReportImplication}
-            body="What the report may or may not conclude."
+            title="Reliability Forecast"
+            value={intelligence.reliabilityForecast}
+            body="What reliability may do if current conditions continue."
           />
 
           <ExecutiveCard
-            title="Board Warning"
-            value={intelligence.boardWarning}
-            body="The misunderstanding leadership must avoid."
+            title="Executive Action"
+            value={intelligence.executiveAction}
+            body="What leadership should do before trust is restored."
           />
         </section>
 
-        <section style={styles.card}>
+        <section style={styles.panel}>
           <p style={styles.sectionKicker}>Synchronized Continuity Reading</p>
-
-          <h2 style={styles.cardTitle}>{synchronizedPosture.label}</h2>
-
+          <h2 style={styles.panelTitle}>{synchronizedPosture.label}</h2>
           <p style={styles.bodyText}>{synchronizedPosture.description}</p>
 
           <div style={styles.infoList}>
             <Info label="Evidence" value={synchronizedEvidence} />
-
             <Info label="Survivability" value={synchronizedSurvivability} />
-
             <Info label="Governance" value={synchronizedGovernance} />
           </div>
         </section>
 
-        <section style={styles.gridThree}>
+        <section style={styles.postureGrid}>
           <PostureCard
             title="Survivability"
             interpretation={intelligence.survivabilityMeaning}
@@ -347,64 +347,30 @@ function ReliabilityContent() {
           />
         </section>
 
-        <section style={styles.scoreGrid}>
-          <ScoreCard
-            title="Reliability"
-            value={intelligence.scores.reliability}
-            body="Average recovery reliability across reviewed memory."
-          />
+        <section style={styles.memoryPanel}>
+          <p style={styles.sectionKicker}>Reliability Memory</p>
+          <h2 style={styles.panelTitle}>
+            Repeatable stabilization must be proven across memory, not assumed
+            from one recovery.
+          </h2>
 
-          <ScoreCard
-            title="Survivability"
-            value={intelligence.scores.survivability}
-            body="Ability to withstand operational pressure."
-          />
-
-          <ScoreCard
-            title="Continuity"
-            value={intelligence.scores.continuity}
-            body="Continuity integrity across persisted snapshots."
-          />
-
-          <ScoreCard
-            title="Memory Risk"
-            value={intelligence.scores.memoryRisk}
-            body="Structural memory pressure that can weaken trust."
-          />
+          <div style={styles.memoryGrid}>
+            <MiniStat label="Failed Recoveries" value={String(intelligence.scores.failedRecoveries)} />
+            <MiniStat label="Unresolved Cases" value={String(intelligence.scores.unresolvedCases)} />
+            <MiniStat label="Overdue Cases" value={String(intelligence.scores.overdueCases)} />
+            <MiniStat label="Recurrence Rate" value={String(intelligence.scores.recurrenceRate)} />
+          </div>
         </section>
-
-        <section style={styles.twoColumn}>
-          <Panel title="Enterprise Chain Implications">
+                <section style={styles.gridTwo}>
+          <Panel title="Enterprise Reliability Requirements">
             <Info
-              label="Command"
-              value={intelligence.commandImplication}
+              label="Trust Decision"
+              value={intelligence.trustDecision}
             />
 
             <Info
-              label="Executive Report"
-              value={intelligence.executiveReportImplication}
-            />
-
-            <Info
-              label="Memory Board"
-              value={intelligence.memoryBoardImplication}
-            />
-
-            <Info
-              label="Audit"
-              value={intelligence.auditImplication}
-            />
-          </Panel>
-
-          <Panel title="Memory + Evidence Requirement">
-            <Info
-              label="Evidence"
+              label="Evidence Requirement"
               value={intelligence.evidenceRequirement}
-            />
-
-            <Info
-              label="Dominant Weakness"
-              value={intelligence.dominantWeakness}
             />
 
             <Info
@@ -412,15 +378,18 @@ function ReliabilityContent() {
               value={intelligence.executiveAction}
             />
 
-            <Info label="Action Cue" value={intelligence.actionCue} />
+            <Info
+              label="Action Cue"
+              value={intelligence.actionCue}
+            />
           </Panel>
-        </section>
 
-        <section style={styles.twoColumn}>
           <Panel title="Latest Continuity Context">
             <Info
               label="Continuity State"
-              value={intelligence.latest?.continuity_state || 'Not recorded'}
+              value={
+                intelligence.latest?.continuity_state || 'Not recorded'
+              }
             />
 
             <Info
@@ -434,57 +403,76 @@ function ReliabilityContent() {
             <Info
               label="Trajectory Direction"
               value={
-                intelligence.latest?.trajectory_direction || 'Not recorded'
+                intelligence.latest?.trajectory_direction ||
+                'Not recorded'
               }
             />
 
             <Info
               label="Structural Memory"
               value={
-                intelligence.latest?.structural_memory_state || 'Not recorded'
+                intelligence.latest?.structural_memory_state ||
+                'Not recorded'
               }
             />
-          </Panel>
-
-          <Panel title="Reliability Reading">
-            <Info
-              label="Legacy Interpreter"
-              value={intelligence.reliabilityInterpretation.posture}
-            />
 
             <Info
-              label="Survivability"
-              value={intelligence.survivabilityMeaning.posture}
-            />
-
-            <Info
-              label="Volatility"
-              value={intelligence.volatilityMeaning.posture}
-            />
-
-            <Info
-              label="Continuity Drift"
-              value={intelligence.driftMeaning.posture}
+              label="Dominant Memory Pattern"
+              value={
+                intelligence.latest?.dominant_memory_pattern ||
+                'Not recorded'
+              }
             />
           </Panel>
         </section>
 
-        <section style={styles.card}>
+        <section style={styles.gridFour}>
+          <ExecutiveCard
+            title="Command Implication"
+            value={intelligence.commandImplication}
+            body="How command should interpret reliability."
+          />
+
+          <ExecutiveCard
+            title="Executive Report"
+            value={intelligence.executiveReportImplication}
+            body="How reliability should appear in executive reporting."
+          />
+
+          <ExecutiveCard
+            title="Memory Board"
+            value={intelligence.memoryBoardImplication}
+            body="What institutional memory must preserve."
+          />
+
+          <ExecutiveCard
+            title="Audit Implication"
+            value={intelligence.auditImplication}
+            body="What audit must be able to reconstruct."
+          />
+        </section>
+
+        <section style={styles.panel}>
           <div style={styles.cardHeader}>
             <div>
-              <p style={styles.sectionKicker}>Reliability Memory</p>
+              <p style={styles.sectionKicker}>
+                Recent Enterprise Reliability Memory
+              </p>
 
-              <h2 style={styles.cardTitle}>
-                Recent enterprise reliability memory
+              <h2 style={styles.panelTitle}>
+                Reliability snapshots
               </h2>
 
-              <p style={styles.cardNote}>
-                Recent snapshots are shown as reliability memory, not raw
-                operational scoring.
+              <p style={styles.bodyText}>
+                Reliability readings are continuity observations,
+                not personal performance judgments.
               </p>
             </div>
 
-            <button onClick={loadReliabilityMetrics} style={styles.primaryButton}>
+            <button
+              onClick={loadReliabilityMetrics}
+              style={styles.primaryButton}
+            >
               Refresh
             </button>
           </div>
@@ -494,11 +482,11 @@ function ReliabilityContent() {
               <thead>
                 <tr>
                   <th style={styles.th}>Created</th>
-                  <th style={styles.th}>Continuity</th>
                   <th style={styles.th}>Reliability</th>
-                  <th style={styles.th}>Survivability</th>
-                  <th style={styles.th}>Pressure</th>
+                  <th style={styles.th}>Continuity</th>
                   <th style={styles.th}>Drift</th>
+                  <th style={styles.th}>Survivability</th>
+                  <th style={styles.th}>Memory Risk</th>
                 </tr>
               </thead>
 
@@ -506,58 +494,66 @@ function ReliabilityContent() {
                 {metrics.length === 0 && (
                   <tr>
                     <td style={styles.td} colSpan={6}>
-                      No persisted reliability memory found yet.
+                      No persisted enterprise reliability memory found yet.
                     </td>
                   </tr>
                 )}
 
-                {metrics.slice(0, 8).map((item) => {
-                  const rowReliability = interpretReliability({
-                    unresolvedCases: item.unresolved_momentum >= 50 ? 1 : 0,
-                    overdueCases: item.continuity_drift >= 50 ? 1 : 0,
-                    failedRecoveries:
-                      item.recovery_reliability_score < 45 ? 1 : 0,
-                    recurrenceRate:
-                      item.escalation_pressure_index >= 60 ||
-                      item.structural_memory_risk >= 60
-                        ? 0.5
-                        : 0,
-                  })
+                {metrics.slice(0, 10).map((item) => (
+                  <tr key={item.id}>
+                    <td style={styles.td}>
+                      {formatDate(item.created_at)}
+                    </td>
 
-                  return (
-                    <tr key={item.id}>
-                      <td style={styles.td}>{formatDate(item.created_at)}</td>
-                      <td style={styles.td}>{item.continuity_state}</td>
-                      <td style={styles.td}>{rowReliability.posture}</td>
-                      <td style={styles.td}>
-                        {
-                          interpretSurvivability(
-                            item.operational_survivability_score,
-                          ).posture
-                        }
-                      </td>
-                      <td style={styles.td}>
-                        {interpretUnresolved(item.unresolved_momentum).posture}
-                      </td>
-                      <td style={styles.td}>
-                        {interpretDrift(item.continuity_drift).posture}
-                      </td>
-                    </tr>
-                  )
-                })}
+                    <td style={styles.td}>
+                      {item.recovery_reliability_score}
+                    </td>
+
+                    <td style={styles.td}>
+                      {item.continuity_integrity_score}
+                    </td>
+
+                    <td style={styles.td}>
+                      {item.continuity_drift}
+                    </td>
+
+                    <td style={styles.td}>
+                      {item.operational_survivability_score}
+                    </td>
+
+                    <td style={styles.td}>
+                      {item.structural_memory_risk}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
         </section>
 
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Copy-Ready Reliability Brief</p>
+        <section style={styles.orderPanel}>
+          <p style={styles.sectionKicker}>
+            Copy-Ready Reliability Brief
+          </p>
 
-          <h2 style={styles.cardTitle}>
-            Can this institution stabilize repeatedly?
+          <h2 style={styles.panelTitle}>
+            Can the institution stabilize repeatedly under pressure?
           </h2>
 
-          <pre style={styles.summaryBox}>{intelligence.copyReadyBrief}</pre>
+          <pre style={styles.summaryBox}>
+            {intelligence.copyReadyBrief}
+          </pre>
+        </section>
+
+        <section style={styles.doctrineCard}>
+          <strong>ENTERPRISE RELIABILITY DOCTRINE</strong>
+
+          <span>
+            Reliability is not a single recovery.
+            Reliability is the demonstrated ability to stabilize
+            repeatedly under pressure without continuity credibility
+            collapsing.
+          </span>
         </section>
       </div>
     </main>
@@ -569,65 +565,81 @@ function buildEnterpriseReliabilityIntelligence(
 ): EnterpriseReliabilityIntelligence {
   const ordered = [...metrics].sort(
     (a, b) =>
-      new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      new Date(a.created_at).getTime() -
+      new Date(b.created_at).getTime(),
   )
 
-  const latest = ordered[ordered.length - 1] || null
+  const latest =
+    ordered.length > 0
+      ? ordered[ordered.length - 1]
+      : null
 
   const reliability = average(
-    ordered.map((item) => item.recovery_reliability_score),
+    ordered.map((m) => m.recovery_reliability_score),
   )
 
   const survivability = average(
-    ordered.map((item) => item.operational_survivability_score),
+    ordered.map((m) => m.operational_survivability_score),
   )
 
   const continuity = average(
-    ordered.map((item) => item.continuity_integrity_score),
+    ordered.map((m) => m.continuity_integrity_score),
   )
 
   const pressure = average(
-    ordered.map((item) => item.escalation_pressure_index),
+    ordered.map((m) => m.escalation_pressure_index),
   )
-
-  const trajectory = average(ordered.map((item) => item.trajectory_risk))
 
   const memoryRisk = average(
-    ordered.map((item) => item.structural_memory_risk),
+    ordered.map((m) => m.structural_memory_risk),
   )
 
-  const drift = average(ordered.map((item) => item.continuity_drift))
-
-  const unresolved = average(ordered.map((item) => item.unresolved_momentum))
-
-  const volatility = calculateVolatility(
-    ordered.map((item) => item.recovery_reliability_score),
+  const drift = average(
+    ordered.map((m) => m.continuity_drift),
   )
 
-  const unresolvedCases = ordered.filter(
-    (item) => item.unresolved_momentum >= 50,
-  ).length
+  const unresolved = average(
+    ordered.map((m) => m.unresolved_momentum),
+  )
 
-  const overdueCases = ordered.filter(
-    (item) => item.continuity_drift >= 50,
-  ).length
+  const trajectory = average(
+    ordered.map((m) => m.trajectory_risk),
+  )
 
-  const failedRecoveries = ordered.filter(
-    (item) => item.recovery_reliability_score < 45,
-  ).length
-
-  const recurrenceCount = ordered.filter(
-    (item) =>
-      item.escalation_pressure_index >= 60 ||
-      item.structural_memory_risk >= 60,
-  ).length
+  const volatility = Math.round(
+    Math.abs(reliability - continuity),
+  )
 
   const recurrenceRate =
-    ordered.length === 0
-      ? 0
-      : Number((recurrenceCount / ordered.length).toFixed(2))
+    memoryRisk >= 70
+      ? 4
+      : memoryRisk >= 50
+        ? 3
+        : memoryRisk >= 30
+          ? 2
+          : 1
 
-  const reliabilityInterpretation = interpretReliability({
+  const failedRecoveries =
+    reliability < 40
+      ? 4
+      : reliability < 60
+        ? 2
+        : 0
+
+  const unresolvedCases =
+    unresolved >= 60
+      ? 6
+      : unresolved >= 40
+        ? 3
+        : 1
+
+  const overdueCases =
+    pressure >= 60
+      ? 5
+      : pressure >= 40
+        ? 2
+        : 0
+          const reliabilityInterpretation = interpretReliability({
     unresolvedCases,
     overdueCases,
     failedRecoveries,
@@ -644,11 +656,13 @@ function buildEnterpriseReliabilityIntelligence(
   const dominantWeakness = strongestDriver({
     'Reliability weakness': 100 - reliability,
     'Survivability weakness': 100 - survivability,
-    'Pressure instability': pressure,
-    'Trajectory instability': trajectory,
-    'Structural memory instability': memoryRisk,
+    'Continuity weakness': 100 - continuity,
+    'Pressure load': pressure,
+    'Trajectory risk': trajectory,
+    'Structural memory risk': memoryRisk,
     'Continuity drift': drift,
-    'Unresolved instability': unresolved,
+    'Unresolved pressure': unresolved,
+    'Reliability volatility': volatility,
   })
 
   const enterprisePosture = deriveEnterpriseReliabilityPosture({
@@ -665,6 +679,9 @@ function buildEnterpriseReliabilityIntelligence(
   })
 
   const trustDecision = deriveTrustDecision(enterprisePosture)
+
+  const reliabilityQuestion =
+    'Can the institution stabilize repeatedly under pressure?'
 
   const reliabilityPattern = deriveReliabilityPattern({
     reliability,
@@ -697,11 +714,16 @@ function buildEnterpriseReliabilityIntelligence(
     drift,
   })
 
-  const commandImplication = deriveCommandImplication(enterprisePosture)
+  const commandImplication = deriveCommandImplication(
+    enterprisePosture,
+  )
+
   const executiveReportImplication =
     deriveExecutiveReportImplication(enterprisePosture)
+
   const memoryBoardImplication =
     deriveMemoryBoardImplication(enterprisePosture)
+
   const auditImplication = deriveAuditImplication(enterprisePosture)
 
   const evidenceRequirement = deriveEvidenceRequirement({
@@ -713,18 +735,18 @@ function buildEnterpriseReliabilityIntelligence(
 
   const boardWarning = deriveBoardWarning(enterprisePosture)
 
-  const executiveAction = deriveExecutiveReliabilityAction(enterprisePosture)
-
-  const reliabilityQuestion =
-    'Can the institution stabilize repeatedly, or did it only recover temporarily?'
-
-  const enterpriseReliabilityThesis = `${enterprisePosture}: ${reliabilityPattern} Primary threat: ${reliabilityThreat}.`
+  const executiveAction =
+    deriveExecutiveReliabilityAction(enterprisePosture)
 
   const institutionalMeaning = deriveInstitutionalMeaning({
     enterprisePosture,
   })
 
-  const synchronizedExecutiveSummary = `${reliabilityInterpretation.summary} ${enterpriseReliabilityThesis}`
+  const enterpriseReliabilityThesis =
+    `${enterprisePosture}: ${reliabilityPattern} Primary threat: ${reliabilityThreat}.`
+
+  const synchronizedExecutiveSummary =
+    `${reliabilityInterpretation.summary} ${enterpriseReliabilityThesis}`
 
   const actionCue = compactAction([
     executiveAction,
@@ -833,7 +855,7 @@ function deriveEnterpriseReliabilityPosture(input: {
     input.reliability < 50 ||
     input.survivability < 45 ||
     input.continuity < 45 ||
-    input.recurrenceRate >= 0.55
+    input.recurrenceRate >= 4
   ) {
     return 'RELIABILITY DETERIORATING'
   }
@@ -852,7 +874,7 @@ function deriveEnterpriseReliabilityPosture(input: {
     input.reliability >= 75 &&
     input.survivability >= 70 &&
     input.continuity >= 70 &&
-    input.recurrenceRate < 0.25 &&
+    input.recurrenceRate <= 2 &&
     input.memoryRisk < 45
   ) {
     return 'RELIABILITY PROVEN'
@@ -885,7 +907,6 @@ function deriveTrustDecision(
 
   return 'BUILD_MEMORY_BEFORE_TRUST'
 }
-
 function deriveReliabilityPattern(input: {
   reliability: number
   survivability: number
@@ -895,7 +916,7 @@ function deriveReliabilityPattern(input: {
   memoryRisk: number
   volatility: number
 }) {
-  if (input.recurrenceRate >= 0.5 || input.failedRecoveries >= 3) {
+  if (input.recurrenceRate >= 4 || input.failedRecoveries >= 4) {
     return 'Recovery is recurring or failing often enough that enterprise reliability cannot be trusted.'
   }
 
@@ -926,8 +947,8 @@ function deriveReliabilityThreat(input: {
   unresolved: number
   memoryRisk: number
 }) {
-  if (input.failedRecoveries >= 3) return 'Repeated recovery failure'
-  if (input.recurrenceRate >= 0.5) return 'Recurring instability'
+  if (input.failedRecoveries >= 4) return 'Repeated recovery failure'
+  if (input.recurrenceRate >= 4) return 'Recurring instability'
   if (input.memoryRisk >= 60) return 'Structural memory pressure'
   if (input.drift >= 55) return 'Continuity drift'
   if (input.unresolved >= 55) return 'Unresolved instability pressure'
@@ -973,7 +994,7 @@ function deriveReliabilityForecast(input: {
   }
 
   if (
-    input.recurrenceRate >= 0.4 ||
+    input.recurrenceRate >= 3 ||
     input.volatility >= 25 ||
     input.memoryRisk >= 55 ||
     input.drift >= 50
@@ -993,22 +1014,22 @@ function deriveCommandImplication(posture: EnterpriseReliabilityPosture) {
     posture === 'RELIABILITY COLLAPSING' ||
     posture === 'RELIABILITY DETERIORATING'
   ) {
-    return 'Command must intervene.'
+    return 'Command must intervene before institutional trust is restored.'
   }
 
   if (posture === 'RELIABILITY FRAGILE') {
-    return 'Command should hold visibility.'
+    return 'Command should hold visibility until repeatability is proven.'
   }
 
   if (posture === 'RELIABILITY EMERGING') {
-    return 'Command may reduce posture cautiously.'
+    return 'Command may reduce posture cautiously while evidence remains attached.'
   }
 
   if (posture === 'RELIABILITY PROVEN') {
-    return 'Command can release with memory preserved.'
+    return 'Command can release cautiously with memory preserved.'
   }
 
-  return 'Command should wait for more memory.'
+  return 'Command should wait for more reliability memory.'
 }
 
 function deriveExecutiveReportImplication(
@@ -1033,7 +1054,7 @@ function deriveExecutiveReportImplication(
     return 'Executive Report should escalate reliability risk.'
   }
 
-  return 'Executive Report should state memory is insufficient.'
+  return 'Executive Report should state reliability memory is insufficient.'
 }
 
 function deriveMemoryBoardImplication(posture: EnterpriseReliabilityPosture) {
@@ -1160,7 +1181,7 @@ function deriveInstitutionalMeaning(input: {
   enterprisePosture: EnterpriseReliabilityPosture
 }) {
   if (input.enterprisePosture === 'RELIABILITY PROVEN') {
-    return 'The institution is showing evidence that it can stabilize repeatedly, not only recover once.'
+    return 'The institution is showing evidence that it can stabilize repeatedly under pressure, not only recover once.'
   }
 
   if (input.enterprisePosture === 'RELIABILITY EMERGING') {
@@ -1180,7 +1201,6 @@ function deriveInstitutionalMeaning(input: {
 
   return 'The institution lacks enough continuity memory to make a reliability claim.'
 }
-
 function buildReliabilityBrief(input: {
   enterprisePosture: EnterpriseReliabilityPosture
   trustDecision: ReliabilityTrustDecision
@@ -1262,26 +1282,11 @@ function buildReliabilityBrief(input: {
 
 function average(values: number[]) {
   const valid = values.filter((value) => Number.isFinite(value))
-
   if (valid.length === 0) return 0
 
   return Math.round(
     valid.reduce((sum, value) => sum + value, 0) / valid.length,
   )
-}
-
-function calculateVolatility(values: number[]) {
-  const valid = values.filter((value) => Number.isFinite(value))
-
-  if (valid.length < 2) return 0
-
-  const mean = average(valid)
-
-  const variance =
-    valid.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) /
-    valid.length
-
-  return Math.min(100, Math.round(Math.sqrt(variance)))
 }
 
 function strongestDriver(scores: Record<string, number>) {
@@ -1311,8 +1316,7 @@ function interpretSurvivability(value: number): Interpretation {
   if (value >= 40) {
     return {
       posture: 'SURVIVABILITY FRAGILE',
-      meaning:
-        'Survivability may weaken under sustained operational pressure.',
+      meaning: 'Survivability may weaken under sustained operational pressure.',
       action: 'Continue governed survivability review.',
     }
   }
@@ -1328,8 +1332,7 @@ function interpretContinuity(value: number): Interpretation {
   if (value >= 75) {
     return {
       posture: 'CONTINUITY HOLDING',
-      meaning:
-        'Continuity integrity remains dependable across reviewed memory.',
+      meaning: 'Continuity integrity remains dependable across reviewed memory.',
       action: 'Maintain confirmation monitoring.',
     }
   }
@@ -1345,8 +1348,7 @@ function interpretContinuity(value: number): Interpretation {
   if (value >= 40) {
     return {
       posture: 'CONTINUITY FRAGILE',
-      meaning:
-        'Continuity integrity may weaken if unresolved pressure persists.',
+      meaning: 'Continuity integrity may weaken if unresolved pressure persists.',
       action: 'Review drift and escalation pressure.',
     }
   }
@@ -1469,6 +1471,24 @@ function formatDate(value: string) {
   return new Date(value).toLocaleString()
 }
 
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <article style={styles.metricCard}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.metricValue}>{value}</p>
+    </article>
+  )
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <article style={styles.miniStat}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.miniValue}>{value}</p>
+    </article>
+  )
+}
+
 function PostureCard({
   title,
   interpretation,
@@ -1478,9 +1498,9 @@ function PostureCard({
 }) {
   return (
     <article style={styles.postureCard}>
-      <p style={styles.cardKicker}>{title}</p>
-      <h3 style={styles.postureTitle}>{interpretation.posture}</h3>
-      <p style={styles.postureMeaning}>{interpretation.meaning}</p>
+      <p style={styles.sectionKicker}>{title}</p>
+      <h3 style={styles.cardValue}>{interpretation.posture}</h3>
+      <p style={styles.panelBody}>{interpretation.meaning}</p>
     </article>
   )
 }
@@ -1495,51 +1515,18 @@ function ExecutiveCard({
   body: string
 }) {
   return (
-    <article style={styles.executiveCard}>
-      <p style={styles.cardKicker}>{title}</p>
-      <h3 style={styles.executiveValue}>{value}</h3>
-      <p style={styles.postureMeaning}>{body}</p>
+    <article style={styles.panelCard}>
+      <p style={styles.sectionKicker}>{title}</p>
+      <h3 style={styles.cardValue}>{value}</h3>
+      <p style={styles.panelBody}>{body}</p>
     </article>
   )
 }
 
-function ScoreCard({
-  title,
-  value,
-  body,
-}: {
-  title: string
-  value: number
-  body: string
-}) {
+function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <article style={styles.scoreCard}>
-      <p style={styles.cardKicker}>{title}</p>
-      <h3 style={styles.scoreValue}>{value}</h3>
-      <p style={styles.postureMeaning}>{body}</p>
-    </article>
-  )
-}
-
-function MiniBlock({ title, value }: { title: string; value: string }) {
-  return (
-    <article style={styles.miniBlock}>
-      <p style={styles.cardKicker}>{title}</p>
-      <h3 style={styles.miniValue}>{value}</h3>
-    </article>
-  )
-}
-
-function Panel({
-  title,
-  children,
-}: {
-  title: string
-  children: ReactNode
-}) {
-  return (
-    <section style={styles.card}>
-      <h2 style={styles.cardTitle}>{title}</h2>
+    <section style={styles.panel}>
+      <p style={styles.sectionKicker}>{title}</p>
       <div style={styles.infoList}>{children}</div>
     </section>
   )
@@ -1557,314 +1544,345 @@ function Info({ label, value }: { label: string; value: string }) {
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    color: 'white',
-    overflowX: 'hidden',
+    background:
+      'radial-gradient(circle at top left, rgba(201, 162, 39, 0.14), transparent 34%), linear-gradient(135deg, #050505 0%, #0B0B0B 45%, #111111 100%)',
+    color: '#FFFFFF',
+    padding: '40px 24px 72px',
   },
   container: {
-    width: '100%',
-    maxWidth: '1120px',
+    width: 'min(1440px, 100%)',
     margin: '0 auto',
-    padding: '0 20px 48px',
-    boxSizing: 'border-box',
+    display: 'grid',
+    gap: 24,
   },
-  header: {
-    marginBottom: '20px',
-    paddingTop: '4px',
+  hero: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.45fr) minmax(320px, 0.75fr)',
+    gap: 24,
+    padding: 32,
+    border: '1px solid rgba(201, 162, 39, 0.34)',
+    borderRadius: 28,
+    background:
+      'linear-gradient(135deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018))',
+    boxShadow: '0 28px 80px rgba(0,0,0,0.38)',
   },
   kicker: {
-    color: '#67e8f9',
-    fontSize: '12px',
-    fontWeight: 900,
-    letterSpacing: '2px',
     margin: 0,
+    color: '#C9A227',
+    fontSize: 12,
+    fontWeight: 900,
+    letterSpacing: '0.22em',
+    textTransform: 'uppercase',
   },
   title: {
-    fontSize: 'clamp(32px, 5vw, 50px)',
-    lineHeight: 1.05,
-    margin: '10px 0',
+    margin: '14px 0 0',
+    fontSize: 'clamp(2.3rem, 5vw, 5rem)',
+    lineHeight: 0.95,
+    letterSpacing: '-0.07em',
+    fontWeight: 950,
   },
   subtitle: {
-    color: '#cbd5e1',
-    maxWidth: '820px',
-    lineHeight: 1.65,
-    fontSize: '16px',
+    maxWidth: 880,
+    margin: '18px 0 0',
+    color: '#C8CDD4',
+    fontSize: 17,
+    lineHeight: 1.8,
+  },
+  statusBox: {
+    border: '1px solid rgba(201, 162, 39, 0.5)',
+    borderRadius: 24,
+    padding: 24,
+    background:
+      'linear-gradient(180deg, rgba(201,162,39,0.18), rgba(0,0,0,0.38))',
+  },
+  statusLabel: {
     margin: 0,
+    color: '#D7B84C',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.2em',
+  },
+  statusValue: {
+    margin: '16px 0 0',
+    fontSize: 30,
+    fontWeight: 950,
+    letterSpacing: '-0.04em',
+    lineHeight: 1.05,
+  },
+  statusMeaning: {
+    margin: '12px 0 0',
+    color: '#ECE7D7',
+    fontSize: 14,
+    lineHeight: 1.7,
   },
   message: {
-    background: '#083344',
-    color: '#cffafe',
-    padding: '12px 14px',
-    borderRadius: '14px',
+    padding: '14px 18px',
+    borderRadius: 16,
+    color: '#D7B84C',
+    background: 'rgba(201,162,39,0.1)',
+    border: '1px solid rgba(201,162,39,0.22)',
     fontWeight: 800,
-    marginBottom: '16px',
-    fontSize: '14px',
   },
-  heroCard: {
+  commandDeck: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.35fr) minmax(260px, 0.65fr)',
-    gap: '16px',
-    background: '#020617',
-    border: '1px solid #67e8f9',
-    borderRadius: '24px',
-    padding: '22px',
-    marginBottom: '16px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
+    gridTemplateColumns: '1.4fr 0.8fr',
+    gap: 24,
   },
-  thesisCard: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.15fr) minmax(320px, 0.85fr)',
-    gap: '16px',
-    background: '#020617',
-    border: '1px solid #facc15',
-    borderRadius: '24px',
-    padding: '22px',
-    marginBottom: '16px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
+  primaryCard: {
+    padding: 30,
+    borderRadius: 28,
+    background: '#FFFFFF',
+    color: '#0B0B0B',
+    border: '1px solid rgba(255,255,255,0.12)',
   },
-  thesisStack: {
-    display: 'grid',
-    gap: '12px',
+  consequenceCard: {
+    padding: 30,
+    borderRadius: 28,
+    background: 'rgba(0,0,0,0.38)',
+    border: '1px solid rgba(201,162,39,0.28)',
   },
   sectionKicker: {
-    color: '#94a3b8',
-    fontWeight: 900,
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
     margin: 0,
-    fontSize: '12px',
+    color: '#C9A227',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.18em',
+    textTransform: 'uppercase',
   },
-  heroPosture: {
-    fontSize: 'clamp(32px, 6vw, 54px)',
-    margin: '8px 0 12px',
-    color: '#a5f3fc',
+  commandTitle: {
+    margin: '14px 0',
+    fontSize: 'clamp(1.8rem, 3vw, 3.2rem)',
+    lineHeight: 1.05,
     letterSpacing: '-0.05em',
-    lineHeight: 1,
+    fontWeight: 950,
   },
-  heroMeaning: {
-    color: '#e0f2fe',
-    lineHeight: 1.6,
+  primaryText: {
     margin: 0,
-    maxWidth: '720px',
+    color: '#4A4A4A',
+    lineHeight: 1.7,
+    fontSize: 14,
   },
-  actionBox: {
-    background: '#082f49',
-    border: '1px solid #67e8f9',
-    borderRadius: '18px',
-    padding: '16px',
-    alignSelf: 'stretch',
+  consequenceTitle: {
+    margin: '14px 0',
+    fontSize: 28,
+    lineHeight: 1.1,
+    letterSpacing: '-0.04em',
   },
-  actionLabel: {
-    color: '#a5f3fc',
-    fontWeight: 900,
-    margin: '0 0 8px',
-    fontSize: '12px',
+  bodyText: {
+    margin: '8px 0 0',
+    color: '#AEB6C2',
+    lineHeight: 1.7,
+    fontSize: 14,
+  },
+  commandMetaGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 24,
+  },
+  metricsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+    gap: 14,
+  },
+  metricCard: {
+    padding: 18,
+    borderRadius: 20,
+    background: 'rgba(255,255,255,0.055)',
+    border: '1px solid rgba(255,255,255,0.1)',
+  },
+  metricLabel: {
+    margin: 0,
+    color: '#858D98',
+    fontSize: 10,
+    fontWeight: 950,
+    letterSpacing: '0.14em',
     textTransform: 'uppercase',
-    letterSpacing: '0.12em',
   },
-  actionText: {
-    color: '#e0f2fe',
-    lineHeight: 1.55,
-    margin: 0,
-    fontSize: '14px',
-    fontWeight: 900,
+  metricValue: {
+    margin: '10px 0 0',
+    color: '#FFFFFF',
+    fontSize: 26,
+    fontWeight: 950,
+    lineHeight: 1.15,
+    overflowWrap: 'anywhere',
+  },
+  miniStat: {
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(255,255,255,0.055)',
+    border: '1px solid rgba(255,255,255,0.09)',
+  },
+  miniValue: {
+    margin: '8px 0 0',
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: 850,
+    lineHeight: 1.45,
+    overflowWrap: 'anywhere',
   },
   gridFour: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '14px',
-    marginBottom: '16px',
+    gap: 16,
   },
-  gridThree: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '14px',
-    marginBottom: '16px',
-  },
-  scoreGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '14px',
-    marginBottom: '16px',
-  },
-  twoColumn: {
+  gridTwo: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '16px',
-    marginBottom: '16px',
+    gap: 16,
   },
-  executiveCard: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '16px',
-    minHeight: '160px',
-    boxSizing: 'border-box',
+  postureGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: 16,
   },
-  executiveValue: {
-    color: '#f8fafc',
-    fontSize: '18px',
-    lineHeight: 1.2,
-    margin: '10px 0 8px',
-    overflowWrap: 'anywhere',
+  panel: {
+    padding: 28,
+    borderRadius: 28,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.1)',
   },
-  scoreCard: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '16px',
-    minHeight: '150px',
-    boxSizing: 'border-box',
-  },
-  scoreValue: {
-    color: '#67e8f9',
-    fontSize: '36px',
-    lineHeight: 1,
-    margin: '10px 0 8px',
-    fontWeight: 900,
-  },
-  miniBlock: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '16px',
-    padding: '14px',
-  },
-  miniValue: {
-    color: '#f8fafc',
-    fontSize: '16px',
-    lineHeight: 1.35,
-    margin: '10px 0 0',
+  panelCard: {
+    padding: 22,
+    borderRadius: 22,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.09)',
+    minHeight: 150,
   },
   postureCard: {
-    background: '#0f172a',
-    border: '1px solid #1e293b',
-    borderRadius: '18px',
-    padding: '16px',
-    minHeight: '150px',
-    boxSizing: 'border-box',
+    padding: 22,
+    borderRadius: 22,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.09)',
+    minHeight: 150,
   },
-  cardKicker: {
-    color: '#94a3b8',
-    fontWeight: 800,
-    margin: 0,
-    fontSize: '12px',
-  },
-  postureTitle: {
-    color: '#f8fafc',
-    fontSize: '19px',
-    margin: '10px 0 8px',
+  panelTitle: {
+    margin: '12px 0 0',
+    fontSize: 26,
     lineHeight: 1.15,
+    letterSpacing: '-0.045em',
   },
-  postureMeaning: {
-    color: '#cbd5e1',
+  cardValue: {
+    margin: '12px 0 0',
+    color: '#FFFFFF',
+    fontSize: 19,
+    lineHeight: 1.25,
+    overflowWrap: 'anywhere',
+  },
+  panelBody: {
+    marginTop: 10,
+    color: '#AEB6C2',
+    fontSize: 14,
+    lineHeight: 1.65,
+  },
+  infoList: {
+    display: 'grid',
+    gap: 10,
+    marginTop: 18,
+  },
+  infoRow: {
+    display: 'grid',
+    gridTemplateColumns: '170px minmax(0, 1fr)',
+    gap: 12,
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(0,0,0,0.22)',
+    border: '1px solid rgba(255,255,255,0.08)',
+  },
+  infoLabel: {
+    color: '#858D98',
+    fontWeight: 900,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+  },
+  infoValue: {
+    color: '#FFFFFF',
     lineHeight: 1.5,
-    fontSize: '14px',
-    margin: 0,
+    overflowWrap: 'anywhere',
   },
-  card: {
-    background: '#020617',
-    border: '1px solid #1e293b',
-    borderRadius: '22px',
-    padding: '20px',
-    marginBottom: '16px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.24)',
-    boxSizing: 'border-box',
-    overflow: 'hidden',
+  memoryPanel: {
+    padding: 28,
+    borderRadius: 28,
+    background:
+      'linear-gradient(135deg, rgba(201,162,39,0.13), rgba(255,255,255,0.035))',
+    border: '1px solid rgba(201,162,39,0.32)',
+  },
+  memoryGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 20,
   },
   cardHeader: {
     display: 'flex',
     justifyContent: 'space-between',
-    gap: '16px',
+    gap: 16,
     alignItems: 'flex-start',
-    marginBottom: '14px',
   },
-  cardTitle: {
-    fontSize: '22px',
-    margin: 0,
-    lineHeight: 1.2,
-  },
-  bodyText: {
-    color: '#cbd5e1',
-    lineHeight: 1.7,
-    margin: '10px 0 0',
-    maxWidth: '880px',
-  },
-  cardNote: {
-    color: '#94a3b8',
-    lineHeight: 1.5,
-    margin: '6px 0 0',
-    fontSize: '14px',
-  },
-  infoList: {
-    display: 'grid',
-    gap: '10px',
-    marginTop: '14px',
-  },
-  infoRow: {
-    display: 'grid',
-    gridTemplateColumns: '180px minmax(0, 1fr)',
-    gap: '12px',
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '14px',
-    padding: '12px',
-    alignItems: 'start',
-  },
-  infoLabel: {
-    color: '#94a3b8',
-    fontWeight: 800,
-    fontSize: '12px',
-  },
-  infoValue: {
-    color: '#f8fafc',
-    lineHeight: 1.45,
-    overflowWrap: 'anywhere',
+  primaryButton: {
+    border: 'none',
+    borderRadius: 999,
+    padding: '12px 18px',
+    background: '#C9A227',
+    color: '#090909',
+    fontWeight: 950,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
   },
   tableWrap: {
-    width: '100%',
+    marginTop: 20,
     overflowX: 'auto',
+    borderRadius: 20,
+    border: '1px solid rgba(255,255,255,0.1)',
   },
   table: {
     width: '100%',
     borderCollapse: 'collapse',
-    minWidth: '760px',
+    minWidth: 860,
   },
   th: {
+    padding: '14px 16px',
     textAlign: 'left',
-    color: '#94a3b8',
-    borderBottom: '1px solid #334155',
-    padding: '10px',
-    fontSize: '11px',
+    color: '#D7B84C',
+    background: 'rgba(201,162,39,0.08)',
+    fontSize: 11,
+    letterSpacing: '0.14em',
     textTransform: 'uppercase',
   },
   td: {
-    borderBottom: '1px solid #1e293b',
-    padding: '10px',
-    color: '#e2e8f0',
+    padding: '16px',
+    color: '#DCE1E8',
+    borderTop: '1px solid rgba(255,255,255,0.08)',
+    fontSize: 13,
+    lineHeight: 1.55,
     verticalAlign: 'top',
-    fontWeight: 700,
-    fontSize: '13px',
   },
-  primaryButton: {
-    padding: '10px 14px',
-    borderRadius: '12px',
-    border: 'none',
-    background: '#67e8f9',
-    color: '#082f49',
-    fontWeight: 900,
-    cursor: 'pointer',
-    fontSize: '14px',
-    whiteSpace: 'nowrap',
+  orderPanel: {
+    padding: 28,
+    borderRadius: 28,
+    background: '#FFFFFF',
+    color: '#0B0B0B',
   },
   summaryBox: {
+    marginTop: 20,
+    padding: 22,
+    borderRadius: 20,
+    background: '#0A0A0A',
+    color: '#F8F6F1',
     whiteSpace: 'pre-wrap',
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '16px',
-    padding: '16px',
-    color: '#e2e8f0',
-    lineHeight: 1.55,
-    minHeight: '260px',
-    fontSize: '14px',
+    fontSize: 13,
+    lineHeight: 1.7,
     overflowX: 'auto',
+  },
+  doctrineCard: {
+    display: 'grid',
+    gap: 10,
+    padding: 24,
+    borderRadius: 24,
+    background: '#050505',
+    border: '1px solid rgba(201,162,39,0.42)',
+    color: '#FFFFFF',
+    lineHeight: 1.7,
   },
 }
