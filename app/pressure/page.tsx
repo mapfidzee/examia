@@ -80,11 +80,7 @@ function mapToSynthesisPosture(value: unknown): CGIRouteSynthesisPosture {
 export default function PressurePage() {
   return (
     <GovernanceRouteGuard
-      allowedRoles={[
-        'SUPER_ADMIN',
-        'COMMAND_ADMIN',
-        'GOVERNANCE_OFFICER',
-      ]}
+      allowedRoles={['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']}
     >
       <CGIGovernanceShell>
         <PressureContent />
@@ -160,62 +156,59 @@ function PressureContent() {
   return (
     <main style={styles.page}>
       <div style={styles.container}>
-        <section style={styles.header}>
-          <p style={styles.kicker}>TSINAXA CGI • ENTERPRISE PRESSURE</p>
-
-          <h1 style={styles.title}>Enterprise Pressure Intelligence</h1>
-
-          <p style={styles.subtitle}>
-            Pressure intelligence identifies where instability is accumulating,
-            spreading, converging, becoming structural, or approaching command
-            threshold before continuity credibility weakens further.
-          </p>
-        </section>
-
-        <section style={styles.heroCard}>
+        <section style={styles.hero}>
           <div>
-            <p style={styles.sectionKicker}>Enterprise Pressure Thesis</p>
-
-            <h2 style={styles.heroTitle}>{enterprisePressure.posture}</h2>
-
-            <p style={styles.heroMeaning}>{enterprisePressure.thesis}</p>
-          </div>
-
-          <div style={styles.toneBox}>
-            <p style={styles.toneLabel}>Command Threshold</p>
-            <p style={styles.toneValue}>
-              {enterprisePressure.escalationThreshold}
+            <p style={styles.kicker}>TSINAXA CGI • ENTERPRISE PRESSURE</p>
+            <h1 style={styles.title}>Enterprise Pressure Intelligence</h1>
+            <p style={styles.subtitle}>
+              Pressure identifies where instability is accumulating before it
+              forces Command action. CGI treats pressure as continuity strain,
+              not simple workload.
             </p>
           </div>
+
+          <div style={styles.statusBox}>
+            <p style={styles.statusLabel}>PRESSURE POSTURE</p>
+            <p style={styles.statusValue}>{enterprisePressure.posture}</p>
+            <p style={styles.statusMeaning}>{enterprisePressure.thesis}</p>
+          </div>
         </section>
 
-        <section style={styles.questionCard}>
-          <div>
+        <section style={styles.commandDeck}>
+          <div style={styles.primaryCard}>
             <p style={styles.sectionKicker}>Executive Pressure Question</p>
-
-            <h2 style={styles.cardTitle}>
+            <h2 style={styles.commandTitle}>
               {enterprisePressure.pressureQuestion}
             </h2>
-
             <p style={styles.bodyText}>
               Pressure becomes enterprise-significant when it concentrates
               across unresolved work, spreads across coordination channels,
               repeats across time, or weakens the institution&apos;s ability to
               stabilize itself.
             </p>
+
+            <div style={styles.commandMetaGrid}>
+              <MiniStat label="Threshold" value={enterprisePressure.escalationThreshold} />
+              <MiniStat label="Open Cases" value={String(pressureInput.openCases)} />
+              <MiniStat label="Escalated" value={String(pressureInput.escalatedCases)} />
+              <MiniStat label="Repeated" value={String(pressureInput.repeatedInstabilityCount)} />
+            </div>
           </div>
 
-          <div style={styles.questionStack}>
-            <MiniBlock
-              title="Pressure Forecast"
-              value={enterprisePressure.forecast}
-            />
-
-            <MiniBlock
-              title="Board Warning"
-              value={enterprisePressure.boardWarning}
-            />
+          <div style={styles.consequenceCard}>
+            <p style={styles.sectionKicker}>Board Warning</p>
+            <h2 style={styles.consequenceTitle}>Do not confuse activity with relief.</h2>
+            <p style={styles.bodyText}>{enterprisePressure.boardWarning}</p>
           </div>
+        </section>
+
+        <section style={styles.metricsGrid}>
+          <Metric label="Coordination Issues" value={String(pressureInput.coordinationIssues)} />
+          <Metric label="Recovery Failures" value={String(pressureInput.recoveryFailures)} />
+          <Metric label="Reburn Count" value={String(pressureInput.reburnCount)} />
+          <Metric label="Critical Unresolved" value={String(pressureInput.unresolvedCriticalCount)} />
+          <Metric label="Unresolved Days" value={String(pressureInput.averageUnresolvedDays)} />
+          <Metric label="Evidence Verified" value={pressureInput.evidenceVerified ? 'YES' : 'NO'} />
         </section>
 
         <section style={styles.gridFour}>
@@ -244,11 +237,9 @@ function PressureContent() {
           />
         </section>
 
-        <section style={styles.card}>
+        <section style={styles.panel}>
           <p style={styles.sectionKicker}>Synchronized Continuity Reading</p>
-
-          <h2 style={styles.cardTitle}>{synchronizedPosture.label}</h2>
-
+          <h2 style={styles.panelTitle}>{synchronizedPosture.label}</h2>
           <p style={styles.bodyText}>{synchronizedPosture.description}</p>
 
           <div style={styles.infoList}>
@@ -323,47 +314,44 @@ function PressureContent() {
           />
         </section>
 
-        <section style={styles.gridThree}>
-          <Panel
-            title="Structural Memory"
-            value={formatLabel(
-              pressureIntelligence.memory.primaryMemorySignal,
-            )}
-          >
-            {pressureIntelligence.memory.executiveMemoryWarning}
-          </Panel>
-
-          <Panel
-            title="Pressure Memory Risk"
-            value={formatLabel(pressureIntelligence.memory.memoryRiskLevel)}
-          >
-            {enterprisePressure.memoryRequirement}
-          </Panel>
-
-          <Panel
-            title="Institutional Fragility"
-            value={
-              pressureIntelligence.memory.institutionalFragilityDetected
-                ? 'YES'
-                : 'NO'
-            }
-          >
-            Fragility means prior pressure history may be weakening
-            stabilization capacity.
-          </Panel>
-        </section>
-
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Enterprise Pressure Doctrine</p>
-
-          <h2 style={styles.cardTitle}>
-            Pressure becomes dangerous when it weakens continuity credibility.
+        <section style={styles.memoryPanel}>
+          <p style={styles.sectionKicker}>Pressure Memory</p>
+          <h2 style={styles.panelTitle}>
+            Pressure that repeats must not be treated as isolated workload.
           </h2>
 
+          <div style={styles.memoryGrid}>
+            <MiniStat
+              label="Structural Memory"
+              value={formatLabel(
+                pressureIntelligence.memory.primaryMemorySignal,
+              )}
+            />
+            <MiniStat
+              label="Memory Risk"
+              value={formatLabel(pressureIntelligence.memory.memoryRiskLevel)}
+            />
+            <MiniStat
+              label="Fragility"
+              value={
+                pressureIntelligence.memory.institutionalFragilityDetected
+                  ? 'YES'
+                  : 'NO'
+              }
+            />
+            <MiniStat label="Memory Requirement" value={enterprisePressure.memoryRequirement} />
+          </div>
+        </section>
+
+        <section style={styles.panel}>
+          <p style={styles.sectionKicker}>Enterprise Pressure Doctrine</p>
+          <h2 style={styles.panelTitle}>
+            Pressure becomes dangerous when it weakens continuity credibility.
+          </h2>
           <p style={styles.bodyText}>
             CGI does not treat pressure as simple workload. Pressure becomes
-            command-relevant when it accumulates, concentrates, repeats,
-            delays recovery, weakens reliability, exposes coordination gaps, or
+            command-relevant when it accumulates, concentrates, repeats, delays
+            recovery, weakens reliability, exposes coordination gaps, or
             threatens the institution&apos;s ability to stabilize itself under
             strain.
           </p>
@@ -403,13 +391,11 @@ function PressureContent() {
           </Panel>
         </section>
 
-        <section style={styles.card}>
+        <section style={styles.panel}>
           <p style={styles.sectionKicker}>Pressure Interpretation</p>
-
-          <h2 style={styles.cardTitle}>
+          <h2 style={styles.panelTitle}>
             Pressure must be interpreted before it becomes survivability risk.
           </h2>
-
           <p style={styles.bodyText}>
             {pressureIntelligence.operationalNarrative}
           </p>
@@ -437,16 +423,23 @@ function PressureContent() {
           />
         </section>
 
-        <section style={styles.card}>
+        <section style={styles.orderPanel}>
           <p style={styles.sectionKicker}>Copy-Ready Pressure Brief</p>
-
-          <h2 style={styles.cardTitle}>
+          <h2 style={styles.panelTitle}>
             Where is instability accumulating before it forces command action?
           </h2>
-
           <pre style={styles.summaryBox}>
             {enterprisePressure.copyReadyBrief}
           </pre>
+        </section>
+
+        <section style={styles.doctrineCard}>
+          <strong>ENTERPRISE PRESSURE DOCTRINE</strong>
+          <span>
+            Pressure is not volume. Pressure is accumulating continuity strain.
+            Command should act before pressure becomes normalized, hidden, or
+            structurally repeated.
+          </span>
         </section>
       </div>
     </main>
@@ -681,6 +674,24 @@ function derivePressurePosture(
   return 'PRESSURE CONTAINED'
 }
 
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <article style={styles.metricCard}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.metricValue}>{value}</p>
+    </article>
+  )
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <article style={styles.miniStat}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.miniValue}>{value}</p>
+    </article>
+  )
+}
+
 function Panel({
   title,
   value,
@@ -691,9 +702,9 @@ function Panel({
   children?: ReactNode
 }) {
   return (
-    <section style={styles.panel}>
-      <p style={styles.panelKicker}>{title}</p>
-      {value ? <h3 style={styles.panelValue}>{value}</h3> : null}
+    <section style={styles.panelCard}>
+      <p style={styles.sectionKicker}>{title}</p>
+      {value ? <h3 style={styles.cardValue}>{value}</h3> : null}
       {children ? <div style={styles.panelBody}>{children}</div> : null}
     </section>
   )
@@ -709,19 +720,10 @@ function ExecutiveCard({
   body: ReactNode
 }) {
   return (
-    <article style={styles.panel}>
-      <p style={styles.panelKicker}>{title}</p>
-      <h3 style={styles.panelValue}>{value}</h3>
+    <article style={styles.panelCard}>
+      <p style={styles.sectionKicker}>{title}</p>
+      <h3 style={styles.cardValue}>{value}</h3>
       <div style={styles.panelBody}>{body}</div>
-    </article>
-  )
-}
-
-function MiniBlock({ title, value }: { title: string; value: string }) {
-  return (
-    <article style={styles.miniBlock}>
-      <p style={styles.panelKicker}>{title}</p>
-      <p style={styles.miniValue}>{value}</p>
     </article>
   )
 }
@@ -744,9 +746,9 @@ function PressurePrinciple({
 }) {
   return (
     <article style={styles.principleCard}>
-      <p style={styles.principleKicker}>CGI Pressure Principle</p>
+      <p style={styles.sectionKicker}>CGI Pressure Principle</p>
       <h3 style={styles.principleTitle}>{title}</h3>
-      <p style={styles.principleBody}>{body}</p>
+      <p style={styles.bodyText}>{body}</p>
     </article>
   )
 }
@@ -754,247 +756,287 @@ function PressurePrinciple({
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    color: 'white',
-    overflowX: 'hidden',
+    background:
+      'radial-gradient(circle at top left, rgba(201, 162, 39, 0.14), transparent 34%), linear-gradient(135deg, #050505 0%, #0B0B0B 45%, #111111 100%)',
+    color: '#FFFFFF',
+    padding: '40px 24px 72px',
   },
   container: {
-    width: '100%',
-    maxWidth: '1120px',
+    width: 'min(1440px, 100%)',
     margin: '0 auto',
-    padding: '0 20px 48px',
-    boxSizing: 'border-box',
+    display: 'grid',
+    gap: 24,
   },
-  header: {
-    marginBottom: '20px',
-    paddingTop: '4px',
+  hero: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.45fr) minmax(320px, 0.75fr)',
+    gap: 24,
+    padding: 32,
+    border: '1px solid rgba(201, 162, 39, 0.34)',
+    borderRadius: 28,
+    background:
+      'linear-gradient(135deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018))',
+    boxShadow: '0 28px 80px rgba(0,0,0,0.38)',
   },
   kicker: {
-    color: '#67e8f9',
-    fontSize: '12px',
-    fontWeight: 900,
-    letterSpacing: '2px',
     margin: 0,
+    color: '#C9A227',
+    fontSize: 12,
+    fontWeight: 900,
+    letterSpacing: '0.22em',
+    textTransform: 'uppercase',
   },
   title: {
-    fontSize: 'clamp(32px, 5vw, 48px)',
-    lineHeight: 1.05,
-    margin: '10px 0',
+    margin: '14px 0 0',
+    fontSize: 'clamp(2.3rem, 5vw, 5rem)',
+    lineHeight: 0.95,
+    letterSpacing: '-0.07em',
+    fontWeight: 950,
   },
   subtitle: {
-    color: '#cbd5e1',
-    maxWidth: '800px',
-    lineHeight: 1.65,
-    fontSize: '16px',
+    maxWidth: 880,
+    margin: '18px 0 0',
+    color: '#C8CDD4',
+    fontSize: 17,
+    lineHeight: 1.8,
+  },
+  statusBox: {
+    border: '1px solid rgba(201, 162, 39, 0.5)',
+    borderRadius: 24,
+    padding: 24,
+    background: 'linear-gradient(180deg, rgba(201,162,39,0.18), rgba(0,0,0,0.38))',
+  },
+  statusLabel: {
     margin: 0,
+    color: '#D7B84C',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.2em',
   },
-  heroCard: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.4fr) minmax(220px, 0.6fr)',
-    gap: '16px',
-    background: '#020617',
-    border: '1px solid #22d3ee',
-    borderRadius: '24px',
-    padding: '22px',
-    marginBottom: '16px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
+  statusValue: {
+    margin: '16px 0 0',
+    fontSize: 30,
+    fontWeight: 950,
+    letterSpacing: '-0.04em',
+    lineHeight: 1.05,
   },
-  questionCard: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.1fr) minmax(280px, 0.9fr)',
-    gap: '16px',
-    background: '#020617',
-    border: '1px solid #facc15',
-    borderRadius: '24px',
-    padding: '22px',
-    marginBottom: '16px',
+  statusMeaning: {
+    margin: '12px 0 0',
+    color: '#ECE7D7',
+    fontSize: 14,
+    lineHeight: 1.7,
   },
-  questionStack: {
+  commandDeck: {
     display: 'grid',
-    gap: '12px',
+    gridTemplateColumns: '1.4fr 0.8fr',
+    gap: 24,
+  },
+  primaryCard: {
+    padding: 30,
+    borderRadius: 28,
+    background: '#FFFFFF',
+    color: '#0B0B0B',
+    border: '1px solid rgba(255,255,255,0.12)',
+  },
+  consequenceCard: {
+    padding: 30,
+    borderRadius: 28,
+    background: 'rgba(0,0,0,0.38)',
+    border: '1px solid rgba(201,162,39,0.28)',
   },
   sectionKicker: {
-    color: '#94a3b8',
-    fontWeight: 900,
+    margin: 0,
+    color: '#C9A227',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.18em',
+    textTransform: 'uppercase',
+  },
+  commandTitle: {
+    margin: '14px 0',
+    fontSize: 'clamp(1.8rem, 3vw, 3.2rem)',
+    lineHeight: 1.05,
+    letterSpacing: '-0.05em',
+    fontWeight: 950,
+  },
+  consequenceTitle: {
+    margin: '14px 0',
+    fontSize: 28,
+    lineHeight: 1.1,
+    letterSpacing: '-0.04em',
+  },
+  bodyText: {
+    margin: '8px 0 0',
+    color: '#AEB6C2',
+    lineHeight: 1.7,
+    fontSize: 14,
+  },
+  commandMetaGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 24,
+  },
+  metricsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+    gap: 14,
+  },
+  metricCard: {
+    padding: 18,
+    borderRadius: 20,
+    background: 'rgba(255,255,255,0.055)',
+    border: '1px solid rgba(255,255,255,0.1)',
+  },
+  metricLabel: {
+    margin: 0,
+    color: '#858D98',
+    fontSize: 10,
+    fontWeight: 950,
     letterSpacing: '0.14em',
     textTransform: 'uppercase',
-    margin: 0,
-    fontSize: '12px',
   },
-  heroTitle: {
-    color: '#f8fafc',
-    fontSize: 'clamp(28px, 4vw, 42px)',
-    lineHeight: 1.1,
-    margin: '10px 0',
+  metricValue: {
+    margin: '10px 0 0',
+    color: '#FFFFFF',
+    fontSize: 30,
+    fontWeight: 950,
   },
-  heroMeaning: {
-    color: '#cbd5e1',
-    lineHeight: 1.65,
-    margin: 0,
-    maxWidth: '760px',
+  miniStat: {
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(255,255,255,0.055)',
+    border: '1px solid rgba(255,255,255,0.09)',
   },
-  toneBox: {
-    background: '#083344',
-    border: '1px solid #22d3ee',
-    borderRadius: '18px',
-    padding: '16px',
-    alignSelf: 'stretch',
-  },
-  toneLabel: {
-    color: '#67e8f9',
-    fontWeight: 900,
-    margin: '0 0 8px',
-    fontSize: '12px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.12em',
-  },
-  toneValue: {
-    color: '#cffafe',
-    fontSize: '24px',
-    lineHeight: 1.1,
-    margin: 0,
-    fontWeight: 900,
+  miniValue: {
+    margin: '8px 0 0',
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: 850,
+    lineHeight: 1.45,
+    overflowWrap: 'anywhere',
   },
   gridFour: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '14px',
-    marginBottom: '16px',
+    gap: 16,
   },
   gridThree: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '14px',
-    marginBottom: '16px',
+    gap: 16,
   },
   gridTwo: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '16px',
-    marginBottom: '16px',
+    gap: 16,
   },
   panel: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '16px',
-    minHeight: '150px',
-    boxSizing: 'border-box',
+    padding: 28,
+    borderRadius: 28,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.1)',
   },
-  miniBlock: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '16px',
-    padding: '14px',
+  panelCard: {
+    padding: 22,
+    borderRadius: 22,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.09)',
+    minHeight: 150,
   },
-  miniValue: {
-    color: '#f8fafc',
-    lineHeight: 1.45,
-    margin: '10px 0 0',
-    fontWeight: 800,
-  },
-  panelKicker: {
-    color: '#94a3b8',
-    fontSize: '12px',
-    fontWeight: 900,
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
-    margin: 0,
-  },
-  panelValue: {
-    color: '#f8fafc',
-    fontSize: '20px',
+  panelTitle: {
+    margin: '12px 0 0',
+    fontSize: 26,
     lineHeight: 1.15,
-    margin: '10px 0 0',
+    letterSpacing: '-0.045em',
+  },
+  cardValue: {
+    margin: '12px 0 0',
+    color: '#FFFFFF',
+    fontSize: 19,
+    lineHeight: 1.25,
   },
   panelBody: {
-    color: '#cbd5e1',
-    fontSize: '14px',
-    lineHeight: 1.6,
-    marginTop: '10px',
-  },
-  card: {
-    background: '#020617',
-    border: '1px solid #1e293b',
-    borderRadius: '22px',
-    padding: '20px',
-    marginBottom: '16px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.24)',
-    boxSizing: 'border-box',
-    overflow: 'hidden',
-  },
-  cardTitle: {
-    color: '#f8fafc',
-    fontSize: '26px',
-    lineHeight: 1.15,
-    margin: '10px 0 10px',
-  },
-  bodyText: {
-    color: '#cbd5e1',
-    lineHeight: 1.7,
-    margin: 0,
-    maxWidth: '880px',
+    marginTop: 10,
+    color: '#AEB6C2',
+    fontSize: 14,
+    lineHeight: 1.65,
   },
   infoList: {
     display: 'grid',
-    gap: '10px',
-    marginTop: '14px',
+    gap: 10,
+    marginTop: 18,
   },
   infoRow: {
     display: 'grid',
-    gridTemplateColumns: '160px minmax(0, 1fr)',
-    gap: '12px',
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '14px',
-    padding: '12px',
-    alignItems: 'start',
+    gridTemplateColumns: '170px minmax(0, 1fr)',
+    gap: 12,
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(0,0,0,0.22)',
+    border: '1px solid rgba(255,255,255,0.08)',
   },
   infoLabel: {
-    color: '#94a3b8',
-    fontWeight: 800,
-    fontSize: '12px',
+    color: '#858D98',
+    fontWeight: 900,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
   },
   infoValue: {
-    color: '#f8fafc',
-    lineHeight: 1.45,
-    overflowWrap: 'anywhere',
+    color: '#FFFFFF',
+    lineHeight: 1.5,
+  },
+  memoryPanel: {
+    padding: 28,
+    borderRadius: 28,
+    background: 'linear-gradient(135deg, rgba(201,162,39,0.13), rgba(255,255,255,0.035))',
+    border: '1px solid rgba(201,162,39,0.32)',
+  },
+  memoryGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 20,
   },
   principleCard: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '18px',
-    minHeight: '160px',
-  },
-  principleKicker: {
-    color: '#94a3b8',
-    fontSize: '12px',
-    fontWeight: 900,
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
-    margin: 0,
+    padding: 22,
+    borderRadius: 22,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.09)',
+    minHeight: 160,
   },
   principleTitle: {
-    color: '#f8fafc',
-    fontSize: '22px',
+    margin: '12px 0 0',
+    color: '#FFFFFF',
+    fontSize: 22,
     lineHeight: 1.15,
-    margin: '10px 0',
   },
-  principleBody: {
-    color: '#cbd5e1',
-    lineHeight: 1.6,
-    margin: 0,
+  orderPanel: {
+    padding: 28,
+    borderRadius: 28,
+    background: '#FFFFFF',
+    color: '#0B0B0B',
   },
   summaryBox: {
+    marginTop: 20,
+    padding: 22,
+    borderRadius: 20,
+    background: '#0A0A0A',
+    color: '#F8F6F1',
     whiteSpace: 'pre-wrap',
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '16px',
-    padding: '16px',
-    color: '#e2e8f0',
-    lineHeight: 1.55,
-    minHeight: '240px',
-    fontSize: '14px',
+    fontSize: 13,
+    lineHeight: 1.7,
     overflowX: 'auto',
+  },
+  doctrineCard: {
+    display: 'grid',
+    gap: 10,
+    padding: 24,
+    borderRadius: 24,
+    background: '#050505',
+    border: '1px solid rgba(201,162,39,0.42)',
+    color: '#FFFFFF',
+    lineHeight: 1.7,
   },
 }
