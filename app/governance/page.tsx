@@ -1,8 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import type { CSSProperties } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
+
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
+import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { supabase } from '../../lib/supabase'
 
 type TeacherProfile = {
@@ -17,6 +19,40 @@ type TeacherProfile = {
   bio: string | null
   status: string
   created_at?: string
+}
+
+type GovernancePosture =
+  | 'AUTHORITY CONTROLLED'
+  | 'AUTHORITY UNDER REVIEW'
+  | 'AUTHORITY CONDITIONAL'
+  | 'AUTHORITY RESTRICTED'
+  | 'AUTHORITY COMPROMISED'
+  | 'AUTHORITY MEMORY ABSENT'
+
+type AuthorityDecision =
+  | 'ACTIVATE_WITH_EVIDENCE'
+  | 'VERIFY_BEFORE_ACTIVATION'
+  | 'RESTRICT_AUTHORITY'
+  | 'SUSPEND_AUTHORITY'
+  | 'REMOVE_AUTHORITY'
+  | 'BUILD_GOVERNANCE_MEMORY'
+
+type GovernanceIntelligence = {
+  posture: GovernancePosture
+  decision: AuthorityDecision
+  question: string
+  thesis: string
+  authorityMeaning: string
+  accessRisk: string
+  responderTrust: string
+  restrictionMeaning: string
+  auditMeaning: string
+  doctrineMeaning: string
+  executiveAction: string
+  evidenceRequirement: string
+  memoryRequirement: string
+  boardWarning: string
+  generatedBrief: string
 }
 
 const STATUS_FLOW = [
@@ -75,44 +111,46 @@ const GOVERNANCE_REASONS: Record<string, string[]> = {
 
 const doctrineLocks = [
   {
-    title: 'Continuity First',
+    title: 'Continuity Authority Must Be Governed',
     text:
-      'EXAMIA exists to keep visible disruption governed until ownership, response, evidence, recovery, and institutional memory are confirmed.',
+      'Access, responder activation, restriction, suspension, and removal must remain governed by role, trust state, evidence, and continuity purpose.',
   },
   {
     title: 'Non-Punitive Interpretation',
     text:
-      'Signals must support stabilization and fair response. They must not become person-level blame, ranking, or punishment tools.',
+      'Governance signals must protect continuity and safeguarding. They must not become blame, ranking, humiliation, or uncontrolled surveillance.',
   },
   {
-    title: 'Traceability Before Closure',
+    title: 'Authority Requires Evidence',
     text:
-      'A pathway is not complete because action occurred. Closure requires traceable outcome, recovery position, and audit memory.',
+      'A responder is not operationally trusted because a profile exists. Authority requires verification, scope clarity, safeguarding review, and audit memory.',
   },
   {
-    title: 'Access Must Match Authority',
+    title: 'Audit Must Reconstruct Authority',
     text:
-      'Role, governance status, operational status, and responder trust state must control what users can see or do.',
+      'Every governance action must be reconstructable: who changed authority, why, from what status, to what status, and with what evidence.',
   },
 ]
 
 const deploymentHardening = [
   'Environment variables verified before deployment',
-  'Supabase project and table access confirmed',
-  'RLS policies reviewed before institutional use',
-  'Command route accessible to authorized leaders only',
+  'Supabase access and RLS policies reviewed',
+  'Command route restricted to authorized leaders',
   'Audit route preserved as institutional memory layer',
   'Recovery protocol reviewed before pilot launch',
-  'Manual degraded-operations capture process defined',
-  'Backup and export discipline scheduled',
   'Access-denied pathway tested',
   'Responder suspension and restriction behavior tested',
+  'Manual degraded-operations capture process defined',
+  'Backup and export discipline scheduled',
+  'Governance action logging verified',
 ]
 
 export default function GovernanceConsolePage() {
   return (
     <GovernanceRouteGuard allowedRoles={['SUPER_ADMIN', 'GOVERNANCE_OFFICER']}>
-      <GovernanceConsoleContent />
+      <CGIGovernanceShell>
+        <GovernanceConsoleContent />
+      </CGIGovernanceShell>
     </GovernanceRouteGuard>
   )
 }
@@ -124,7 +162,9 @@ function GovernanceConsoleContent() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [message, setMessage] = useState('')
 
-  const [selectedProfile, setSelectedProfile] = useState<TeacherProfile | null>(null)
+  const [selectedProfile, setSelectedProfile] = useState<TeacherProfile | null>(
+    null,
+  )
   const [selectedStatus, setSelectedStatus] = useState('')
   const [selectedReason, setSelectedReason] = useState('')
   const [governanceNotes, setGovernanceNotes] = useState('')
@@ -134,11 +174,9 @@ function GovernanceConsoleContent() {
     loadProfiles()
   }, [])
 
-  if (!mounted) return null
-
   async function loadProfiles() {
     setLoading(true)
-    setMessage('')
+    setMessage('Loading enterprise governance authority memory...')
 
     const { data, error } = await supabase
       .from('teacher_profiles')
@@ -147,33 +185,14 @@ function GovernanceConsoleContent() {
 
     if (error) {
       console.error(error)
-      setMessage('Could not load responder governance profiles.')
+      setMessage('Enterprise governance authority memory could not be loaded.')
       setLoading(false)
       return
     }
 
     setProfiles(data || [])
+    setMessage('Enterprise governance authority memory loaded.')
     setLoading(false)
-  }
-
-  function normalizedStatus(status: string) {
-    if (status === 'APPROVED') return 'VERIFIED'
-    return status || 'PENDING'
-  }
-
-  function arrayText(value: string[] | null | undefined) {
-    if (!value || value.length === 0) return 'Not provided'
-    return value.join(', ')
-  }
-
-  function trustScoreForStatus(status: string) {
-    if (status === 'ACTIVE') return 75
-    if (status === 'VERIFIED') return 65
-    if (status === 'UNDER_REVIEW') return 50
-    if (status === 'RESTRICTED') return 35
-    if (status === 'SUSPENDED') return 20
-    if (status === 'REMOVED') return 0
-    return 45
   }
 
   function openGovernanceAction(profile: TeacherProfile, nextStatus: string) {
@@ -229,7 +248,7 @@ function GovernanceConsoleContent() {
           verification_summary: selectedProfile.bio || '',
           updated_at: new Date().toISOString(),
         },
-        { onConflict: 'email' }
+        { onConflict: 'email' },
       )
       .select()
       .single()
@@ -241,16 +260,18 @@ function GovernanceConsoleContent() {
       return
     }
 
-    const { error: actionError } = await supabase.from('governance_actions').insert({
-      responder_id: responderData.id,
-      teacher_profile_id: selectedProfile.id,
-      action_type: `STATUS_CHANGE_TO_${selectedStatus}`,
-      previous_status: previousStatus,
-      new_status: selectedStatus,
-      governance_actor: 'EXAMIA Governance Console',
-      reason: selectedReason,
-      notes: governanceNotes.trim() || null,
-    })
+    const { error: actionError } = await supabase
+      .from('governance_actions')
+      .insert({
+        responder_id: responderData.id,
+        teacher_profile_id: selectedProfile.id,
+        action_type: `STATUS_CHANGE_TO_${selectedStatus}`,
+        previous_status: previousStatus,
+        new_status: selectedStatus,
+        governance_actor: 'TSINAXA CGI Governance Console',
+        reason: selectedReason,
+        notes: governanceNotes.trim() || null,
+      })
 
     if (actionError) {
       console.error(actionError)
@@ -264,65 +285,177 @@ function GovernanceConsoleContent() {
     setSelectedReason('')
     setGovernanceNotes('')
     setActionLoading(null)
-    setMessage(`Responder moved to ${selectedStatus}. Governance action logged.`)
+    setMessage(`Authority moved to ${selectedStatus}. Governance action logged.`)
 
     await loadProfiles()
   }
 
-  const total = profiles.length
-  const pending = profiles.filter((p) => normalizedStatus(p.status) === 'PENDING').length
-  const active = profiles.filter((p) => normalizedStatus(p.status) === 'ACTIVE').length
-  const restricted = profiles.filter((p) =>
-    ['RESTRICTED', 'SUSPENDED'].includes(normalizedStatus(p.status))
-  ).length
+  const governance = useMemo(
+    () => buildGovernanceIntelligence(profiles),
+    [profiles],
+  )
 
-  return (
+  if (!mounted) return null
+    return (
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.hero}>
-          <p style={styles.kicker}>EXAMIA • GOVERNANCE DOCTRINE + ACCESS CONTROL</p>
+          <div>
+            <p style={styles.kicker}>TSINAXA CGI • ENTERPRISE GOVERNANCE</p>
 
-          <h1 style={styles.title}>Institutional Governance Console</h1>
+            <h1 style={styles.title}>Enterprise Governance Intelligence</h1>
 
-          <p style={styles.subtitle}>
-            This protected governance surface controls responder verification, access
-            authority, restriction, suspension, removal, institutional trust evidence,
-            deployment discipline, and continuity doctrine.
-          </p>
+            <p style={styles.subtitle}>
+              Governance controls continuity authority, access, trust, activation,
+              restriction, suspension, removal, doctrine, deployment discipline,
+              and auditability. CGI does not allow authority to drift beyond
+              evidence.
+            </p>
+          </div>
+
+          <div style={styles.statusBox}>
+            <p style={styles.statusLabel}>GOVERNANCE POSTURE</p>
+            <p style={styles.statusValue}>{governance.posture}</p>
+            <p style={styles.statusMeaning}>{governance.thesis}</p>
+          </div>
+        </section>
+
+        {message && <div style={styles.message}>{message}</div>}
+
+        <section style={styles.commandDeck}>
+          <div style={styles.primaryCard}>
+            <p style={styles.sectionKicker}>Executive Governance Question</p>
+
+            <h2 style={styles.commandTitle}>{governance.question}</h2>
+
+            <p style={styles.primaryText}>{governance.authorityMeaning}</p>
+
+            <div style={styles.commandMetaGrid}>
+              <MiniStat label="Authority Decision" value={governance.decision} />
+              <MiniStat label="Responder Trust" value={governance.responderTrust} />
+              <MiniStat label="Access Risk" value={governance.accessRisk} />
+              <MiniStat label="Audit" value={governance.auditMeaning} />
+            </div>
+          </div>
+
+          <div style={styles.consequenceCard}>
+            <p style={styles.sectionKicker}>Board Warning</p>
+
+            <h2 style={styles.consequenceTitle}>
+              Authority without evidence becomes institutional risk.
+            </h2>
+
+            <p style={styles.bodyText}>{governance.boardWarning}</p>
+          </div>
         </section>
 
         <section style={styles.metricsGrid}>
-          <Metric label="Total Profiles" value={total} />
-          <Metric label="Pending Review" value={pending} />
-          <Metric label="Active Responders" value={active} />
-          <Metric label="Restricted / Suspended" value={restricted} />
+          <Metric label="Total Profiles" value={profiles.length} />
+          <Metric
+            label="Pending Review"
+            value={
+              profiles.filter((item) => normalizedStatus(item.status) === 'PENDING')
+                .length
+            }
+          />
+          <Metric
+            label="Under Review"
+            value={
+              profiles.filter(
+                (item) => normalizedStatus(item.status) === 'UNDER_REVIEW',
+              ).length
+            }
+          />
+          <Metric
+            label="Active"
+            value={
+              profiles.filter((item) => normalizedStatus(item.status) === 'ACTIVE')
+                .length
+            }
+          />
+          <Metric
+            label="Restricted"
+            value={
+              profiles.filter((item) =>
+                ['RESTRICTED', 'SUSPENDED'].includes(
+                  normalizedStatus(item.status),
+                ),
+              ).length
+            }
+          />
+          <Metric
+            label="Removed"
+            value={
+              profiles.filter((item) => normalizedStatus(item.status) === 'REMOVED')
+                .length
+            }
+          />
         </section>
 
-        {message && <p style={styles.message}>{message}</p>}
+        <section style={styles.gridFour}>
+          <ExecutiveCard
+            title="Access Risk"
+            value={governance.accessRisk}
+            body="Whether continuity authority may exceed evidence or role permission."
+          />
+
+          <ExecutiveCard
+            title="Responder Trust"
+            value={governance.responderTrust}
+            body="Whether responders are sufficiently verified for operational authority."
+          />
+
+          <ExecutiveCard
+            title="Restriction Meaning"
+            value={governance.restrictionMeaning}
+            body="Whether restrictions and suspensions are preserving continuity credibility."
+          />
+
+          <ExecutiveCard
+            title="Doctrine Meaning"
+            value={governance.doctrineMeaning}
+            body="Whether governance is preventing blame, drift, weak closure, and uncontrolled authority."
+          />
+        </section>
+
+        <section style={styles.memoryPanel}>
+          <p style={styles.sectionKicker}>Governance Memory</p>
+
+          <h2 style={styles.panelTitle}>
+            Authority must be evidence-bound, role-bound, time-bound, and
+            reconstructable.
+          </h2>
+
+          <div style={styles.memoryGrid}>
+            <MiniStat label="Evidence" value={governance.evidenceRequirement} />
+            <MiniStat label="Memory" value={governance.memoryRequirement} />
+            <MiniStat label="Executive Action" value={governance.executiveAction} />
+            <MiniStat label="Audit" value={governance.auditMeaning} />
+          </div>
+        </section>
 
         <section style={styles.gridTwo}>
-          <div style={styles.card}>
-            <h2 style={styles.cardTitle}>Governance Doctrine Locks</h2>
-            <p style={styles.cardText}>
-              These rules protect EXAMIA from drifting into surveillance, blame, weak
-              closure, or uncontrolled institutional access.
+          <Panel title="Governance Doctrine Locks">
+            <p style={styles.bodyText}>
+              These locks protect CGI from becoming surveillance, blame,
+              uncontrolled access, weak authority, or non-reconstructable
+              decisions.
             </p>
 
             <div style={styles.doctrineGrid}>
               {doctrineLocks.map((item) => (
-                <article key={item.title} style={styles.doctrineCard}>
-                  <h3 style={styles.doctrineTitle}>{item.title}</h3>
-                  <p style={styles.doctrineText}>{item.text}</p>
+                <article key={item.title} style={styles.doctrineItem}>
+                  <h3 style={styles.cardValue}>{item.title}</h3>
+                  <p style={styles.panelBody}>{item.text}</p>
                 </article>
               ))}
             </div>
-          </div>
+          </Panel>
 
-          <div style={styles.card}>
-            <h2 style={styles.cardTitle}>Deployment Hardening Checklist</h2>
-            <p style={styles.cardText}>
-              These checks must be treated as operational doctrine before serious
-              institutional demonstration or pilot deployment.
+          <Panel title="Deployment Hardening">
+            <p style={styles.bodyText}>
+              These checks protect serious institutional demonstration and pilot
+              deployment.
             </p>
 
             <div style={styles.checkList}>
@@ -332,30 +465,33 @@ function GovernanceConsoleContent() {
                 </div>
               ))}
             </div>
-          </div>
+          </Panel>
         </section>
-
-        <section style={styles.card}>
+                <section style={styles.panel}>
           <div style={styles.cardHeader}>
             <div>
-              <h2 style={styles.cardTitle}>Responder Verification Queue</h2>
+              <p style={styles.sectionKicker}>Responder Authority Queue</p>
 
-              <p style={styles.cardText}>
-                Review each responder and move them through the governed lifecycle using
-                structured action reasons. These decisions affect route access,
-                operational authority, trust scoring, and assignment eligibility.
+              <h2 style={styles.panelTitle}>
+                Govern activation, restriction, suspension, and removal
+              </h2>
+
+              <p style={styles.bodyText}>
+                These decisions affect route access, operational authority,
+                trust scoring, assignment eligibility, safeguarding visibility,
+                and audit memory.
               </p>
             </div>
 
-            <button onClick={loadProfiles} style={styles.refreshButton}>
-              Refresh
+            <button onClick={loadProfiles} style={styles.primaryButton}>
+              Refresh Governance
             </button>
           </div>
 
           {loading ? (
-            <p style={styles.cardText}>Loading governance queue...</p>
+            <p style={styles.emptyBox}>Loading governance authority queue...</p>
           ) : profiles.length === 0 ? (
-            <p style={styles.cardText}>No responder profiles found.</p>
+            <p style={styles.emptyBox}>No responder authority profiles found.</p>
           ) : (
             <div style={styles.profileList}>
               {profiles.map((profile) => {
@@ -365,30 +501,46 @@ function GovernanceConsoleContent() {
                   <article key={profile.id} style={styles.profileCard}>
                     <div style={styles.profileTop}>
                       <div>
+                        <p style={styles.metricLabel}>Responder Authority</p>
                         <h3 style={styles.profileName}>{profile.full_name}</h3>
                         <p style={styles.email}>{profile.email}</p>
                       </div>
 
-                      <span style={statusBadge(currentStatus)}>{currentStatus}</span>
+                      <span style={statusBadge(currentStatus)}>
+                        {currentStatus}
+                      </span>
                     </div>
 
                     <div style={styles.infoGrid}>
                       <Info label="Domains" value={arrayText(profile.subjects)} />
-                      <Info label="Operational Levels" value={arrayText(profile.grade_levels)} />
-                      <Info label="Languages" value={arrayText(profile.spoken_languages)} />
+                      <Info
+                        label="Operational Levels"
+                        value={arrayText(profile.grade_levels)}
+                      />
+                      <Info
+                        label="Languages"
+                        value={arrayText(profile.spoken_languages)}
+                      />
                       <Info label="Region" value={profile.province || 'Not provided'} />
                       <Info
                         label="Expected Rate"
                         value={
-                          profile.hourly_rate !== null && profile.hourly_rate !== undefined
+                          profile.hourly_rate !== null &&
+                          profile.hourly_rate !== undefined
                             ? String(profile.hourly_rate)
                             : 'Not provided'
                         }
                       />
+                      <Info
+                        label="Trust Score"
+                        value={String(trustScoreForStatus(currentStatus))}
+                      />
                     </div>
 
                     <details style={styles.details}>
-                      <summary style={styles.summary}>View verification evidence</summary>
+                      <summary style={styles.summary}>
+                        View verification evidence
+                      </summary>
 
                       <pre style={styles.bio}>
                         {profile.bio || 'No verification evidence submitted.'}
@@ -410,7 +562,9 @@ function GovernanceConsoleContent() {
                                 : 1,
                           }}
                         >
-                          {actionLoading === `${profile.id}-${status}` ? 'Saving...' : status}
+                          {actionLoading === `${profile.id}-${status}`
+                            ? 'Saving...'
+                            : status}
                         </button>
                       ))}
                     </div>
@@ -420,12 +574,35 @@ function GovernanceConsoleContent() {
             </div>
           )}
         </section>
+
+        <section style={styles.orderPanel}>
+          <p style={styles.sectionKicker}>Copy-Ready Governance Brief</p>
+
+          <h2 style={styles.panelTitle}>
+            Can continuity authority be trusted, controlled, and reconstructed?
+          </h2>
+
+          <pre style={styles.summaryBox}>{governance.generatedBrief}</pre>
+        </section>
+
+        <section style={styles.doctrineCard}>
+          <strong>ENTERPRISE GOVERNANCE DOCTRINE</strong>
+
+          <span>
+            Governance is not administration. Governance is the control of
+            authority, trust, access, restriction, activation, suspension,
+            removal, doctrine, and audit memory before continuity authority can
+            affect institutional survivability.
+          </span>
+        </section>
       </div>
 
       {selectedProfile && (
         <div style={styles.overlay}>
           <div style={styles.modal}>
-            <h2 style={styles.modalTitle}>Governance Action</h2>
+            <p style={styles.sectionKicker}>Governance Action</p>
+
+            <h2 style={styles.modalTitle}>Change authority state</h2>
 
             <p style={styles.modalText}>
               Move <strong>{selectedProfile.full_name}</strong> to{' '}
@@ -436,7 +613,7 @@ function GovernanceConsoleContent() {
 
             <select
               value={selectedReason}
-              onChange={(e) => setSelectedReason(e.target.value)}
+              onChange={(event) => setSelectedReason(event.target.value)}
               style={styles.select}
             >
               <option value="">Select governance reason</option>
@@ -452,7 +629,7 @@ function GovernanceConsoleContent() {
 
             <textarea
               value={governanceNotes}
-              onChange={(e) => setGovernanceNotes(e.target.value)}
+              onChange={(event) => setGovernanceNotes(event.target.value)}
               style={styles.textarea}
               placeholder="Additional governance notes..."
             />
@@ -470,7 +647,10 @@ function GovernanceConsoleContent() {
                 Cancel
               </button>
 
-              <button onClick={confirmGovernanceAction} style={styles.confirmButton}>
+              <button
+                onClick={confirmGovernanceAction}
+                style={styles.confirmButton}
+              >
                 Confirm Governance Action
               </button>
             </div>
@@ -480,21 +660,393 @@ function GovernanceConsoleContent() {
     </main>
   )
 }
+function buildGovernanceIntelligence(
+  profiles: TeacherProfile[],
+): GovernanceIntelligence {
+  const total = profiles.length
+
+  const pending = profiles.filter(
+    (item) => normalizedStatus(item.status) === 'PENDING',
+  ).length
+
+  const underReview = profiles.filter(
+    (item) => normalizedStatus(item.status) === 'UNDER_REVIEW',
+  ).length
+
+  const verified = profiles.filter(
+    (item) => normalizedStatus(item.status) === 'VERIFIED',
+  ).length
+
+  const active = profiles.filter(
+    (item) => normalizedStatus(item.status) === 'ACTIVE',
+  ).length
+
+  const restricted = profiles.filter((item) =>
+    ['RESTRICTED', 'SUSPENDED'].includes(normalizedStatus(item.status)),
+  ).length
+
+  const removed = profiles.filter(
+    (item) => normalizedStatus(item.status) === 'REMOVED',
+  ).length
+
+  const posture = deriveGovernancePosture({
+    total,
+    pending,
+    underReview,
+    verified,
+    active,
+    restricted,
+    removed,
+  })
+
+  const decision = deriveAuthorityDecision(posture)
+
+  const question =
+    'Can continuity authority be trusted, controlled, and reconstructed?'
+
+  const accessRisk = deriveAccessRisk({
+    total,
+    pending,
+    underReview,
+    restricted,
+    removed,
+  })
+
+  const responderTrust = deriveResponderTrust({
+    total,
+    verified,
+    active,
+    pending,
+    underReview,
+  })
+
+  const restrictionMeaning = deriveRestrictionMeaning({
+    restricted,
+    removed,
+  })
+
+  const auditMeaning = deriveAuditMeaning(posture)
+
+  const doctrineMeaning =
+    'Governance protects authority from drifting beyond role, trust, evidence, safeguarding, and continuity purpose.'
+
+  const authorityMeaning = deriveAuthorityMeaning(posture)
+
+  const executiveAction = deriveExecutiveAction(posture)
+
+  const evidenceRequirement =
+    'Preserve profile identity, governance status, previous authority state, new authority state, reason, actor, trust score, safeguarding status, operational scope, and governance notes.'
+
+  const memoryRequirement =
+    'Preserve every authority change so activation, restriction, suspension, removal, and restoration remain reconstructable.'
+
+  const boardWarning =
+    'Do not allow operational authority to exceed evidence, role permission, safeguarding review, or audit memory.'
+
+  const thesis = `${posture}: ${authorityMeaning}`
+
+  const generatedBrief = [
+    'TSINAXA CGI ENTERPRISE GOVERNANCE INTELLIGENCE BRIEF',
+    '',
+    `Executive Governance Question: ${question}`,
+    '',
+    `Governance Posture: ${posture}`,
+    '',
+    `Authority Decision: ${decision}`,
+    '',
+    `Enterprise Thesis: ${thesis}`,
+    '',
+    `Total Profiles: ${total}`,
+    '',
+    `Pending Review: ${pending}`,
+    '',
+    `Under Review: ${underReview}`,
+    '',
+    `Verified: ${verified}`,
+    '',
+    `Active: ${active}`,
+    '',
+    `Restricted / Suspended: ${restricted}`,
+    '',
+    `Removed: ${removed}`,
+    '',
+    `Access Risk: ${accessRisk}`,
+    '',
+    `Responder Trust: ${responderTrust}`,
+    '',
+    `Restriction Meaning: ${restrictionMeaning}`,
+    '',
+    `Audit Meaning: ${auditMeaning}`,
+    '',
+    `Doctrine Meaning: ${doctrineMeaning}`,
+    '',
+    `Evidence Requirement: ${evidenceRequirement}`,
+    '',
+    `Memory Requirement: ${memoryRequirement}`,
+    '',
+    `Board Warning: ${boardWarning}`,
+    '',
+    `Executive Action: ${executiveAction}`,
+    '',
+    'Governance-Safe Meaning:',
+    'Governance controls authority without assigning blame. It protects continuity by ensuring that access, activation, restriction, suspension, and removal remain evidence-bound and reconstructable.',
+  ].join('\n')
+
+  return {
+    posture,
+    decision,
+    question,
+    thesis,
+    authorityMeaning,
+    accessRisk,
+    responderTrust,
+    restrictionMeaning,
+    auditMeaning,
+    doctrineMeaning,
+    executiveAction,
+    evidenceRequirement,
+    memoryRequirement,
+    boardWarning,
+    generatedBrief,
+  }
+}
+
+function deriveGovernancePosture(input: {
+  total: number
+  pending: number
+  underReview: number
+  verified: number
+  active: number
+  restricted: number
+  removed: number
+}): GovernancePosture {
+  if (input.total === 0) return 'AUTHORITY MEMORY ABSENT'
+
+  if (input.removed > 0 || input.restricted >= 3) {
+    return 'AUTHORITY COMPROMISED'
+  }
+
+  if (input.restricted > 0) {
+    return 'AUTHORITY RESTRICTED'
+  }
+
+  if (input.pending > 0 || input.underReview > 0) {
+    return 'AUTHORITY UNDER REVIEW'
+  }
+
+  if (input.verified > 0 && input.active === 0) {
+    return 'AUTHORITY CONDITIONAL'
+  }
+
+  return 'AUTHORITY CONTROLLED'
+}
+
+function deriveAuthorityDecision(
+  posture: GovernancePosture,
+): AuthorityDecision {
+  if (posture === 'AUTHORITY CONTROLLED') return 'ACTIVATE_WITH_EVIDENCE'
+  if (posture === 'AUTHORITY CONDITIONAL') return 'VERIFY_BEFORE_ACTIVATION'
+  if (posture === 'AUTHORITY UNDER REVIEW') return 'VERIFY_BEFORE_ACTIVATION'
+  if (posture === 'AUTHORITY RESTRICTED') return 'RESTRICT_AUTHORITY'
+  if (posture === 'AUTHORITY COMPROMISED') return 'SUSPEND_AUTHORITY'
+  return 'BUILD_GOVERNANCE_MEMORY'
+}
+
+function deriveAccessRisk(input: {
+  total: number
+  pending: number
+  underReview: number
+  restricted: number
+  removed: number
+}) {
+  if (input.total === 0) {
+    return 'Access risk cannot be interpreted because no authority memory exists.'
+  }
+
+  if (input.removed > 0 || input.restricted >= 3) {
+    return 'Access risk is elevated because restriction, suspension, or removal is visible.'
+  }
+
+  if (input.pending > 0 || input.underReview > 0) {
+    return 'Access risk is conditional because some authority states remain under review.'
+  }
+
+  return 'Access risk appears controlled under current governance memory.'
+}
+
+function deriveResponderTrust(input: {
+  total: number
+  verified: number
+  active: number
+  pending: number
+  underReview: number
+}) {
+  if (input.total === 0) {
+    return 'Responder trust cannot be established without governance memory.'
+  }
+
+  if (input.active > 0 && input.pending === 0 && input.underReview === 0) {
+    return 'Responder trust is currently operationally usable with evidence preserved.'
+  }
+
+  if (input.verified > 0 || input.active > 0) {
+    return 'Responder trust is partially established but remains conditional.'
+  }
+
+  return 'Responder trust requires further verification before operational authority expands.'
+}
+
+function deriveRestrictionMeaning(input: {
+  restricted: number
+  removed: number
+}) {
+  if (input.removed > 0) {
+    return 'Removal is visible, meaning authority failure must remain preserved for audit.'
+  }
+
+  if (input.restricted > 0) {
+    return 'Restriction or suspension is active, meaning authority has been narrowed to protect continuity.'
+  }
+
+  return 'No restriction or removal is currently visible.'
+}
+
+function deriveAuditMeaning(posture: GovernancePosture) {
+  if (posture === 'AUTHORITY MEMORY ABSENT') {
+    return 'Audit cannot reconstruct authority until governance memory exists.'
+  }
+
+  if (
+    posture === 'AUTHORITY COMPROMISED' ||
+    posture === 'AUTHORITY RESTRICTED'
+  ) {
+    return 'Audit must preserve why authority was narrowed, suspended, or removed.'
+  }
+
+  if (posture === 'AUTHORITY UNDER REVIEW') {
+    return 'Audit must preserve why authority remains conditional before activation.'
+  }
+
+  return 'Audit can preserve the authority chain under current governance memory.'
+}
+
+function deriveAuthorityMeaning(posture: GovernancePosture) {
+  if (posture === 'AUTHORITY CONTROLLED') {
+    return 'Continuity authority appears controlled by role, verification, trust state, and governance memory.'
+  }
+
+  if (posture === 'AUTHORITY CONDITIONAL') {
+    return 'Continuity authority is forming, but activation should remain evidence-bound.'
+  }
+
+  if (posture === 'AUTHORITY UNDER REVIEW') {
+    return 'Continuity authority cannot be fully trusted until review and verification are completed.'
+  }
+
+  if (posture === 'AUTHORITY RESTRICTED') {
+    return 'Continuity authority has been narrowed to protect trust, safeguarding, and institutional control.'
+  }
+
+  if (posture === 'AUTHORITY COMPROMISED') {
+    return 'Continuity authority is compromised and requires executive governance visibility.'
+  }
+
+  return 'Continuity authority cannot be interpreted because governance memory is absent.'
+}
+
+function deriveExecutiveAction(posture: GovernancePosture) {
+  if (posture === 'AUTHORITY CONTROLLED') {
+    return 'Maintain authority monitoring and preserve governance action memory.'
+  }
+
+  if (posture === 'AUTHORITY CONDITIONAL') {
+    return 'Complete verification before expanding operational authority.'
+  }
+
+  if (posture === 'AUTHORITY UNDER REVIEW') {
+    return 'Hold authority under review and require evidence before activation.'
+  }
+
+  if (posture === 'AUTHORITY RESTRICTED') {
+    return 'Maintain restricted authority until evidence supports restoration or escalation.'
+  }
+
+  if (posture === 'AUTHORITY COMPROMISED') {
+    return 'Escalate governance review and preserve suspension, removal, or restriction evidence.'
+  }
+
+  return 'Build governance memory before authority decisions are trusted.'
+}
+
+function normalizedStatus(status: string) {
+  if (status === 'APPROVED') return 'VERIFIED'
+  return status || 'PENDING'
+}
+
+function arrayText(value: string[] | null | undefined) {
+  if (!value || value.length === 0) return 'Not provided'
+  return value.join(', ')
+}
+
+function trustScoreForStatus(status: string) {
+  if (status === 'ACTIVE') return 75
+  if (status === 'VERIFIED') return 65
+  if (status === 'UNDER_REVIEW') return 50
+  if (status === 'RESTRICTED') return 35
+  if (status === 'SUSPENDED') return 20
+  if (status === 'REMOVED') return 0
+  return 45
+}
 
 function Metric({ label, value }: { label: string; value: number }) {
   return (
-    <div style={styles.metricCard}>
+    <article style={styles.metricCard}>
       <p style={styles.metricLabel}>{label}</p>
-      <h2 style={styles.metricValue}>{value}</h2>
-    </div>
+      <p style={styles.metricValue}>{String(value)}</p>
+    </article>
+  )
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <article style={styles.miniStat}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.miniValue}>{value}</p>
+    </article>
+  )
+}
+function ExecutiveCard({
+  title,
+  value,
+  body,
+}: {
+  title: string
+  value: string
+  body: string
+}) {
+  return (
+    <article style={styles.panelCard}>
+      <p style={styles.sectionKicker}>{title}</p>
+      <h3 style={styles.cardValue}>{value}</h3>
+      <p style={styles.panelBody}>{body}</p>
+    </article>
+  )
+}
+
+function Panel({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section style={styles.panel}>
+      <p style={styles.sectionKicker}>{title}</p>
+      <div style={styles.infoList}>{children}</div>
+    </section>
   )
 }
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div style={styles.infoBox}>
-      <p style={styles.infoLabel}>{label}</p>
-      <p style={styles.infoValue}>{value}</p>
+    <div style={styles.infoRow}>
+      <span style={styles.infoLabel}>{label}</span>
+      <strong style={styles.infoValue}>{value}</strong>
     </div>
   )
 }
@@ -503,312 +1055,525 @@ function statusBadge(status: string): CSSProperties {
   const base: CSSProperties = {
     padding: '8px 12px',
     borderRadius: '999px',
-    fontSize: '12px',
-    fontWeight: 900,
-    letterSpacing: '0.5px',
+    fontSize: 12,
+    fontWeight: 950,
+    letterSpacing: '0.08em',
+    border: '1px solid rgba(201,162,39,0.28)',
+    textTransform: 'uppercase',
+    background: 'rgba(201,162,39,0.12)',
+    color: '#D7B84C',
   }
 
-  if (status === 'ACTIVE') return { ...base, background: '#dcfce7', color: '#166534' }
-  if (status === 'VERIFIED') return { ...base, background: '#dbeafe', color: '#1e40af' }
-  if (status === 'UNDER_REVIEW') return { ...base, background: '#fef9c3', color: '#854d0e' }
-  if (status === 'RESTRICTED') return { ...base, background: '#ffedd5', color: '#9a3412' }
-  if (status === 'SUSPENDED') return { ...base, background: '#fee2e2', color: '#991b1b' }
-  if (status === 'REMOVED') return { ...base, background: '#111827', color: '#f9fafb' }
+  if (status === 'ACTIVE') {
+    return {
+      ...base,
+      background: 'rgba(255,255,255,0.12)',
+      color: '#FFFFFF',
+    }
+  }
 
-  return { ...base, background: '#e0f2fe', color: '#075985' }
+  if (status === 'RESTRICTED' || status === 'SUSPENDED') {
+    return {
+      ...base,
+      background: 'rgba(201,162,39,0.18)',
+      color: '#F4D36A',
+    }
+  }
+
+  if (status === 'REMOVED') {
+    return {
+      ...base,
+      background: 'rgba(255,255,255,0.08)',
+      color: '#AEB6C2',
+      border: '1px solid rgba(255,255,255,0.18)',
+    }
+  }
+
+  return base
 }
 
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    background: 'linear-gradient(180deg, #020617 0%, #0f172a 100%)',
-    color: 'white',
-    padding: '56px 18px',
+    background:
+      'radial-gradient(circle at top left, rgba(201, 162, 39, 0.14), transparent 34%), linear-gradient(135deg, #050505 0%, #0B0B0B 45%, #111111 100%)',
+    color: '#FFFFFF',
+    padding: '40px 24px 72px',
   },
   container: {
-    maxWidth: '1180px',
+    width: 'min(1440px, 100%)',
     margin: '0 auto',
+    display: 'grid',
+    gap: 24,
   },
   hero: {
-    marginBottom: '28px',
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.45fr) minmax(320px, 0.75fr)',
+    gap: 24,
+    padding: 32,
+    border: '1px solid rgba(201, 162, 39, 0.34)',
+    borderRadius: 28,
+    background:
+      'linear-gradient(135deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018))',
+    boxShadow: '0 28px 80px rgba(0,0,0,0.38)',
   },
   kicker: {
-    color: '#67e8f9',
-    fontSize: '12px',
+    margin: 0,
+    color: '#C9A227',
+    fontSize: 12,
     fontWeight: 900,
-    letterSpacing: '2px',
+    letterSpacing: '0.22em',
+    textTransform: 'uppercase',
   },
   title: {
-    fontSize: 'clamp(34px, 6vw, 58px)',
-    margin: '10px 0',
-    lineHeight: 1.05,
+    margin: '14px 0 0',
+    fontSize: 'clamp(2.3rem, 5vw, 5rem)',
+    lineHeight: 0.95,
+    letterSpacing: '-0.07em',
+    fontWeight: 950,
   },
   subtitle: {
-    maxWidth: '900px',
-    color: '#cbd5e1',
-    fontSize: '18px',
-    lineHeight: 1.6,
+    maxWidth: 880,
+    margin: '18px 0 0',
+    color: '#C8CDD4',
+    fontSize: 17,
+    lineHeight: 1.8,
+  },
+  statusBox: {
+    border: '1px solid rgba(201, 162, 39, 0.5)',
+    borderRadius: 24,
+    padding: 24,
+    background:
+      'linear-gradient(180deg, rgba(201,162,39,0.18), rgba(0,0,0,0.38))',
+  },
+  statusLabel: {
+    margin: 0,
+    color: '#D7B84C',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.2em',
+  },
+  statusValue: {
+    margin: '16px 0 0',
+    fontSize: 30,
+    fontWeight: 950,
+    letterSpacing: '-0.04em',
+    lineHeight: 1.05,
+  },
+  statusMeaning: {
+    margin: '12px 0 0',
+    color: '#ECE7D7',
+    fontSize: 14,
+    lineHeight: 1.7,
+  },
+  message: {
+    padding: '14px 18px',
+    borderRadius: 16,
+    color: '#D7B84C',
+    background: 'rgba(201,162,39,0.1)',
+    border: '1px solid rgba(201,162,39,0.22)',
+    fontWeight: 800,
+  },
+  commandDeck: {
+    display: 'grid',
+    gridTemplateColumns: '1.4fr 0.8fr',
+    gap: 24,
+  },
+  primaryCard: {
+    padding: 30,
+    borderRadius: 28,
+    background: '#FFFFFF',
+    color: '#0B0B0B',
+    border: '1px solid rgba(255,255,255,0.12)',
+  },
+  consequenceCard: {
+    padding: 30,
+    borderRadius: 28,
+    background: 'rgba(0,0,0,0.38)',
+    border: '1px solid rgba(201,162,39,0.28)',
+  },
+  sectionKicker: {
+    margin: 0,
+    color: '#C9A227',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.18em',
+    textTransform: 'uppercase',
+  },
+  commandTitle: {
+    margin: '14px 0',
+    fontSize: 'clamp(1.8rem, 3vw, 3.2rem)',
+    lineHeight: 1.05,
+    letterSpacing: '-0.05em',
+    fontWeight: 950,
+  },
+  primaryText: {
+    margin: 0,
+    color: '#4A4A4A',
+    lineHeight: 1.7,
+    fontSize: 14,
+  },
+  consequenceTitle: {
+    margin: '14px 0',
+    fontSize: 28,
+    lineHeight: 1.1,
+    letterSpacing: '-0.04em',
+  },
+  bodyText: {
+    margin: '8px 0 0',
+    color: '#AEB6C2',
+    lineHeight: 1.7,
+    fontSize: 14,
+  },
+  commandMetaGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 24,
   },
   metricsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
-    gap: '14px',
-    marginBottom: '22px',
+    gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+    gap: 14,
   },
   metricCard: {
-    background: '#0f172a',
-    border: '1px solid #1e293b',
-    borderRadius: '18px',
-    padding: '20px',
+    padding: 18,
+    borderRadius: 20,
+    background: 'rgba(255,255,255,0.055)',
+    border: '1px solid rgba(255,255,255,0.1)',
   },
   metricLabel: {
-    color: '#94a3b8',
-    fontWeight: 800,
     margin: 0,
+    color: '#858D98',
+    fontSize: 10,
+    fontWeight: 950,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
   },
   metricValue: {
-    fontSize: '36px',
-    margin: '8px 0 0',
+    margin: '10px 0 0',
+    color: '#FFFFFF',
+    fontSize: 26,
+    fontWeight: 950,
+    lineHeight: 1.15,
+    overflowWrap: 'anywhere',
   },
-  message: {
-    background: '#064e3b',
-    color: '#bbf7d0',
-    padding: '14px',
-    borderRadius: '14px',
-    fontWeight: 800,
-    marginBottom: '22px',
+  miniStat: {
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(255,255,255,0.055)',
+    border: '1px solid rgba(255,255,255,0.09)',
+  },
+  miniValue: {
+    margin: '8px 0 0',
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: 850,
+    lineHeight: 1.45,
+    overflowWrap: 'anywhere',
+  },
+  gridFour: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 16,
   },
   gridTwo: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-    gap: '18px',
-    marginBottom: '24px',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 16,
   },
-  card: {
-    background: '#020617',
-    border: '1px solid #1e293b',
-    borderRadius: '24px',
-    padding: '24px',
-    boxShadow: '0 24px 70px rgba(0,0,0,0.4)',
-    marginBottom: '24px',
+  panel: {
+    padding: 28,
+    borderRadius: 28,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.1)',
+  },
+  panelCard: {
+    padding: 22,
+    borderRadius: 22,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.09)',
+    minHeight: 150,
+  },
+  panelTitle: {
+    margin: '12px 0 0',
+    fontSize: 26,
+    lineHeight: 1.15,
+    letterSpacing: '-0.045em',
+  },
+  cardValue: {
+    margin: '12px 0 0',
+    color: '#FFFFFF',
+    fontSize: 19,
+    lineHeight: 1.25,
+    overflowWrap: 'anywhere',
+  },
+  panelBody: {
+    marginTop: 10,
+    color: '#AEB6C2',
+    fontSize: 14,
+    lineHeight: 1.65,
+  },
+  memoryPanel: {
+    padding: 28,
+    borderRadius: 28,
+    background:
+      'linear-gradient(135deg, rgba(201,162,39,0.13), rgba(255,255,255,0.035))',
+    border: '1px solid rgba(201,162,39,0.32)',
+  },
+  memoryGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 20,
+  },
+  infoList: {
+    display: 'grid',
+    gap: 10,
+    marginTop: 18,
+  },
+  infoRow: {
+    display: 'grid',
+    gridTemplateColumns: '170px minmax(0, 1fr)',
+    gap: 12,
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(0,0,0,0.22)',
+    border: '1px solid rgba(255,255,255,0.08)',
+  },
+  infoLabel: {
+    color: '#858D98',
+    fontWeight: 900,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+  },
+  infoValue: {
+    color: '#FFFFFF',
+    lineHeight: 1.5,
+    overflowWrap: 'anywhere',
+  },
+  doctrineGrid: {
+    display: 'grid',
+    gap: 14,
+    marginTop: 18,
+  },
+  doctrineItem: {
+    padding: 18,
+    borderRadius: 18,
+    background: 'rgba(0,0,0,0.22)',
+    border: '1px solid rgba(255,255,255,0.08)',
+  },
+  checkList: {
+    display: 'grid',
+    gap: 10,
+    marginTop: 18,
+  },
+  checkItem: {
+    padding: 14,
+    borderRadius: 14,
+    background: 'rgba(0,0,0,0.22)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    color: '#DCE1E8',
+    fontWeight: 800,
   },
   cardHeader: {
     display: 'flex',
     justifyContent: 'space-between',
-    gap: '16px',
-    alignItems: 'center',
-    marginBottom: '20px',
-    flexWrap: 'wrap',
+    gap: 16,
+    alignItems: 'flex-start',
   },
-  cardTitle: {
-    margin: 0,
-    fontSize: '26px',
-  },
-  cardText: {
-    color: '#cbd5e1',
-    lineHeight: 1.6,
-  },
-  doctrineGrid: {
-    display: 'grid',
-    gap: '14px',
-    marginTop: '18px',
-  },
-  doctrineCard: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '16px',
-  },
-  doctrineTitle: {
-    color: '#67e8f9',
-    margin: '0 0 8px',
-    fontSize: '17px',
-  },
-  doctrineText: {
-    color: '#cbd5e1',
-    lineHeight: 1.6,
-    margin: 0,
-  },
-  checkList: {
-    display: 'grid',
-    gap: '10px',
-    marginTop: '18px',
-  },
-  checkItem: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '14px',
-    padding: '14px',
-    color: '#e2e8f0',
-    fontWeight: 700,
-  },
-  refreshButton: {
-    background: '#67e8f9',
-    color: '#082f49',
+  primaryButton: {
     border: 'none',
-    borderRadius: '12px',
-    padding: '12px 16px',
-    fontWeight: 900,
+    borderRadius: 999,
+    padding: '14px 22px',
+    background: '#C9A227',
+    color: '#090909',
+    fontWeight: 950,
     cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  },
+  emptyBox: {
+    margin: 0,
+    color: '#DCE1E8',
+    padding: 18,
+    borderRadius: 18,
+    border: '1px dashed rgba(255,255,255,0.18)',
+    background: 'rgba(0,0,0,0.22)',
   },
   profileList: {
     display: 'grid',
-    gap: '18px',
+    gap: 18,
+    marginTop: 20,
   },
   profileCard: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '20px',
-    padding: '20px',
+    padding: 22,
+    borderRadius: 22,
+    background: 'rgba(0,0,0,0.24)',
+    border: '1px solid rgba(255,255,255,0.09)',
   },
   profileTop: {
     display: 'flex',
     justifyContent: 'space-between',
-    gap: '14px',
+    gap: 14,
     alignItems: 'flex-start',
     flexWrap: 'wrap',
   },
   profileName: {
-    margin: 0,
-    fontSize: '22px',
+    margin: '8px 0 0',
+    fontSize: 24,
+    lineHeight: 1.15,
+    color: '#FFFFFF',
   },
   email: {
-    color: '#93c5fd',
-    marginTop: '6px',
+    color: '#D7B84C',
+    marginTop: 6,
   },
   infoGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
-    gap: '12px',
-    marginTop: '16px',
-  },
-  infoBox: {
-    background: '#020617',
-    border: '1px solid #1e293b',
-    borderRadius: '14px',
-    padding: '12px',
-  },
-  infoLabel: {
-    color: '#94a3b8',
-    fontSize: '12px',
-    fontWeight: 900,
-    margin: 0,
-  },
-  infoValue: {
-    color: '#f8fafc',
-    margin: '6px 0 0',
-    lineHeight: 1.4,
+    gap: 12,
+    marginTop: 16,
   },
   details: {
-    marginTop: '16px',
-    background: '#020617',
-    borderRadius: '14px',
-    padding: '14px',
-    border: '1px solid #1e293b',
+    marginTop: 16,
+    background: 'rgba(0,0,0,0.28)',
+    borderRadius: 14,
+    padding: 14,
+    border: '1px solid rgba(255,255,255,0.08)',
   },
   summary: {
     cursor: 'pointer',
-    fontWeight: 900,
-    color: '#67e8f9',
+    fontWeight: 950,
+    color: '#D7B84C',
   },
   bio: {
     whiteSpace: 'pre-wrap',
-    color: '#dbeafe',
+    color: '#DCE1E8',
     lineHeight: 1.5,
-    marginTop: '12px',
+    marginTop: 12,
     fontFamily: 'inherit',
   },
   actionGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-    gap: '10px',
-    marginTop: '16px',
+    gap: 10,
+    marginTop: 16,
   },
   actionButton: {
-    padding: '12px',
-    borderRadius: '12px',
-    border: '1px solid #475569',
-    background: '#111827',
-    color: 'white',
-    fontWeight: 900,
+    padding: 12,
+    borderRadius: 12,
+    border: '1px solid rgba(201,162,39,0.24)',
+    background: 'rgba(201,162,39,0.1)',
+    color: '#FFFFFF',
+    fontWeight: 950,
     cursor: 'pointer',
+  },
+  orderPanel: {
+    padding: 28,
+    borderRadius: 28,
+    background: '#FFFFFF',
+    color: '#0B0B0B',
+  },
+  summaryBox: {
+    marginTop: 20,
+    padding: 22,
+    borderRadius: 20,
+    background: '#0A0A0A',
+    color: '#F8F6F1',
+    whiteSpace: 'pre-wrap',
+    fontSize: 13,
+    lineHeight: 1.7,
+    overflowX: 'auto',
+  },
+  doctrineCard: {
+    display: 'grid',
+    gap: 10,
+    padding: 24,
+    borderRadius: 24,
+    background: '#050505',
+    border: '1px solid rgba(201,162,39,0.42)',
+    color: '#FFFFFF',
+    lineHeight: 1.7,
   },
   overlay: {
     position: 'fixed',
     inset: 0,
-    background: 'rgba(0,0,0,0.72)',
+    background: 'rgba(0,0,0,0.78)',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
-    padding: '20px',
+    padding: 20,
   },
   modal: {
     width: '100%',
-    maxWidth: '620px',
-    background: '#020617',
-    borderRadius: '20px',
-    padding: '24px',
-    border: '1px solid #334155',
-    boxShadow: '0 24px 70px rgba(0,0,0,0.55)',
+    maxWidth: 620,
+    background: '#050505',
+    borderRadius: 24,
+    padding: 26,
+    border: '1px solid rgba(201,162,39,0.36)',
+    boxShadow: '0 28px 90px rgba(0,0,0,0.62)',
   },
   modalTitle: {
-    fontSize: '28px',
-    margin: '0 0 10px',
+    fontSize: 30,
+    margin: '10px 0',
+    letterSpacing: '-0.04em',
   },
   modalText: {
-    color: '#cbd5e1',
-    marginBottom: '20px',
+    color: '#C8CDD4',
+    marginBottom: 20,
     lineHeight: 1.5,
   },
   label: {
     display: 'block',
-    marginBottom: '8px',
-    marginTop: '16px',
-    fontWeight: 800,
+    marginBottom: 8,
+    marginTop: 16,
+    fontWeight: 900,
+    color: '#DCE1E8',
   },
   select: {
     width: '100%',
-    padding: '14px',
-    borderRadius: '12px',
-    background: '#111827',
-    color: 'white',
-    border: '1px solid #334155',
+    padding: 14,
+    borderRadius: 14,
+    background: '#0D0D0D',
+    color: '#FFFFFF',
+    border: '1px solid rgba(201,162,39,0.24)',
   },
   textarea: {
     width: '100%',
-    minHeight: '120px',
-    padding: '14px',
-    borderRadius: '12px',
-    background: '#111827',
-    color: 'white',
-    border: '1px solid #334155',
+    minHeight: 120,
+    padding: 14,
+    borderRadius: 14,
+    background: '#0D0D0D',
+    color: '#FFFFFF',
+    border: '1px solid rgba(201,162,39,0.24)',
     resize: 'vertical',
   },
   modalActions: {
     display: 'flex',
-    gap: '12px',
-    marginTop: '24px',
+    gap: 12,
+    marginTop: 24,
     flexWrap: 'wrap',
   },
   cancelButton: {
     flex: 1,
-    padding: '14px',
-    borderRadius: '12px',
-    background: '#1e293b',
-    color: 'white',
-    border: 'none',
-    fontWeight: 800,
+    padding: 14,
+    borderRadius: 14,
+    background: 'rgba(255,255,255,0.08)',
+    color: '#FFFFFF',
+    border: '1px solid rgba(255,255,255,0.12)',
+    fontWeight: 900,
     cursor: 'pointer',
   },
   confirmButton: {
     flex: 1,
-    padding: '14px',
-    borderRadius: '12px',
-    background: '#67e8f9',
-    color: '#082f49',
+    padding: 14,
+    borderRadius: 14,
+    background: '#C9A227',
+    color: '#090909',
     border: 'none',
-    fontWeight: 900,
+    fontWeight: 950,
     cursor: 'pointer',
   },
 }
