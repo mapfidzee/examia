@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
+import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { interpretPredictive } from '@/lib/cgi/interpreters/interpretPredictive'
 import { buildCGIExecutiveBriefing } from '@/lib/cgiExecutiveBriefingGenerator'
@@ -92,9 +93,13 @@ const SAMPLE_LIMIT = 120
 
 export default function PredictivePage() {
   return (
-    <CGIGovernanceShell>
-      <PredictiveContent />
-    </CGIGovernanceShell>
+    <GovernanceRouteGuard
+      allowedRoles={['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']}
+    >
+      <CGIGovernanceShell>
+        <PredictiveContent />
+      </CGIGovernanceShell>
+    </GovernanceRouteGuard>
   )
 }
 
@@ -323,74 +328,62 @@ function PredictiveContent() {
     reliabilityWeakness: predictive.reliabilityMeaning.posture,
     actionCue: predictive.actionCue,
   })
-
-  return (
+    return (
     <main style={styles.page}>
       <div style={styles.container}>
-        <section style={styles.header}>
-          <p style={styles.kicker}>
-            TSINAXA CGI • ENTERPRISE FORESIGHT
-          </p>
+        <section style={styles.hero}>
+          <div>
+            <p style={styles.kicker}>TSINAXA CGI • ENTERPRISE FORESIGHT</p>
+            <h1 style={styles.title}>Enterprise Continuity Foresight Intelligence</h1>
+            <p style={styles.subtitle}>
+              Predictive intelligence identifies what continuity risk is likely
+              to become visible next if pressure, trajectory, memory,
+              reliability, and recovery patterns continue unchanged.
+            </p>
+          </div>
 
-          <h1 style={styles.title}>
-            Enterprise Continuity Foresight Intelligence
-          </h1>
-
-          <p style={styles.subtitle}>
-            Predictive intelligence does not forecast random events. It
-            forecasts the continuity condition most likely to become visible if
-            current pressure, trajectory, memory, reliability, and recovery
-            patterns persist.
-          </p>
+          <div style={styles.statusBox}>
+            <p style={styles.statusLabel}>FORECAST CONDITION</p>
+            <p style={styles.statusValue}>{predictive.foresight.condition}</p>
+            <p style={styles.statusMeaning}>{predictive.foresight.thesis}</p>
+          </div>
         </section>
 
         {message && <div style={styles.message}>{message}</div>}
 
-        <section style={styles.heroCard}>
-          <div>
-            <p style={styles.sectionKicker}>Enterprise Forecast Thesis</p>
+        <section style={styles.commandDeck}>
+          <div style={styles.primaryCard}>
+            <p style={styles.sectionKicker}>Executive Foresight Question</p>
+            <h2 style={styles.commandTitle}>{predictive.foresight.question}</h2>
+            <p style={styles.primaryText}>
+              {predictive.foresight.executivePreventionThesis}
+            </p>
 
-            <h2 style={styles.heroPosture}>
-              {predictive.foresight.condition}
-            </h2>
-
-            <p style={styles.heroMeaning}>{predictive.foresight.thesis}</p>
+            <div style={styles.commandMetaGrid}>
+              <MiniStat label="Horizon" value={predictive.foresight.horizon} />
+              <MiniStat label="Confidence" value={predictive.foresight.confidence} />
+              <MiniStat
+                label="Dominant Driver"
+                value={predictive.foresight.dominantFutureDriver}
+              />
+              <MiniStat label="Memory" value={predictive.historyMeaning.posture} />
+            </div>
           </div>
 
-          <div style={styles.actionBox}>
-            <p style={styles.actionLabel}>Forecast Horizon</p>
-
-            <p style={styles.actionText}>{predictive.foresight.horizon}</p>
+          <div style={styles.consequenceCard}>
+            <p style={styles.sectionKicker}>Board Warning</p>
+            <h2 style={styles.consequenceTitle}>Do not wait for visible failure.</h2>
+            <p style={styles.bodyText}>{predictive.foresight.boardWarning}</p>
           </div>
         </section>
 
-        <section style={styles.questionCard}>
-          <div>
-            <p style={styles.sectionKicker}>Executive Foresight Question</p>
-
-            <h2 style={styles.cardTitle}>{predictive.foresight.question}</h2>
-
-            <p style={styles.bodyText}>
-              {predictive.foresight.executivePreventionThesis}
-            </p>
-          </div>
-
-          <div style={styles.questionStack}>
-            <MiniBlock
-              title="Forecast Confidence"
-              value={predictive.foresight.confidence}
-            />
-
-            <MiniBlock
-              title="Dominant Future Driver"
-              value={predictive.foresight.dominantFutureDriver}
-            />
-
-            <MiniBlock
-              title="Board Warning"
-              value={predictive.foresight.boardWarning}
-            />
-          </div>
+        <section style={styles.metricsGrid}>
+          <Metric label="Propagation" value={predictive.propagationMeaning.posture} />
+          <Metric label="Trajectory" value={predictive.trajectoryMeaning.posture} />
+          <Metric label="Memory" value={predictive.memoryMeaning.posture} />
+          <Metric label="Unresolved" value={predictive.unresolvedMeaning.posture} />
+          <Metric label="Drag" value={predictive.dragMeaning.posture} />
+          <Metric label="Pressure" value={predictive.pressureMeaning.posture} />
         </section>
 
         <section style={styles.gridFour}>
@@ -445,11 +438,9 @@ function PredictiveContent() {
           />
         </section>
 
-        <section style={styles.card}>
+        <section style={styles.panel}>
           <p style={styles.sectionKicker}>Synchronized Continuity Reading</p>
-
-          <h2 style={styles.cardTitle}>{synchronizedPosture.label}</h2>
-
+          <h2 style={styles.panelTitle}>{synchronizedPosture.label}</h2>
           <p style={styles.bodyText}>{synchronizedPosture.description}</p>
 
           <div style={styles.infoList}>
@@ -491,29 +482,27 @@ function PredictiveContent() {
           />
         </section>
 
-        <section style={styles.compactGrid}>
-          <CompactCard
-            title="Memory Depth"
-            value={predictive.historyMeaning.posture}
-          />
+        <section style={styles.memoryPanel}>
+          <p style={styles.sectionKicker}>Foresight Memory</p>
+          <h2 style={styles.panelTitle}>
+            Prediction must remain evidence-bound and reconstructable.
+          </h2>
 
-          <CompactCard
-            title="Dominant Driver"
-            value={predictive.dominantForecastDriver}
-          />
-
-          <CompactCard
-            title="Survivability Weakness"
-            value={predictive.survivabilityMeaning.posture}
-          />
-
-          <CompactCard
-            title="Reliability Weakness"
-            value={predictive.reliabilityMeaning.posture}
-          />
+          <div style={styles.memoryGrid}>
+            <MiniStat label="Memory Depth" value={predictive.historyMeaning.posture} />
+            <MiniStat label="Dominant Driver" value={predictive.dominantForecastDriver} />
+            <MiniStat
+              label="Survivability"
+              value={predictive.survivabilityMeaning.posture}
+            />
+            <MiniStat
+              label="Reliability"
+              value={predictive.reliabilityMeaning.posture}
+            />
+          </div>
         </section>
 
-        <section style={styles.twoColumn}>
+        <section style={styles.gridTwo}>
           <Panel title="Enterprise Prevention Requirements">
             <Info
               label="Prevention Action"
@@ -567,14 +556,12 @@ function PredictiveContent() {
           </Panel>
         </section>
 
-        <section style={styles.card}>
+        <section style={styles.panel}>
           <div style={styles.cardHeader}>
             <div>
-              <h2 style={styles.cardTitle}>
-                Recent Enterprise Foresight Memory
-              </h2>
-
-              <p style={styles.cardNote}>
+              <p style={styles.sectionKicker}>Recent Enterprise Foresight Memory</p>
+              <h2 style={styles.panelTitle}>Continuity foresight snapshots</h2>
+              <p style={styles.bodyText}>
                 Recent snapshots are shown as continuity foresight readings, not
                 personal performance judgments.
               </p>
@@ -619,23 +606,19 @@ function PredictiveContent() {
                   return (
                     <tr key={item.id}>
                       <td style={styles.td}>{formatDate(item.created_at)}</td>
-
                       <td style={styles.td}>{rowPredictive.posture}</td>
-
                       <td style={styles.td}>
                         {
                           interpretRisk(item.propagation_risk, 'PROPAGATION')
                             .posture
                         }
                       </td>
-
                       <td style={styles.td}>
                         {
                           interpretRisk(item.trajectory_risk, 'TRAJECTORY')
                             .posture
                         }
                       </td>
-
                       <td style={styles.td}>
                         {
                           interpretRisk(
@@ -644,7 +627,6 @@ function PredictiveContent() {
                           ).posture
                         }
                       </td>
-
                       <td style={styles.td}>
                         {interpretDrag(item.stabilization_drag).posture}
                       </td>
@@ -656,14 +638,20 @@ function PredictiveContent() {
           </div>
         </section>
 
-        <section style={styles.card}>
+        <section style={styles.orderPanel}>
           <p style={styles.sectionKicker}>Copy-Ready Foresight Brief</p>
-
-          <h2 style={styles.cardTitle}>
+          <h2 style={styles.panelTitle}>
             What continuity risk is likely to become visible next?
           </h2>
-
           <pre style={styles.summaryBox}>{brief}</pre>
+        </section>
+
+        <section style={styles.doctrineCard}>
+          <strong>ENTERPRISE FORESIGHT DOCTRINE</strong>
+          <span>
+            Predictive intelligence does not guess the future. It governs the
+            most probable continuity risk before it becomes visible instability.
+          </span>
         </section>
       </div>
     </main>
@@ -789,7 +777,6 @@ function buildEnterpriseForesight(input: {
     copyReadyBrief,
   }
 }
-
 function deriveForecastCondition(input: {
   recordCount: number
   propagationRisk: number
@@ -1001,9 +988,7 @@ function deriveCrossSiteForecast(input: {
   return 'Cross-site spread is not yet strongly indicated.'
 }
 
-function deriveLikelyToWorsen(input: {
-  dominantForecastDriver: string
-}) {
+function deriveLikelyToWorsen(input: { dominantForecastDriver: string }) {
   return `${input.dominantForecastDriver} is the most likely worsening driver if no prevention action is taken.`
 }
 
@@ -1126,7 +1111,6 @@ function deriveBoardWarning(condition: EnterpriseForecastCondition) {
 
   return 'Do not overstate prediction without memory.'
 }
-
 function buildPredictiveBrief(input: {
   foresight: EnterpriseForesight
   synchronizedPosture: string
@@ -1388,6 +1372,24 @@ function formatDate(value: string) {
   return new Date(value).toLocaleString()
 }
 
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <article style={styles.metricCard}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.metricValue}>{value}</p>
+    </article>
+  )
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <article style={styles.miniStat}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.miniValue}>{value}</p>
+    </article>
+  )
+}
+
 function PostureCard({
   title,
   interpretation,
@@ -1397,9 +1399,9 @@ function PostureCard({
 }) {
   return (
     <article style={styles.postureCard}>
-      <p style={styles.cardKicker}>{title}</p>
-      <h3 style={styles.postureTitle}>{interpretation.posture}</h3>
-      <p style={styles.postureMeaning}>{interpretation.meaning}</p>
+      <p style={styles.sectionKicker}>{title}</p>
+      <h3 style={styles.cardValue}>{interpretation.posture}</h3>
+      <p style={styles.panelBody}>{interpretation.meaning}</p>
     </article>
   )
 }
@@ -1414,36 +1416,18 @@ function ExecutiveCard({
   body: string
 }) {
   return (
-    <article style={styles.executiveCard}>
-      <p style={styles.cardKicker}>{title}</p>
-      <h3 style={styles.executiveValue}>{value}</h3>
-      <p style={styles.postureMeaning}>{body}</p>
-    </article>
-  )
-}
-
-function MiniBlock({ title, value }: { title: string; value: string }) {
-  return (
-    <article style={styles.miniBlock}>
-      <p style={styles.cardKicker}>{title}</p>
-      <h3 style={styles.miniValue}>{value}</h3>
-    </article>
-  )
-}
-
-function CompactCard({ title, value }: { title: string; value: string }) {
-  return (
-    <article style={styles.compactCard}>
-      <p style={styles.cardKicker}>{title}</p>
-      <h3 style={styles.compactValue}>{value}</h3>
+    <article style={styles.panelCard}>
+      <p style={styles.sectionKicker}>{title}</p>
+      <h3 style={styles.cardValue}>{value}</h3>
+      <p style={styles.panelBody}>{body}</p>
     </article>
   )
 }
 
 function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section style={styles.card}>
-      <h2 style={styles.cardTitle}>{title}</h2>
+    <section style={styles.panel}>
+      <p style={styles.sectionKicker}>{title}</p>
       <div style={styles.infoList}>{children}</div>
     </section>
   )
@@ -1461,315 +1445,343 @@ function Info({ label, value }: { label: string; value: string }) {
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    color: 'white',
-    overflowX: 'hidden',
+    background:
+      'radial-gradient(circle at top left, rgba(201, 162, 39, 0.14), transparent 34%), linear-gradient(135deg, #050505 0%, #0B0B0B 45%, #111111 100%)',
+    color: '#FFFFFF',
+    padding: '40px 24px 72px',
   },
   container: {
-    width: '100%',
-    maxWidth: '1120px',
+    width: 'min(1440px, 100%)',
     margin: '0 auto',
-    padding: '0 20px 48px',
-    boxSizing: 'border-box',
+    display: 'grid',
+    gap: 24,
   },
-  header: {
-    marginBottom: '20px',
-    paddingTop: '4px',
+  hero: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.45fr) minmax(320px, 0.75fr)',
+    gap: 24,
+    padding: 32,
+    border: '1px solid rgba(201, 162, 39, 0.34)',
+    borderRadius: 28,
+    background:
+      'linear-gradient(135deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018))',
+    boxShadow: '0 28px 80px rgba(0,0,0,0.38)',
   },
   kicker: {
-    color: '#facc15',
-    fontSize: '12px',
-    fontWeight: 900,
-    letterSpacing: '2px',
     margin: 0,
+    color: '#C9A227',
+    fontSize: 12,
+    fontWeight: 900,
+    letterSpacing: '0.22em',
+    textTransform: 'uppercase',
   },
   title: {
-    fontSize: 'clamp(32px, 5vw, 48px)',
-    lineHeight: 1.05,
-    margin: '10px 0',
+    margin: '14px 0 0',
+    fontSize: 'clamp(2.3rem, 5vw, 5rem)',
+    lineHeight: 0.95,
+    letterSpacing: '-0.07em',
+    fontWeight: 950,
   },
   subtitle: {
-    color: '#e5e7eb',
-    maxWidth: '820px',
-    lineHeight: 1.65,
-    fontSize: '16px',
+    maxWidth: 880,
+    margin: '18px 0 0',
+    color: '#C8CDD4',
+    fontSize: 17,
+    lineHeight: 1.8,
+  },
+  statusBox: {
+    border: '1px solid rgba(201, 162, 39, 0.5)',
+    borderRadius: 24,
+    padding: 24,
+    background: 'linear-gradient(180deg, rgba(201,162,39,0.18), rgba(0,0,0,0.38))',
+  },
+  statusLabel: {
     margin: 0,
+    color: '#D7B84C',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.2em',
+  },
+  statusValue: {
+    margin: '16px 0 0',
+    fontSize: 30,
+    fontWeight: 950,
+    letterSpacing: '-0.04em',
+    lineHeight: 1.05,
+  },
+  statusMeaning: {
+    margin: '12px 0 0',
+    color: '#ECE7D7',
+    fontSize: 14,
+    lineHeight: 1.7,
   },
   message: {
-    background: '#1c1917',
-    color: '#fef3c7',
-    padding: '12px 14px',
-    borderRadius: '14px',
+    padding: '14px 18px',
+    borderRadius: 16,
+    color: '#D7B84C',
+    background: 'rgba(201,162,39,0.1)',
+    border: '1px solid rgba(201,162,39,0.22)',
     fontWeight: 800,
-    marginBottom: '16px',
-    fontSize: '14px',
-    border: '1px solid #92400e',
   },
-  heroCard: {
+  commandDeck: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.35fr) minmax(260px, 0.65fr)',
-    gap: '16px',
-    background: '#020617',
-    border: '1px solid #facc15',
-    borderRadius: '24px',
-    padding: '22px',
-    marginBottom: '16px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
+    gridTemplateColumns: '1.4fr 0.8fr',
+    gap: 24,
   },
-  questionCard: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.15fr) minmax(320px, 0.85fr)',
-    gap: '16px',
-    background: '#020617',
-    border: '1px solid #ca8a04',
-    borderRadius: '24px',
-    padding: '22px',
-    marginBottom: '16px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
+  primaryCard: {
+    padding: 30,
+    borderRadius: 28,
+    background: '#FFFFFF',
+    color: '#0B0B0B',
+    border: '1px solid rgba(255,255,255,0.12)',
   },
-  questionStack: {
-    display: 'grid',
-    gap: '12px',
+  consequenceCard: {
+    padding: 30,
+    borderRadius: 28,
+    background: 'rgba(0,0,0,0.38)',
+    border: '1px solid rgba(201,162,39,0.28)',
   },
   sectionKicker: {
-    color: '#d6d3d1',
-    fontWeight: 900,
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
     margin: 0,
-    fontSize: '12px',
+    color: '#C9A227',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.18em',
+    textTransform: 'uppercase',
   },
-  heroPosture: {
-    fontSize: 'clamp(34px, 6vw, 56px)',
-    margin: '8px 0 12px',
-    color: '#facc15',
+  commandTitle: {
+    margin: '14px 0',
+    fontSize: 'clamp(1.8rem, 3vw, 3.2rem)',
+    lineHeight: 1.05,
     letterSpacing: '-0.05em',
-    lineHeight: 1,
+    fontWeight: 950,
   },
-  heroMeaning: {
-    color: '#fefce8',
-    lineHeight: 1.6,
+  primaryText: {
     margin: 0,
-    maxWidth: '720px',
+    color: '#4A4A4A',
+    lineHeight: 1.7,
+    fontSize: 14,
   },
-  actionBox: {
-    background: '#1c1917',
-    border: '1px solid #facc15',
-    borderRadius: '18px',
-    padding: '16px',
-    alignSelf: 'stretch',
+  consequenceTitle: {
+    margin: '14px 0',
+    fontSize: 28,
+    lineHeight: 1.1,
+    letterSpacing: '-0.04em',
   },
-  actionLabel: {
-    color: '#fde68a',
-    fontWeight: 900,
-    margin: '0 0 8px',
-    fontSize: '12px',
+  bodyText: {
+    margin: '8px 0 0',
+    color: '#AEB6C2',
+    lineHeight: 1.7,
+    fontSize: 14,
+  },
+  commandMetaGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 24,
+  },
+  metricsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+    gap: 14,
+  },
+  metricCard: {
+    padding: 18,
+    borderRadius: 20,
+    background: 'rgba(255,255,255,0.055)',
+    border: '1px solid rgba(255,255,255,0.1)',
+  },
+  metricLabel: {
+    margin: 0,
+    color: '#858D98',
+    fontSize: 10,
+    fontWeight: 950,
+    letterSpacing: '0.14em',
     textTransform: 'uppercase',
-    letterSpacing: '0.12em',
   },
-  actionText: {
-    color: '#fef3c7',
-    lineHeight: 1.55,
-    margin: 0,
-    fontSize: '16px',
-    fontWeight: 900,
+  metricValue: {
+    margin: '10px 0 0',
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: 950,
+    lineHeight: 1.15,
+    overflowWrap: 'anywhere',
+  },
+  miniStat: {
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(255,255,255,0.055)',
+    border: '1px solid rgba(255,255,255,0.09)',
+  },
+  miniValue: {
+    margin: '8px 0 0',
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: 850,
+    lineHeight: 1.45,
+    overflowWrap: 'anywhere',
   },
   gridFour: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '14px',
-    marginBottom: '16px',
+    gap: 16,
+  },
+  gridTwo: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 16,
   },
   postureGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '14px',
-    marginBottom: '16px',
+    gap: 16,
   },
-  compactGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '14px',
-    marginBottom: '16px',
+  panel: {
+    padding: 28,
+    borderRadius: 28,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.1)',
   },
-  twoColumn: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '16px',
-    marginBottom: '16px',
-  },
-  executiveCard: {
-    background: '#0f172a',
-    border: '1px solid #44403c',
-    borderRadius: '18px',
-    padding: '16px',
-    minHeight: '160px',
-    boxSizing: 'border-box',
-  },
-  executiveValue: {
-    color: '#f8fafc',
-    fontSize: '18px',
-    lineHeight: 1.2,
-    margin: '10px 0 8px',
-    overflowWrap: 'anywhere',
-  },
-  miniBlock: {
-    background: '#0f172a',
-    border: '1px solid #44403c',
-    borderRadius: '16px',
-    padding: '14px',
-  },
-  miniValue: {
-    color: '#f8fafc',
-    fontSize: '16px',
-    lineHeight: 1.35,
-    margin: '10px 0 0',
+  panelCard: {
+    padding: 22,
+    borderRadius: 22,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.09)',
+    minHeight: 150,
   },
   postureCard: {
-    background: '#0f172a',
-    border: '1px solid #1e293b',
-    borderRadius: '18px',
-    padding: '16px',
-    minHeight: '150px',
-    boxSizing: 'border-box',
+    padding: 22,
+    borderRadius: 22,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.09)',
+    minHeight: 150,
   },
-  compactCard: {
-    background: '#0f172a',
-    border: '1px solid #1e293b',
-    borderRadius: '18px',
-    padding: '16px',
-    minHeight: '104px',
-    boxSizing: 'border-box',
-  },
-  cardKicker: {
-    color: '#d6d3d1',
-    fontWeight: 800,
-    margin: 0,
-    fontSize: '12px',
-  },
-  postureTitle: {
-    color: '#f8fafc',
-    fontSize: '19px',
-    margin: '10px 0 8px',
+  panelTitle: {
+    margin: '12px 0 0',
+    fontSize: 26,
     lineHeight: 1.15,
+    letterSpacing: '-0.045em',
   },
-  postureMeaning: {
-    color: '#cbd5e1',
-    lineHeight: 1.5,
-    fontSize: '14px',
-    margin: 0,
-  },
-  compactValue: {
-    fontSize: '18px',
-    lineHeight: 1.2,
-    margin: '10px 0 0',
-    color: '#f8fafc',
+  cardValue: {
+    margin: '12px 0 0',
+    color: '#FFFFFF',
+    fontSize: 19,
+    lineHeight: 1.25,
     overflowWrap: 'anywhere',
   },
-  card: {
-    background: '#020617',
-    border: '1px solid #1e293b',
-    borderRadius: '22px',
-    padding: '20px',
-    marginBottom: '16px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.24)',
-    boxSizing: 'border-box',
-    overflow: 'hidden',
+  panelBody: {
+    marginTop: 10,
+    color: '#AEB6C2',
+    fontSize: 14,
+    lineHeight: 1.65,
+  },
+  infoList: {
+    display: 'grid',
+    gap: 10,
+    marginTop: 18,
+  },
+  infoRow: {
+    display: 'grid',
+    gridTemplateColumns: '170px minmax(0, 1fr)',
+    gap: 12,
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(0,0,0,0.22)',
+    border: '1px solid rgba(255,255,255,0.08)',
+  },
+  infoLabel: {
+    color: '#858D98',
+    fontWeight: 900,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+  },
+  infoValue: {
+    color: '#FFFFFF',
+    lineHeight: 1.5,
+    overflowWrap: 'anywhere',
+  },
+  memoryPanel: {
+    padding: 28,
+    borderRadius: 28,
+    background: 'linear-gradient(135deg, rgba(201,162,39,0.13), rgba(255,255,255,0.035))',
+    border: '1px solid rgba(201,162,39,0.32)',
+  },
+  memoryGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 20,
   },
   cardHeader: {
     display: 'flex',
     justifyContent: 'space-between',
-    gap: '16px',
+    gap: 16,
     alignItems: 'flex-start',
-    marginBottom: '14px',
   },
-  cardTitle: {
-    fontSize: '22px',
-    margin: 0,
-    lineHeight: 1.2,
-  },
-  bodyText: {
-    color: '#cbd5e1',
-    lineHeight: 1.7,
-    margin: '10px 0 0',
-    maxWidth: '880px',
-  },
-  cardNote: {
-    color: '#94a3b8',
-    lineHeight: 1.5,
-    margin: '6px 0 0',
-    fontSize: '14px',
-  },
-  infoList: {
-    display: 'grid',
-    gap: '10px',
-    marginTop: '14px',
-  },
-  infoRow: {
-    display: 'grid',
-    gridTemplateColumns: '160px minmax(0, 1fr)',
-    gap: '12px',
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '14px',
-    padding: '12px',
-    alignItems: 'start',
-  },
-  infoLabel: {
-    color: '#94a3b8',
-    fontWeight: 800,
-    fontSize: '12px',
-  },
-  infoValue: {
-    color: '#f8fafc',
-    lineHeight: 1.45,
-    overflowWrap: 'anywhere',
+  primaryButton: {
+    border: 'none',
+    borderRadius: 999,
+    padding: '12px 18px',
+    background: '#C9A227',
+    color: '#090909',
+    fontWeight: 950,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
   },
   tableWrap: {
-    width: '100%',
+    marginTop: 20,
     overflowX: 'auto',
+    borderRadius: 20,
+    border: '1px solid rgba(255,255,255,0.1)',
   },
   table: {
     width: '100%',
     borderCollapse: 'collapse',
-    minWidth: '760px',
+    minWidth: 860,
   },
   th: {
+    padding: '14px 16px',
     textAlign: 'left',
-    color: '#94a3b8',
-    borderBottom: '1px solid #334155',
-    padding: '10px',
-    fontSize: '11px',
+    color: '#D7B84C',
+    background: 'rgba(201,162,39,0.08)',
+    fontSize: 11,
+    letterSpacing: '0.14em',
     textTransform: 'uppercase',
   },
   td: {
-    borderBottom: '1px solid #1e293b',
-    padding: '10px',
-    color: '#e2e8f0',
+    padding: '16px',
+    color: '#DCE1E8',
+    borderTop: '1px solid rgba(255,255,255,0.08)',
+    fontSize: 13,
+    lineHeight: 1.55,
     verticalAlign: 'top',
-    fontWeight: 700,
-    fontSize: '13px',
   },
-  primaryButton: {
-    padding: '10px 14px',
-    borderRadius: '12px',
-    border: 'none',
-    background: '#facc15',
-    color: '#111827',
-    fontWeight: 900,
-    cursor: 'pointer',
-    fontSize: '14px',
-    whiteSpace: 'nowrap',
+  orderPanel: {
+    padding: 28,
+    borderRadius: 28,
+    background: '#FFFFFF',
+    color: '#0B0B0B',
   },
   summaryBox: {
+    marginTop: 20,
+    padding: 22,
+    borderRadius: 20,
+    background: '#0A0A0A',
+    color: '#F8F6F1',
     whiteSpace: 'pre-wrap',
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '16px',
-    padding: '16px',
-    color: '#e2e8f0',
-    lineHeight: 1.55,
-    minHeight: '260px',
-    fontSize: '14px',
+    fontSize: 13,
+    lineHeight: 1.7,
     overflowX: 'auto',
+  },
+  doctrineCard: {
+    display: 'grid',
+    gap: 10,
+    padding: 24,
+    borderRadius: 24,
+    background: '#050505',
+    border: '1px solid rgba(201,162,39,0.42)',
+    color: '#FFFFFF',
+    lineHeight: 1.7,
   },
 }
