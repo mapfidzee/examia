@@ -1,7 +1,10 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import type { CSSProperties } from 'react'
+
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
+import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { supabase } from '../../lib/supabase'
 
 type TimelineEvent = {
@@ -13,10 +16,49 @@ type TimelineEvent = {
   created_at: string
 }
 
+type MemoryPosture =
+  | 'MEMORY ESTABLISHED'
+  | 'MEMORY FORMING'
+  | 'MEMORY FRAGMENTED'
+  | 'MEMORY WEAK'
+  | 'MEMORY ABSENT'
+
+type TimelineIntelligence = {
+  posture: MemoryPosture
+  question: string
+  thesis: string
+  continuityMeaning: string
+  pressureMemory: string
+  trajectoryMemory: string
+  recoveryMemory: string
+  reliabilityMemory: string
+  constraintMemory: string
+  commandMemory: string
+  evidenceRequirement: string
+  memoryRequirement: string
+  boardWarning: string
+  executiveAction: string
+  auditImplication: string
+  generatedBrief: string
+}
+
+const EVENT_MEMORY_TYPES = {
+  pressure: ['PRESSURE', 'NEED_DETECTED', 'ESCALATED', 'SAFEGUARDING'],
+  trajectory: ['TRIAGE', 'STATUS', 'REOPENED', 'RECURRENCE'],
+  recovery: ['RECOVERY', 'STABILIZING', 'STABILIZED', 'OUTCOME'],
+  reliability: ['FOLLOW_UP', 'MONITORING', 'REVIEW', 'VERIFICATION'],
+  constraint: ['ROUTING', 'RESPONDER_ASSIGNED', 'OWNERSHIP', 'DELAY'],
+  command: ['COMMAND', 'GOVERNANCE', 'EXECUTIVE', 'AUDIT'],
+}
+
 export default function TimelinePage() {
   return (
-    <GovernanceRouteGuard allowedRoles={['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']}>
-      <TimelineContent />
+    <GovernanceRouteGuard
+      allowedRoles={['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']}
+    >
+      <CGIGovernanceShell>
+        <TimelineContent />
+      </CGIGovernanceShell>
     </GovernanceRouteGuard>
   )
 }
@@ -24,29 +66,17 @@ export default function TimelinePage() {
 function TimelineContent() {
   const [events, setEvents] = useState<TimelineEvent[]>([])
   const [loading, setLoading] = useState(true)
-  const [message, setMessage] = useState('Loading governed stabilization chronology...')
+  const [message, setMessage] = useState(
+    'Loading institutional continuity memory timeline...',
+  )
 
   useEffect(() => {
     loadTimeline()
   }, [])
 
-  const totalEvents = events.length
-
-  const uniqueCases = useMemo(() => {
-    return new Set(events.map((event) => event.case_id)).size
-  }, [events])
-
-  const routingEvents = useMemo(() => {
-    return events.filter((event) => event.event_type.includes('RESPONDER_ASSIGNED')).length
-  }, [events])
-
-  const outcomeEvents = useMemo(() => {
-    return events.filter((event) => event.event_type.includes('OUTCOME')).length
-  }, [events])
-
   async function loadTimeline() {
     setLoading(true)
-    setMessage('Loading governed stabilization chronology...')
+    setMessage('Loading institutional continuity memory timeline...')
 
     const { data, error } = await supabase
       .from('case_timeline')
@@ -55,96 +85,219 @@ function TimelineContent() {
 
     if (error) {
       console.error(error)
-      setMessage('Could not load stabilization timeline.')
+      setMessage('Institutional continuity memory timeline could not be loaded.')
       setLoading(false)
       return
     }
 
     setEvents(data || [])
-    setMessage('')
+    setMessage('Institutional continuity memory timeline loaded.')
     setLoading(false)
   }
 
-  function formatDateTime(value: string) {
-    if (!value) return 'Not recorded'
+  const intelligence = useMemo(() => buildTimelineIntelligence(events), [events])
 
-    const date = new Date(value)
+  const totalEvents = events.length
 
-    if (Number.isNaN(date.getTime())) {
-      return 'Not recorded'
-    }
+  const uniqueCases = useMemo(() => {
+    return new Set(events.map((event) => event.case_id)).size
+  }, [events])
 
-    return date.toLocaleString()
-  }
+  const pressureEvents = useMemo(
+    () => countEventsByMemory(events, EVENT_MEMORY_TYPES.pressure),
+    [events],
+  )
 
-  function shortCaseId(caseId: string) {
-    if (!caseId) return 'Unknown case'
+  const recoveryEvents = useMemo(
+    () => countEventsByMemory(events, EVENT_MEMORY_TYPES.recovery),
+    [events],
+  )
 
-    return caseId.slice(0, 8)
-  }
+  const constraintEvents = useMemo(
+    () => countEventsByMemory(events, EVENT_MEMORY_TYPES.constraint),
+    [events],
+  )
+
+  const commandEvents = useMemo(
+    () => countEventsByMemory(events, EVENT_MEMORY_TYPES.command),
+    [events],
+  )
 
   return (
-    <main className="timelinePage">
-      <div className="pageShell">
-        <header className="hero">
-          <p className="eyebrow">EXAMIA TRACEABILITY INFRASTRUCTURE</p>
+    <main style={styles.page}>
+      <div style={styles.container}>
+        <section style={styles.hero}>
+          <div>
+            <p style={styles.kicker}>
+              TSINAXA CGI • INSTITUTIONAL MEMORY TIMELINE
+            </p>
 
-          <h1>Governed Stabilization Chronology</h1>
+            <h1 style={styles.title}>
+              Institutional Continuity Memory Timeline
+            </h1>
 
-          <p className="heroText">
-            This protected timeline preserves institutional memory, continuity visibility,
-            routing traceability, intervention chronology, and operational accountability
-            after disruption is detected inside EXAMIA.
-          </p>
-        </header>
+            <p style={styles.subtitle}>
+              Timeline preserves how continuity became what it is today. CGI
+              does not treat history as archive; it treats institutional memory
+              as evidence against repeated forgetting.
+            </p>
+          </div>
 
-        <section className="metricsGrid">
-          <Metric label="Timeline Events" value={totalEvents} />
-          <Metric label="Cases With Memory" value={uniqueCases} />
-          <Metric label="Routing Events" value={routingEvents} />
-          <Metric label="Outcome Events" value={outcomeEvents} />
+          <div style={styles.statusBox}>
+            <p style={styles.statusLabel}>MEMORY POSTURE</p>
+            <p style={styles.statusValue}>{intelligence.posture}</p>
+            <p style={styles.statusMeaning}>{intelligence.thesis}</p>
+          </div>
         </section>
 
-        {message && <p className="message">{message}</p>}
+        {message && <div style={styles.message}>{message}</div>}
 
-        <section className="panel">
-          <div className="panelHeader">
+        <section style={styles.commandDeck}>
+          <div style={styles.primaryCard}>
+            <p style={styles.sectionKicker}>Executive Memory Question</p>
+
+            <h2 style={styles.commandTitle}>{intelligence.question}</h2>
+
+            <p style={styles.primaryText}>{intelligence.continuityMeaning}</p>
+
+            <div style={styles.commandMetaGrid}>
+              <MiniStat label="Events" value={String(totalEvents)} />
+              <MiniStat label="Cases With Memory" value={String(uniqueCases)} />
+              <MiniStat label="Pressure Memory" value={String(pressureEvents)} />
+              <MiniStat label="Recovery Memory" value={String(recoveryEvents)} />
+            </div>
+          </div>
+
+          <div style={styles.consequenceCard}>
+            <p style={styles.sectionKicker}>Board Warning</p>
+
+            <h2 style={styles.consequenceTitle}>
+              Institutions repeat what they forget.
+            </h2>
+
+            <p style={styles.bodyText}>{intelligence.boardWarning}</p>
+          </div>
+        </section>
+                <section style={styles.metricsGrid}>
+          <Metric label="Timeline Events" value={String(totalEvents)} />
+          <Metric label="Cases With Memory" value={String(uniqueCases)} />
+          <Metric label="Constraint Memory" value={String(constraintEvents)} />
+          <Metric label="Command Memory" value={String(commandEvents)} />
+          <Metric label="Recovery Memory" value={String(recoveryEvents)} />
+          <Metric label="Pressure Memory" value={String(pressureEvents)} />
+        </section>
+
+        <section style={styles.gridThree}>
+          <ExecutiveCard
+            title="Pressure Memory"
+            value={intelligence.pressureMemory}
+            body="Whether the timeline preserves where instability first accumulated."
+          />
+
+          <ExecutiveCard
+            title="Trajectory Memory"
+            value={intelligence.trajectoryMemory}
+            body="Whether the timeline explains how continuity direction changed."
+          />
+
+          <ExecutiveCard
+            title="Recovery Memory"
+            value={intelligence.recoveryMemory}
+            body="Whether the timeline preserves evidence of stabilization and recovery."
+          />
+        </section>
+
+        <section style={styles.gridThree}>
+          <ExecutiveCard
+            title="Reliability Memory"
+            value={intelligence.reliabilityMemory}
+            body="Whether repeated stabilization can be reconstructed."
+          />
+
+          <ExecutiveCard
+            title="Constraint Memory"
+            value={intelligence.constraintMemory}
+            body="Whether blocked movement and ownership pressure remain visible."
+          />
+
+          <ExecutiveCard
+            title="Command Memory"
+            value={intelligence.commandMemory}
+            body="Whether leadership action and governance decisions remain attached."
+          />
+        </section>
+
+        <section style={styles.memoryPanel}>
+          <p style={styles.sectionKicker}>Institutional Memory Requirements</p>
+
+          <h2 style={styles.panelTitle}>
+            Continuity memory must explain pressure, movement, recovery,
+            reliability, constraints, command, and auditability.
+          </h2>
+
+          <div style={styles.memoryGrid}>
+            <MiniStat label="Evidence" value={intelligence.evidenceRequirement} />
+            <MiniStat label="Memory" value={intelligence.memoryRequirement} />
+            <MiniStat label="Executive Action" value={intelligence.executiveAction} />
+            <MiniStat label="Audit" value={intelligence.auditImplication} />
+          </div>
+        </section>
+
+        <section style={styles.panel}>
+          <div style={styles.cardHeader}>
             <div>
-              <p className="sectionKicker">Operational memory</p>
+              <p style={styles.sectionKicker}>
+                Continuity Memory Records
+              </p>
 
-              <h2>Timeline Events</h2>
+              <h2 style={styles.panelTitle}>
+                Institutional continuity timeline
+              </h2>
 
-              <p>
-                Every stabilization event below strengthens institutional continuity,
-                auditability, traceability, governance visibility, and operational memory.
+              <p style={styles.bodyText}>
+                Each event is preserved as institutional memory. The purpose is
+                not simply to show what happened, but to reconstruct how
+                continuity changed.
               </p>
             </div>
 
-            <button onClick={loadTimeline}>Refresh Timeline</button>
+            <button onClick={loadTimeline} style={styles.primaryButton}>
+              Refresh Timeline
+            </button>
           </div>
 
           {loading ? (
-            <p className="emptyBox">Loading timeline...</p>
+            <p style={styles.emptyBox}>Loading continuity memory...</p>
           ) : events.length === 0 ? (
-            <p className="emptyBox">No timeline events found.</p>
+            <p style={styles.emptyBox}>
+              No institutional continuity memory events found yet.
+            </p>
           ) : (
-            <div className="timelineList">
+            <div style={styles.timelineList}>
               {events.map((event) => (
-                <article className="timelineCard" key={event.id}>
-                  <div className="timelineTop">
+                <article style={styles.timelineCard} key={event.id}>
+                  <div style={styles.timelineTop}>
                     <div>
-                      <p className="miniLabel">Case {shortCaseId(event.case_id)}</p>
+                      <p style={styles.metricLabel}>
+                        Case {shortCaseId(event.case_id)}
+                      </p>
 
-                      <h3>{event.event_type}</h3>
+                      <h3 style={styles.eventTitle}>
+                        {event.event_type}
+                      </h3>
                     </div>
 
-                    <span className="timeBadge">{formatDateTime(event.created_at)}</span>
+                    <span style={styles.timeBadge}>
+                      {formatDateTime(event.created_at)}
+                    </span>
                   </div>
 
-                  <p className="summary">{event.event_summary}</p>
+                  <p style={styles.eventSummary}>
+                    {event.event_summary}
+                  </p>
 
-                  <div className="detailGrid">
-                    <Detail label="Case ID" value={event.case_id} />
+                  <div style={styles.detailGrid}>
+                    <Detail label="Memory Type" value={deriveMemoryType(event)} />
                     <Detail label="Actor" value={event.actor || 'Not recorded'} />
                     <Detail label="Event ID" value={event.id} />
                   </div>
@@ -153,262 +306,673 @@ function TimelineContent() {
             </div>
           )}
         </section>
+
+        <section style={styles.orderPanel}>
+          <p style={styles.sectionKicker}>Copy-Ready Memory Timeline Brief</p>
+
+          <h2 style={styles.panelTitle}>
+            How did continuity become what it is today?
+          </h2>
+
+          <pre style={styles.summaryBox}>
+            {intelligence.generatedBrief}
+          </pre>
+        </section>
+
+        <section style={styles.doctrineCard}>
+          <strong>INSTITUTIONAL CONTINUITY MEMORY DOCTRINE</strong>
+
+          <span>
+            Institutions forget. Continuity memory prevents repeated instability
+            from becoming invisible. Timeline is not history; it is the evidence
+            chain that explains how continuity evolved.
+          </span>
+        </section>
       </div>
-
-      <style jsx>{`
-        .timelinePage {
-          min-height: 100vh;
-          background:
-            radial-gradient(circle at top left, rgba(37, 99, 235, 0.3), transparent 30%),
-            radial-gradient(circle at top right, rgba(20, 184, 166, 0.18), transparent 28%),
-            linear-gradient(180deg, #020617 0%, #07111f 55%, #020617 100%);
-          color: #ffffff;
-          padding: 48px 18px 120px;
-        }
-
-        .pageShell {
-          max-width: 1180px;
-          margin: 0 auto;
-          display: grid;
-          gap: 24px;
-        }
-
-        .hero {
-          border: 1px solid rgba(148, 163, 184, 0.24);
-          border-radius: 30px;
-          background:
-            linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(15, 23, 42, 0.96)),
-            rgba(15, 23, 42, 0.92);
-          padding: 26px;
-          box-shadow: 0 24px 70px rgba(0, 0, 0, 0.32);
-        }
-
-        .eyebrow,
-        .sectionKicker,
-        .miniLabel {
-          margin: 0 0 8px;
-          color: #93c5fd;
-          font-size: 11px;
-          font-weight: 900;
-          letter-spacing: 0.14em;
-          text-transform: uppercase;
-        }
-
-        h1 {
-          margin: 0;
-          max-width: 900px;
-          font-size: clamp(42px, 9vw, 76px);
-          line-height: 0.92;
-          letter-spacing: -0.06em;
-        }
-
-        h2 {
-          margin: 0;
-          font-size: 32px;
-          letter-spacing: -0.04em;
-        }
-
-        h3 {
-          margin: 0;
-          font-size: 22px;
-          letter-spacing: -0.03em;
-          word-break: break-word;
-        }
-
-        .heroText,
-        .panelHeader p {
-          max-width: 900px;
-          color: #dbeafe;
-          line-height: 1.65;
-          font-size: 16px;
-          margin-top: 16px;
-        }
-
-        .metricsGrid {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 12px;
-        }
-
-        .metricCard,
-        .panel,
-        .timelineCard {
-          background: rgba(15, 23, 42, 0.92);
-          border: 1px solid rgba(148, 163, 184, 0.24);
-          border-radius: 26px;
-          box-shadow: 0 22px 60px rgba(0, 0, 0, 0.28);
-        }
-
-        .metricCard {
-          padding: 18px;
-        }
-
-        .metricCard p {
-          margin: 0;
-          color: #bfdbfe;
-          font-size: 12px;
-          font-weight: 900;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-        }
-
-        .metricCard strong {
-          display: block;
-          margin-top: 8px;
-          font-size: 42px;
-          line-height: 1;
-        }
-
-        .message {
-          background: rgba(37, 99, 235, 0.18);
-          color: #dbeafe;
-          padding: 14px;
-          border-radius: 18px;
-          border: 1px solid rgba(147, 197, 253, 0.28);
-        }
-
-        .panel {
-          padding: 20px;
-        }
-
-        .panelHeader {
-          display: grid;
-          gap: 14px;
-          margin-bottom: 18px;
-        }
-
-        button {
-          border: none;
-          border-radius: 16px;
-          padding: 14px 16px;
-          min-height: 52px;
-          background: #67e8f9;
-          color: #082f49;
-          font-size: 15px;
-          font-weight: 900;
-          cursor: pointer;
-        }
-
-        .timelineList {
-          display: grid;
-          gap: 14px;
-        }
-
-        .timelineCard {
-          padding: 18px;
-          background:
-            linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(15, 23, 42, 0.96)),
-            rgba(15, 23, 42, 0.92);
-        }
-
-        .timelineTop {
-          display: grid;
-          gap: 12px;
-          padding-bottom: 14px;
-          margin-bottom: 14px;
-          border-bottom: 1px solid rgba(148, 163, 184, 0.18);
-        }
-
-        .timeBadge {
-          width: fit-content;
-          border-radius: 999px;
-          padding: 8px 13px;
-          background: rgba(96, 165, 250, 0.16);
-          color: #dbeafe;
-          border: 1px solid rgba(147, 197, 253, 0.3);
-          font-size: 12px;
-          font-weight: 900;
-        }
-
-        .summary {
-          color: #ffffff;
-          font-size: 16px;
-          line-height: 1.6;
-          margin: 0 0 14px;
-        }
-
-        .detailGrid {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 10px;
-        }
-
-        .detailBox {
-          background: rgba(2, 6, 23, 0.72);
-          border: 1px solid rgba(148, 163, 184, 0.18);
-          border-radius: 18px;
-          padding: 13px;
-          min-width: 0;
-        }
-
-        .detailBox span {
-          display: block;
-          color: #93c5fd;
-          font-size: 12px;
-          font-weight: 900;
-          margin-bottom: 6px;
-          text-transform: uppercase;
-          letter-spacing: 0.1em;
-        }
-
-        .detailBox p {
-          margin: 0;
-          color: #ffffff;
-          line-height: 1.45;
-          word-break: break-word;
-        }
-
-        .emptyBox {
-          color: #e2e8f0;
-          background: rgba(2, 6, 23, 0.65);
-          padding: 17px;
-          border-radius: 18px;
-          border: 1px dashed rgba(148, 163, 184, 0.34);
-          margin: 0;
-        }
-
-        @media (min-width: 760px) {
-          .timelinePage {
-            padding: 64px 36px 140px;
-          }
-
-          .metricsGrid {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-          }
-
-          .panelHeader {
-            grid-template-columns: 1fr auto;
-            align-items: end;
-          }
-
-          .timelineTop {
-            grid-template-columns: 1fr auto;
-            align-items: start;
-          }
-
-          .detailGrid {
-            grid-template-columns: 1.2fr 1fr 1.2fr;
-          }
-        }
-      `}</style>
     </main>
   )
 }
+function buildTimelineIntelligence(events: TimelineEvent[]): TimelineIntelligence {
+  const totalEvents = events.length
+  const uniqueCases = new Set(events.map((event) => event.case_id)).size
 
-function Metric({ label, value }: { label: string; value: number }) {
+  const pressureEvents = countEventsByMemory(events, EVENT_MEMORY_TYPES.pressure)
+  const trajectoryEvents = countEventsByMemory(events, EVENT_MEMORY_TYPES.trajectory)
+  const recoveryEvents = countEventsByMemory(events, EVENT_MEMORY_TYPES.recovery)
+  const reliabilityEvents = countEventsByMemory(events, EVENT_MEMORY_TYPES.reliability)
+  const constraintEvents = countEventsByMemory(events, EVENT_MEMORY_TYPES.constraint)
+  const commandEvents = countEventsByMemory(events, EVENT_MEMORY_TYPES.command)
+
+  const posture = deriveMemoryPosture({
+    totalEvents,
+    uniqueCases,
+    pressureEvents,
+    trajectoryEvents,
+    recoveryEvents,
+    reliabilityEvents,
+    constraintEvents,
+    commandEvents,
+  })
+
+  const question = 'How did continuity become what it is today?'
+
+  const pressureMemory =
+    pressureEvents > 0
+      ? 'Pressure memory is preserved. The timeline can show where instability became visible.'
+      : 'Pressure memory is weak. The timeline may not show where instability first accumulated.'
+
+  const trajectoryMemory =
+    trajectoryEvents > 0
+      ? 'Trajectory memory is visible. The timeline can help explain continuity direction changes.'
+      : 'Trajectory memory is limited. Direction changes may be difficult to reconstruct.'
+
+  const recoveryMemory =
+    recoveryEvents > 0
+      ? 'Recovery memory is preserved. Stabilization and outcome movement can be reconstructed.'
+      : 'Recovery memory is weak. Stabilization claims may lack chronological evidence.'
+
+  const reliabilityMemory =
+    reliabilityEvents > 0
+      ? 'Reliability memory is visible. Repeated monitoring and verification can be reviewed.'
+      : 'Reliability memory is limited. Repeatable stabilization may not be provable from timeline evidence.'
+
+  const constraintMemory =
+    constraintEvents > 0
+      ? 'Constraint memory is visible. Blocked movement, routing, or ownership pressure can be reconstructed.'
+      : 'Constraint memory is weak. It may be difficult to explain why continuity movement slowed.'
+
+  const commandMemory =
+    commandEvents > 0
+      ? 'Command memory is preserved. Governance or leadership decisions remain attached to the continuity chain.'
+      : 'Command memory is limited. Executive decisions may not yet be fully reconstructable.'
+
+  const continuityMeaning = deriveContinuityMeaning(posture)
+
+  const evidenceRequirement =
+    'Preserve case ID, event type, event summary, actor, timestamp, memory type, continuity meaning, and audit relevance.'
+
+  const memoryRequirement =
+    'Preserve the sequence linking instability, routing, ownership, intervention, outcome, recovery, reliability, command, and audit.'
+
+  const boardWarning =
+    'Do not allow continuity history to become administrative residue. What the institution forgets can return as repeated instability.'
+
+  const executiveAction =
+    posture === 'MEMORY ABSENT' || posture === 'MEMORY WEAK'
+      ? 'Strengthen timeline capture before executive conclusions are trusted.'
+      : posture === 'MEMORY FRAGMENTED'
+        ? 'Repair missing memory links and preserve continuity chronology.'
+        : 'Use timeline memory to support executive interpretation and audit reconstruction.'
+
+  const auditImplication =
+    posture === 'MEMORY ESTABLISHED'
+      ? 'Audit can reconstruct the continuity chain with meaningful chronological evidence.'
+      : 'Audit should treat the continuity chain as incomplete until memory gaps are corrected.'
+
+  const thesis = `${posture}: ${continuityMeaning}`
+
+  const generatedBrief = [
+    'TSINAXA CGI INSTITUTIONAL CONTINUITY MEMORY TIMELINE BRIEF',
+    '',
+    `Executive Memory Question: ${question}`,
+    '',
+    `Memory Posture: ${posture}`,
+    '',
+    `Timeline Events: ${totalEvents}`,
+    '',
+    `Cases With Memory: ${uniqueCases}`,
+    '',
+    `Enterprise Thesis: ${thesis}`,
+    '',
+    `Pressure Memory: ${pressureMemory}`,
+    '',
+    `Trajectory Memory: ${trajectoryMemory}`,
+    '',
+    `Recovery Memory: ${recoveryMemory}`,
+    '',
+    `Reliability Memory: ${reliabilityMemory}`,
+    '',
+    `Constraint Memory: ${constraintMemory}`,
+    '',
+    `Command Memory: ${commandMemory}`,
+    '',
+    `Evidence Requirement: ${evidenceRequirement}`,
+    '',
+    `Memory Requirement: ${memoryRequirement}`,
+    '',
+    `Board Warning: ${boardWarning}`,
+    '',
+    `Executive Action: ${executiveAction}`,
+    '',
+    `Audit Implication: ${auditImplication}`,
+    '',
+    'Governance-Safe Meaning:',
+    'Timeline preserves institutional continuity memory without assigning blame. It protects the chronological chain that explains how instability entered, moved, stalled, recovered, repeated, escalated, or stabilized.',
+  ].join('\n')
+
+  return {
+    posture,
+    question,
+    thesis,
+    continuityMeaning,
+    pressureMemory,
+    trajectoryMemory,
+    recoveryMemory,
+    reliabilityMemory,
+    constraintMemory,
+    commandMemory,
+    evidenceRequirement,
+    memoryRequirement,
+    boardWarning,
+    executiveAction,
+    auditImplication,
+    generatedBrief,
+  }
+}
+
+function deriveMemoryPosture(input: {
+  totalEvents: number
+  uniqueCases: number
+  pressureEvents: number
+  trajectoryEvents: number
+  recoveryEvents: number
+  reliabilityEvents: number
+  constraintEvents: number
+  commandEvents: number
+}): MemoryPosture {
+  if (input.totalEvents === 0) return 'MEMORY ABSENT'
+
+  const memoryCoverage = [
+    input.pressureEvents,
+    input.trajectoryEvents,
+    input.recoveryEvents,
+    input.reliabilityEvents,
+    input.constraintEvents,
+    input.commandEvents,
+  ].filter((value) => value > 0).length
+
+  if (input.totalEvents >= 20 && input.uniqueCases >= 5 && memoryCoverage >= 4) {
+    return 'MEMORY ESTABLISHED'
+  }
+
+  if (input.totalEvents >= 8 && memoryCoverage >= 3) {
+    return 'MEMORY FORMING'
+  }
+
+  if (input.totalEvents >= 3 && memoryCoverage >= 2) {
+    return 'MEMORY FRAGMENTED'
+  }
+
+  return 'MEMORY WEAK'
+}
+
+function deriveContinuityMeaning(posture: MemoryPosture) {
+  if (posture === 'MEMORY ESTABLISHED') {
+    return 'The institution has enough continuity memory to reconstruct how instability moved, stabilized, repeated, or escalated.'
+  }
+
+  if (posture === 'MEMORY FORMING') {
+    return 'Continuity memory is forming, but executive conclusions should remain conditional until more links are preserved.'
+  }
+
+  if (posture === 'MEMORY FRAGMENTED') {
+    return 'Continuity memory exists, but the chain may contain gaps that weaken executive interpretation.'
+  }
+
+  if (posture === 'MEMORY WEAK') {
+    return 'Continuity memory is too thin to fully explain how the current posture emerged.'
+  }
+
+  return 'No continuity memory is currently available to reconstruct institutional movement.'
+}
+
+function countEventsByMemory(events: TimelineEvent[], patterns: string[]) {
+  return events.filter((event) => {
+    const text = `${event.event_type} ${event.event_summary}`.toUpperCase()
+    return patterns.some((pattern) => text.includes(pattern))
+  }).length
+}
+
+function deriveMemoryType(event: TimelineEvent) {
+  const text = `${event.event_type} ${event.event_summary}`.toUpperCase()
+
+  if (EVENT_MEMORY_TYPES.pressure.some((item) => text.includes(item))) {
+    return 'Pressure Memory'
+  }
+
+  if (EVENT_MEMORY_TYPES.trajectory.some((item) => text.includes(item))) {
+    return 'Trajectory Memory'
+  }
+
+  if (EVENT_MEMORY_TYPES.recovery.some((item) => text.includes(item))) {
+    return 'Recovery Memory'
+  }
+
+  if (EVENT_MEMORY_TYPES.reliability.some((item) => text.includes(item))) {
+    return 'Reliability Memory'
+  }
+
+  if (EVENT_MEMORY_TYPES.constraint.some((item) => text.includes(item))) {
+    return 'Constraint Memory'
+  }
+
+  if (EVENT_MEMORY_TYPES.command.some((item) => text.includes(item))) {
+    return 'Command Memory'
+  }
+
+  return 'General Continuity Memory'
+}
+
+function formatDateTime(value: string) {
+  if (!value) return 'Not recorded'
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Not recorded'
+  }
+
+  return date.toLocaleString()
+}
+
+function shortCaseId(caseId: string) {
+  if (!caseId) return 'Unknown case'
+  return caseId.slice(0, 8)
+}
+function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <article className="metricCard">
-      <p>{label}</p>
-      <strong>{value}</strong>
+    <article style={styles.metricCard}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.metricValue}>{value}</p>
+    </article>
+  )
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <article style={styles.miniStat}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.miniValue}>{value}</p>
+    </article>
+  )
+}
+
+function ExecutiveCard({
+  title,
+  value,
+  body,
+}: {
+  title: string
+  value: string
+  body: string
+}) {
+  return (
+    <article style={styles.panelCard}>
+      <p style={styles.sectionKicker}>{title}</p>
+      <h3 style={styles.cardValue}>{value}</h3>
+      <p style={styles.panelBody}>{body}</p>
     </article>
   )
 }
 
 function Detail({ label, value }: { label: string; value: string }) {
   return (
-    <div className="detailBox">
-      <span>{label}</span>
-      <p>{value}</p>
+    <div style={styles.detailBox}>
+      <span style={styles.detailLabel}>{label}</span>
+      <p style={styles.detailValue}>{value}</p>
     </div>
   )
+}
+
+const styles: Record<string, CSSProperties> = {
+  page: {
+    minHeight: '100vh',
+    background:
+      'radial-gradient(circle at top left, rgba(201, 162, 39, 0.14), transparent 34%), linear-gradient(135deg, #050505 0%, #0B0B0B 45%, #111111 100%)',
+    color: '#FFFFFF',
+    padding: '40px 24px 72px',
+  },
+  container: {
+    width: 'min(1440px, 100%)',
+    margin: '0 auto',
+    display: 'grid',
+    gap: 24,
+  },
+  hero: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.45fr) minmax(320px, 0.75fr)',
+    gap: 24,
+    padding: 32,
+    border: '1px solid rgba(201, 162, 39, 0.34)',
+    borderRadius: 28,
+    background:
+      'linear-gradient(135deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018))',
+    boxShadow: '0 28px 80px rgba(0,0,0,0.38)',
+  },
+  kicker: {
+    margin: 0,
+    color: '#C9A227',
+    fontSize: 12,
+    fontWeight: 900,
+    letterSpacing: '0.22em',
+    textTransform: 'uppercase',
+  },
+  title: {
+    margin: '14px 0 0',
+    fontSize: 'clamp(2.3rem, 5vw, 5rem)',
+    lineHeight: 0.95,
+    letterSpacing: '-0.07em',
+    fontWeight: 950,
+  },
+  subtitle: {
+    maxWidth: 880,
+    margin: '18px 0 0',
+    color: '#C8CDD4',
+    fontSize: 17,
+    lineHeight: 1.8,
+  },
+  statusBox: {
+    border: '1px solid rgba(201, 162, 39, 0.5)',
+    borderRadius: 24,
+    padding: 24,
+    background:
+      'linear-gradient(180deg, rgba(201,162,39,0.18), rgba(0,0,0,0.38))',
+  },
+  statusLabel: {
+    margin: 0,
+    color: '#D7B84C',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.2em',
+  },
+  statusValue: {
+    margin: '16px 0 0',
+    fontSize: 30,
+    fontWeight: 950,
+    letterSpacing: '-0.04em',
+    lineHeight: 1.05,
+  },
+  statusMeaning: {
+    margin: '12px 0 0',
+    color: '#ECE7D7',
+    fontSize: 14,
+    lineHeight: 1.7,
+  },
+  message: {
+    padding: '14px 18px',
+    borderRadius: 16,
+    color: '#D7B84C',
+    background: 'rgba(201,162,39,0.1)',
+    border: '1px solid rgba(201,162,39,0.22)',
+    fontWeight: 800,
+  },
+  commandDeck: {
+    display: 'grid',
+    gridTemplateColumns: '1.4fr 0.8fr',
+    gap: 24,
+  },
+  primaryCard: {
+    padding: 30,
+    borderRadius: 28,
+    background: '#FFFFFF',
+    color: '#0B0B0B',
+    border: '1px solid rgba(255,255,255,0.12)',
+  },
+  consequenceCard: {
+    padding: 30,
+    borderRadius: 28,
+    background: 'rgba(0,0,0,0.38)',
+    border: '1px solid rgba(201,162,39,0.28)',
+  },
+  sectionKicker: {
+    margin: 0,
+    color: '#C9A227',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.18em',
+    textTransform: 'uppercase',
+  },
+  commandTitle: {
+    margin: '14px 0',
+    fontSize: 'clamp(1.8rem, 3vw, 3.2rem)',
+    lineHeight: 1.05,
+    letterSpacing: '-0.05em',
+    fontWeight: 950,
+  },
+  primaryText: {
+    margin: 0,
+    color: '#4A4A4A',
+    lineHeight: 1.7,
+    fontSize: 14,
+  },
+  consequenceTitle: {
+    margin: '14px 0',
+    fontSize: 28,
+    lineHeight: 1.1,
+    letterSpacing: '-0.04em',
+  },
+  bodyText: {
+    margin: '8px 0 0',
+    color: '#AEB6C2',
+    lineHeight: 1.7,
+    fontSize: 14,
+  },
+  commandMetaGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 24,
+  },
+  metricsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+    gap: 14,
+  },
+  metricCard: {
+    padding: 18,
+    borderRadius: 20,
+    background: 'rgba(255,255,255,0.055)',
+    border: '1px solid rgba(255,255,255,0.1)',
+  },
+  metricLabel: {
+    margin: 0,
+    color: '#858D98',
+    fontSize: 10,
+    fontWeight: 950,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+  },
+  metricValue: {
+    margin: '10px 0 0',
+    color: '#FFFFFF',
+    fontSize: 26,
+    fontWeight: 950,
+    lineHeight: 1.15,
+    overflowWrap: 'anywhere',
+  },
+  miniStat: {
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(255,255,255,0.055)',
+    border: '1px solid rgba(255,255,255,0.09)',
+  },
+  miniValue: {
+    margin: '8px 0 0',
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: 850,
+    lineHeight: 1.45,
+    overflowWrap: 'anywhere',
+  },
+  gridThree: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: 16,
+  },
+  panelCard: {
+    padding: 22,
+    borderRadius: 22,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.09)',
+    minHeight: 150,
+  },
+  cardValue: {
+    margin: '12px 0 0',
+    color: '#FFFFFF',
+    fontSize: 19,
+    lineHeight: 1.25,
+    overflowWrap: 'anywhere',
+  },
+  panelBody: {
+    marginTop: 10,
+    color: '#AEB6C2',
+    fontSize: 14,
+    lineHeight: 1.65,
+  },
+  memoryPanel: {
+    padding: 28,
+    borderRadius: 28,
+    background:
+      'linear-gradient(135deg, rgba(201,162,39,0.13), rgba(255,255,255,0.035))',
+    border: '1px solid rgba(201,162,39,0.32)',
+  },
+  panelTitle: {
+    margin: '12px 0 0',
+    fontSize: 26,
+    lineHeight: 1.15,
+    letterSpacing: '-0.045em',
+  },
+  memoryGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 20,
+  },
+  panel: {
+    padding: 28,
+    borderRadius: 28,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.1)',
+  },
+  cardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: 16,
+    alignItems: 'flex-start',
+  },
+  primaryButton: {
+    border: 'none',
+    borderRadius: 999,
+    padding: '14px 22px',
+    background: '#C9A227',
+    color: '#090909',
+    fontWeight: 950,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  },
+  emptyBox: {
+    margin: 0,
+    color: '#DCE1E8',
+    padding: 18,
+    borderRadius: 18,
+    border: '1px dashed rgba(255,255,255,0.18)',
+    background: 'rgba(0,0,0,0.22)',
+  },
+  timelineList: {
+    display: 'grid',
+    gap: 14,
+    marginTop: 20,
+  },
+  timelineCard: {
+    padding: 20,
+    borderRadius: 22,
+    background: 'rgba(0,0,0,0.24)',
+    border: '1px solid rgba(255,255,255,0.09)',
+  },
+  timelineTop: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: 16,
+    alignItems: 'flex-start',
+    paddingBottom: 14,
+    marginBottom: 14,
+    borderBottom: '1px solid rgba(255,255,255,0.08)',
+  },
+  eventTitle: {
+    margin: '8px 0 0',
+    color: '#FFFFFF',
+    fontSize: 22,
+    lineHeight: 1.15,
+    overflowWrap: 'anywhere',
+  },
+  timeBadge: {
+    borderRadius: 999,
+    padding: '8px 13px',
+    background: 'rgba(201,162,39,0.12)',
+    color: '#D7B84C',
+    border: '1px solid rgba(201,162,39,0.28)',
+    fontSize: 12,
+    fontWeight: 900,
+    whiteSpace: 'nowrap',
+  },
+  eventSummary: {
+    margin: '0 0 14px',
+    color: '#FFFFFF',
+    fontSize: 15,
+    lineHeight: 1.65,
+  },
+  detailGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: 10,
+  },
+  detailBox: {
+    padding: 13,
+    borderRadius: 16,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    minWidth: 0,
+  },
+  detailLabel: {
+    display: 'block',
+    color: '#858D98',
+    fontSize: 11,
+    fontWeight: 900,
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+  },
+  detailValue: {
+    margin: 0,
+    color: '#FFFFFF',
+    lineHeight: 1.45,
+    overflowWrap: 'anywhere',
+  },
+  orderPanel: {
+    padding: 28,
+    borderRadius: 28,
+    background: '#FFFFFF',
+    color: '#0B0B0B',
+  },
+  summaryBox: {
+    marginTop: 20,
+    padding: 22,
+    borderRadius: 20,
+    background: '#0A0A0A',
+    color: '#F8F6F1',
+    whiteSpace: 'pre-wrap',
+    fontSize: 13,
+    lineHeight: 1.7,
+    overflowX: 'auto',
+  },
+  doctrineCard: {
+    display: 'grid',
+    gap: 10,
+    padding: 24,
+    borderRadius: 24,
+    background: '#050505',
+    border: '1px solid rgba(201,162,39,0.42)',
+    color: '#FFFFFF',
+    lineHeight: 1.7,
+  },
 }
