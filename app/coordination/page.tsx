@@ -90,6 +90,7 @@ type CoordinationPatternReading = {
 type CoordinationReading = {
   status: string
   commandQuestion: string
+  executiveQuestion: string
   chainPosition: string
   synchronizationMeaning: string
   nextDestination: string
@@ -102,6 +103,7 @@ type CoordinationReading = {
   evidenceStandard: string
   requiredAction: string
   continuityRisk: string
+  boardWarning: string
 }
 
 const ACTIVE_CASE_STATUSES = [
@@ -186,7 +188,7 @@ function CoordinationContent() {
     setRoutingActions(routingResult.data || [])
     setInterventions(interventionResult.data || [])
     setOutcomes(outcomeResult.data || [])
-    setMessage('Coordination synchronization refreshed.')
+    setMessage('Enterprise coordination intelligence refreshed.')
   }
 
   const activeCases = cases.filter((item) =>
@@ -220,7 +222,10 @@ function CoordinationContent() {
     (item) => item.coordination_status === 'ACTIVE',
   )
 
-  const uniqueInterventionCases = new Set(interventions.map((item) => item.case_id)).size
+  const uniqueInterventionCases = new Set(
+    interventions.map((item) => item.case_id),
+  ).size
+
   const uniqueOutcomeCases = new Set(outcomes.map((item) => item.case_id)).size
 
   const interventionCoverage =
@@ -312,66 +317,71 @@ function CoordinationContent() {
     () => groupedRows(cases.map((item) => item.case_status || 'Status not recorded')),
     [cases],
   )
-
-  return (
+    return (
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.hero}>
-          <p style={styles.kicker}>TSINAXA CGI • COORDINATION</p>
+          <div>
+            <p style={styles.kicker}>TSINAXA CGI • ENTERPRISE COORDINATION</p>
 
-          <h1 style={styles.title}>Coordination Synchronization Intelligence</h1>
+            <h1 style={styles.title}>Enterprise Coordination Intelligence</h1>
 
-          <p style={styles.subtitle}>
-            Synchronize ownership, routing, responder capacity, institutional
-            load, evidence maturity, recovery readiness, and shared dependency
-            before continuity moves to Cross-Site, Situation Room, Executive
-            Center, Audit, or Stability Board.
-          </p>
+            <p style={styles.subtitle}>
+              Coordination governs the dependencies that must synchronize before
+              continuity can safely move. It protects ownership, routing,
+              responder capacity, institutional load, evidence maturity,
+              recovery readiness, and shared dependency visibility before
+              Cross-Site, Situation Room, Executive Center, or Audit receives the
+              chain.
+            </p>
+          </div>
+
+          <div style={styles.statusBox}>
+            <p style={styles.statusLabel}>COORDINATION POSTURE</p>
+            <p style={styles.statusValue}>{coordinationReading.status}</p>
+            <p style={styles.statusMeaning}>
+              {coordinationReading.synchronizationMeaning}
+            </p>
+          </div>
         </section>
 
         {message && <div style={styles.message}>{message}</div>}
 
-        <section style={styles.heroCard}>
-          <div>
-            <p style={styles.sectionKicker}>Enterprise Synchronization Pattern</p>
-            <h2 style={styles.heroTitle}>{coordinationPattern.patternName}</h2>
-            <p style={styles.bodyText}>{coordinationPattern.patternMeaning}</p>
+        <section style={styles.commandDeck}>
+          <div style={styles.primaryCard}>
+            <p style={styles.sectionKicker}>Executive Coordination Question</p>
+
+            <h2 style={styles.commandTitle}>
+              {coordinationReading.executiveQuestion}
+            </h2>
+
+            <p style={styles.primaryText}>
+              {coordinationReading.chainPosition}
+            </p>
+
+            <div style={styles.commandMetaGrid}>
+              <MiniStat label="Pattern" value={coordinationPattern.patternName} />
+              <MiniStat label="Next" value={coordinationReading.nextDestination} />
+              <MiniStat
+                label="Cross-Site"
+                value={coordinationReading.crossSiteRequired ? 'REQUIRED' : 'CONDITIONAL'}
+              />
+              <MiniStat
+                label="Audit"
+                value={coordinationReading.auditRequired ? 'REQUIRED' : 'CONDITIONAL'}
+              />
+            </div>
           </div>
 
-          <div style={styles.statusBox}>
-            <p style={styles.statusLabel}>Pattern Type</p>
-            <p style={styles.statusValue}>{coordinationPattern.patternType}</p>
-          </div>
-        </section>
+          <div style={styles.consequenceCard}>
+            <p style={styles.sectionKicker}>Board Warning</p>
 
-        <section style={styles.heroCard}>
-          <div>
-            <p style={styles.sectionKicker}>Coordination Chain Position</p>
-            <h2 style={styles.heroTitle}>{coordinationReading.chainPosition}</h2>
-            <p style={styles.bodyText}>{coordinationReading.synchronizationMeaning}</p>
-          </div>
+            <h2 style={styles.consequenceTitle}>
+              Unsynchronized dependencies create false continuity confidence.
+            </h2>
 
-          <div style={styles.statusBox}>
-            <p style={styles.statusLabel}>Next Destination</p>
-            <p style={styles.statusValue}>{coordinationReading.nextDestination}</p>
+            <p style={styles.bodyText}>{coordinationReading.boardWarning}</p>
           </div>
-        </section>
-
-        <section style={styles.chainPanel}>
-          <ChainStep label="Command" value="Decides movement" />
-          <ChainStep label="Coordination" value="Synchronizes pattern" active />
-          <ChainStep
-            label="Cross-Site"
-            value={coordinationReading.crossSiteRequired ? 'Required' : 'Conditional'}
-          />
-          <ChainStep
-            label="Executive"
-            value={coordinationReading.executiveReviewRequired ? 'Required' : 'Conditional'}
-          />
-          <ChainStep
-            label="Audit"
-            value={coordinationReading.auditRequired ? 'Required' : 'Preserve if needed'}
-          />
         </section>
 
         <section style={styles.metricsGrid}>
@@ -385,174 +395,194 @@ function CoordinationContent() {
           <Metric label="Outcome Coverage" value={outcomeCoverage} suffix="%" />
         </section>
 
-        <section style={styles.requirementGrid}>
+        <section style={styles.gridFour}>
+          <ExecutiveCard
+            title="Synchronization Pattern"
+            value={coordinationPattern.patternName}
+            body={coordinationPattern.patternMeaning}
+          />
+
+          <ExecutiveCard
+            title="Enterprise Exposure"
+            value={coordinationPattern.enterpriseExposure}
+            body="Whether coordination pressure is still local or becoming enterprise-visible."
+          />
+
+          <ExecutiveCard
+            title="Executive Meaning"
+            value={coordinationPattern.executiveMeaning}
+            body="What leadership should understand before the chain moves forward."
+          />
+
+          <ExecutiveCard
+            title="Cross-Site Question"
+            value={coordinationPattern.crossSiteQuestion}
+            body="The question Coordination hands to Cross-Site when dependency visibility expands."
+          />
+        </section>
+
+        <section style={styles.gridFour}>
           <RequirementCard
             label="Shared Ownership"
             active={coordinationPattern.sharedOwnershipVisible}
-            body="Shows whether multiple cases or routing actions are converging around the same ownership structure."
+            body="Whether multiple records are converging around the same ownership structure."
           />
 
           <RequirementCard
             label="Shared Institution"
             active={coordinationPattern.sharedInstitutionVisible}
-            body="Shows whether institutional load may be creating a distributed coordination pattern."
+            body="Whether institutional load may be creating distributed coordination pressure."
           />
 
           <RequirementCard
             label="Shared Responder"
             active={coordinationPattern.sharedResponderVisible}
-            body="Shows whether responder concentration may be weakening continuity confidence."
+            body="Whether responder concentration may weaken continuity confidence."
           />
 
           <RequirementCard
-            label="Cross-Site"
-            active={coordinationPattern.crossSiteEscalationRequired}
-            body="Shows whether synchronization pressure should move into enterprise pattern review."
+            label="Shared Region"
+            active={coordinationPattern.sharedRegionVisible}
+            body="Whether visible pressure may be regional rather than isolated."
           />
         </section>
 
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Cross-Site Handoff Question</p>
-          <h2 style={styles.sectionTitle}>{coordinationPattern.crossSiteQuestion}</h2>
-          <p style={styles.panelNote}>{coordinationPattern.enterpriseExposure}</p>
+        <section style={styles.memoryPanel}>
+          <p style={styles.sectionKicker}>Synchronization Memory</p>
 
-          <div style={styles.priorityGrid}>
-            <PriorityItem
-              title="Executive Meaning"
-              body={coordinationPattern.executiveMeaning}
-            />
-            <PriorityItem
-              title="Synchronization Evidence"
-              body={coordinationPattern.requiredSynchronizationEvidence}
-            />
-            <PriorityItem
-              title="Pilot Chain Context"
-              body={pilotThread.executiveThesis}
-            />
+          <h2 style={styles.panelTitle}>
+            The institution must remember which dependencies repeatedly require
+            synchronization.
+          </h2>
+
+          <div style={styles.memoryGrid}>
+            <MiniStat label="Regions" value={String(regionRows.length)} />
+            <MiniStat label="Institutions" value={String(institutions.length)} />
+            <MiniStat label="Responders" value={String(responders.length)} />
+            <MiniStat label="Lifecycle States" value={String(lifecycleRows.length)} />
           </div>
         </section>
+                <section style={styles.gridTwo}>
+          <Panel title="Coordination Movement Requirements">
+            <Info label="Required Action" value={coordinationReading.requiredAction} />
+            <Info label="Handoff Reason" value={coordinationReading.handoffReason} />
+            <Info label="Continuity Risk" value={coordinationReading.continuityRisk} />
+            <Info
+              label="Synchronization Evidence"
+              value={coordinationPattern.requiredSynchronizationEvidence}
+            />
+          </Panel>
 
-        <section style={styles.requirementGrid}>
-          <RequirementCard
-            label="Coordination"
-            active={coordinationReading.coordinationRequired}
-            body="Ownership and routing synchronization must remain visible before continuity moves forward."
-          />
-
-          <RequirementCard
-            label="Cross-Site"
-            active={coordinationReading.crossSiteRequired}
-            body="Distributed pressure, recurrence, or multi-site visibility requires enterprise comparison."
-          />
-
-          <RequirementCard
-            label="Executive"
-            active={coordinationReading.executiveReviewRequired}
-            body="Leadership synthesis is required when coordination pressure threatens continuity confidence."
-          />
-
-          <RequirementCard
-            label="Audit"
-            active={coordinationReading.auditRequired}
-            body="Coordination evidence must remain reconstructable across the lifecycle."
-          />
+          <Panel title="Enterprise Movement Gates">
+            <Info
+              label="Coordination"
+              value={coordinationReading.coordinationRequired ? 'REQUIRED' : 'WATCH'}
+            />
+            <Info
+              label="Cross-Site"
+              value={coordinationReading.crossSiteRequired ? 'REQUIRED' : 'CONDITIONAL'}
+            />
+            <Info
+              label="Executive"
+              value={
+                coordinationReading.executiveReviewRequired
+                  ? 'REQUIRED'
+                  : 'CONDITIONAL'
+              }
+            />
+            <Info
+              label="Audit"
+              value={coordinationReading.auditRequired ? 'REQUIRED' : 'CONDITIONAL'}
+            />
+          </Panel>
         </section>
 
-        <section style={styles.layoutGrid}>
-          <section style={styles.card}>
-            <p style={styles.sectionKicker}>Required Coordination Action</p>
-            <h2 style={styles.sectionTitle}>{coordinationReading.requiredAction}</h2>
-            <p style={styles.panelNote}>{coordinationReading.handoffReason}</p>
+        <section style={styles.actionPanel}>
+          <div>
+            <p style={styles.sectionKicker}>Coordination Refresh</p>
 
-            <div style={styles.priorityGrid}>
-              <PriorityItem title="Evidence Standard" body={coordinationReading.evidenceStandard} />
-              <PriorityItem title="Continuity Risk" body={coordinationReading.continuityRisk} />
-              <PriorityItem
-                title="History"
-                body={
-                  coordinationReading.continuityHistoryRequired
-                    ? 'Continuity history must preserve recurrence and synchronization memory.'
-                    : 'Routine memory preservation is sufficient.'
-                }
-              />
-            </div>
+            <h2 style={styles.actionTitle}>
+              Refresh enterprise synchronization intelligence.
+            </h2>
 
-            <button onClick={loadCoordinationData} style={styles.primaryButton}>
-              Refresh Coordination Synchronization
-            </button>
-          </section>
+            <p style={styles.actionText}>
+              Refreshing reloads cases, institutions, responders, routing
+              actions, interventions, and outcomes before recalculating
+              dependency posture.
+            </p>
+          </div>
 
-          <section style={styles.card}>
-            <p style={styles.sectionKicker}>Generated Coordination Brief</p>
-            <h2 style={styles.sectionTitle}>Synchronization brief</h2>
-
-            <pre style={styles.summaryBox}>
-              {coordinationBrief({
-                reading: coordinationReading,
-                pattern: coordinationPattern,
-                totalCases: cases.length,
-                activeCases: activeCases.length,
-                stabilizedCases: stabilizedCases.length,
-                escalatedCases: escalatedCases.length,
-                criticalCases: criticalCases.length,
-                safeguardingCases: safeguardingCases.length,
-                stalledCases: stalledCases.length,
-                recurrenceCases: recurrenceCases.length,
-                institutions: institutions.length,
-                activeInstitutions: activeInstitutions.length,
-                activeResponders: activeResponders.length,
-                routingActions: routingActions.length,
-                interventions: interventions.length,
-                outcomes: outcomes.length,
-                interventionCoverage,
-                outcomeCoverage,
-                stabilizationRate,
-              })}
-            </pre>
-          </section>
+          <button onClick={loadCoordinationData} style={styles.primaryButton}>
+            Refresh Coordination
+          </button>
         </section>
 
-        <section style={styles.layoutGrid}>
-          <Panel
-            title="Regional Coordination Visibility"
-            note="Shows where stabilization pressure is appearing."
-            rows={regionRows}
-          />
+        <section style={styles.gridTwo}>
+          <Panel title="Regional Synchronization Memory">
+            <RowList rows={regionRows} />
+          </Panel>
 
-          <Panel
-            title="Institution Coordination Load"
-            note="Shows routing load by coordination site."
-            rows={institutionRows}
-          />
+          <Panel title="Institution Synchronization Memory">
+            <RowList rows={institutionRows} />
+          </Panel>
 
-          <Panel
-            title="Responder Coordination Load"
-            note="Shows routing load by responder network."
-            rows={responderRows}
-          />
+          <Panel title="Responder Synchronization Memory">
+            <RowList rows={responderRows} />
+          </Panel>
 
-          <Panel
-            title="Lifecycle Coordination View"
-            note="Shows where cases are sitting inside the stabilization pathway."
-            rows={lifecycleRows}
-          />
+          <Panel title="Lifecycle Synchronization Memory">
+            <RowList rows={lifecycleRows} />
+          </Panel>
+        </section>
+
+        <section style={styles.orderPanel}>
+          <p style={styles.sectionKicker}>Copy-Ready Coordination Brief</p>
+
+          <h2 style={styles.panelTitle}>
+            What dependencies must synchronize before continuity can move?
+          </h2>
+
+          <pre style={styles.summaryBox}>
+            {coordinationBrief({
+              reading: coordinationReading,
+              pattern: coordinationPattern,
+              totalCases: cases.length,
+              activeCases: activeCases.length,
+              stabilizedCases: stabilizedCases.length,
+              escalatedCases: escalatedCases.length,
+              criticalCases: criticalCases.length,
+              safeguardingCases: safeguardingCases.length,
+              stalledCases: stalledCases.length,
+              recurrenceCases: recurrenceCases.length,
+              institutions: institutions.length,
+              activeInstitutions: activeInstitutions.length,
+              activeResponders: activeResponders.length,
+              routingActions: routingActions.length,
+              interventions: interventions.length,
+              outcomes: outcomes.length,
+              interventionCoverage,
+              outcomeCoverage,
+              stabilizationRate,
+            })}
+          </pre>
         </section>
 
         <section style={styles.doctrineCard}>
-          <strong>COORDINATION SYNCHRONIZATION</strong>
+          <strong>ENTERPRISE COORDINATION DOCTRINE</strong>
+
           <span>
-            Command decides movement. Coordination synchronizes ownership,
-            routing, capacity, evidence, shared dependency, and response
-            responsibility before continuity can safely move to Cross-Site,
-            Situation Room, Executive Center, Audit, Recovery, or Stability
-            Board.
+            Command decides movement. Coordination synchronizes dependency.
+            Cross-Site compares pattern. Situation Room interprets operating
+            condition. Executive Center governs meaning. Audit preserves
+            reconstructability. Continuity must not move forward on hidden
+            ownership, routing, responder, institutional, evidence, recovery, or
+            shared dependency weakness.
           </span>
         </section>
       </div>
     </main>
   )
 }
-
 function buildCoordinationPatternReading(input: {
   cases: BeneficiaryCase[]
   institutions: Institution[]
@@ -581,7 +611,9 @@ function buildCoordinationPatternReading(input: {
   )
 
   const sharedOwnershipVisible = hasRepeatedValue(
-    input.routingActions.map((item) => item.institution_id || 'Institution not recorded'),
+    input.routingActions.map(
+      (item) => item.institution_id || 'Institution not recorded',
+    ),
   )
 
   const evidenceWeak =
@@ -622,9 +654,8 @@ function buildCoordinationPatternReading(input: {
     enterpriseExposure: buildEnterpriseExposure(patternType),
     executiveMeaning: buildPatternExecutiveMeaning(patternType),
     crossSiteQuestion: buildCrossSiteQuestion(patternType),
-    requiredSynchronizationEvidence: buildRequiredSynchronizationEvidence(
-      patternType,
-    ),
+    requiredSynchronizationEvidence:
+      buildRequiredSynchronizationEvidence(patternType),
   }
 }
 
@@ -647,14 +678,16 @@ function buildCoordinationReading(input: {
 }): CoordinationReading {
   if (input.totalCases === 0) {
     return {
-      status: 'COORDINATION_CLEAR',
+      status: 'COORDINATION CLEAR',
       commandQuestion: 'Does continuity require synchronization?',
+      executiveQuestion:
+        'Can continuity remain clear without unnecessary synchronization?',
       chainPosition: 'Coordination is clear. No synchronization handoff is required.',
       synchronizationMeaning:
         'No active coordination-visible records exist. The system should preserve readiness without creating artificial escalation.',
       nextDestination: 'Monitoring',
       handoffReason:
-        'There is no current ownership, routing, responder, or institutional pressure requiring coordination movement.',
+        'There is no current ownership, routing, responder, institutional, or evidence pressure requiring coordination movement.',
       coordinationRequired: false,
       crossSiteRequired: false,
       executiveReviewRequired: false,
@@ -663,18 +696,21 @@ function buildCoordinationReading(input: {
       evidenceStandard: 'Routine monitoring evidence only.',
       requiredAction: 'Maintain coordination readiness.',
       continuityRisk: 'No active coordination risk is visible.',
+      boardWarning:
+        'Do not manufacture coordination pressure when no synchronization signal exists.',
     }
   }
 
   if (input.coordinationPattern.crossSiteEscalationRequired) {
     return {
-      status: 'CROSS_SITE_COORDINATION_REQUIRED',
+      status: 'CROSS-SITE COORDINATION REQUIRED',
       commandQuestion:
         'Has coordination revealed a pattern larger than one site or operational lane?',
+      executiveQuestion:
+        'What dependency pattern must move to Cross-Site before continuity can be trusted?',
       chainPosition:
         'Coordination is preparing continuity for Cross-Site Review.',
-      synchronizationMeaning:
-        input.coordinationPattern.patternMeaning,
+      synchronizationMeaning: input.coordinationPattern.patternMeaning,
       nextDestination: 'Cross-Site Review',
       handoffReason:
         'Cross-site review must determine whether instability is isolated, repeated, distributed, or structurally shared across operational environments.',
@@ -688,6 +724,8 @@ function buildCoordinationReading(input: {
       requiredAction: 'Move synchronized pattern evidence to Cross-Site Review.',
       continuityRisk:
         'Failure to review across sites may allow a distributed continuity pattern to look like isolated cases.',
+      boardWarning:
+        'Do not allow a shared dependency pattern to remain buried inside local coordination workload.',
     }
   }
 
@@ -697,9 +735,11 @@ function buildCoordinationReading(input: {
     input.safeguardingCases > 0
   ) {
     return {
-      status: 'EXECUTIVE_COORDINATION_PRESSURE',
+      status: 'EXECUTIVE COORDINATION PRESSURE',
       commandQuestion:
         'Must coordination escalate to executive synthesis before continuity can be trusted?',
+      executiveQuestion:
+        'Can continuity authority move safely while coordination carries executive pressure?',
       chainPosition:
         'Coordination is holding executive-relevant continuity pressure.',
       synchronizationMeaning:
@@ -708,7 +748,8 @@ function buildCoordinationReading(input: {
       handoffReason:
         'Leadership synthesis is required because the coordination signal carries executive continuity meaning.',
       coordinationRequired: true,
-      crossSiteRequired: input.recurrenceCases > 0 || input.coordinationVisibleCases > 2,
+      crossSiteRequired:
+        input.recurrenceCases > 0 || input.coordinationVisibleCases > 2,
       executiveReviewRequired: true,
       auditRequired: true,
       continuityHistoryRequired: input.recurrenceCases > 0,
@@ -717,6 +758,8 @@ function buildCoordinationReading(input: {
       requiredAction: 'Move coordinated pressure to Executive Center.',
       continuityRisk:
         'Failure to escalate may allow executive-relevant instability to remain operationally buried.',
+      boardWarning:
+        'Do not treat executive-relevant coordination pressure as ordinary routing work.',
     }
   }
 
@@ -728,9 +771,11 @@ function buildCoordinationReading(input: {
     input.outcomeCoverage < 40
   ) {
     return {
-      status: 'COORDINATION_SYNCHRONIZATION_REQUIRED',
+      status: 'SYNCHRONIZATION REQUIRED',
       commandQuestion:
         'Can continuity move forward before ownership and evidence are synchronized?',
+      executiveQuestion:
+        'What dependency must synchronize before continuity movement can be trusted?',
       chainPosition:
         'Coordination is still synchronizing ownership, routing, capacity, and evidence.',
       synchronizationMeaning:
@@ -748,14 +793,18 @@ function buildCoordinationReading(input: {
       requiredAction: 'Strengthen coordination before lifecycle movement.',
       continuityRisk:
         'Weak synchronization may create false recovery confidence or premature escalation.',
+      boardWarning:
+        'Do not move continuity forward while ownership, evidence, capacity, or routing remain unsynchronized.',
     }
   }
 
   if (input.stabilizationRate >= 60 && input.outcomeCoverage >= 60) {
     return {
-      status: 'RECOVERY_HANDOFF_AVAILABLE',
+      status: 'RECOVERY HANDOFF AVAILABLE',
       commandQuestion:
         'Can coordination release continuity toward recovery verification?',
+      executiveQuestion:
+        'Can synchronized continuity now move toward recovery verification?',
       chainPosition:
         'Coordination can release continuity toward recovery verification.',
       synchronizationMeaning:
@@ -773,13 +822,17 @@ function buildCoordinationReading(input: {
       requiredAction: 'Move stabilized records to Recovery Verification.',
       continuityRisk:
         'Main risk is premature closure if recovery durability is not verified.',
+      boardWarning:
+        'Do not confuse synchronized handoff with durable recovery. Recovery must still be verified.',
     }
   }
 
   return {
-    status: 'COORDINATION_WATCH',
+    status: 'COORDINATION WATCH',
     commandQuestion:
       'Can continuity remain under coordination watch without escalation?',
+    executiveQuestion:
+      'Can coordination remain under watch while synchronization evidence matures?',
     chainPosition:
       'Coordination remains active under proportional synchronization watch.',
     synchronizationMeaning:
@@ -797,6 +850,8 @@ function buildCoordinationReading(input: {
     requiredAction: 'Continue coordination watch.',
     continuityRisk:
       'Risk remains monitored while synchronization evidence continues to mature.',
+    boardWarning:
+      'Do not let visible coordination pressure disappear before synchronization evidence matures.',
   }
 }
 
@@ -822,12 +877,15 @@ function coordinationBrief(input: {
   stabilizationRate: number
 }) {
   return `
-TSINAXA CGI COORDINATION SYNCHRONIZATION BRIEF
+TSINAXA CGI ENTERPRISE COORDINATION INTELLIGENCE BRIEF
+
+Executive Coordination Question:
+${input.reading.executiveQuestion}
 
 Command Question:
 ${input.reading.commandQuestion}
 
-Coordination Status:
+Coordination Posture:
 ${input.reading.status}
 
 Enterprise Synchronization Pattern:
@@ -876,11 +934,17 @@ ${input.reading.requiredAction}
 Evidence Standard:
 ${input.reading.evidenceStandard}
 
+Required Synchronization Evidence:
+${input.pattern.requiredSynchronizationEvidence}
+
 Continuity Risk:
 ${input.reading.continuityRisk}
 
 Executive Meaning:
 ${input.pattern.executiveMeaning}
+
+Board Warning:
+${input.reading.boardWarning}
 
 Governance-Safe Meaning:
 Coordination does not assign blame. It synchronizes ownership, routing, responder capacity, institutional load, evidence maturity, recovery readiness, and shared dependency so continuity does not move forward on weak or invisible foundations.
@@ -897,7 +961,6 @@ function hasRepeatedValue(items: string[]) {
 
   return new Set(normalized).size < normalized.length && normalized.length > 1
 }
-
 function buildPatternName(patternType: CoordinationPatternType) {
   if (patternType === 'ENTERPRISE_PATTERN') {
     return 'Enterprise Synchronization Pattern'
@@ -1047,34 +1110,39 @@ function Metric({
   textValue?: string
 }) {
   return (
-    <div style={styles.metricCard}>
+    <article style={styles.metricCard}>
       <p style={styles.metricLabel}>{label}</p>
 
-      <h2 style={textValue ? styles.metricTextValue : styles.metricValue}>
+      <p style={textValue ? styles.metricTextValue : styles.metricValue}>
         {textValue || `${value ?? 0}${suffix}`}
-      </h2>
-    </div>
+      </p>
+    </article>
   )
 }
 
-function ChainStep({
-  label,
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <article style={styles.miniStat}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.miniValue}>{value}</p>
+    </article>
+  )
+}
+
+function ExecutiveCard({
+  title,
   value,
-  active,
+  body,
 }: {
-  label: string
+  title: string
   value: string
-  active?: boolean
+  body: string
 }) {
   return (
-    <article
-      style={{
-        ...styles.chainStep,
-        ...(active ? styles.chainStepActive : {}),
-      }}
-    >
-      <p style={styles.metricLabel}>{label}</p>
-      <p style={styles.chainValue}>{value}</p>
+    <article style={styles.panelCard}>
+      <p style={styles.sectionKicker}>{title}</p>
+      <h3 style={styles.cardValue}>{value}</h3>
+      <p style={styles.panelBody}>{body}</p>
     </article>
   )
 }
@@ -1091,362 +1159,428 @@ function RequirementCard({
   return (
     <article
       style={{
-        ...styles.requirementCard,
-        ...(active ? styles.requirementCardActive : {}),
+        ...styles.panelCard,
+        ...(active ? styles.activePanelCard : {}),
       }}
     >
-      <p style={styles.metricLabel}>{label}</p>
-      <p style={styles.requirementStatus}>
-        {active ? 'Required' : 'Not Required'}
-      </p>
-      <p style={styles.requirementBody}>{body}</p>
-    </article>
-  )
-}
-
-function PriorityItem({
-  title,
-  body,
-}: {
-  title: string
-  body: string
-}) {
-  return (
-    <article style={styles.priorityItem}>
-      <p style={styles.metricLabel}>{title}</p>
-      <p style={styles.priorityBody}>{body}</p>
+      <p style={styles.sectionKicker}>{label}</p>
+      <h3 style={styles.cardValue}>{active ? 'REQUIRED' : 'WATCH'}</h3>
+      <p style={styles.panelBody}>{body}</p>
     </article>
   )
 }
 
 function Panel({
   title,
-  note,
-  rows,
+  children,
 }: {
   title: string
-  note: string
-  rows: PanelRow[]
+  children: React.ReactNode
 }) {
   return (
-    <div style={styles.card}>
+    <section style={styles.panel}>
       <p style={styles.sectionKicker}>{title}</p>
-      <h2 style={styles.sectionTitle}>{title}</h2>
-      <p style={styles.panelNote}>{note}</p>
+      <div style={styles.infoList}>{children}</div>
+    </section>
+  )
+}
 
-      <div style={styles.panelList}>
-        {rows.length === 0 && <p style={styles.emptyText}>No data available yet.</p>}
-
-        {rows.map((row, index) => (
-          <div key={`${row.label}-${index}`} style={styles.panelRow}>
-            <div>
-              <strong>{row.label}</strong>
-              <p style={styles.rowDetail}>{row.detail}</p>
-            </div>
-
-            <strong>{row.value}</strong>
-          </div>
-        ))}
-      </div>
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={styles.infoRow}>
+      <span style={styles.infoLabel}>{label}</span>
+      <strong style={styles.infoValue}>{value}</strong>
     </div>
   )
 }
 
-const gold = '#d6b25e'
-const mutedGold = '#9f8142'
-const deepBlack = '#030303'
-const panelBlack = '#090807'
-const cardBlack = '#11100d'
-const softLine = 'rgba(214,178,94,0.24)'
+function RowList({ rows }: { rows: PanelRow[] }) {
+  return (
+    <div style={styles.rowList}>
+      {rows.length === 0 && (
+        <p style={styles.emptyText}>No synchronization memory available yet.</p>
+      )}
+
+      {rows.map((row, index) => (
+        <div key={`${row.label}-${index}`} style={styles.rowItem}>
+          <div>
+            <strong style={styles.rowLabel}>{row.label}</strong>
+            <p style={styles.rowDetail}>{row.detail}</p>
+          </div>
+
+          <strong style={styles.rowValue}>{row.value}</strong>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    color: '#f5f0e6',
-    overflowX: 'hidden',
     background:
-      'radial-gradient(circle at top right, rgba(214,178,94,0.08), transparent 32%), #030303',
+      'radial-gradient(circle at top left, rgba(201, 162, 39, 0.14), transparent 34%), linear-gradient(135deg, #050505 0%, #0B0B0B 45%, #111111 100%)',
+    color: '#FFFFFF',
+    padding: '40px 24px 72px',
   },
   container: {
-    width: '100%',
-    maxWidth: '1120px',
+    width: 'min(1440px, 100%)',
     margin: '0 auto',
-    padding: '16px 28px 72px',
-    boxSizing: 'border-box',
+    display: 'grid',
+    gap: 24,
   },
   hero: {
-    marginBottom: '28px',
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.45fr) minmax(320px, 0.75fr)',
+    gap: 24,
+    padding: 32,
+    border: '1px solid rgba(201, 162, 39, 0.34)',
+    borderRadius: 28,
+    background:
+      'linear-gradient(135deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018))',
+    boxShadow: '0 28px 80px rgba(0,0,0,0.38)',
   },
   kicker: {
-    color: gold,
-    fontSize: '11px',
-    fontWeight: 900,
-    letterSpacing: '2px',
     margin: 0,
+    color: '#C9A227',
+    fontSize: 12,
+    fontWeight: 900,
+    letterSpacing: '0.22em',
+    textTransform: 'uppercase',
   },
   title: {
-    color: '#fff8e7',
-    fontSize: 'clamp(34px, 4vw, 48px)',
-    lineHeight: 1,
-    margin: '10px 0',
-    letterSpacing: '-0.05em',
+    margin: '14px 0 0',
+    fontSize: 'clamp(2.3rem, 5vw, 5rem)',
+    lineHeight: 0.95,
+    letterSpacing: '-0.07em',
+    fontWeight: 950,
   },
   subtitle: {
-    color: '#cfc7b5',
-    maxWidth: '880px',
-    lineHeight: 1.65,
-    fontSize: '14px',
+    maxWidth: 880,
+    margin: '18px 0 0',
+    color: '#C8CDD4',
+    fontSize: 17,
+    lineHeight: 1.8,
+  },
+  statusBox: {
+    border: '1px solid rgba(201, 162, 39, 0.5)',
+    borderRadius: 24,
+    padding: 24,
+    background:
+      'linear-gradient(180deg, rgba(201,162,39,0.18), rgba(0,0,0,0.38))',
+  },
+  statusLabel: {
     margin: 0,
+    color: '#D7B84C',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.2em',
+  },
+  statusValue: {
+    margin: '16px 0 0',
+    fontSize: 30,
+    fontWeight: 950,
+    letterSpacing: '-0.04em',
+    lineHeight: 1.05,
+    overflowWrap: 'anywhere',
+  },
+  statusMeaning: {
+    margin: '12px 0 0',
+    color: '#ECE7D7',
+    fontSize: 14,
+    lineHeight: 1.7,
   },
   message: {
-    background: '#14210f',
-    border: `1px solid ${softLine}`,
-    color: '#e8dec8',
-    padding: '14px',
-    borderRadius: '14px',
+    padding: '14px 18px',
+    borderRadius: 16,
+    color: '#D7B84C',
+    background: 'rgba(201,162,39,0.1)',
+    border: '1px solid rgba(201,162,39,0.22)',
     fontWeight: 800,
-    marginBottom: '20px',
   },
-  heroCard: {
+  commandDeck: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.2fr) minmax(260px, 0.8fr)',
-    gap: '24px',
-    background: deepBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '20px',
-    padding: '24px',
-    marginBottom: '20px',
+    gridTemplateColumns: '1.4fr 0.8fr',
+    gap: 24,
+  },
+  primaryCard: {
+    padding: 30,
+    borderRadius: 28,
+    background: '#FFFFFF',
+    color: '#0B0B0B',
+    border: '1px solid rgba(255,255,255,0.12)',
+  },
+  consequenceCard: {
+    padding: 30,
+    borderRadius: 28,
+    background: 'rgba(0,0,0,0.38)',
+    border: '1px solid rgba(201,162,39,0.28)',
   },
   sectionKicker: {
-    color: mutedGold,
-    fontWeight: 900,
-    letterSpacing: '0.15em',
-    textTransform: 'uppercase',
     margin: 0,
-    fontSize: '10px',
+    color: '#C9A227',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.18em',
+    textTransform: 'uppercase',
   },
-  heroTitle: {
-    color: gold,
-    fontSize: 'clamp(28px, 4vw, 42px)',
+  commandTitle: {
+    margin: '14px 0',
+    fontSize: 'clamp(1.8rem, 3vw, 3.2rem)',
     lineHeight: 1.05,
-    margin: '10px 0',
+    letterSpacing: '-0.05em',
+    fontWeight: 950,
+  },
+  primaryText: {
+    margin: 0,
+    color: '#4A4A4A',
+    lineHeight: 1.7,
+    fontSize: 14,
+  },
+  consequenceTitle: {
+    margin: '14px 0',
+    fontSize: 28,
+    lineHeight: 1.1,
     letterSpacing: '-0.04em',
   },
   bodyText: {
-    color: '#cfc7b5',
-    lineHeight: 1.6,
-    fontSize: '13px',
-    margin: 0,
-  },
-  statusBox: {
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '18px',
-  },
-  statusLabel: {
-    color: mutedGold,
-    fontWeight: 900,
-    margin: '0 0 10px',
-    fontSize: '10px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.14em',
-  },
-  statusValue: {
-    color: '#fff8e7',
-    fontSize: '30px',
-    lineHeight: 1.1,
-    margin: 0,
-    fontWeight: 900,
-  },
-  chainPanel: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-    gap: '12px',
-    marginBottom: '20px',
-  },
-  chainStep: {
-    background: cardBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '14px',
-    padding: '14px',
-    minHeight: '88px',
-  },
-  chainStepActive: {
-    background: '#201809',
-    border: `1px solid ${gold}`,
-  },
-  chainValue: {
-    color: '#fff8e7',
-    fontSize: '13px',
-    lineHeight: 1.25,
-    fontWeight: 900,
     margin: '8px 0 0',
+    color: '#AEB6C2',
+    lineHeight: 1.7,
+    fontSize: 14,
+  },
+  commandMetaGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 24,
   },
   metricsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
-    gap: '14px',
-    marginBottom: '24px',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 14,
   },
   metricCard: {
-    background: cardBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '16px',
+    padding: 18,
+    borderRadius: 20,
+    background: 'rgba(255,255,255,0.055)',
+    border: '1px solid rgba(255,255,255,0.1)',
   },
   metricLabel: {
-    color: mutedGold,
-    fontSize: '9px',
-    fontWeight: 900,
+    margin: 0,
+    color: '#858D98',
+    fontSize: 10,
+    fontWeight: 950,
     letterSpacing: '0.14em',
     textTransform: 'uppercase',
-    margin: 0,
   },
   metricValue: {
-    color: gold,
-    fontSize: '34px',
-    margin: '8px 0 0',
-    lineHeight: 1,
+    margin: '10px 0 0',
+    color: '#FFFFFF',
+    fontSize: 28,
+    fontWeight: 950,
+    lineHeight: 1.15,
+    overflowWrap: 'anywhere',
   },
   metricTextValue: {
-    color: gold,
-    fontSize: '17px',
-    lineHeight: 1.3,
     margin: '10px 0 0',
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: 950,
+    lineHeight: 1.25,
+    overflowWrap: 'anywhere',
   },
-  requirementGrid: {
+  miniStat: {
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(255,255,255,0.055)',
+    border: '1px solid rgba(255,255,255,0.09)',
+  },
+  miniValue: {
+    margin: '8px 0 0',
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: 850,
+    lineHeight: 1.45,
+    overflowWrap: 'anywhere',
+  },
+  gridFour: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '14px',
-    marginBottom: '24px',
+    gap: 16,
   },
-  requirementCard: {
-    background: cardBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '16px',
-    minHeight: '138px',
-  },
-  requirementCardActive: {
-    background: '#1a1308',
-    border: `1px solid ${gold}`,
-  },
-  requirementStatus: {
-    color: gold,
-    fontSize: '17px',
-    fontWeight: 950,
-    margin: '8px 0',
-  },
-  requirementBody: {
-    color: '#cfc7b5',
-    fontSize: '12px',
-    lineHeight: 1.5,
-    margin: 0,
-  },
-  layoutGrid: {
+  gridTwo: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-    gap: '20px',
-    marginBottom: '24px',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 16,
   },
-  card: {
-    background: panelBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '20px',
-    padding: '24px',
-    marginBottom: '24px',
-    boxSizing: 'border-box',
-    overflow: 'hidden',
+  panel: {
+    padding: 28,
+    borderRadius: 28,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.1)',
   },
-  sectionTitle: {
-    color: '#fff8e7',
-    fontSize: 'clamp(22px, 2vw, 28px)',
-    lineHeight: 1.1,
-    margin: '10px 0',
+  panelCard: {
+    padding: 22,
+    borderRadius: 22,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.09)',
+    minHeight: 150,
+  },
+  activePanelCard: {
+    background:
+      'linear-gradient(135deg, rgba(201,162,39,0.14), rgba(255,255,255,0.035))',
+    border: '1px solid rgba(201,162,39,0.38)',
+  },
+  panelTitle: {
+    margin: '12px 0 0',
+    fontSize: 26,
+    lineHeight: 1.15,
+    letterSpacing: '-0.045em',
+  },
+  cardValue: {
+    margin: '12px 0 0',
+    color: '#FFFFFF',
+    fontSize: 19,
+    lineHeight: 1.25,
+    overflowWrap: 'anywhere',
+  },
+  panelBody: {
+    marginTop: 10,
+    color: '#AEB6C2',
+    fontSize: 14,
+    lineHeight: 1.65,
+  },
+  memoryPanel: {
+    padding: 28,
+    borderRadius: 28,
+    background:
+      'linear-gradient(135deg, rgba(201,162,39,0.13), rgba(255,255,255,0.035))',
+    border: '1px solid rgba(201,162,39,0.32)',
+  },
+  memoryGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 20,
+  },
+  infoList: {
+    display: 'grid',
+    gap: 10,
+    marginTop: 18,
+  },
+  infoRow: {
+    display: 'grid',
+    gridTemplateColumns: '190px minmax(0, 1fr)',
+    gap: 12,
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(0,0,0,0.22)',
+    border: '1px solid rgba(255,255,255,0.08)',
+  },
+  infoLabel: {
+    color: '#858D98',
+    fontWeight: 900,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+  },
+  infoValue: {
+    color: '#FFFFFF',
+    lineHeight: 1.5,
+    overflowWrap: 'anywhere',
+  },
+  actionPanel: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1fr) auto',
+    gap: 16,
+    alignItems: 'center',
+    padding: 28,
+    borderRadius: 28,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(201,162,39,0.24)',
+  },
+  actionTitle: {
+    margin: '12px 0 0',
+    color: '#FFFFFF',
+    fontSize: 26,
+    lineHeight: 1.15,
     letterSpacing: '-0.04em',
   },
-  panelNote: {
-    color: '#cfc7b5',
-    lineHeight: 1.6,
-    fontSize: '13px',
-    margin: '0 0 18px',
-  },
-  priorityGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '12px',
-    margin: '18px 0',
-  },
-  priorityItem: {
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '14px',
-    padding: '14px',
-  },
-  priorityBody: {
-    color: '#e8dec8',
-    lineHeight: 1.5,
-    margin: '8px 0 0',
-    fontSize: '12px',
-    fontWeight: 750,
+  actionText: {
+    margin: '12px 0 0',
+    color: '#AEB6C2',
+    lineHeight: 1.7,
+    maxWidth: 820,
   },
   primaryButton: {
-    width: '100%',
-    padding: '14px',
-    borderRadius: '14px',
-    border: `1px solid ${gold}`,
-    background: '#201809',
-    color: '#fff8e7',
-    fontWeight: 900,
+    border: 'none',
+    borderRadius: 999,
+    padding: '14px 22px',
+    background: '#C9A227',
+    color: '#090909',
+    fontWeight: 950,
     cursor: 'pointer',
-    fontSize: '14px',
+    whiteSpace: 'nowrap',
   },
-  summaryBox: {
-    whiteSpace: 'pre-wrap',
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '16px',
-    color: '#e8dec8',
-    lineHeight: 1.6,
-    minHeight: '560px',
-    fontSize: '12px',
-  },
-  panelList: {
+  rowList: {
     display: 'grid',
-    gap: '10px',
+    gap: 10,
   },
-  panelRow: {
+  rowItem: {
     display: 'flex',
     justifyContent: 'space-between',
-    gap: '16px',
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '14px',
-    padding: '14px',
-    color: '#fff8e7',
+    gap: 16,
+    alignItems: 'flex-start',
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(0,0,0,0.22)',
+    border: '1px solid rgba(255,255,255,0.08)',
+  },
+  rowLabel: {
+    color: '#FFFFFF',
+    lineHeight: 1.35,
   },
   rowDetail: {
-    color: '#cfc7b5',
+    color: '#AEB6C2',
     margin: '6px 0 0',
-    fontSize: '12px',
+    fontSize: 12,
+    lineHeight: 1.4,
+  },
+  rowValue: {
+    color: '#D7B84C',
+    fontSize: 18,
   },
   emptyText: {
-    color: '#cfc7b5',
+    margin: 0,
+    color: '#AEB6C2',
+    lineHeight: 1.6,
+  },
+  orderPanel: {
+    padding: 28,
+    borderRadius: 28,
+    background: '#FFFFFF',
+    color: '#0B0B0B',
+  },
+  summaryBox: {
+    marginTop: 20,
+    padding: 22,
+    borderRadius: 20,
+    background: '#0A0A0A',
+    color: '#F8F6F1',
+    whiteSpace: 'pre-wrap',
+    fontSize: 13,
+    lineHeight: 1.7,
+    overflowX: 'auto',
   },
   doctrineCard: {
     display: 'grid',
-    gridTemplateColumns: '240px minmax(0, 1fr)',
-    gap: '24px',
-    background: deepBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '18px',
-    padding: '20px 24px',
-    color: '#e8dec8',
-    fontSize: '13px',
-    lineHeight: 1.55,
-    fontWeight: 750,
-    boxSizing: 'border-box',
+    gap: 10,
+    padding: 24,
+    borderRadius: 24,
+    background: '#050505',
+    border: '1px solid rgba(201,162,39,0.42)',
+    color: '#FFFFFF',
+    lineHeight: 1.7,
   },
 }
