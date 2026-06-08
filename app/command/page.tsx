@@ -27,23 +27,12 @@ type CommandCase = {
 type RoutingAction = {
   id: string
   case_id: string
-  routing_status?: string | null
-  routing_priority?: string | null
-  routing_reason?: string | null
-  institution_id?: string | null
   assigned_responder_id?: string | null
-  created_at?: string | null
 }
 
 type InterventionRecord = {
   id: string
   case_id: string
-  intervention_type?: string | null
-  intervention_status?: string | null
-  assigned_responder_id?: string | null
-  responder_id?: string | null
-  created_at?: string | null
-  completed_at?: string | null
 }
 
 type OutcomeRecord = {
@@ -51,19 +40,12 @@ type OutcomeRecord = {
   case_id: string
   outcome_status: string | null
   outcome_summary: string | null
-  stabilization_status?: string | null
-  recovery_status?: string | null
-  created_at?: string | null
 }
 
 type Responder = {
   id: string
   full_name: string
   operational_status: string
-  governance_status?: string | null
-  responder_status?: string | null
-  trust_score?: number | null
-  active_case_count?: number | null
 }
 
 type Institution = {
@@ -91,97 +73,11 @@ type CommandDecision = {
   status: string
 }
 
-type CommandConsequence = {
-  condition: string
-  meaning: string
-}
-
 type CommandCaseRecord = {
   caseItem: CommandCase
-  latestRecoveryReview?: OutcomeRecord
   recoveryDisposition: string
-  recommendedMovement: string
-  movementReason: string
-  durabilityResult: string
   commandPosture: string
-  recoveryConfidence: string
-  memoryImpact: string
   reburnVisible: boolean
-}
-
-type CommandMovementReading = {
-  statusShort: string
-  statusMeaning: string
-  activeCaseCount: string
-  evidenceShort: string
-  survivabilityShort: string
-  pressureShort: string
-  trajectoryShort: string
-  recoveryShort: string
-  reliabilityShort: string
-  attributionTitle: string
-  attributionMeaning: string
-  commandVisibility: string
-  commandAction: string
-  commandDecision: string
-  commandQuestion: string
-  nextGovernedMovement: string
-  movementReason: string
-  evidenceGap: string
-  recoveryCredibility: string
-  memory: string
-  persistence: string
-  risk: string
-  lifecyclePosition: string
-  nextDestination: string
-  handoffReason: string
-  coordinationRequired: boolean
-  crossSiteRequired: boolean
-  executiveReviewRequired: boolean
-  auditRequired: boolean
-  continuityHistoryRequired: boolean
-  destinationExecutiveCenter: number
-  destinationRecovery: number
-  destinationCoordination: number
-  destinationCrossSite: number
-  destinationAudit: number
-  destinationStabilityBoard: number
-  hasActiveCommandEvidence: boolean
-  executiveBrief: {
-    cases: string
-    evidence: string
-    action: string
-  }
-  continuityMemory: {
-    continuityMemory: string
-    lastCommandActivity: string
-    lastEscalation: string
-    lastRecoveryVerification: string
-    lastExecutiveReview: string
-  }
-}
-
-type CommandActionReading = {
-  posture: CommandPosture
-  commandThesis: string
-  dominantThreat: string
-  whyNow: string
-  ifNoAction: string
-  executiveAction: string
-  readiness: CommandReadiness
-  readinessMeaning: string
-  nextDestination: string
-  commandQuestion: string
-  requiredDecisions: CommandDecision[]
-  consequences: CommandConsequence[]
-  commandLedger: CommandDecision[]
-  evidenceStandard: string
-  commandOrder: string
-  supportingSignals: {
-    label: string
-    value: string
-    meaning: string
-  }[]
 }
 
 const COMMAND_VISIBLE_STATUSES = [
@@ -254,10 +150,7 @@ function CommandContent() {
   const [institutions, setInstitutions] = useState<Institution[]>([])
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
-
-  const [reportTemplate, setReportTemplate] = useState(
-    COMMAND_REPORT_TEMPLATES[0],
-  )
+  const [reportTemplate, setReportTemplate] = useState(COMMAND_REPORT_TEMPLATES[0])
   const [commandScope, setCommandScope] = useState(COMMAND_SCOPE_OPTIONS[0])
   const [additionalNotes, setAdditionalNotes] = useState('')
 
@@ -301,9 +194,7 @@ function CommandContent() {
 
     setCases(casesResult.error ? [] : casesResult.data || [])
     setRoutingActions(routingResult.error ? [] : routingResult.data || [])
-    setInterventions(
-      interventionResult.error ? [] : interventionResult.data || [],
-    )
+    setInterventions(interventionResult.error ? [] : interventionResult.data || [])
     setOutcomes(outcomeResult.error ? [] : outcomeResult.data || [])
     setResponders(responderResult.error ? [] : responderResult.data || [])
     setInstitutions(institutionResult.error ? [] : institutionResult.data || [])
@@ -312,245 +203,157 @@ function CommandContent() {
     setLoading(false)
   }
 
-  const commandRecords = useMemo(
-    () => buildCommandCaseRecords(cases, outcomes),
-    [cases, outcomes],
-  )
+  const records = useMemo(() => buildCommandCaseRecords(cases, outcomes), [cases, outcomes])
 
-  const movement = useMemo(
-    () => buildCommandMovementReading(commandRecords),
-    [commandRecords],
-  )
-
-  const action = useMemo(
+  const intelligence = useMemo(
     () =>
-      buildCommandActionReading({
+      buildCommandIntelligence({
         cases,
+        records,
         routingActions,
         interventions,
         outcomes,
         responders,
         institutions,
+      }),
+    [cases, records, routingActions, interventions, outcomes, responders, institutions],
+  )
+
+  const commandOrder = useMemo(
+    () =>
+      buildCommandOrder({
         reportTemplate,
         commandScope,
+        intelligence,
         additionalNotes,
-        movement,
       }),
-    [
-      cases,
-      routingActions,
-      interventions,
-      outcomes,
-      responders,
-      institutions,
-      reportTemplate,
-      commandScope,
-      additionalNotes,
-      movement,
-    ],
+    [reportTemplate, commandScope, intelligence, additionalNotes],
   )
 
   return (
     <main style={styles.page}>
       <div style={styles.container}>
-        <section style={styles.header}>
-          <p style={styles.kicker}>TSINAXA CGI • COMMAND</p>
-          <h1 style={styles.title}>Enterprise Command Intelligence</h1>
-          <p style={styles.subtitle}>
-            Consolidated command gate for determining where continuity must move
-            and what leadership must do. Command does not close instability.
-            Command protects action, ownership, evidence, deadlines, movement,
-            memory, and auditability.
-          </p>
+        <section style={styles.hero}>
+          <div>
+            <p style={styles.kicker}>TSINAXA CGI • COMMAND</p>
+            <h1 style={styles.title}>Enterprise Command Intelligence</h1>
+            <p style={styles.subtitle}>
+              Command decides what leadership must do, where continuity must move,
+              and what evidence must remain attached. Command is not closure.
+            </p>
+          </div>
+
+          <div style={styles.statusBox}>
+            <p style={styles.statusLabel}>COMMAND POSTURE</p>
+            <p style={styles.statusValue}>{intelligence.posture}</p>
+            <p style={styles.statusMeaning}>{intelligence.commandThesis}</p>
+          </div>
         </section>
 
         {message && <div style={styles.message}>{message}</div>}
 
-        <section style={styles.heroGrid}>
-          <div style={styles.heroCard}>
-            <p style={styles.sectionKicker}>Command Movement</p>
-            <h2 style={styles.heroTitle}>{movement.statusShort}</h2>
-            <p style={styles.bodyText}>{movement.statusMeaning}</p>
+        <section style={styles.commandDeck}>
+          <div style={styles.primaryCommandCard}>
+            <p style={styles.sectionKicker}>Required Executive Action</p>
+            <h2 style={styles.commandTitle}>{intelligence.executiveAction}</h2>
+            <p style={styles.bodyText}>{intelligence.whyNow}</p>
+
+            <div style={styles.commandMetaGrid}>
+              <MiniStat label="Movement" value={intelligence.movementDecision} />
+              <MiniStat label="Next Destination" value={intelligence.nextDestination} />
+              <MiniStat label="Readiness" value={intelligence.readiness} />
+              <MiniStat label="Dominant Threat" value={intelligence.dominantThreat} />
+            </div>
           </div>
 
-          <div style={styles.heroCardGold}>
-            <p style={styles.sectionKicker}>Executive Action</p>
-            <h2 style={styles.heroTitleGold}>{action.posture}</h2>
-            <p style={styles.bodyText}>{action.commandThesis}</p>
-          </div>
-        </section>
-
-        <section style={styles.commandQuestionPanel}>
-          <div>
-            <p style={styles.sectionKicker}>Command Question</p>
-            <h2 style={styles.questionTitle}>{movement.commandQuestion}</h2>
-            <p style={styles.bodyText}>{movement.movementReason}</p>
-          </div>
-
-          <div style={styles.commandAuthorityBox}>
-            <p style={styles.metricLabel}>Action Question</p>
-            <p style={styles.bodyText}>{action.commandQuestion}</p>
+          <div style={styles.consequenceCard}>
+            <p style={styles.sectionKicker}>If Leadership Does Nothing</p>
+            <h2 style={styles.consequenceTitle}>False stability risk remains.</h2>
+            <p style={styles.bodyText}>{intelligence.ifNoAction}</p>
           </div>
         </section>
 
-        <section style={styles.decisionPanel}>
-          <div style={styles.decisionPrimary}>
-            <p style={styles.sectionKicker}>Movement Decision</p>
-            <h2 style={styles.decisionTitle}>{movement.commandDecision}</h2>
-            <p style={styles.bodyText}>{movement.nextGovernedMovement}</p>
-          </div>
+        <section style={styles.metricsGrid}>
+          <Metric label="Active Cases" value={String(intelligence.activeCases)} />
+          <Metric label="Escalated / Critical" value={String(intelligence.escalatedCritical)} />
+          <Metric label="Cross-Site Signals" value={String(intelligence.crossSiteSignals)} />
+          <Metric label="Recovery Monitoring" value={String(intelligence.recoveryMonitoring)} />
+          <Metric label="Routing Gaps" value={String(intelligence.routingGaps)} />
+          <Metric label="Outcome Gaps" value={String(intelligence.outcomeGaps)} />
+        </section>
 
-          <div style={styles.decisionSecondary}>
-            <p style={styles.sectionKicker}>Required Action</p>
-            <h2 style={styles.movementTitle}>{action.executiveAction}</h2>
-            <p style={styles.bodyText}>{action.whyNow}</p>
+        <section style={styles.panel}>
+          <p style={styles.sectionKicker}>Continuity Handoff Chain</p>
+          <h2 style={styles.panelTitle}>Command must move continuity without hiding instability.</h2>
+
+          <div style={styles.chain}>
+            <ChainStep label="Recovery" body="Verifies durability" />
+            <ChainStep label="Command" body="Moves and acts" active />
+            <ChainStep label={intelligence.nextDestination} body="Next governed destination" active />
+            <ChainStep label="Executive Report" body="Formal conclusion" />
+            <ChainStep label="Audit" body="Reconstructs truth" />
           </div>
         </section>
 
-        <section style={styles.handoffPanel}>
-          <div>
-            <p style={styles.sectionKicker}>Continuity Handoff Chain</p>
-            <h2 style={styles.compactTitle}>{movement.lifecyclePosition}</h2>
-            <p style={styles.bodyText}>{movement.handoffReason}</p>
-          </div>
-
-          <div style={styles.handoffGrid}>
-            <HandoffStep label="Recovery" value="Verifies durability" />
-            <HandoffStep label="Command" value="Moves + acts" active />
-            <HandoffStep label="Next" value={movement.nextDestination} active />
-            <HandoffStep
-              label="Executive"
-              value={movement.executiveReviewRequired ? 'Required' : 'Conditional'}
-            />
-            <HandoffStep
-              label="Audit"
-              value={movement.auditRequired ? 'Required' : 'Preserve if needed'}
-            />
-          </div>
-        </section>
-
-        <section style={styles.gridFour}>
+        <section style={styles.requirementGrid}>
           <RequirementCard
             label="Coordination"
-            active={movement.coordinationRequired}
+            active={intelligence.coordinationRequired}
             body={
-              movement.coordinationRequired
-                ? 'Coordination must synchronize ownership before continuity advances.'
-                : 'No concentrated coordination handoff is required.'
+              intelligence.coordinationRequired
+                ? 'Ownership synchronization is required before continuity can advance.'
+                : 'No concentrated coordination handoff is currently required.'
             }
           />
-
           <RequirementCard
             label="Cross-Site"
-            active={movement.crossSiteRequired}
+            active={intelligence.crossSiteRequired}
             body={
-              movement.crossSiteRequired
-                ? 'Cross-site review is required because the signal may no longer be isolated.'
+              intelligence.crossSiteRequired
+                ? 'Distributed exposure must be interpreted before recovery can be trusted.'
                 : 'No cross-site review is required by current command posture.'
             }
           />
-
           <RequirementCard
             label="Executive"
-            active={movement.executiveReviewRequired}
+            active={intelligence.executiveReviewRequired}
             body={
-              movement.executiveReviewRequired
+              intelligence.executiveReviewRequired
                 ? 'Leadership synthesis is required before continuity confidence can be restored.'
                 : 'Executive review remains conditional.'
             }
           />
-
           <RequirementCard
             label="Audit"
-            active={movement.auditRequired}
+            active={intelligence.auditRequired}
             body={
-              movement.auditRequired
-                ? 'Evidence must remain reconstructable across the governed chain.'
-                : 'No audit escalation is required beyond routine preservation.'
+              intelligence.auditRequired
+                ? 'The continuity chain must remain reconstructable.'
+                : 'Routine preservation is sufficient.'
             }
           />
         </section>
 
-        <section style={styles.gridFour}>
-          <SignalCard
-            title="Readiness"
-            value={action.readiness}
-            body={action.readinessMeaning}
-          />
-
-          <SignalCard
-            title="Dominant Threat"
-            value={action.dominantThreat}
-            body={action.ifNoAction}
-          />
-
-          <SignalCard
-            title="Next Destination"
-            value={action.nextDestination}
-            body="Action readiness determines whether Command can release the chain."
-          />
-
-          <SignalCard
-            title="Evidence Standard"
-            value="ATTACHED"
-            body={action.evidenceStandard}
-          />
-        </section>
-
-        <section style={styles.card}>
+        <section style={styles.panel}>
           <p style={styles.sectionKicker}>Required Executive Decisions</p>
-          <h2 style={styles.cardTitle}>
-            Command converts visible instability into owned decisions.
-          </h2>
+          <h2 style={styles.panelTitle}>Command converts visible instability into owned decisions.</h2>
 
           <div style={styles.decisionList}>
-            {action.requiredDecisions.map((decision, index) => (
-              <DecisionCard
-                key={`${decision.decision}-${index}`}
-                decision={decision}
-                index={index}
-              />
+            {intelligence.requiredDecisions.map((decision, index) => (
+              <DecisionCard key={`${decision.decision}-${index}`} decision={decision} index={index} />
             ))}
           </div>
         </section>
 
         <section style={styles.gridThree}>
-          {action.consequences.map((item) => (
-            <ConsequenceCard key={item.condition} item={item} />
-          ))}
+          <EvidenceCard title="Readiness Meaning" body={intelligence.readinessMeaning} />
+          <EvidenceCard title="Evidence Standard" body={intelligence.evidenceStandard} />
+          <EvidenceCard title="Recovery Credibility" body={intelligence.recoveryCredibility} />
         </section>
 
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Lifecycle Destinations</p>
-          <h2 style={styles.cardTitle}>Where Command can move continuity</h2>
-
-          <div style={styles.destinationGrid}>
-            <Destination
-              label="Executive Center"
-              value={movement.destinationExecutiveCenter}
-            />
-            <Destination label="Recovery" value={movement.destinationRecovery} />
-            <Destination
-              label="Coordination"
-              value={movement.destinationCoordination}
-            />
-            <Destination
-              label="Cross-Site"
-              value={movement.destinationCrossSite}
-            />
-            <Destination label="Audit" value={movement.destinationAudit} />
-            <Destination
-              label="Stability Board"
-              value={movement.destinationStabilityBoard}
-            />
-          </div>
-        </section>
-
-        <section style={styles.card}>
+        <section style={styles.panel}>
           <p style={styles.sectionKicker}>Command Accountability Ledger</p>
-          <h2 style={styles.cardTitle}>
-            Decisions must become owned, time-bound, and evidence-bound.
-          </h2>
+          <h2 style={styles.panelTitle}>Every command decision must be owned, timed, and evidence-bound.</h2>
 
           <div style={styles.tableWrap}>
             <table style={styles.table}>
@@ -563,9 +366,8 @@ function CommandContent() {
                   <th style={styles.th}>Status</th>
                 </tr>
               </thead>
-
               <tbody>
-                {action.commandLedger.map((item, index) => (
+                {intelligence.requiredDecisions.map((item, index) => (
                   <tr key={`${item.decision}-${index}`}>
                     <td style={styles.td}>{item.decision}</td>
                     <td style={styles.td}>{item.owner}</td>
@@ -580,132 +382,66 @@ function CommandContent() {
         </section>
 
         <section style={styles.signalGrid}>
-          <Signal label="Pressure" value={movement.pressureShort} />
-          <Signal label="Trajectory" value={movement.trajectoryShort} />
-          <Signal label="Recovery" value={movement.recoveryShort} />
-          <Signal label="Reliability" value={movement.reliabilityShort} />
-          <Signal label="Survivability" value={movement.survivabilityShort} />
+          <Signal label="Pressure" value={intelligence.pressureSignal} />
+          <Signal label="Trajectory" value={intelligence.trajectorySignal} />
+          <Signal label="Recovery" value={intelligence.recoverySignal} />
+          <Signal label="Reliability" value={intelligence.reliabilitySignal} />
+          <Signal label="Survivability" value={intelligence.survivabilitySignal} />
         </section>
 
         <section style={styles.commandGrid}>
-          <section style={styles.compactCard}>
-            <p style={styles.sectionKicker}>Attribution</p>
-            <h2 style={styles.compactTitle}>{movement.attributionTitle}</h2>
-            <p style={styles.bodyText}>{movement.attributionMeaning}</p>
+          <section style={styles.panel}>
+            <p style={styles.sectionKicker}>Command Attribution</p>
+            <h2 style={styles.panelTitle}>{records.length} active command-visible record(s)</h2>
+            <p style={styles.bodyText}>
+              Active lifecycle evidence remains attached to Command until ownership,
+              movement, recovery confidence, and auditability are protected.
+            </p>
 
-            {!loading && commandRecords.length > 0 && (
+            {!loading && records.length > 0 && (
               <div style={styles.caseList}>
-                {commandRecords.map((record) => (
+                {records.map((record) => (
                   <article key={record.caseItem.id} style={styles.caseCard}>
-                    <p style={styles.caseIdentity}>
-                      {record.caseItem.beneficiary_name}
-                    </p>
-
+                    <p style={styles.caseTitle}>{record.caseItem.beneficiary_name}</p>
                     <div style={styles.caseMetaGrid}>
-                      <SmallMetric
-                        label="Pressure"
-                        value={record.caseItem.support_domain}
-                      />
-                      <SmallMetric
-                        label="Status"
-                        value={record.caseItem.case_status}
-                      />
-                      <SmallMetric
-                        label="Severity"
-                        value={record.caseItem.severity_level}
-                      />
-                      <SmallMetric
-                        label="Area"
-                        value={record.caseItem.region || 'Not recorded'}
-                      />
+                      <MiniStat label="Pressure" value={record.caseItem.support_domain} />
+                      <MiniStat label="Status" value={record.caseItem.case_status} />
+                      <MiniStat label="Severity" value={record.caseItem.severity_level} />
+                      <MiniStat label="Area" value={record.caseItem.region || 'Not recorded'} />
                     </div>
-
-                    {record.latestRecoveryReview && (
-                      <div style={styles.recoveryMiniPanel}>
-                        <SmallMetric
-                          label="Recovery Disposition"
-                          value={record.recoveryDisposition}
-                        />
-                        <SmallMetric
-                          label="Command Posture"
-                          value={record.commandPosture}
-                        />
-                      </div>
-                    )}
                   </article>
                 ))}
               </div>
             )}
           </section>
 
-          <section style={styles.compactCard}>
-            <p style={styles.sectionKicker}>Command Visibility</p>
-            <h2 style={styles.compactTitle}>{movement.commandVisibility}</h2>
-            <p style={styles.bodyText}>{movement.commandAction}</p>
+          <section style={styles.panel}>
+            <p style={styles.sectionKicker}>Supporting Signals</p>
+            <h2 style={styles.panelTitle}>Evidence supports Command. It does not replace it.</h2>
 
-            <p style={styles.inlineRisk}>
-              Memory: {movement.memory} • Persistence: {movement.persistence} •
-              Risk: {movement.risk}
-            </p>
+            <div style={styles.supportingGrid}>
+              {intelligence.supportingSignals.map((signal) => (
+                <MiniStat key={signal.label} label={signal.label} value={signal.value} />
+              ))}
+            </div>
           </section>
         </section>
 
-        {movement.hasActiveCommandEvidence && (
-          <section style={styles.twoColumnGrid}>
-            <ExecutivePanel title="Evidence" body={movement.evidenceGap} />
-            <ExecutivePanel title="Recovery" body={movement.recoveryCredibility} />
-          </section>
-        )}
-
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Supporting Intelligence Evidence</p>
-          <h2 style={styles.cardTitle}>
-            Signals remain attached as evidence, but they do not dominate
-            Command.
-          </h2>
-
-          <div style={styles.supportingGrid}>
-            {action.supportingSignals.map((signal) => (
-              <SignalCard
-                key={signal.label}
-                title={signal.label}
-                value={signal.value}
-                body={signal.meaning}
-              />
-            ))}
-          </div>
-        </section>
-
-        <section style={styles.memoryBoard}>
+        <section style={styles.memoryPanel}>
           <p style={styles.sectionKicker}>Continuity Memory</p>
+          <h2 style={styles.panelTitle}>Command preserves what institutions are tempted to forget.</h2>
 
-          <div style={styles.memoryBoardGrid}>
-            <MemoryLine
-              label="Memory"
-              value={movement.continuityMemory.continuityMemory}
-            />
-            <MemoryLine
-              label="Last Activity"
-              value={movement.continuityMemory.lastCommandActivity}
-            />
-            <MemoryLine
-              label="Escalation"
-              value={movement.continuityMemory.lastEscalation}
-            />
-            <MemoryLine
-              label="Recovery Review"
-              value={movement.continuityMemory.lastRecoveryVerification}
-            />
-            <MemoryLine
-              label="Executive Review"
-              value={movement.continuityMemory.lastExecutiveReview}
-            />
+          <div style={styles.memoryGrid}>
+            <MiniStat label="Memory" value={intelligence.memory} />
+            <MiniStat label="Persistence" value={intelligence.persistence} />
+            <MiniStat label="Risk" value={intelligence.risk} />
+            <MiniStat label="Audit Required" value={intelligence.auditRequired ? 'YES' : 'NO'} />
           </div>
         </section>
 
-        <section style={styles.card}>
+        <section style={styles.panel}>
           <p style={styles.sectionKicker}>Command Order Controls</p>
-          <h2 style={styles.cardTitle}>Generate a governed command order.</h2>
+          <h2 style={styles.panelTitle}>Generate a governed executive command order.</h2>
 
           <Select
             label="Command Report Template"
@@ -738,23 +474,18 @@ function CommandContent() {
           </button>
         </section>
 
-        <section style={styles.card}>
+        <section style={styles.orderPanel}>
           <p style={styles.sectionKicker}>Copy-Ready Command Order</p>
-          <h2 style={styles.cardTitle}>
-            Executive action must be clear enough to execute and evidence-bound
-            enough to audit.
-          </h2>
-
-          <pre style={styles.summaryBox}>{action.commandOrder}</pre>
+          <h2 style={styles.panelTitle}>Executive action must be clear enough to execute and evidence-bound enough to audit.</h2>
+          <pre style={styles.summaryBox}>{commandOrder}</pre>
         </section>
 
         <section style={styles.doctrineCard}>
-          <strong>COMMAND DECISION GATE</strong>
+          <strong>EXECUTIVE COMMAND DOCTRINE</strong>
           <span>
-            Recovery verifies. Command moves and acts. Coordination
-            synchronizes. Cross-Site reveals enterprise pattern. Executive
-            Center synthesizes. Executive Report concludes. Audit preserves
-            reconstructability.
+            Recovery verifies. Command moves. Coordination synchronizes. Cross-Site
+            reveals enterprise pattern. Executive Center interprets. Executive
+            Report concludes. Audit preserves continuity truth.
           </span>
         </section>
       </div>
@@ -762,26 +493,15 @@ function CommandContent() {
   )
 }
 
-function buildCommandCaseRecords(
-  cases: CommandCase[],
-  outcomes: OutcomeRecord[],
-): CommandCaseRecord[] {
+function buildCommandCaseRecords(cases: CommandCase[], outcomes: OutcomeRecord[]): CommandCaseRecord[] {
   return cases.map((caseItem) => {
-    const caseOutcomes = outcomes.filter(
-      (outcome) => outcome.case_id === caseItem.id,
-    )
-
+    const caseOutcomes = outcomes.filter((outcome) => outcome.case_id === caseItem.id)
     const latestRecoveryReview = caseOutcomes.find((outcome) =>
       isRecoverySummary(outcome.outcome_summary || ''),
     )
 
-    const summary =
-      latestRecoveryReview?.outcome_summary || caseItem.outcome_summary || ''
-
-    const recoveryDisposition =
-      extractField(summary, 'RECOVERY DISPOSITION') ||
-      deriveDispositionFromCase(caseItem)
-
+    const summary = latestRecoveryReview?.outcome_summary || caseItem.outcome_summary || ''
+    const recoveryDisposition = extractField(summary, 'RECOVERY DISPOSITION') || deriveDispositionFromCase(caseItem)
     const durabilityResult =
       extractField(summary, 'DURABILITY RESULT') ||
       latestRecoveryReview?.outcome_status ||
@@ -791,24 +511,8 @@ function buildCommandCaseRecords(
 
     return {
       caseItem,
-      latestRecoveryReview,
       recoveryDisposition,
-      recommendedMovement:
-        extractField(summary, 'RECOMMENDED NEXT MOVEMENT') ||
-        deriveRecommendedMovement(recoveryDisposition, caseItem),
-      movementReason:
-        extractField(summary, 'MOVEMENT REASON') ||
-        deriveMovementReason(recoveryDisposition, caseItem),
-      durabilityResult,
-      commandPosture:
-        extractField(summary, 'COMMAND POSTURE') ||
-        deriveCommandPostureFromCase(caseItem),
-      recoveryConfidence:
-        extractField(summary, 'RECOVERY CONFIDENCE') ||
-        'RECOVERY_CONFIDENCE_UNRECORDED',
-      memoryImpact:
-        extractField(summary, 'MEMORY IMPACT') ||
-        deriveMemoryImpactFromCase(caseItem),
+      commandPosture: extractField(summary, 'COMMAND POSTURE') || deriveCommandPostureFromCase(caseItem),
       reburnVisible:
         durabilityResult.includes('REBURN') ||
         reburnSignal.includes('REBURN') ||
@@ -818,233 +522,37 @@ function buildCommandCaseRecords(
   })
 }
 
-function buildCommandMovementReading(
-  records: CommandCaseRecord[],
-): CommandMovementReading {
-  const total = records.length
-
-  const commandEscalations = records.filter(
-    (record) =>
-      record.caseItem.case_status === 'TRIAGE_COMMAND_ESCALATION' ||
-      record.caseItem.case_status.includes('ESCALATED') ||
-      record.caseItem.safeguarding_flag ||
-      record.recoveryDisposition === 'MOVE_TO_COMMAND_ESCALATION',
-  ).length
-
-  const commandWatch = records.filter(
-    (record) => record.recoveryDisposition === 'MOVE_TO_COMMAND_WATCH',
-  ).length
-
-  const evidenceReturn = records.filter(
-    (record) =>
-      record.recoveryDisposition === 'RETURN_TO_OUTCOMES_REVIEW' ||
-      record.recoveryDisposition === 'RETURN_TO_INTERVENTION_REVIEW' ||
-      record.caseItem.case_status === 'EVIDENCE_REQUIRED_BEFORE_ROUTING' ||
-      record.caseItem.case_status === 'OWNERSHIP_CLARITY_REQUIRED',
-  ).length
-
-  const stabilityReady = records.filter(
-    (record) => record.recoveryDisposition === 'MOVE_TO_STABILITY_BOARD',
-  ).length
-
-  const recoveryDestination = records.filter(
-    (record) =>
-      record.recoveryDisposition === 'CONTINUE_RECOVERY_MONITORING' ||
-      record.caseItem.case_status === 'RECOVERY_MONITORING',
-  ).length
-
-  const highSeverity = records.filter(
-    (record) =>
-      record.caseItem.severity_level === 'HIGH' ||
-      record.caseItem.severity_level === 'CRITICAL',
-  ).length
-
-  const recurrenceVisible = records.filter(
-    (record) =>
-      record.caseItem.case_status.includes('RECURRENCE') ||
-      record.caseItem.case_status === 'REOPENED' ||
-      record.caseItem.beneficiary_name.includes('ISSUE_REPEATED') ||
-      Boolean(record.caseItem.outcome_summary?.includes('RECURRENCE')) ||
-      Boolean(record.caseItem.intervention_summary?.includes('RECURRENCE')) ||
-      record.reburnVisible,
-  ).length
-
-  const recoveryMonitoring = records.filter(
-    (record) =>
-      record.caseItem.case_status === 'RECOVERY_MONITORING' ||
-      record.recoveryDisposition === 'CONTINUE_RECOVERY_MONITORING',
-  ).length
-
-  const coordinationPressure = records.filter(
-    (record) =>
-      record.caseItem.support_domain === 'COORDINATION' ||
-      record.caseItem.case_status === 'ROUTING_STALLED' ||
-      record.caseItem.case_status === 'OWNERSHIP_CLARITY_REQUIRED',
-  ).length
-
-  const crossSitePressure = records.filter(
-    (record) =>
-      record.caseItem.region ||
-      record.caseItem.institution_name ||
-      record.memoryImpact === 'CONTINUITY_MEMORY_VISIBLE' ||
-      record.reburnVisible,
-  ).length
-
-  const auditPressure = records.filter(
-    (record) =>
-      record.caseItem.safeguarding_flag ||
-      record.caseItem.case_status.includes('ESCALATED') ||
-      record.caseItem.case_status.includes('RECURRENCE') ||
-      record.reburnVisible,
-  ).length
-
-  const latestCase = records[0]?.caseItem
-
-  if (total === 0) {
-    return clearMovementReading()
-  }
-
-  const destinations = {
-    executiveCenter: commandEscalations,
-    recovery: recoveryDestination,
-    coordination: coordinationPressure,
-    crossSite: crossSitePressure,
-    audit: auditPressure,
-    stabilityBoard: stabilityReady,
-  }
-
-  if (commandEscalations > 0) {
-    return elevatedReading({
-      total,
-      highSeverity,
-      recurrenceVisible,
-      recoveryMonitoring,
-      latestCase,
-      destinations,
-    })
-  }
-
-  if (coordinationPressure > 0) {
-    return coordinationReading({
-      total,
-      highSeverity,
-      recurrenceVisible,
-      recoveryMonitoring,
-      latestCase,
-      destinations,
-    })
-  }
-
-  if (crossSitePressure > 1) {
-    return crossSiteReading({
-      total,
-      highSeverity,
-      recurrenceVisible,
-      recoveryMonitoring,
-      latestCase,
-      destinations,
-    })
-  }
-
-  if (evidenceReturn > 0) {
-    return evidenceReturnReading({
-      total,
-      recoveryMonitoring,
-      latestCase,
-      destinations,
-    })
-  }
-
-  if (commandWatch > 0 || recurrenceVisible > 0 || highSeverity > 1) {
-    return watchReading({
-      total,
-      highSeverity,
-      recurrenceVisible,
-      recoveryMonitoring,
-      latestCase,
-      destinations,
-    })
-  }
-
-  if (stabilityReady > 0) {
-    return stabilityReadyReading({
-      total,
-      latestCase,
-      destinations,
-    })
-  }
-
-  return watchReading({
-    total,
-    highSeverity,
-    recurrenceVisible,
-    recoveryMonitoring,
-    latestCase,
-    destinations,
-  })
-}
-
-function buildCommandActionReading(input: {
+function buildCommandIntelligence(input: {
   cases: CommandCase[]
+  records: CommandCaseRecord[]
   routingActions: RoutingAction[]
   interventions: InterventionRecord[]
   outcomes: OutcomeRecord[]
   responders: Responder[]
   institutions: Institution[]
-  reportTemplate: string
-  commandScope: string
-  additionalNotes: string
-  movement: CommandMovementReading
-}): CommandActionReading {
-  const totalCases = input.cases.length
-  const activeCases = input.cases.filter((item) =>
-    COMMAND_VISIBLE_STATUSES.includes(item.case_status),
-  ).length
-
+}) {
+  const activeCases = input.cases.filter((item) => COMMAND_VISIBLE_STATUSES.includes(item.case_status)).length
   const escalatedCases = input.cases.filter(
-    (item) =>
-      item.case_status === 'ESCALATED' ||
-      item.case_status === 'TRIAGE_COMMAND_ESCALATION',
+    (item) => item.case_status === 'ESCALATED' || item.case_status === 'TRIAGE_COMMAND_ESCALATION',
   ).length
-
-  const criticalCases = input.cases.filter(
-    (item) => item.severity_level === 'CRITICAL',
-  ).length
-
-  const safeguardingFlags = input.cases.filter(
-    (item) => item.safeguarding_flag,
-  ).length
-
+  const criticalCases = input.cases.filter((item) => item.severity_level === 'CRITICAL').length
+  const safeguardingFlags = input.cases.filter((item) => item.safeguarding_flag).length
   const recurrenceCases = input.cases.filter(
-    (item) =>
-      item.case_status.includes('RECURRENCE') ||
-      item.case_status === 'REOPENED',
+    (item) => item.case_status.includes('RECURRENCE') || item.case_status === 'REOPENED',
   ).length
+  const recoveryMonitoring = input.cases.filter((item) => item.case_status === 'RECOVERY_MONITORING').length
 
   const outcomeCaseIds = new Set(input.outcomes.map((item) => item.case_id))
-  const interventionCaseIds = new Set(
-    input.interventions.map((item) => item.case_id),
-  )
-  const routedCaseIds = new Set(
-    input.routingActions.map((item) => item.case_id),
-  )
+  const interventionCaseIds = new Set(input.interventions.map((item) => item.case_id))
+  const routedCaseIds = new Set(input.routingActions.map((item) => item.case_id))
 
   const activeWithoutRouting = input.cases.filter(
-    (item) =>
-      COMMAND_VISIBLE_STATUSES.includes(item.case_status) &&
-      !routedCaseIds.has(item.id),
+    (item) => COMMAND_VISIBLE_STATUSES.includes(item.case_status) && !routedCaseIds.has(item.id),
   ).length
-
-  const routedWithoutResponder = input.routingActions.filter(
-    (item) => !item.assigned_responder_id,
-  ).length
-
+  const routedWithoutResponder = input.routingActions.filter((item) => !item.assigned_responder_id).length
   const activeWithoutOutcome = input.cases.filter(
-    (item) =>
-      COMMAND_VISIBLE_STATUSES.includes(item.case_status) &&
-      !outcomeCaseIds.has(item.id),
+    (item) => COMMAND_VISIBLE_STATUSES.includes(item.case_status) && !outcomeCaseIds.has(item.id),
   ).length
-
   const unresolvedInterventionPathways = input.cases.filter(
     (item) =>
       COMMAND_VISIBLE_STATUSES.includes(item.case_status) &&
@@ -1053,75 +561,36 @@ function buildCommandActionReading(input: {
   ).length
 
   const stalledCases = input.cases.filter(
-    (item) =>
-      COMMAND_VISIBLE_STATUSES.includes(item.case_status) &&
-      outcomeCaseIds.has(item.id) &&
-      item.case_status !== 'STABILIZED',
+    (item) => COMMAND_VISIBLE_STATUSES.includes(item.case_status) && outcomeCaseIds.has(item.id) && item.case_status !== 'STABILIZED',
   ).length
 
   const crossSiteSignals = input.cases.filter(
-    (item) =>
-      item.region ||
-      item.institution_name ||
-      item.case_status.includes('RECURRENCE') ||
-      item.case_status === 'REOPENED',
+    (item) => item.region || item.institution_name || item.case_status.includes('RECURRENCE') || item.case_status === 'REOPENED',
   ).length
 
-  const activeInstitutions = input.institutions.filter(
-    (item) => item.coordination_status === 'ACTIVE',
-  ).length
-
-  const activeResponders = input.responders.filter(
-    (item) => item.operational_status === 'ACTIVE',
-  ).length
-
-  const interventionCoverage =
-    totalCases === 0
-      ? 0
-      : Math.round((interventionCaseIds.size / totalCases) * 100)
-
-  const outcomeCoverage =
-    totalCases === 0
-      ? 0
-      : Math.round((outcomeCaseIds.size / totalCases) * 100)
+  const routingGaps = activeWithoutRouting + routedWithoutResponder
+  const outcomeGaps = activeWithoutOutcome
+  const escalatedCritical = escalatedCases + criticalCases
 
   const commandPressure =
     escalatedCases * 3 +
     criticalCases * 3 +
     safeguardingFlags * 2 +
     recurrenceCases * 2 +
-    activeWithoutRouting +
-    routedWithoutResponder +
-    activeWithoutOutcome +
+    routingGaps +
+    outcomeGaps +
     unresolvedInterventionPathways +
     stalledCases +
     (crossSiteSignals > 1 ? 2 : 0)
 
   const posture = deriveActionPosture(commandPressure)
-
-  const requiredDecisions = buildRequiredDecisions({
-    activeWithoutRouting,
-    routedWithoutResponder,
-    activeWithoutOutcome,
-    unresolvedInterventionPathways,
-    outcomeCoverage,
-    crossSiteSignals,
-    recurrenceCases,
-    escalatedCases,
-    criticalCases,
-    safeguardingFlags,
-  })
-
   const readiness = deriveReadiness({
     posture,
     activeWithoutRouting,
     routedWithoutResponder,
     activeWithoutOutcome,
     unresolvedInterventionPathways,
-    requiredDecisionCount: requiredDecisions.length,
   })
-
-  const readinessMeaning = deriveReadinessMeaning(readiness)
 
   const dominantThreat = deriveDominantThreat({
     crossSiteSignals,
@@ -1136,596 +605,97 @@ function buildCommandActionReading(input: {
     stalledCases,
   })
 
-  const commandThesis = deriveCommandThesis({
-    posture,
-    dominantThreat,
+  const requiredDecisions = buildRequiredDecisions({
+    activeWithoutRouting,
+    routedWithoutResponder,
+    activeWithoutOutcome,
+    unresolvedInterventionPathways,
+    outcomeCoverage: input.cases.length === 0 ? 0 : Math.round((outcomeCaseIds.size / input.cases.length) * 100),
+    crossSiteSignals,
+    recurrenceCases,
+    escalatedCases,
+    criticalCases,
+    safeguardingFlags,
   })
 
-  const executiveAction = deriveExecutiveAction({
+  const movementDecision = deriveMovementDecision({
+    escalatedCases,
+    criticalCases,
+    safeguardingFlags,
+    recurrenceCases,
+    crossSiteSignals,
+    routingGaps,
+    outcomeGaps,
+    recoveryMonitoring,
     posture,
+  })
+
+  const nextDestination = deriveNextDestination({
     readiness,
+    movementDecision,
+    crossSiteSignals,
+    routingGaps,
+    escalatedCases,
+    criticalCases,
   })
 
-  const nextDestination =
-    readiness === 'READY_FOR_EXECUTIVE_REPORT'
-      ? 'Executive Report'
-      : readiness === 'CONDITIONAL_REPORT_READINESS'
-        ? input.movement.nextDestination
-        : 'Coordination / Cross-Site Review'
+  const commandThesis = deriveCommandThesis({ posture, dominantThreat })
+  const executiveAction = deriveExecutiveAction({ posture, readiness })
 
-  const evidenceStandard =
-    'Preserve command decision, owner, deadline, evidence requirement, recovery status, coordination handoff, cross-site exposure, executive rationale, and audit trail.'
-
-  const consequences = [
-    {
-      condition: 'If action succeeds',
-      meaning:
-        'Command can release the chain toward Executive Report with evidence and memory attached.',
-    },
-    {
-      condition: 'If action fails',
-      meaning:
-        'Command pressure remains elevated and must return to Coordination, Cross-Site, Recovery Review, or Executive Center.',
-    },
-    {
-      condition: 'If action stalls',
-      meaning:
-        'The institution risks false stability because ownership exists without verified movement.',
-    },
-  ]
-
-  const supportingSignals = [
-    {
-      label: 'Active Cases',
-      value: String(activeCases),
-      meaning: 'Active lifecycle pressure still visible to command.',
-    },
-    {
-      label: 'Escalated / Critical',
-      value: String(escalatedCases + criticalCases),
-      meaning: 'Records requiring stronger leadership visibility.',
-    },
-    {
-      label: 'Safeguarding',
-      value: String(safeguardingFlags),
-      meaning: 'Safeguarding-visible records requiring careful command handling.',
-    },
-    {
-      label: 'Cross-Site Signals',
-      value: String(crossSiteSignals),
-      meaning: 'Potentially distributed continuity exposure.',
-    },
-    {
-      label: 'Routing Gaps',
-      value: String(activeWithoutRouting + routedWithoutResponder),
-      meaning: 'Ownership and routing evidence gaps visible to command.',
-    },
-    {
-      label: 'Outcome Gaps',
-      value: String(activeWithoutOutcome),
-      meaning: 'Active records not yet supported by outcome evidence.',
-    },
-    {
-      label: 'Intervention Coverage',
-      value: `${interventionCoverage}%`,
-      meaning: 'How much of the case base has intervention evidence attached.',
-    },
-    {
-      label: 'Outcome Coverage',
-      value: `${outcomeCoverage}%`,
-      meaning: 'How much of the case base has outcome evidence attached.',
-    },
-    {
-      label: 'Active Institutions',
-      value: String(activeInstitutions),
-      meaning: 'Institutional coordination capacity visible to Command.',
-    },
-    {
-      label: 'Active Responders',
-      value: String(activeResponders),
-      meaning: 'Responder capacity visible to Command.',
-    },
-  ]
-
-  const commandOrder = buildCommandOrder({
-    reportTemplate: input.reportTemplate,
-    commandScope: input.commandScope,
-    posture,
-    commandThesis,
-    dominantThreat,
-    executiveAction,
-    readiness,
-    readinessMeaning,
-    nextDestination,
-    movementDestination: input.movement.nextDestination,
-    movementDecision: input.movement.commandDecision,
-    evidenceStandard,
-    requiredDecisions,
-    consequences,
-    supportingSignals,
-    additionalNotes: input.additionalNotes,
-  })
+  const coordinationRequired = routingGaps > 0 || movementDecision.includes('Coordination')
+  const crossSiteRequired = crossSiteSignals > 1 || recurrenceCases > 0
+  const executiveReviewRequired =
+    escalatedCases > 0 || criticalCases > 0 || safeguardingFlags > 0 || posture === 'CRITICAL COMMAND'
+  const auditRequired = executiveReviewRequired || recurrenceCases > 0 || crossSiteRequired || safeguardingFlags > 0
 
   return {
     posture,
     commandThesis,
     dominantThreat,
+    executiveAction,
+    readiness,
+    readinessMeaning: deriveReadinessMeaning(readiness),
+    movementDecision,
+    nextDestination,
     whyNow:
       'Command is required because visible continuity pressure must become owned, evidenced, time-bound action before the chain can safely move forward.',
     ifNoAction:
-      'If leadership does nothing, unresolved ownership, weak evidence, recurrence, or cross-site exposure can disappear into false stability.',
-    executiveAction,
-    readiness,
-    readinessMeaning,
-    nextDestination,
-    commandQuestion:
-      'What must leadership do now so continuity does not move forward without ownership, evidence, and consequence?',
+      'Unresolved ownership, weak evidence, recurrence, or cross-site exposure can disappear into false stability.',
+    activeCases,
+    escalatedCritical,
+    crossSiteSignals,
+    recoveryMonitoring,
+    routingGaps,
+    outcomeGaps,
     requiredDecisions,
-    consequences,
-    commandLedger: requiredDecisions,
-    evidenceStandard,
-    commandOrder,
-    supportingSignals,
-  }
-}
-
-function clearMovementReading(): CommandMovementReading {
-  return {
-    statusShort: 'CLEAR',
-    statusMeaning: 'No active command-visible instability exists.',
-    activeCaseCount: '0',
-    evidenceShort: 'NONE',
-    survivabilityShort: 'CLEAR',
-    pressureShort: 'CLEAR',
-    trajectoryShort: 'STABLE',
-    recoveryShort: 'NONE',
-    reliabilityShort: 'STABLE',
-    attributionTitle: 'None active',
-    attributionMeaning: 'No active lifecycle records are attributed to Command.',
-    commandVisibility: 'Clear',
-    commandAction:
-      'No executive intervention is required. Command remains available if instability, recurrence, recovery fragility, or evidence gaps reappear.',
-    commandDecision: 'Maintain Clear Command',
-    commandQuestion: 'Where should continuity move next?',
-    nextGovernedMovement: 'No Movement Required',
-    movementReason:
-      'No active command-attributed lifecycle records exist. Do not create artificial pressure.',
-    evidenceGap: 'No active evidence gap.',
-    recoveryCredibility: 'No active recovery concern.',
-    memory: 'PRESERVED',
-    persistence: 'NONE ACTIVE',
-    risk: 'CLEAR',
-    lifecyclePosition: 'Command is clear. No lifecycle handoff is required.',
-    nextDestination: 'Monitoring',
-    handoffReason:
-      'No active command-attributed instability exists. CGI should preserve readiness without manufacturing escalation.',
-    coordinationRequired: false,
-    crossSiteRequired: false,
-    executiveReviewRequired: false,
-    auditRequired: false,
-    continuityHistoryRequired: false,
-    destinationExecutiveCenter: 0,
-    destinationRecovery: 0,
-    destinationCoordination: 0,
-    destinationCrossSite: 0,
-    destinationAudit: 0,
-    destinationStabilityBoard: 0,
-    hasActiveCommandEvidence: false,
-    executiveBrief: {
-      cases: '0 active command-attributed cases',
-      evidence: 'None required',
-      action: 'No executive intervention',
-    },
-    continuityMemory: {
-      continuityMemory: 'PRESERVED',
-      lastCommandActivity: 'NONE ACTIVE',
-      lastEscalation: 'NONE ACTIVE',
-      lastRecoveryVerification: 'NONE ACTIVE',
-      lastExecutiveReview: 'NONE REQUIRED',
-    },
-  }
-}
-
-type ReadingInput = {
-  total: number
-  highSeverity?: number
-  recurrenceVisible?: number
-  recoveryMonitoring?: number
-  latestCase?: CommandCase
-  destinations: {
-    executiveCenter: number
-    recovery: number
-    coordination: number
-    crossSite: number
-    audit: number
-    stabilityBoard: number
-  }
-}
-
-function elevatedReading(input: ReadingInput): CommandMovementReading {
-  return {
-    statusShort: 'ELEVATED',
-    statusMeaning: 'Executive continuity review is required.',
-    activeCaseCount: String(input.total),
-    evidenceShort: 'REQUIRED',
-    survivabilityShort: 'WATCH',
-    pressureShort: (input.highSeverity || 0) > 1 ? 'ELEVATED' : 'VISIBLE',
-    trajectoryShort: (input.recurrenceVisible || 0) > 0 ? 'UNSTABLE' : 'WATCH',
-    recoveryShort:
-      (input.recoveryMonitoring || 0) > 0 ? 'MONITORING' : 'UNCONFIRMED',
-    reliabilityShort: (input.recurrenceVisible || 0) > 0 ? 'VARIABLE' : 'WATCH',
-    attributionTitle: `${input.total} active record(s)`,
-    attributionMeaning:
-      'Active lifecycle evidence requires executive visibility before stability can be trusted.',
-    commandVisibility: 'Executive review required',
-    commandAction:
-      'Do not allow escalated instability, reburn, or severe continuity pressure to move silently.',
-    commandDecision: 'Executive Review Required',
-    commandQuestion: 'Must leadership become involved before stability is trusted?',
-    nextGovernedMovement: 'Move to Executive Center',
-    movementReason:
-      'Command escalation is visible. Leadership synthesis is required before any final stability absorption.',
-    evidenceGap:
-      'Ownership, action, outcome credibility, recurrence review, durability evidence, and audit-ready reconstruction are required.',
+    evidenceStandard:
+      'Preserve command decision, owner, deadline, evidence requirement, recovery status, coordination handoff, cross-site exposure, executive rationale, and audit trail.',
     recoveryCredibility:
-      (input.recoveryMonitoring || 0) > 0
-        ? 'Recovery monitoring is visible, but durability is unconfirmed.'
-        : 'Recovery credibility is not yet established.',
-    memory: (input.recurrenceVisible || 0) > 0 ? 'RECURRENCE' : 'VISIBLE',
-    persistence: (input.recurrenceVisible || 0) > 0 ? 'PERSISTENT' : 'EMERGING',
-    risk: 'WATCHED',
-    lifecyclePosition:
-      'Command is escalating continuity toward executive synthesis.',
-    nextDestination: 'Executive Center',
-    handoffReason:
-      'Escalation, severe pressure, safeguarding visibility, or reburn risk requires leadership interpretation before continuity confidence can be restored.',
-    coordinationRequired: input.destinations.coordination > 0,
-    crossSiteRequired: input.destinations.crossSite > 1,
-    executiveReviewRequired: true,
-    auditRequired: true,
-    continuityHistoryRequired: (input.recurrenceVisible || 0) > 0,
-    destinationExecutiveCenter: input.destinations.executiveCenter,
-    destinationRecovery: input.destinations.recovery,
-    destinationCoordination: input.destinations.coordination,
-    destinationCrossSite: input.destinations.crossSite,
-    destinationAudit: Math.max(
-      input.destinations.audit,
-      input.destinations.executiveCenter,
-    ),
-    destinationStabilityBoard: input.destinations.stabilityBoard,
-    hasActiveCommandEvidence: true,
-    executiveBrief: {
-      cases: `${input.total} command-attributed record(s)`,
-      evidence: 'Executive and audit evidence required',
-      action: 'Require leadership synthesis',
-    },
-    continuityMemory: {
-      continuityMemory:
-        (input.recurrenceVisible || 0) > 0 ? 'RECURRENCE' : 'VISIBLE',
-      lastCommandActivity: input.latestCase?.created_at || 'ACTIVE',
-      lastEscalation: 'VISIBLE',
-      lastRecoveryVerification:
-        (input.recoveryMonitoring || 0) > 0 ? 'MONITORING' : 'UNCONFIRMED',
-      lastExecutiveReview: 'REQUIRED',
-    },
-  }
-}
-
-function coordinationReading(input: ReadingInput): CommandMovementReading {
-  return {
-    statusShort: 'COORDINATE',
-    statusMeaning:
-      'Coordination ownership is required before continuity can advance.',
-    activeCaseCount: String(input.total),
-    evidenceShort: 'REQUIRED',
-    survivabilityShort: 'WATCH',
-    pressureShort: 'VISIBLE',
-    trajectoryShort: (input.recurrenceVisible || 0) > 0 ? 'UNSTABLE' : 'WATCH',
-    recoveryShort:
-      (input.recoveryMonitoring || 0) > 0 ? 'MONITORING' : 'PENDING',
-    reliabilityShort: 'VARIABLE',
-    attributionTitle: `${input.total} active record(s)`,
-    attributionMeaning:
-      'Command visibility remains active because coordination, ownership, or routing clarity is not yet strong enough.',
-    commandVisibility: 'Coordination handoff required',
-    commandAction:
-      'Move continuity to Coordination Center before escalation, cross-site review, or executive synthesis is trusted.',
-    commandDecision: 'Coordination Required',
-    commandQuestion:
-      'Must coordination stabilize ownership before continuity moves forward?',
-    nextGovernedMovement: 'Move to Coordination Center',
-    movementReason:
-      'Coordination pressure, stalled routing, or ownership ambiguity requires synchronized action before recovery credibility can mature.',
-    evidenceGap:
-      'Coordination ownership, routing clarity, response responsibility, and evidence maturity must be strengthened.',
-    recoveryCredibility:
-      'Recovery cannot become durable until coordination responsibility is clear.',
-    memory: (input.recurrenceVisible || 0) > 0 ? 'RECURRENCE' : 'VISIBLE',
-    persistence: (input.recurrenceVisible || 0) > 0 ? 'PERSISTENT' : 'EMERGING',
-    risk: 'MONITORED',
-    lifecyclePosition:
-      'Command is handing continuity to Coordination Center for synchronization.',
-    nextDestination: 'Coordination Center',
-    handoffReason:
-      'The current signal requires ownership synchronization before continuity can safely move to recovery, cross-site review, or executive synthesis.',
-    coordinationRequired: true,
-    crossSiteRequired: input.destinations.crossSite > 1,
-    executiveReviewRequired: false,
-    auditRequired: true,
-    continuityHistoryRequired: (input.recurrenceVisible || 0) > 0,
-    destinationExecutiveCenter: input.destinations.executiveCenter,
-    destinationRecovery: input.destinations.recovery,
-    destinationCoordination: Math.max(input.destinations.coordination, 1),
-    destinationCrossSite: input.destinations.crossSite,
-    destinationAudit: Math.max(input.destinations.audit, 1),
-    destinationStabilityBoard: input.destinations.stabilityBoard,
-    hasActiveCommandEvidence: true,
-    executiveBrief: {
-      cases: `${input.total} command-attributed record(s)`,
-      evidence: 'Coordination evidence required',
-      action: 'Move to Coordination Center',
-    },
-    continuityMemory: {
-      continuityMemory:
-        (input.recurrenceVisible || 0) > 0 ? 'RECURRENCE' : 'VISIBLE',
-      lastCommandActivity: input.latestCase?.created_at || 'ACTIVE',
-      lastEscalation: 'NONE CONCENTRATED',
-      lastRecoveryVerification:
-        (input.recoveryMonitoring || 0) > 0 ? 'MONITORING' : 'PENDING',
-      lastExecutiveReview: 'CONDITIONAL',
-    },
-  }
-}
-
-function crossSiteReading(input: ReadingInput): CommandMovementReading {
-  return {
-    statusShort: 'CROSS-SITE',
-    statusMeaning:
-      'Continuity may no longer be isolated to one operational lane.',
-    activeCaseCount: String(input.total),
-    evidenceShort: 'REQUIRED',
-    survivabilityShort: 'WATCH',
-    pressureShort: (input.highSeverity || 0) > 1 ? 'ELEVATED' : 'VISIBLE',
-    trajectoryShort: 'UNSTABLE',
-    recoveryShort:
-      (input.recoveryMonitoring || 0) > 0 ? 'MONITORING' : 'PENDING',
-    reliabilityShort: 'VARIABLE',
-    attributionTitle: `${input.total} active record(s)`,
-    attributionMeaning:
-      'Command visibility indicates continuity may require cross-site pattern review.',
-    commandVisibility: 'Cross-site review required',
-    commandAction:
-      'Move continuity to Cross-Site Review so distributed pressure, recurrence, memory, and survivability exposure remain visible.',
-    commandDecision: 'Cross-Site Review Required',
-    commandQuestion: 'Has continuity moved beyond one site or isolated lane?',
-    nextGovernedMovement: 'Move to Cross-Site Review',
-    movementReason:
-      'Recurring memory, site exposure, reburn, or regional visibility suggests the instability may require enterprise comparison.',
-    evidenceGap:
-      'Cross-site evidence must preserve affected site, pressure type, recovery posture, recurrence memory, and executive meaning.',
-    recoveryCredibility:
-      'Recovery credibility cannot be trusted until cross-site pattern risk is interpreted.',
-    memory: 'RECURRENCE',
-    persistence: 'PERSISTENT',
-    risk: 'WATCHED',
-    lifecyclePosition:
-      'Command is moving continuity into cross-site enterprise pattern review.',
-    nextDestination: 'Cross-Site Review',
-    handoffReason:
-      'The signal may no longer be contained within one case, site, or operational lane.',
-    coordinationRequired: true,
-    crossSiteRequired: true,
-    executiveReviewRequired: true,
-    auditRequired: true,
-    continuityHistoryRequired: true,
-    destinationExecutiveCenter: Math.max(input.destinations.executiveCenter, 1),
-    destinationRecovery: input.destinations.recovery,
-    destinationCoordination: Math.max(input.destinations.coordination, 1),
-    destinationCrossSite: Math.max(input.destinations.crossSite, 1),
-    destinationAudit: Math.max(input.destinations.audit, 1),
-    destinationStabilityBoard: input.destinations.stabilityBoard,
-    hasActiveCommandEvidence: true,
-    executiveBrief: {
-      cases: `${input.total} command-attributed record(s)`,
-      evidence: 'Cross-site evidence required',
-      action: 'Move to Cross-Site Review',
-    },
-    continuityMemory: {
-      continuityMemory: 'RECURRENCE',
-      lastCommandActivity: input.latestCase?.created_at || 'ACTIVE',
-      lastEscalation: 'DISTRIBUTED SIGNAL',
-      lastRecoveryVerification:
-        (input.recoveryMonitoring || 0) > 0 ? 'MONITORING' : 'PENDING',
-      lastExecutiveReview: 'REQUIRED AFTER CROSS-SITE',
-    },
-  }
-}
-
-function evidenceReturnReading(input: ReadingInput): CommandMovementReading {
-  return {
-    statusShort: 'WATCH',
-    statusMeaning:
-      'Evidence or intervention review is required before stability can be trusted.',
-    activeCaseCount: String(input.total),
-    evidenceShort: 'REQUIRED',
-    survivabilityShort: 'STABLE',
-    pressureShort: 'VISIBLE',
-    trajectoryShort: 'WATCH',
-    recoveryShort:
-      (input.recoveryMonitoring || 0) > 0 ? 'MONITORING' : 'PENDING',
-    reliabilityShort: 'VARIABLE',
-    attributionTitle: `${input.total} active record(s)`,
-    attributionMeaning:
-      'Command visibility remains active because evidence or ownership is not yet strong enough.',
-    commandVisibility: 'Evidence watch active',
-    commandAction:
-      'Return weak evidence to the appropriate operational review point before declaring durability.',
-    commandDecision: 'Evidence Insufficient',
-    commandQuestion: 'Can the evidence be trusted enough for recovery confidence?',
-    nextGovernedMovement: 'Return to Outcomes or Interventions',
-    movementReason:
-      'Evidence, ownership, or stabilization credibility requires strengthening before recovery can mature.',
-    evidenceGap: 'Evidence maturity is insufficient for durability confidence.',
-    recoveryCredibility:
-      'Recovery cannot become credible until evidence and intervention meaning are strengthened.',
-    memory: 'VISIBLE',
-    persistence: 'EMERGING',
-    risk: 'MONITORED',
-    lifecyclePosition:
-      'Command is returning continuity to evidence strengthening before further movement.',
-    nextDestination: 'Outcomes / Interventions Review',
-    handoffReason:
-      'The evidence standard is not mature enough to support recovery confidence, executive review, or stability absorption.',
-    coordinationRequired: false,
-    crossSiteRequired: false,
-    executiveReviewRequired: false,
-    auditRequired: true,
-    continuityHistoryRequired: false,
-    destinationExecutiveCenter: input.destinations.executiveCenter,
-    destinationRecovery: input.destinations.recovery,
-    destinationCoordination: input.destinations.coordination,
-    destinationCrossSite: input.destinations.crossSite,
-    destinationAudit: Math.max(input.destinations.audit, 1),
-    destinationStabilityBoard: input.destinations.stabilityBoard,
-    hasActiveCommandEvidence: true,
-    executiveBrief: {
-      cases: `${input.total} command-attributed record(s)`,
-      evidence: 'Evidence review required',
-      action: 'Return to evidence or intervention review',
-    },
-    continuityMemory: {
-      continuityMemory: 'VISIBLE',
-      lastCommandActivity: input.latestCase?.created_at || 'ACTIVE',
-      lastEscalation: 'NONE CONCENTRATED',
-      lastRecoveryVerification:
-        (input.recoveryMonitoring || 0) > 0 ? 'MONITORING' : 'PENDING',
-      lastExecutiveReview: 'WATCH',
-    },
-  }
-}
-
-function watchReading(input: ReadingInput): CommandMovementReading {
-  return {
-    statusShort: 'WATCH',
-    statusMeaning: 'Proportional executive visibility remains active.',
-    activeCaseCount: String(input.total),
-    evidenceShort: 'MONITOR',
-    survivabilityShort: 'STABLE',
-    pressureShort: (input.highSeverity || 0) > 1 ? 'ELEVATED' : 'VISIBLE',
-    trajectoryShort: (input.recurrenceVisible || 0) > 0 ? 'UNSTABLE' : 'STABLE',
-    recoveryShort:
-      (input.recoveryMonitoring || 0) > 0 ? 'MONITORING' : 'PENDING',
-    reliabilityShort: (input.recurrenceVisible || 0) > 0 ? 'VARIABLE' : 'STABLE',
-    attributionTitle: `${input.total} active record(s)`,
-    attributionMeaning: 'Active lifecycle records remain under command watch.',
-    commandVisibility: 'Watch active',
-    commandAction:
-      'Monitor without over-escalating, but do not allow fragile recovery to disappear.',
-    commandDecision: 'Maintain Command Watch',
-    commandQuestion: 'Can continuity remain under watch without escalation?',
-    nextGovernedMovement: 'Continue Command Visibility',
-    movementReason:
-      'Recovery, recurrence, or severity signals remain visible but do not yet require full escalation.',
-    evidenceGap: 'Evidence remains important; no concentrated gap is visible.',
-    recoveryCredibility:
-      (input.recoveryMonitoring || 0) > 0
-        ? 'Recovery monitoring is active.'
-        : 'Recovery credibility matures after verification.',
-    memory: (input.recurrenceVisible || 0) > 0 ? 'RECURRENCE' : 'VISIBLE',
-    persistence: (input.recurrenceVisible || 0) > 0 ? 'PERSISTENT' : 'EMERGING',
-    risk: 'MONITORED',
-    lifecyclePosition:
-      'Command is holding proportional visibility while continuity remains watched.',
-    nextDestination: 'Command Watch',
-    handoffReason:
-      'Current signals remain visible but do not yet justify coordination, cross-site review, executive synthesis, or stability absorption.',
-    coordinationRequired: false,
-    crossSiteRequired: false,
-    executiveReviewRequired: false,
-    auditRequired: (input.recurrenceVisible || 0) > 0,
-    continuityHistoryRequired: (input.recurrenceVisible || 0) > 0,
-    destinationExecutiveCenter: input.destinations.executiveCenter,
-    destinationRecovery: input.destinations.recovery,
-    destinationCoordination: input.destinations.coordination,
-    destinationCrossSite: input.destinations.crossSite,
-    destinationAudit: input.destinations.audit,
-    destinationStabilityBoard: input.destinations.stabilityBoard,
-    hasActiveCommandEvidence: true,
-    executiveBrief: {
-      cases: `${input.total} active command-attributed record(s)`,
-      evidence: 'Monitor evidence maturity',
-      action: 'Continue proportional visibility',
-    },
-    continuityMemory: {
-      continuityMemory:
-        (input.recurrenceVisible || 0) > 0 ? 'RECURRENCE' : 'VISIBLE',
-      lastCommandActivity: input.latestCase?.created_at || 'ACTIVE',
-      lastEscalation: 'NONE CONCENTRATED',
-      lastRecoveryVerification:
-        (input.recoveryMonitoring || 0) > 0 ? 'MONITORING' : 'PENDING',
-      lastExecutiveReview: 'WATCH',
-    },
-  }
-}
-
-function stabilityReadyReading(input: ReadingInput): CommandMovementReading {
-  return {
-    statusShort: 'CLEAR',
-    statusMeaning:
-      'Command does not need to hold the case. Stability Board absorption is available.',
-    activeCaseCount: String(input.total),
-    evidenceShort: 'PRESERVED',
-    survivabilityShort: 'CLEAR',
-    pressureShort: 'CLEARING',
-    trajectoryShort: 'STABLE',
-    recoveryShort: 'DURABLE',
-    reliabilityShort: 'STABLE',
-    attributionTitle: `${input.total} active record(s)`,
-    attributionMeaning:
-      'Durable recovery is visible and can move to institutional posture without memory loss.',
-    commandVisibility: 'Release to Stability Board',
-    commandAction:
-      'Do not hold durable recovery in Command. Move to Stability Board while preserving recurrence and evidence memory.',
-    commandDecision: 'Durability Confirmed',
-    commandQuestion: 'Can this recovery be absorbed without hiding memory or risk?',
-    nextGovernedMovement: 'Move to Stability Board',
-    movementReason:
-      'Recovery is durable enough for institutional absorption while memory remains preserved.',
-    evidenceGap: 'No active evidence gap is driving command pressure.',
-    recoveryCredibility:
-      'Recovery credibility is durable enough for Stability Board absorption.',
-    memory: 'PRESERVED',
-    persistence: 'RESOLVED',
-    risk: 'CLEARING',
-    lifecyclePosition:
-      'Command is releasing durable recovery into monitored institutional posture.',
-    nextDestination: 'Stability Board',
-    handoffReason:
-      'Recovery is durable enough to leave Command while continuity memory, evidence, and recurrence visibility remain preserved.',
-    coordinationRequired: false,
-    crossSiteRequired: false,
-    executiveReviewRequired: false,
-    auditRequired: true,
-    continuityHistoryRequired: true,
-    destinationExecutiveCenter: input.destinations.executiveCenter,
-    destinationRecovery: input.destinations.recovery,
-    destinationCoordination: input.destinations.coordination,
-    destinationCrossSite: input.destinations.crossSite,
-    destinationAudit: Math.max(input.destinations.audit, 1),
-    destinationStabilityBoard: input.destinations.stabilityBoard,
-    hasActiveCommandEvidence: true,
-    executiveBrief: {
-      cases: `${input.total} command-visible record(s)`,
-      evidence: 'Preserved',
-      action: 'Move to Stability Board',
-    },
-    continuityMemory: {
-      continuityMemory: 'PRESERVED',
-      lastCommandActivity: input.latestCase?.created_at || 'ACTIVE',
-      lastEscalation: 'NONE CONCENTRATED',
-      lastRecoveryVerification: 'DURABLE',
-      lastExecutiveReview: 'NOT REQUIRED',
-    },
+      recoveryMonitoring > 0
+        ? 'Recovery monitoring is visible, but durability must remain under observation.'
+        : 'Recovery credibility remains dependent on outcome evidence and recurrence review.',
+    coordinationRequired,
+    crossSiteRequired,
+    executiveReviewRequired,
+    auditRequired,
+    pressureSignal: commandPressure >= 8 ? 'ELEVATED' : commandPressure >= 3 ? 'VISIBLE' : 'CLEAR',
+    trajectorySignal: recurrenceCases > 0 || crossSiteSignals > 1 ? 'UNSTABLE' : 'WATCH',
+    recoverySignal: recoveryMonitoring > 0 ? 'MONITORING' : 'PENDING',
+    reliabilitySignal: recurrenceCases > 0 ? 'VARIABLE' : 'STABLE',
+    survivabilitySignal: posture === 'COMMAND CLEAR' ? 'CLEAR' : 'WATCH',
+    memory: recurrenceCases > 0 ? 'RECURRENCE' : 'PRESERVED',
+    persistence: recurrenceCases > 0 ? 'PERSISTENT' : commandPressure > 0 ? 'EMERGING' : 'NONE ACTIVE',
+    risk: posture === 'CRITICAL COMMAND' || posture === 'ELEVATED COMMAND' ? 'WATCHED' : 'MONITORED',
+    supportingSignals: [
+      { label: 'Active Cases', value: String(activeCases) },
+      { label: 'Escalated / Critical', value: String(escalatedCritical) },
+      { label: 'Safeguarding', value: String(safeguardingFlags) },
+      { label: 'Cross-Site', value: String(crossSiteSignals) },
+      { label: 'Routing Gaps', value: String(routingGaps) },
+      { label: 'Outcome Gaps', value: String(outcomeGaps) },
+      { label: 'Responders Active', value: String(input.responders.filter((item) => item.operational_status === 'ACTIVE').length) },
+      { label: 'Institutions Active', value: String(input.institutions.filter((item) => item.coordination_status === 'ACTIVE').length) },
+    ],
   }
 }
 
@@ -1742,7 +712,6 @@ function deriveReadiness(input: {
   routedWithoutResponder: number
   activeWithoutOutcome: number
   unresolvedInterventionPathways: number
-  requiredDecisionCount: number
 }): CommandReadiness {
   if (
     input.activeWithoutRouting > 0 ||
@@ -1753,11 +722,7 @@ function deriveReadiness(input: {
     return 'NOT_READY_FOR_EXECUTIVE_REPORT'
   }
 
-  if (
-    input.posture === 'ELEVATED COMMAND' ||
-    input.posture === 'CRITICAL COMMAND' ||
-    input.requiredDecisionCount > 1
-  ) {
+  if (input.posture === 'ELEVATED COMMAND' || input.posture === 'CRITICAL COMMAND') {
     return 'CONDITIONAL_REPORT_READINESS'
   }
 
@@ -1788,31 +753,69 @@ function deriveDominantThreat(input: {
   unresolvedInterventionPathways: number
   stalledCases: number
 }) {
-  if (input.crossSiteSignals > 1 && input.recurrenceCases > 0) {
-    return 'Distributed recurrence exposure'
-  }
-
-  if (input.escalatedCases > 0 || input.criticalCases > 0) {
-    return 'Unresolved executive escalation pressure'
-  }
-
-  if (input.safeguardingFlags > 0) {
-    return 'Safeguarding-visible continuity pressure'
-  }
-
-  if (input.activeWithoutRouting > 0 || input.routedWithoutResponder > 0) {
-    return 'Ownership and routing uncertainty'
-  }
-
-  if (
-    input.activeWithoutOutcome > 0 ||
-    input.unresolvedInterventionPathways > 0 ||
-    input.stalledCases > 0
-  ) {
+  if (input.crossSiteSignals > 1 && input.recurrenceCases > 0) return 'Distributed recurrence exposure'
+  if (input.escalatedCases > 0 || input.criticalCases > 0) return 'Unresolved executive escalation pressure'
+  if (input.safeguardingFlags > 0) return 'Safeguarding-visible continuity pressure'
+  if (input.activeWithoutRouting > 0 || input.routedWithoutResponder > 0) return 'Ownership and routing uncertainty'
+  if (input.activeWithoutOutcome > 0 || input.unresolvedInterventionPathways > 0 || input.stalledCases > 0) {
     return 'Evidence and recovery credibility weakness'
   }
-
   return 'No dominant command threat visible'
+}
+
+function deriveMovementDecision(input: {
+  escalatedCases: number
+  criticalCases: number
+  safeguardingFlags: number
+  recurrenceCases: number
+  crossSiteSignals: number
+  routingGaps: number
+  outcomeGaps: number
+  recoveryMonitoring: number
+  posture: CommandPosture
+}) {
+  if (input.escalatedCases > 0 || input.criticalCases > 0 || input.safeguardingFlags > 0) {
+    return 'Executive Review Required'
+  }
+
+  if (input.crossSiteSignals > 1 || input.recurrenceCases > 0) {
+    return 'Cross-Site Review Required'
+  }
+
+  if (input.routingGaps > 0) {
+    return 'Coordination Required'
+  }
+
+  if (input.outcomeGaps > 0) {
+    return 'Evidence Review Required'
+  }
+
+  if (input.recoveryMonitoring > 0) {
+    return 'Continue Recovery Monitoring'
+  }
+
+  if (input.posture === 'COMMAND CLEAR') {
+    return 'Maintain Clear Command'
+  }
+
+  return 'Maintain Command Watch'
+}
+
+function deriveNextDestination(input: {
+  readiness: CommandReadiness
+  movementDecision: string
+  crossSiteSignals: number
+  routingGaps: number
+  escalatedCases: number
+  criticalCases: number
+}) {
+  if (input.escalatedCases > 0 || input.criticalCases > 0) return 'Executive Center'
+  if (input.crossSiteSignals > 1 || input.movementDecision.includes('Cross-Site')) return 'Cross-Site Review'
+  if (input.routingGaps > 0 || input.movementDecision.includes('Coordination')) return 'Coordination Center'
+  if (input.movementDecision.includes('Evidence')) return 'Outcomes Review'
+  if (input.movementDecision.includes('Recovery')) return 'Recovery'
+  if (input.readiness === 'READY_FOR_EXECUTIVE_REPORT') return 'Executive Report'
+  return 'Command Watch'
 }
 
 function deriveCommandThesis(input: {
@@ -1876,23 +879,17 @@ function buildRequiredDecisions(input: {
       decision: 'Resolve ownership and routing gaps',
       owner: 'Coordination Lead',
       deadline: 'Within 24 hours',
-      evidenceRequired:
-        'Assigned owner, responder, route decision, and routing rationale.',
+      evidenceRequired: 'Assigned owner, responder, route decision, and routing rationale.',
       status: 'Required before executive report movement',
     })
   }
 
-  if (
-    input.activeWithoutOutcome > 0 ||
-    input.unresolvedInterventionPathways > 0 ||
-    input.outcomeCoverage < 60
-  ) {
+  if (input.activeWithoutOutcome > 0 || input.unresolvedInterventionPathways > 0 || input.outcomeCoverage < 60) {
     decisions.push({
       decision: 'Strengthen outcome and recovery evidence',
       owner: 'Stabilization Owner',
       deadline: 'Within 48 hours',
-      evidenceRequired:
-        'Outcome verification, intervention closure, recovery confidence, and residual risk.',
+      evidenceRequired: 'Outcome verification, intervention closure, recovery confidence, and residual risk.',
       status: 'Evidence gap active',
     })
   }
@@ -1902,8 +899,7 @@ function buildRequiredDecisions(input: {
       decision: 'Confirm cross-site exposure and recurrence risk',
       owner: 'Cross-Site Review Owner',
       deadline: 'Within 48 hours',
-      evidenceRequired:
-        'Affected sites, shared dependency, recurrence pattern, and enterprise exposure statement.',
+      evidenceRequired: 'Affected sites, shared dependency, recurrence pattern, and enterprise exposure statement.',
       status: 'Cross-site interpretation required',
     })
   }
@@ -1913,8 +909,7 @@ function buildRequiredDecisions(input: {
       decision: 'Maintain escalation visibility',
       owner: 'Command Administrator',
       deadline: 'Immediate',
-      evidenceRequired:
-        'Escalation reason, executive concern, required action, and consequence if unresolved.',
+      evidenceRequired: 'Escalation reason, executive concern, required action, and consequence if unresolved.',
       status: 'Executive visibility required',
     })
   }
@@ -1924,8 +919,7 @@ function buildRequiredDecisions(input: {
       decision: 'Protect safeguarding-visible continuity records',
       owner: 'Governance Officer',
       deadline: 'Immediate',
-      evidenceRequired:
-        'Safeguarding visibility, governance-safe language, access control, and audit preservation.',
+      evidenceRequired: 'Safeguarding visibility, governance-safe language, access control, and audit preservation.',
       status: 'Governance protection required',
     })
   }
@@ -1935,8 +929,7 @@ function buildRequiredDecisions(input: {
       decision: 'Maintain command monitoring',
       owner: 'Command Center',
       deadline: 'Routine review cycle',
-      evidenceRequired:
-        'Current posture, monitoring note, and memory preservation statement.',
+      evidenceRequired: 'Current posture, monitoring note, and memory preservation statement.',
       status: 'No command escalation required',
     })
   }
@@ -1947,23 +940,7 @@ function buildRequiredDecisions(input: {
 function buildCommandOrder(input: {
   reportTemplate: string
   commandScope: string
-  posture: CommandPosture
-  commandThesis: string
-  dominantThreat: string
-  executiveAction: string
-  readiness: CommandReadiness
-  readinessMeaning: string
-  nextDestination: string
-  movementDestination: string
-  movementDecision: string
-  evidenceStandard: string
-  requiredDecisions: CommandDecision[]
-  consequences: CommandConsequence[]
-  supportingSignals: {
-    label: string
-    value: string
-    meaning: string
-  }[]
+  intelligence: ReturnType<typeof buildCommandIntelligence>
   additionalNotes: string
 }) {
   return [
@@ -1972,24 +949,21 @@ function buildCommandOrder(input: {
     `Template: ${input.reportTemplate}`,
     `Scope: ${input.commandScope}`,
     '',
-    `Command Posture: ${input.posture}`,
-    `Movement Decision: ${input.movementDecision}`,
-    `Movement Destination: ${input.movementDestination}`,
+    `Command Posture: ${input.intelligence.posture}`,
+    `Movement Decision: ${input.intelligence.movementDecision}`,
+    `Next Destination: ${input.intelligence.nextDestination}`,
     '',
-    `Command Thesis: ${input.commandThesis}`,
+    `Command Thesis: ${input.intelligence.commandThesis}`,
     '',
-    `Dominant Threat: ${input.dominantThreat}`,
+    `Dominant Threat: ${input.intelligence.dominantThreat}`,
     '',
-    `Executive Action: ${input.executiveAction}`,
+    `Executive Action: ${input.intelligence.executiveAction}`,
     '',
-    `Command Readiness: ${input.readiness}`,
-    '',
-    `Readiness Meaning: ${input.readinessMeaning}`,
-    '',
-    `Next Governed Destination: ${input.nextDestination}`,
+    `Command Readiness: ${input.intelligence.readiness}`,
+    `Readiness Meaning: ${input.intelligence.readinessMeaning}`,
     '',
     'Required Decisions:',
-    ...input.requiredDecisions.map(
+    ...input.intelligence.requiredDecisions.map(
       (item, index) =>
         `${index + 1}. ${item.decision}
    Owner: ${item.owner}
@@ -1998,17 +972,7 @@ function buildCommandOrder(input: {
    Status: ${item.status}`,
     ),
     '',
-    'Command Consequences:',
-    ...input.consequences.map(
-      (item) => `- ${item.condition}: ${item.meaning}`,
-    ),
-    '',
-    `Evidence Standard: ${input.evidenceStandard}`,
-    '',
-    'Supporting Signals:',
-    ...input.supportingSignals.map(
-      (item) => `- ${item.label}: ${item.value}. ${item.meaning}`,
-    ),
+    `Evidence Standard: ${input.intelligence.evidenceStandard}`,
     '',
     'Governance-Safe Meaning:',
     'Command assigns action responsibility without assigning blame. It protects visibility, ownership, evidence, deadlines, movement, memory, and auditability until continuity can safely move forward.',
@@ -2042,62 +1006,6 @@ function deriveDispositionFromCase(caseItem: CommandCase) {
   return 'MOVE_TO_COMMAND_WATCH'
 }
 
-function deriveRecommendedMovement(disposition: string, caseItem: CommandCase) {
-  if (disposition === 'MOVE_TO_STABILITY_BOARD') {
-    return '/system Stability Board — absorb into institutional posture.'
-  }
-
-  if (disposition === 'MOVE_TO_COMMAND_ESCALATION') {
-    return '/executive-center Executive Center — leadership synthesis required.'
-  }
-
-  if (disposition === 'RETURN_TO_OUTCOMES_REVIEW') {
-    return '/outcomes Outcomes Review — evidence credibility requires strengthening.'
-  }
-
-  if (disposition === 'RETURN_TO_INTERVENTION_REVIEW') {
-    return '/interventions Intervention Review — stabilization action requires review.'
-  }
-
-  if (disposition === 'CONTINUE_RECOVERY_MONITORING') {
-    return '/recovery Recovery Monitoring — continue durability observation.'
-  }
-
-  if (caseItem.case_status === 'RECOVERY_MONITORING') {
-    return '/recovery Recovery Monitoring — maintain durability watch.'
-  }
-
-  return '/command Command Watch — maintain executive visibility.'
-}
-
-function deriveMovementReason(disposition: string, caseItem: CommandCase) {
-  if (disposition === 'MOVE_TO_STABILITY_BOARD') {
-    return 'Recovery is durable enough for institutional absorption while memory remains preserved.'
-  }
-
-  if (disposition === 'MOVE_TO_COMMAND_ESCALATION') {
-    return 'Escalation, safeguarding, reburn, or severe continuity pressure requires leadership synthesis.'
-  }
-
-  if (disposition === 'RETURN_TO_OUTCOMES_REVIEW') {
-    return 'Evidence credibility requires strengthening before stability or durability can be trusted.'
-  }
-
-  if (disposition === 'RETURN_TO_INTERVENTION_REVIEW') {
-    return 'Stabilization action requires review before recovery can mature.'
-  }
-
-  if (disposition === 'CONTINUE_RECOVERY_MONITORING') {
-    return 'Recovery is holding but still needs durability observation.'
-  }
-
-  if (caseItem.case_status === 'RECOVERY_MONITORING') {
-    return 'Recovery remains visible but not yet ready for institutional absorption.'
-  }
-
-  return 'Command visibility remains proportionate while the lifecycle continues.'
-}
-
 function deriveCommandPostureFromCase(caseItem: CommandCase) {
   if (
     caseItem.case_status === 'TRIAGE_COMMAND_ESCALATION' ||
@@ -2107,27 +1015,11 @@ function deriveCommandPostureFromCase(caseItem: CommandCase) {
     return 'EXECUTIVE_CONTINUITY_REVIEW'
   }
 
-  if (
-    caseItem.case_status === 'RECOVERY_MONITORING' ||
-    caseItem.case_status === 'FOLLOW_UP_REQUIRED'
-  ) {
+  if (caseItem.case_status === 'RECOVERY_MONITORING' || caseItem.case_status === 'FOLLOW_UP_REQUIRED') {
     return 'ELEVATED_RECOVERY_REVIEW'
   }
 
   return 'COMMAND_WATCH'
-}
-
-function deriveMemoryImpactFromCase(caseItem: CommandCase) {
-  if (
-    caseItem.case_status.includes('RECURRENCE') ||
-    caseItem.case_status === 'REOPENED' ||
-    Boolean(caseItem.outcome_summary?.includes('RECURRENCE')) ||
-    Boolean(caseItem.intervention_summary?.includes('RECURRENCE'))
-  ) {
-    return 'CONTINUITY_MEMORY_VISIBLE'
-  }
-
-  return 'STRUCTURAL_MEMORY_PRESERVED'
 }
 
 function isRecoverySummary(summary: string) {
@@ -2157,11 +1049,65 @@ function extractField(summary: string, label: string) {
   return lines[index + 1] || ''
 }
 
-function Destination({ label, value }: { label: string; value: number }) {
+function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <article style={styles.destinationCard}>
+    <article style={styles.metricCard}>
       <p style={styles.metricLabel}>{label}</p>
-      <p style={styles.destinationValue}>{value}</p>
+      <p style={styles.metricValueLarge}>{value}</p>
+    </article>
+  )
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <article style={styles.miniStat}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.miniValue}>{value}</p>
+    </article>
+  )
+}
+
+function ChainStep({ label, body, active }: { label: string; body: string; active?: boolean }) {
+  return (
+    <article style={{ ...styles.chainStep, ...(active ? styles.chainStepActive : {}) }}>
+      <p style={styles.chainLabel}>{label}</p>
+      <p style={styles.chainBody}>{body}</p>
+    </article>
+  )
+}
+
+function RequirementCard({ label, active, body }: { label: string; active: boolean; body: string }) {
+  return (
+    <article style={{ ...styles.requirementCard, ...(active ? styles.requirementCardActive : {}) }}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.requirementStatus}>{active ? 'Required' : 'Conditional'}</p>
+      <p style={styles.bodyText}>{body}</p>
+    </article>
+  )
+}
+
+function DecisionCard({ decision, index }: { decision: CommandDecision; index: number }) {
+  return (
+    <article style={styles.decisionCard}>
+      <div style={styles.decisionNumber}>{String(index + 1).padStart(2, '0')}</div>
+      <div>
+        <h3 style={styles.decisionTitle}>{decision.decision}</h3>
+        <p style={styles.bodyText}>{decision.evidenceRequired}</p>
+        <div style={styles.decisionMeta}>
+          <MiniStat label="Owner" value={decision.owner} />
+          <MiniStat label="Deadline" value={decision.deadline} />
+          <MiniStat label="Status" value={decision.status} />
+        </div>
+      </div>
+    </article>
+  )
+}
+
+function EvidenceCard({ title, body }: { title: string; body: string }) {
+  return (
+    <article style={styles.evidenceCard}>
+      <p style={styles.sectionKicker}>{title}</p>
+      <p style={styles.bodyText}>{body}</p>
     </article>
   )
 }
@@ -2172,136 +1118,6 @@ function Signal({ label, value }: { label: string; value: string }) {
       <p style={styles.metricLabel}>{label}</p>
       <p style={styles.signalValue}>{value}</p>
     </article>
-  )
-}
-
-function SmallMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <article style={styles.smallMetric}>
-      <p style={styles.metricLabel}>{label}</p>
-      <p style={styles.metricValue}>{value}</p>
-    </article>
-  )
-}
-
-function ExecutivePanel({ title, body }: { title: string; body: string }) {
-  return (
-    <article style={styles.panelCard}>
-      <p style={styles.sectionKicker}>{title}</p>
-      <p style={styles.panelBody}>{body}</p>
-    </article>
-  )
-}
-
-function MemoryLine({ label, value }: { label: string; value: string }) {
-  return (
-    <article style={styles.memoryLine}>
-      <p style={styles.metricLabel}>{label}</p>
-      <p style={styles.memoryValue}>{value}</p>
-    </article>
-  )
-}
-
-function HandoffStep({
-  label,
-  value,
-  active,
-}: {
-  label: string
-  value: string
-  active?: boolean
-}) {
-  return (
-    <article
-      style={{
-        ...styles.handoffStep,
-        ...(active ? styles.handoffStepActive : {}),
-      }}
-    >
-      <p style={styles.metricLabel}>{label}</p>
-      <p style={styles.handoffValue}>{value}</p>
-    </article>
-  )
-}
-
-function RequirementCard({
-  label,
-  active,
-  body,
-}: {
-  label: string
-  active: boolean
-  body: string
-}) {
-  return (
-    <article
-      style={{
-        ...styles.requirementCard,
-        ...(active ? styles.requirementCardActive : {}),
-      }}
-    >
-      <p style={styles.metricLabel}>{label}</p>
-      <p style={styles.requirementStatus}>
-        {active ? 'Required' : 'Not Required'}
-      </p>
-      <p style={styles.requirementBody}>{body}</p>
-    </article>
-  )
-}
-
-function SignalCard({
-  title,
-  value,
-  body,
-}: {
-  title: string
-  value: string
-  body: string
-}) {
-  return (
-    <article style={styles.supportSignalCard}>
-      <p style={styles.metricLabel}>{title}</p>
-      <p style={styles.supportSignalValue}>{value}</p>
-      <p style={styles.requirementBody}>{body}</p>
-    </article>
-  )
-}
-
-function DecisionCard({
-  decision,
-  index,
-}: {
-  decision: CommandDecision
-  index: number
-}) {
-  return (
-    <article style={styles.actionDecisionCard}>
-      <p style={styles.metricLabel}>Decision {index + 1}</p>
-      <h3 style={styles.actionDecisionTitle}>{decision.decision}</h3>
-
-      <Info label="Owner" value={decision.owner} />
-      <Info label="Deadline" value={decision.deadline} />
-      <Info label="Evidence" value={decision.evidenceRequired} />
-      <Info label="Status" value={decision.status} />
-    </article>
-  )
-}
-
-function ConsequenceCard({ item }: { item: CommandConsequence }) {
-  return (
-    <article style={styles.consequenceCard}>
-      <p style={styles.metricLabel}>{item.condition}</p>
-      <p style={styles.consequenceText}>{item.meaning}</p>
-    </article>
-  )
-}
-
-function Info({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={styles.infoRow}>
-      <span style={styles.infoLabel}>{label}</span>
-      <strong style={styles.infoValue}>{value}</strong>
-    </div>
   )
 }
 
@@ -2316,21 +1132,13 @@ function Select({
   setValue: (value: string) => void
   options: string[]
 }) {
-  const id = label.toLowerCase().replaceAll(' ', '-')
-
   return (
-    <label style={styles.label} htmlFor={id}>
+    <label style={styles.label}>
       {label}
-      <select
-        id={id}
-        name={id}
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        style={styles.select}
-      >
-        {options.map((item) => (
-          <option key={item} value={item}>
-            {item}
+      <select value={value} onChange={(event) => setValue(event.target.value)} style={styles.select}>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
           </option>
         ))}
       </select>
@@ -2338,575 +1146,441 @@ function Select({
   )
 }
 
-const gold = '#d6b25e'
-const mutedGold = '#9f8142'
-const deepBlack = '#030303'
-const panelBlack = '#090807'
-const cardBlack = '#11100d'
-const softLine = 'rgba(214,178,94,0.24)'
-
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    color: '#f5f0e6',
-    overflowX: 'hidden',
     background:
-      'radial-gradient(circle at top right, rgba(214,178,94,0.08), transparent 32%), #030303',
+      'radial-gradient(circle at top left, rgba(201, 162, 39, 0.14), transparent 34%), linear-gradient(135deg, #050505 0%, #0B0B0B 45%, #111111 100%)',
+    color: '#FFFFFF',
+    padding: '40px 24px 72px',
   },
   container: {
-    width: '100%',
-    maxWidth: '1120px',
+    width: 'min(1440px, 100%)',
     margin: '0 auto',
-    padding: '16px 28px 72px',
-    boxSizing: 'border-box',
+    display: 'grid',
+    gap: 24,
   },
-  header: {
-    marginBottom: '28px',
+  hero: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.45fr) minmax(320px, 0.75fr)',
+    gap: 24,
+    padding: 32,
+    border: '1px solid rgba(201, 162, 39, 0.34)',
+    borderRadius: 28,
+    background:
+      'linear-gradient(135deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018))',
+    boxShadow: '0 28px 80px rgba(0,0,0,0.38)',
   },
   kicker: {
-    color: gold,
-    fontSize: '11px',
-    fontWeight: 900,
-    letterSpacing: '2px',
     margin: 0,
+    color: '#C9A227',
+    fontSize: 12,
+    fontWeight: 900,
+    letterSpacing: '0.22em',
+    textTransform: 'uppercase',
   },
   title: {
-    color: '#fff8e7',
-    fontSize: 'clamp(34px, 4vw, 48px)',
-    lineHeight: 1,
-    margin: '10px 0',
-    letterSpacing: '-0.05em',
+    margin: '14px 0 0',
+    fontSize: 'clamp(2.3rem, 5vw, 5rem)',
+    lineHeight: 0.95,
+    letterSpacing: '-0.07em',
+    fontWeight: 950,
   },
   subtitle: {
-    color: '#cfc7b5',
-    maxWidth: '860px',
-    lineHeight: 1.65,
-    fontSize: '14px',
+    maxWidth: 880,
+    margin: '18px 0 0',
+    color: '#C8CDD4',
+    fontSize: 17,
+    lineHeight: 1.8,
+  },
+  statusBox: {
+    border: '1px solid rgba(201, 162, 39, 0.5)',
+    borderRadius: 24,
+    padding: 24,
+    background: 'linear-gradient(180deg, rgba(201,162,39,0.18), rgba(0,0,0,0.38))',
+  },
+  statusLabel: {
     margin: 0,
+    color: '#D7B84C',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.2em',
+  },
+  statusValue: {
+    margin: '16px 0 0',
+    fontSize: 34,
+    fontWeight: 950,
+    letterSpacing: '-0.04em',
+  },
+  statusMeaning: {
+    margin: '12px 0 0',
+    color: '#ECE7D7',
+    fontSize: 14,
+    lineHeight: 1.7,
   },
   message: {
-    background: '#15110a',
-    color: '#fff8e7',
-    border: `1px solid ${softLine}`,
-    padding: '12px 14px',
-    borderRadius: '14px',
+    padding: '14px 18px',
+    borderRadius: 16,
+    color: '#D7B84C',
+    background: 'rgba(201,162,39,0.1)',
+    border: '1px solid rgba(201,162,39,0.22)',
     fontWeight: 800,
-    marginBottom: '16px',
-    fontSize: '13px',
   },
-  heroGrid: {
+  commandDeck: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '24px',
-    marginBottom: '24px',
+    gridTemplateColumns: '1.4fr 0.8fr',
+    gap: 24,
   },
-  heroCard: {
-    background: deepBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '20px',
-    padding: '24px',
+  primaryCommandCard: {
+    padding: 30,
+    borderRadius: 28,
+    background: '#FFFFFF',
+    color: '#0B0B0B',
+    border: '1px solid rgba(255,255,255,0.12)',
   },
-  heroCardGold: {
-    background: panelBlack,
-    border: `1px solid ${gold}`,
-    borderRadius: '20px',
-    padding: '24px',
+  consequenceCard: {
+    padding: 30,
+    borderRadius: 28,
+    background: 'rgba(0,0,0,0.38)',
+    border: '1px solid rgba(201,162,39,0.28)',
   },
-  heroTitle: {
-    color: '#fff8e7',
-    fontSize: 'clamp(32px, 4vw, 46px)',
-    lineHeight: 1,
-    margin: '10px 0',
-    letterSpacing: '-0.05em',
+  sectionKicker: {
+    margin: 0,
+    color: '#C9A227',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.18em',
+    textTransform: 'uppercase',
   },
-  heroTitleGold: {
-    color: gold,
-    fontSize: 'clamp(30px, 4vw, 42px)',
-    lineHeight: 1,
-    margin: '10px 0',
-    letterSpacing: '-0.05em',
-  },
-  commandQuestionPanel: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.2fr) minmax(280px, 0.8fr)',
-    gap: '24px',
-    background: deepBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '20px',
-    padding: '24px',
-    marginBottom: '24px',
-    boxSizing: 'border-box',
-  },
-  questionTitle: {
-    color: gold,
-    fontSize: 'clamp(28px, 4vw, 42px)',
+  commandTitle: {
+    margin: '14px 0',
+    fontSize: 'clamp(1.8rem, 3vw, 3.2rem)',
     lineHeight: 1.05,
-    margin: '10px 0',
-    letterSpacing: '-0.04em',
+    letterSpacing: '-0.05em',
+    fontWeight: 950,
   },
-  commandAuthorityBox: {
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '18px',
-  },
-  decisionPanel: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '24px',
-    marginBottom: '24px',
-  },
-  decisionPrimary: {
-    background: deepBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '20px',
-    padding: '24px',
-  },
-  decisionSecondary: {
-    background: panelBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '20px',
-    padding: '24px',
-  },
-  decisionTitle: {
-    color: gold,
-    fontSize: 'clamp(28px, 3vw, 40px)',
-    lineHeight: 1.05,
-    margin: '10px 0',
-    letterSpacing: '-0.04em',
-  },
-  movementTitle: {
-    color: '#fff8e7',
-    fontSize: 'clamp(22px, 3vw, 32px)',
+  consequenceTitle: {
+    margin: '14px 0',
+    fontSize: 28,
     lineHeight: 1.1,
-    margin: '10px 0',
     letterSpacing: '-0.04em',
   },
-  handoffPanel: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 0.9fr) minmax(0, 1.1fr)',
-    gap: '24px',
-    background: deepBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '20px',
-    padding: '24px',
-    marginBottom: '24px',
-  },
-  handoffGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-    gap: '12px',
-  },
-  handoffStep: {
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '14px',
-    padding: '14px',
-    minHeight: '88px',
-  },
-  handoffStepActive: {
-    background: '#201809',
-    border: `1px solid ${gold}`,
-  },
-  handoffValue: {
-    color: '#fff8e7',
-    fontSize: '13px',
-    lineHeight: 1.25,
-    fontWeight: 900,
+  bodyText: {
     margin: '8px 0 0',
+    color: '#AEB6C2',
+    lineHeight: 1.7,
+    fontSize: 14,
   },
-  gridFour: {
+  commandMetaGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '14px',
-    marginBottom: '24px',
+    gap: 12,
+    marginTop: 24,
+  },
+  metricsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+    gap: 14,
+  },
+  metricCard: {
+    padding: 18,
+    borderRadius: 20,
+    background: 'rgba(255,255,255,0.055)',
+    border: '1px solid rgba(255,255,255,0.1)',
+  },
+  metricLabel: {
+    margin: 0,
+    color: '#858D98',
+    fontSize: 10,
+    fontWeight: 950,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+  },
+  metricValueLarge: {
+    margin: '10px 0 0',
+    color: '#FFFFFF',
+    fontSize: 32,
+    fontWeight: 950,
+  },
+  miniStat: {
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(255,255,255,0.055)',
+    border: '1px solid rgba(255,255,255,0.09)',
+  },
+  miniValue: {
+    margin: '8px 0 0',
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: 850,
+    lineHeight: 1.45,
+    overflowWrap: 'anywhere',
+  },
+  panel: {
+    padding: 28,
+    borderRadius: 28,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.1)',
+  },
+  panelTitle: {
+    margin: '12px 0 0',
+    fontSize: 26,
+    lineHeight: 1.15,
+    letterSpacing: '-0.045em',
+  },
+  chain: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 22,
+  },
+  chainStep: {
+    padding: 18,
+    borderRadius: 18,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.09)',
+  },
+  chainStepActive: {
+    background: 'rgba(201,162,39,0.14)',
+    borderColor: 'rgba(201,162,39,0.42)',
+  },
+  chainLabel: {
+    margin: 0,
+    color: '#FFFFFF',
+    fontWeight: 950,
+  },
+  chainBody: {
+    margin: '8px 0 0',
+    color: '#9EA7B3',
+    fontSize: 13,
+    lineHeight: 1.55,
+  },
+  requirementGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 16,
+  },
+  requirementCard: {
+    padding: 22,
+    borderRadius: 22,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.09)',
+  },
+  requirementCardActive: {
+    background: 'rgba(201,162,39,0.12)',
+    borderColor: 'rgba(201,162,39,0.42)',
+  },
+  requirementStatus: {
+    margin: '12px 0 0',
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: 950,
+  },
+  decisionList: {
+    display: 'grid',
+    gap: 14,
+    marginTop: 20,
+  },
+  decisionCard: {
+    display: 'grid',
+    gridTemplateColumns: '58px 1fr',
+    gap: 18,
+    padding: 20,
+    borderRadius: 22,
+    background: 'rgba(0,0,0,0.22)',
+    border: '1px solid rgba(201,162,39,0.18)',
+  },
+  decisionNumber: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    display: 'grid',
+    placeItems: 'center',
+    background: 'rgba(201,162,39,0.16)',
+    border: '1px solid rgba(201,162,39,0.36)',
+    color: '#D7B84C',
+    fontWeight: 950,
+  },
+  decisionTitle: {
+    margin: 0,
+    color: '#FFFFFF',
+    fontSize: 20,
+  },
+  decisionMeta: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 16,
   },
   gridThree: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '14px',
-    marginBottom: '24px',
+    gap: 16,
   },
-  requirementCard: {
-    background: cardBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '16px',
-    minHeight: '138px',
-  },
-  requirementCardActive: {
-    background: '#1a1308',
-    border: `1px solid ${gold}`,
-  },
-  requirementStatus: {
-    color: gold,
-    fontSize: '17px',
-    fontWeight: 950,
-    margin: '8px 0',
-  },
-  requirementBody: {
-    color: '#cfc7b5',
-    fontSize: '12px',
-    lineHeight: 1.5,
-    margin: '8px 0 0',
-  },
-  card: {
-    background: deepBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '20px',
-    padding: '24px',
-    marginBottom: '24px',
-    overflow: 'hidden',
-  },
-  cardTitle: {
-    color: '#fff8e7',
-    fontSize: 'clamp(22px, 3vw, 30px)',
-    lineHeight: 1.15,
-    margin: '10px 0 0',
-    letterSpacing: '-0.04em',
-  },
-  decisionList: {
-    display: 'grid',
-    gap: '14px',
-    marginTop: '18px',
-  },
-  actionDecisionCard: {
-    background: cardBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '16px',
-  },
-  actionDecisionTitle: {
-    color: '#fff8e7',
-    fontSize: '22px',
-    lineHeight: 1.15,
-    margin: '10px 0 14px',
-  },
-  consequenceCard: {
-    background: cardBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '16px',
-    minHeight: '140px',
-  },
-  consequenceText: {
-    color: '#fff8e7',
-    lineHeight: 1.55,
-    margin: '10px 0 0',
-    fontWeight: 800,
-  },
-  destinationGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
-    gap: '14px',
-    marginTop: '18px',
-  },
-  destinationCard: {
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '14px',
-    padding: '14px',
-    minHeight: '76px',
-  },
-  destinationValue: {
-    color: gold,
-    fontSize: '26px',
-    fontWeight: 950,
-    margin: '8px 0 0',
-    lineHeight: 1,
-  },
-  signalGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-    gap: '16px',
-    marginBottom: '24px',
-  },
-  signalCard: {
-    background: cardBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '16px',
-    minHeight: '82px',
-  },
-  signalValue: {
-    color: gold,
-    fontSize: '18px',
-    fontWeight: 950,
-    margin: '8px 0 0',
-  },
-  commandGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '24px',
-    marginBottom: '24px',
-  },
-  compactCard: {
-    background: panelBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '20px',
-    padding: '24px',
-    minHeight: '150px',
-    boxSizing: 'border-box',
-    overflow: 'hidden',
-  },
-  sectionKicker: {
-    color: mutedGold,
-    fontWeight: 900,
-    letterSpacing: '0.15em',
-    textTransform: 'uppercase',
-    margin: 0,
-    fontSize: '10px',
-  },
-  compactTitle: {
-    color: '#fff8e7',
-    fontSize: 'clamp(20px, 2vw, 26px)',
-    lineHeight: 1.1,
-    margin: '10px 0',
-    letterSpacing: '-0.04em',
-  },
-  bodyText: {
-    color: '#cfc7b5',
-    lineHeight: 1.6,
-    fontSize: '13px',
-    margin: 0,
-  },
-  inlineRisk: {
-    marginTop: '18px',
-    color: '#fff8e7',
-    fontSize: '12px',
-    fontWeight: 850,
-    lineHeight: 1.5,
-  },
-  twoColumnGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '24px',
-    marginBottom: '24px',
-  },
-  panelCard: {
-    background: '#100f0d',
-    border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '20px',
-    minHeight: '110px',
-  },
-  panelBody: {
-    color: '#cfc7b5',
-    lineHeight: 1.55,
-    fontSize: '13px',
-    margin: '10px 0 0',
-  },
-  supportingGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-    gap: '14px',
-    marginTop: '18px',
-  },
-  supportSignalCard: {
-    background: cardBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '14px',
-    padding: '14px',
-    minHeight: '120px',
-  },
-  supportSignalValue: {
-    color: '#fff8e7',
-    fontSize: '16px',
-    fontWeight: 900,
-    margin: '8px 0',
-    lineHeight: 1.2,
-    overflowWrap: 'anywhere',
-  },
-  memoryBoard: {
-    background: panelBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '20px',
-    padding: '24px',
-    marginBottom: '24px',
-  },
-  memoryBoardGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-    gap: '14px',
-    marginTop: '18px',
-  },
-  memoryLine: {
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '14px',
-    padding: '14px',
-    minHeight: '80px',
-  },
-  memoryValue: {
-    color: '#fff8e7',
-    fontSize: '14px',
-    fontWeight: 900,
-    lineHeight: 1.25,
-    margin: '8px 0 0',
-  },
-  smallMetric: {
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '12px',
-    padding: '10px',
-  },
-  metricLabel: {
-    color: mutedGold,
-    fontSize: '9px',
-    fontWeight: 900,
-    letterSpacing: '0.14em',
-    textTransform: 'uppercase',
-    margin: 0,
-  },
-  metricValue: {
-    color: '#fff8e7',
-    fontSize: '13px',
-    lineHeight: 1.2,
-    fontWeight: 900,
-    margin: '6px 0 0',
-  },
-  caseList: {
-    display: 'grid',
-    gap: '14px',
-    marginTop: '18px',
-  },
-  caseCard: {
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '14px',
-    padding: '14px',
-  },
-  caseIdentity: {
-    color: '#fff8e7',
-    fontWeight: 900,
-    margin: '0 0 10px',
-    lineHeight: 1.3,
-  },
-  caseMetaGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '10px',
-  },
-  recoveryMiniPanel: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '10px',
-    marginTop: '10px',
+  evidenceCard: {
+    padding: 22,
+    borderRadius: 22,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.09)',
   },
   tableWrap: {
-    width: '100%',
+    marginTop: 20,
     overflowX: 'auto',
-    marginTop: '16px',
+    borderRadius: 20,
+    border: '1px solid rgba(255,255,255,0.1)',
   },
   table: {
     width: '100%',
     borderCollapse: 'collapse',
-    minWidth: '920px',
+    minWidth: 920,
   },
   th: {
+    padding: '14px 16px',
     textAlign: 'left',
-    color: mutedGold,
-    borderBottom: `1px solid ${softLine}`,
-    padding: '10px',
-    fontSize: '10px',
+    color: '#D7B84C',
+    background: 'rgba(201,162,39,0.08)',
+    fontSize: 11,
+    letterSpacing: '0.14em',
     textTransform: 'uppercase',
-    letterSpacing: '0.08em',
   },
   td: {
-    borderBottom: '1px solid rgba(214,178,94,0.12)',
-    padding: '10px',
-    color: '#e8dec8',
+    padding: '16px',
+    color: '#DCE1E8',
+    borderTop: '1px solid rgba(255,255,255,0.08)',
+    fontSize: 13,
+    lineHeight: 1.55,
     verticalAlign: 'top',
-    lineHeight: 1.5,
-    fontSize: '12px',
   },
-  infoRow: {
+  signalGrid: {
     display: 'grid',
-    gridTemplateColumns: '150px minmax(0, 1fr)',
-    gap: '10px',
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '12px',
-    padding: '10px',
-    alignItems: 'start',
-    marginTop: '8px',
+    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+    gap: 14,
   },
-  infoLabel: {
-    color: mutedGold,
-    fontWeight: 900,
-    fontSize: '10px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
+  signalCard: {
+    padding: 18,
+    borderRadius: 20,
+    background: 'rgba(201,162,39,0.08)',
+    border: '1px solid rgba(201,162,39,0.22)',
   },
-  infoValue: {
-    color: '#fff8e7',
-    lineHeight: 1.45,
-    overflowWrap: 'anywhere',
-    fontSize: '12px',
+  signalValue: {
+    margin: '10px 0 0',
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: 950,
+  },
+  commandGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1.25fr 0.75fr',
+    gap: 24,
+  },
+  caseList: {
+    display: 'grid',
+    gap: 14,
+    marginTop: 20,
+  },
+  caseCard: {
+    padding: 18,
+    borderRadius: 20,
+    background: 'rgba(0,0,0,0.22)',
+    border: '1px solid rgba(255,255,255,0.08)',
+  },
+  caseTitle: {
+    margin: 0,
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 950,
+  },
+  caseMetaGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 10,
+    marginTop: 14,
+  },
+  supportingGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 20,
+  },
+  memoryPanel: {
+    padding: 28,
+    borderRadius: 28,
+    background: 'linear-gradient(135deg, rgba(201,162,39,0.13), rgba(255,255,255,0.035))',
+    border: '1px solid rgba(201,162,39,0.32)',
+  },
+  memoryGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 20,
   },
   label: {
-    display: 'block',
-    fontWeight: 800,
-    marginTop: '16px',
-    marginBottom: '12px',
-    color: '#fff8e7',
+    display: 'grid',
+    gap: 8,
+    marginTop: 18,
+    color: '#DDE3EA',
+    fontSize: 12,
+    fontWeight: 900,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
   },
   select: {
     width: '100%',
-    marginTop: '8px',
-    padding: '12px',
-    borderRadius: '12px',
-    background: '#15110a',
-    color: '#fff8e7',
-    border: `1px solid ${softLine}`,
+    borderRadius: 16,
+    border: '1px solid rgba(201,162,39,0.22)',
+    background: '#0D0D0D',
+    color: '#FFFFFF',
+    padding: '14px 16px',
+    fontSize: 14,
+    outline: 'none',
   },
   textarea: {
-    width: '100%',
-    minHeight: '110px',
-    marginTop: '8px',
-    padding: '12px',
-    borderRadius: '12px',
-    background: '#15110a',
-    color: '#fff8e7',
-    border: `1px solid ${softLine}`,
+    minHeight: 120,
     resize: 'vertical',
+    borderRadius: 18,
+    border: '1px solid rgba(201,162,39,0.22)',
+    background: '#0D0D0D',
+    color: '#FFFFFF',
+    padding: 16,
+    fontSize: 14,
+    lineHeight: 1.6,
+    outline: 'none',
   },
   primaryButton: {
-    width: '100%',
-    padding: '14px',
-    borderRadius: '14px',
+    marginTop: 20,
     border: 'none',
-    background: gold,
-    color: '#11100d',
+    borderRadius: 999,
+    padding: '14px 22px',
+    background: '#C9A227',
+    color: '#090909',
     fontWeight: 950,
     cursor: 'pointer',
-    fontSize: '14px',
-    marginTop: '18px',
+  },
+  orderPanel: {
+    padding: 28,
+    borderRadius: 28,
+    background: '#FFFFFF',
+    color: '#0B0B0B',
   },
   summaryBox: {
+    marginTop: 20,
+    padding: 22,
+    borderRadius: 20,
+    background: '#0A0A0A',
+    color: '#F8F6F1',
     whiteSpace: 'pre-wrap',
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '16px',
-    color: '#e8dec8',
-    lineHeight: 1.55,
-    minHeight: '260px',
-    fontSize: '13px',
+    fontSize: 13,
+    lineHeight: 1.7,
     overflowX: 'auto',
   },
   doctrineCard: {
     display: 'grid',
-    gridTemplateColumns: '220px minmax(0, 1fr)',
-    gap: '24px',
-    background: deepBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '18px',
-    padding: '20px 24px',
-    color: '#e8dec8',
-    fontSize: '13px',
-    lineHeight: 1.55,
-    fontWeight: 750,
-    boxSizing: 'border-box',
+    gap: 10,
+    padding: 24,
+    borderRadius: 24,
+    background: '#050505',
+    border: '1px solid rgba(201,162,39,0.42)',
+    color: '#FFFFFF',
+    lineHeight: 1.7,
   },
 }
