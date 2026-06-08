@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
+import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { interpretTrajectory } from '@/lib/cgi/interpreters/interpretTrajectory'
 import { buildCGIExecutiveBriefing } from '@/lib/cgiExecutiveBriefingGenerator'
@@ -12,6 +13,7 @@ import {
   formatCGISurvivabilityLanguage,
   formatCGIGovernanceSafeLanguage,
 } from '@/lib/cgiExecutivePostureFormatter'
+import type { CGIRouteSynthesisPosture } from '@/lib/cgiCrossRouteContinuitySynthesisEngine'
 import { supabase } from '../../lib/supabase'
 
 type CgiOperationalMetric = {
@@ -99,9 +101,13 @@ const SAMPLE_LIMIT = 120
 
 export default function TrajectoryPage() {
   return (
-    <CGIGovernanceShell>
-      <TrajectoryContent />
-    </CGIGovernanceShell>
+    <GovernanceRouteGuard
+      allowedRoles={['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']}
+    >
+      <CGIGovernanceShell>
+        <TrajectoryContent />
+      </CGIGovernanceShell>
+    </GovernanceRouteGuard>
   )
 }
 
@@ -452,63 +458,60 @@ function TrajectoryContent() {
   return (
     <main style={styles.page}>
       <div style={styles.container}>
-        <section style={styles.header}>
-          <p style={styles.kicker}>TSINAXA CGI • ENTERPRISE TRAJECTORY</p>
+        <section style={styles.hero}>
+          <div>
+            <p style={styles.kicker}>TSINAXA CGI • ENTERPRISE TRAJECTORY</p>
+            <h1 style={styles.title}>Enterprise Trajectory Intelligence</h1>
+            <p style={styles.subtitle}>
+              Trajectory shows where continuity is heading. CGI does not wait
+              for collapse; it reads direction, velocity, confidence, memory,
+              and executive risk before the institution loses continuity
+              credibility.
+            </p>
+          </div>
 
-          <h1 style={styles.title}>Enterprise Trajectory Intelligence</h1>
-
-          <p style={styles.subtitle}>
-            Executive visibility into whether continuity is strengthening,
-            holding, drifting, reversing, or heading toward executive risk
-            across persisted institutional memory.
-          </p>
+          <div style={styles.statusBox}>
+            <p style={styles.statusLabel}>TRAJECTORY POSTURE</p>
+            <p style={styles.statusValue}>{trajectory.enterprise.posture}</p>
+            <p style={styles.statusMeaning}>{trajectory.enterprise.thesis}</p>
+          </div>
         </section>
 
         {message && <div style={styles.message}>{message}</div>}
-
-        <section style={styles.heroCard}>
-          <div>
-            <p style={styles.sectionKicker}>Enterprise Trajectory Thesis</p>
-
-            <h2 style={styles.heroPosture}>
-              {trajectory.enterprise.posture}
+                <section style={styles.commandDeck}>
+          <div style={styles.primaryCard}>
+            <p style={styles.sectionKicker}>Executive Trajectory Question</p>
+            <h2 style={styles.commandTitle}>
+              {trajectory.enterprise.trajectoryQuestion}
             </h2>
+            <p style={styles.primaryText}>
+              {trajectory.enterprise.destinationReason}
+            </p>
 
-            <p style={styles.heroMeaning}>{trajectory.enterprise.thesis}</p>
+            <div style={styles.commandMetaGrid}>
+              <MiniStat label="Destination" value={trajectory.enterprise.destination} />
+              <MiniStat label="Velocity" value={trajectory.enterprise.velocity} />
+              <MiniStat label="Confidence" value={trajectory.enterprise.confidence} />
+              <MiniStat label="Memory" value={trajectory.historyDepth.posture} />
+            </div>
           </div>
 
-          <div style={styles.actionBox}>
-            <p style={styles.actionLabel}>Expected Destination</p>
-            <p style={styles.actionText}>
-              {trajectory.enterprise.destination}
-            </p>
+          <div style={styles.consequenceCard}>
+            <p style={styles.sectionKicker}>Board Warning</p>
+            <h2 style={styles.consequenceTitle}>
+              Do not confuse movement with stability.
+            </h2>
+            <p style={styles.bodyText}>{trajectory.enterprise.boardWarning}</p>
           </div>
         </section>
 
-        <section style={styles.questionCard}>
-          <div>
-            <p style={styles.sectionKicker}>Executive Trajectory Question</p>
-
-            <h2 style={styles.cardTitle}>
-              {trajectory.enterprise.trajectoryQuestion}
-            </h2>
-
-            <p style={styles.bodyText}>
-              {trajectory.enterprise.destinationReason}
-            </p>
-          </div>
-
-          <div style={styles.questionStack}>
-            <MiniBlock title="Velocity" value={trajectory.enterprise.velocity} />
-            <MiniBlock
-              title="Confidence"
-              value={trajectory.enterprise.confidence}
-            />
-            <MiniBlock
-              title="Executive Horizon"
-              value={trajectory.enterprise.executiveHorizon}
-            />
-          </div>
+        <section style={styles.metricsGrid}>
+          <Metric label="Direction" value={trajectory.directionPosture.posture} />
+          <Metric label="Drift" value={trajectory.driftPosture.posture} />
+          <Metric label="Momentum" value={trajectory.momentumPosture.posture} />
+          <Metric label="Unresolved" value={trajectory.unresolvedPosture.posture} />
+          <Metric label="Volatility" value={trajectory.volatilityPosture.posture} />
+          <Metric label="Dominant Driver" value={trajectory.dominantDriver} />
         </section>
 
         <section style={styles.gridFour}>
@@ -537,11 +540,9 @@ function TrajectoryContent() {
           />
         </section>
 
-        <section style={styles.card}>
+        <section style={styles.panel}>
           <p style={styles.sectionKicker}>Synchronized Continuity Reading</p>
-
-          <h2 style={styles.cardTitle}>{synchronizedPosture.label}</h2>
-
+          <h2 style={styles.panelTitle}>{synchronizedPosture.label}</h2>
           <p style={styles.bodyText}>{synchronizedPosture.description}</p>
 
           <div style={styles.infoList}>
@@ -578,26 +579,21 @@ function TrajectoryContent() {
           />
         </section>
 
-        <section style={styles.compactGrid}>
-          <CompactCard
-            title="Memory Depth"
-            value={trajectory.historyDepth.posture}
-          />
-          <CompactCard
-            title="Dominant Driver"
-            value={trajectory.dominantDriver}
-          />
-          <CompactCard
-            title="Movement"
-            value={trajectory.movementPosture.posture}
-          />
-          <CompactCard
-            title="Trajectory Volatility"
-            value={trajectory.volatilityPosture.posture}
-          />
+        <section style={styles.memoryPanel}>
+          <p style={styles.sectionKicker}>Trajectory Memory</p>
+          <h2 style={styles.panelTitle}>
+            Continuity direction must remain reconstructable over time.
+          </h2>
+
+          <div style={styles.memoryGrid}>
+            <MiniStat label="Memory Depth" value={trajectory.historyDepth.posture} />
+            <MiniStat label="Movement" value={trajectory.movementPosture.posture} />
+            <MiniStat label="Volatility" value={trajectory.volatilityPosture.posture} />
+            <MiniStat label="Executive Horizon" value={trajectory.enterprise.executiveHorizon} />
+          </div>
         </section>
 
-        <section style={styles.twoColumn}>
+        <section style={styles.gridTwo}>
           <Panel title="Enterprise Movement Requirements">
             <Info
               label="Executive Action"
@@ -648,13 +644,14 @@ function TrajectoryContent() {
           </Panel>
         </section>
 
-        <section style={styles.card}>
+        <section style={styles.panel}>
           <div style={styles.cardHeader}>
             <div>
-              <h2 style={styles.cardTitle}>Recent Continuity Memory Trail</h2>
-              <p style={styles.cardNote}>
-                Recent snapshots are shown as enterprise trajectory readings,
-                not personal performance judgments.
+              <p style={styles.sectionKicker}>Recent Continuity Memory Trail</p>
+              <h2 style={styles.panelTitle}>Enterprise trajectory snapshots</h2>
+              <p style={styles.bodyText}>
+                Recent snapshots are shown as continuity readings, not personal
+                performance judgments.
               </p>
             </div>
 
@@ -721,16 +718,55 @@ function TrajectoryContent() {
           </div>
         </section>
 
-        <section style={styles.card}>
+        <section style={styles.orderPanel}>
           <p style={styles.sectionKicker}>Copy-Ready Trajectory Brief</p>
-          <h2 style={styles.cardTitle}>
+          <h2 style={styles.panelTitle}>
             What future continuity posture is becoming increasingly probable?
           </h2>
           <pre style={styles.summaryBox}>{brief}</pre>
         </section>
+
+        <section style={styles.doctrineCard}>
+          <strong>ENTERPRISE TRAJECTORY DOCTRINE</strong>
+          <span>
+            Pressure shows where instability is accumulating. Trajectory shows
+            where continuity is heading. Direction must be governed before risk
+            becomes unavoidable.
+          </span>
+        </section>
       </div>
     </main>
   )
+}
+
+function mapToSynthesisPosture(value: unknown): CGIRouteSynthesisPosture {
+  const normalized = String(value).toUpperCase()
+
+  if (
+    normalized.includes('SURVIVABILITY_THREAT') ||
+    normalized.includes('CRITICAL') ||
+    normalized.includes('HIGH') ||
+    normalized.includes('FAILED') ||
+    normalized.includes('SEVERE')
+  ) {
+    return 'CRITICAL'
+  }
+
+  if (
+    normalized.includes('ELEVATED') ||
+    normalized.includes('MODERATE') ||
+    normalized.includes('ACTIVE_INSTABILITY') ||
+    normalized.includes('FRAGILE') ||
+    normalized.includes('PARTIAL') ||
+    normalized.includes('UNCERTAIN') ||
+    normalized.includes('LOW') ||
+    normalized.includes('WEAK') ||
+    normalized.includes('CONDITIONAL')
+  ) {
+    return 'ELEVATED'
+  }
+
+  return 'WATCHED'
 }
 
 function buildEnterpriseTrajectoryIntelligence(input: {
@@ -840,7 +876,6 @@ function buildEnterpriseTrajectoryIntelligence(input: {
     copyReadyBrief,
   }
 }
-
 function deriveEnterpriseTrajectoryPosture(input: {
   recordCount: number
   directionStrength: number
@@ -941,7 +976,6 @@ function deriveTrajectoryVelocity(input: {
   trajectoryVolatility: number
 }): TrajectoryVelocity {
   if (input.recordCount < 3) return 'INSUFFICIENT VELOCITY MEMORY'
-
   if (input.trajectoryVolatility >= 30) return 'VOLATILE TRANSITION'
 
   if (
@@ -973,10 +1007,7 @@ function deriveTrajectoryConfidence(input: {
   if (input.trajectoryVolatility >= 30) return 'WEAK CONFIDENCE'
   if (input.recordCount < 10) return 'MODERATE CONFIDENCE'
 
-  if (
-    input.directionStrength >= 70 ||
-    input.deteriorationLoad >= 65
-  ) {
+  if (input.directionStrength >= 70 || input.deteriorationLoad >= 65) {
     return 'HIGH CONFIDENCE'
   }
 
@@ -1308,7 +1339,6 @@ function interpretDirectionStrength(value: number): Interpretation {
     action: 'Review recovery and stabilization barriers.',
   }
 }
-
 function interpretDrift(value: number): Interpretation {
   if (value >= 60) {
     return {
@@ -1534,6 +1564,24 @@ function formatDate(value: string) {
   return new Date(value).toLocaleString()
 }
 
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <article style={styles.metricCard}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.metricValue}>{value}</p>
+    </article>
+  )
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <article style={styles.miniStat}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.miniValue}>{value}</p>
+    </article>
+  )
+}
+
 function PostureCard({
   title,
   interpretation,
@@ -1543,18 +1591,9 @@ function PostureCard({
 }) {
   return (
     <article style={styles.postureCard}>
-      <p style={styles.cardKicker}>{title}</p>
-      <h3 style={styles.postureTitle}>{interpretation.posture}</h3>
-      <p style={styles.postureMeaning}>{interpretation.meaning}</p>
-    </article>
-  )
-}
-
-function CompactCard({ title, value }: { title: string; value: string }) {
-  return (
-    <article style={styles.compactCard}>
-      <p style={styles.cardKicker}>{title}</p>
-      <h3 style={styles.compactValue}>{value}</h3>
+      <p style={styles.sectionKicker}>{title}</p>
+      <h3 style={styles.cardValue}>{interpretation.posture}</h3>
+      <p style={styles.panelBody}>{interpretation.meaning}</p>
     </article>
   )
 }
@@ -1569,27 +1608,18 @@ function ExecutiveCard({
   body: string
 }) {
   return (
-    <article style={styles.executiveCard}>
-      <p style={styles.cardKicker}>{title}</p>
-      <h3 style={styles.executiveValue}>{value}</h3>
-      <p style={styles.postureMeaning}>{body}</p>
-    </article>
-  )
-}
-
-function MiniBlock({ title, value }: { title: string; value: string }) {
-  return (
-    <article style={styles.miniBlock}>
-      <p style={styles.cardKicker}>{title}</p>
-      <h3 style={styles.miniValue}>{value}</h3>
+    <article style={styles.panelCard}>
+      <p style={styles.sectionKicker}>{title}</p>
+      <h3 style={styles.cardValue}>{value}</h3>
+      <p style={styles.panelBody}>{body}</p>
     </article>
   )
 }
 
 function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section style={styles.card}>
-      <h2 style={styles.cardTitle}>{title}</h2>
+    <section style={styles.panel}>
+      <p style={styles.sectionKicker}>{title}</p>
       <div style={styles.infoList}>{children}</div>
     </section>
   )
@@ -1607,314 +1637,343 @@ function Info({ label, value }: { label: string; value: string }) {
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    color: 'white',
-    overflowX: 'hidden',
+    background:
+      'radial-gradient(circle at top left, rgba(201, 162, 39, 0.14), transparent 34%), linear-gradient(135deg, #050505 0%, #0B0B0B 45%, #111111 100%)',
+    color: '#FFFFFF',
+    padding: '40px 24px 72px',
   },
   container: {
-    width: '100%',
-    maxWidth: '1120px',
+    width: 'min(1440px, 100%)',
     margin: '0 auto',
-    padding: '0 20px 48px',
-    boxSizing: 'border-box',
+    display: 'grid',
+    gap: 24,
   },
-  header: {
-    marginBottom: '20px',
-    paddingTop: '4px',
+  hero: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.45fr) minmax(320px, 0.75fr)',
+    gap: 24,
+    padding: 32,
+    border: '1px solid rgba(201, 162, 39, 0.34)',
+    borderRadius: 28,
+    background:
+      'linear-gradient(135deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018))',
+    boxShadow: '0 28px 80px rgba(0,0,0,0.38)',
   },
   kicker: {
-    color: '#c4b5fd',
-    fontSize: '12px',
-    fontWeight: 900,
-    letterSpacing: '2px',
     margin: 0,
+    color: '#C9A227',
+    fontSize: 12,
+    fontWeight: 900,
+    letterSpacing: '0.22em',
+    textTransform: 'uppercase',
   },
   title: {
-    fontSize: 'clamp(32px, 5vw, 48px)',
-    lineHeight: 1.05,
-    margin: '10px 0',
+    margin: '14px 0 0',
+    fontSize: 'clamp(2.3rem, 5vw, 5rem)',
+    lineHeight: 0.95,
+    letterSpacing: '-0.07em',
+    fontWeight: 950,
   },
   subtitle: {
-    color: '#cbd5e1',
-    maxWidth: '820px',
-    lineHeight: 1.65,
-    fontSize: '16px',
+    maxWidth: 880,
+    margin: '18px 0 0',
+    color: '#C8CDD4',
+    fontSize: 17,
+    lineHeight: 1.8,
+  },
+  statusBox: {
+    border: '1px solid rgba(201, 162, 39, 0.5)',
+    borderRadius: 24,
+    padding: 24,
+    background: 'linear-gradient(180deg, rgba(201,162,39,0.18), rgba(0,0,0,0.38))',
+  },
+  statusLabel: {
     margin: 0,
+    color: '#D7B84C',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.2em',
+  },
+  statusValue: {
+    margin: '16px 0 0',
+    fontSize: 30,
+    fontWeight: 950,
+    letterSpacing: '-0.04em',
+    lineHeight: 1.05,
+  },
+  statusMeaning: {
+    margin: '12px 0 0',
+    color: '#ECE7D7',
+    fontSize: 14,
+    lineHeight: 1.7,
   },
   message: {
-    background: '#2e1065',
-    color: '#ede9fe',
-    padding: '12px 14px',
-    borderRadius: '14px',
+    padding: '14px 18px',
+    borderRadius: 16,
+    color: '#D7B84C',
+    background: 'rgba(201,162,39,0.1)',
+    border: '1px solid rgba(201,162,39,0.22)',
     fontWeight: 800,
-    marginBottom: '16px',
-    fontSize: '14px',
   },
-  heroCard: {
+  commandDeck: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.35fr) minmax(260px, 0.65fr)',
-    gap: '16px',
-    background: '#020617',
-    border: '1px solid #a78bfa',
-    borderRadius: '24px',
-    padding: '22px',
-    marginBottom: '16px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
+    gridTemplateColumns: '1.4fr 0.8fr',
+    gap: 24,
   },
-  questionCard: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.15fr) minmax(320px, 0.85fr)',
-    gap: '16px',
-    background: '#020617',
-    border: '1px solid #facc15',
-    borderRadius: '24px',
-    padding: '22px',
-    marginBottom: '16px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
+  primaryCard: {
+    padding: 30,
+    borderRadius: 28,
+    background: '#FFFFFF',
+    color: '#0B0B0B',
+    border: '1px solid rgba(255,255,255,0.12)',
   },
-  questionStack: {
-    display: 'grid',
-    gap: '12px',
+  consequenceCard: {
+    padding: 30,
+    borderRadius: 28,
+    background: 'rgba(0,0,0,0.38)',
+    border: '1px solid rgba(201,162,39,0.28)',
   },
   sectionKicker: {
-    color: '#94a3b8',
-    fontWeight: 900,
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
     margin: 0,
-    fontSize: '12px',
+    color: '#C9A227',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.18em',
+    textTransform: 'uppercase',
   },
-  heroPosture: {
-    fontSize: 'clamp(34px, 6vw, 56px)',
-    margin: '8px 0 12px',
-    color: '#c4b5fd',
+  commandTitle: {
+    margin: '14px 0',
+    fontSize: 'clamp(1.8rem, 3vw, 3.2rem)',
+    lineHeight: 1.05,
     letterSpacing: '-0.05em',
-    lineHeight: 1,
+    fontWeight: 950,
   },
-  heroMeaning: {
-    color: '#ede9fe',
-    lineHeight: 1.6,
+  primaryText: {
     margin: 0,
-    maxWidth: '720px',
+    color: '#4A4A4A',
+    lineHeight: 1.7,
+    fontSize: 14,
   },
-  actionBox: {
-    background: '#2e1065',
-    border: '1px solid #a78bfa',
-    borderRadius: '18px',
-    padding: '16px',
-    alignSelf: 'stretch',
+  consequenceTitle: {
+    margin: '14px 0',
+    fontSize: 28,
+    lineHeight: 1.1,
+    letterSpacing: '-0.04em',
   },
-  actionLabel: {
-    color: '#c4b5fd',
-    fontWeight: 900,
-    margin: '0 0 8px',
-    fontSize: '12px',
+  bodyText: {
+    margin: '8px 0 0',
+    color: '#AEB6C2',
+    lineHeight: 1.7,
+    fontSize: 14,
+  },
+  commandMetaGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 24,
+  },
+  metricsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+    gap: 14,
+  },
+  metricCard: {
+    padding: 18,
+    borderRadius: 20,
+    background: 'rgba(255,255,255,0.055)',
+    border: '1px solid rgba(255,255,255,0.1)',
+  },
+  metricLabel: {
+    margin: 0,
+    color: '#858D98',
+    fontSize: 10,
+    fontWeight: 950,
+    letterSpacing: '0.14em',
     textTransform: 'uppercase',
-    letterSpacing: '0.12em',
   },
-  actionText: {
-    color: '#ede9fe',
-    lineHeight: 1.55,
-    margin: 0,
-    fontSize: '16px',
-    fontWeight: 900,
+  metricValue: {
+    margin: '10px 0 0',
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: 950,
+    lineHeight: 1.15,
+    overflowWrap: 'anywhere',
+  },
+  miniStat: {
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(255,255,255,0.055)',
+    border: '1px solid rgba(255,255,255,0.09)',
+  },
+  miniValue: {
+    margin: '8px 0 0',
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: 850,
+    lineHeight: 1.45,
+    overflowWrap: 'anywhere',
   },
   gridFour: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '14px',
-    marginBottom: '16px',
+    gap: 16,
+  },
+  gridTwo: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 16,
   },
   postureGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '14px',
-    marginBottom: '16px',
+    gap: 16,
+  },
+  panel: {
+    padding: 28,
+    borderRadius: 28,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.1)',
+  },
+  panelCard: {
+    padding: 22,
+    borderRadius: 22,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.09)',
+    minHeight: 150,
   },
   postureCard: {
-    background: '#0f172a',
-    border: '1px solid #1e293b',
-    borderRadius: '18px',
-    padding: '16px',
-    minHeight: '150px',
-    boxSizing: 'border-box',
+    padding: 22,
+    borderRadius: 22,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.09)',
+    minHeight: 150,
   },
-  executiveCard: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '16px',
-    minHeight: '160px',
-    boxSizing: 'border-box',
+  panelTitle: {
+    margin: '12px 0 0',
+    fontSize: 26,
+    lineHeight: 1.15,
+    letterSpacing: '-0.045em',
   },
-  executiveValue: {
-    color: '#f8fafc',
-    fontSize: '18px',
-    lineHeight: 1.2,
-    margin: '10px 0 8px',
+  cardValue: {
+    margin: '12px 0 0',
+    color: '#FFFFFF',
+    fontSize: 19,
+    lineHeight: 1.25,
     overflowWrap: 'anywhere',
   },
-  cardKicker: {
-    color: '#94a3b8',
-    fontWeight: 800,
-    margin: 0,
-    fontSize: '12px',
+  panelBody: {
+    marginTop: 10,
+    color: '#AEB6C2',
+    fontSize: 14,
+    lineHeight: 1.65,
   },
-  postureTitle: {
-    color: '#f8fafc',
-    fontSize: '19px',
-    margin: '10px 0 8px',
-    lineHeight: 1.15,
+  infoList: {
+    display: 'grid',
+    gap: 10,
+    marginTop: 18,
   },
-  postureMeaning: {
-    color: '#cbd5e1',
+  infoRow: {
+    display: 'grid',
+    gridTemplateColumns: '170px minmax(0, 1fr)',
+    gap: 12,
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(0,0,0,0.22)',
+    border: '1px solid rgba(255,255,255,0.08)',
+  },
+  infoLabel: {
+    color: '#858D98',
+    fontWeight: 900,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+  },
+  infoValue: {
+    color: '#FFFFFF',
     lineHeight: 1.5,
-    fontSize: '14px',
-    margin: 0,
+    overflowWrap: 'anywhere',
   },
-  compactGrid: {
+  memoryPanel: {
+    padding: 28,
+    borderRadius: 28,
+    background: 'linear-gradient(135deg, rgba(201,162,39,0.13), rgba(255,255,255,0.035))',
+    border: '1px solid rgba(201,162,39,0.32)',
+  },
+  memoryGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '14px',
-    marginBottom: '16px',
-  },
-  compactCard: {
-    background: '#0f172a',
-    border: '1px solid #1e293b',
-    borderRadius: '18px',
-    padding: '16px',
-    minHeight: '104px',
-    boxSizing: 'border-box',
-  },
-  compactValue: {
-    fontSize: '18px',
-    lineHeight: 1.2,
-    margin: '10px 0 0',
-    color: '#f8fafc',
-    overflowWrap: 'anywhere',
-  },
-  miniBlock: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '16px',
-    padding: '14px',
-  },
-  miniValue: {
-    color: '#f8fafc',
-    fontSize: '16px',
-    lineHeight: 1.35,
-    margin: '10px 0 0',
-  },
-  twoColumn: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '16px',
-    marginBottom: '16px',
-  },
-  card: {
-    background: '#020617',
-    border: '1px solid #1e293b',
-    borderRadius: '22px',
-    padding: '20px',
-    marginBottom: '16px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.24)',
-    boxSizing: 'border-box',
-    overflow: 'hidden',
+    gap: 12,
+    marginTop: 20,
   },
   cardHeader: {
     display: 'flex',
     justifyContent: 'space-between',
-    gap: '16px',
+    gap: 16,
     alignItems: 'flex-start',
-    marginBottom: '14px',
   },
-  cardTitle: {
-    fontSize: '22px',
-    margin: 0,
-    lineHeight: 1.2,
-  },
-  bodyText: {
-    color: '#cbd5e1',
-    lineHeight: 1.7,
-    margin: '10px 0 0',
-    maxWidth: '880px',
-  },
-  cardNote: {
-    color: '#94a3b8',
-    lineHeight: 1.5,
-    margin: '6px 0 0',
-    fontSize: '14px',
-  },
-  infoList: {
-    display: 'grid',
-    gap: '10px',
-    marginTop: '14px',
-  },
-  infoRow: {
-    display: 'grid',
-    gridTemplateColumns: '160px minmax(0, 1fr)',
-    gap: '12px',
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '14px',
-    padding: '12px',
-    alignItems: 'start',
-  },
-  infoLabel: {
-    color: '#94a3b8',
-    fontWeight: 800,
-    fontSize: '12px',
-  },
-  infoValue: {
-    color: '#f8fafc',
-    lineHeight: 1.45,
-    overflowWrap: 'anywhere',
+  primaryButton: {
+    border: 'none',
+    borderRadius: 999,
+    padding: '12px 18px',
+    background: '#C9A227',
+    color: '#090909',
+    fontWeight: 950,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
   },
   tableWrap: {
-    width: '100%',
+    marginTop: 20,
     overflowX: 'auto',
+    borderRadius: 20,
+    border: '1px solid rgba(255,255,255,0.1)',
   },
   table: {
     width: '100%',
     borderCollapse: 'collapse',
-    minWidth: '760px',
+    minWidth: 860,
   },
   th: {
+    padding: '14px 16px',
     textAlign: 'left',
-    color: '#94a3b8',
-    borderBottom: '1px solid #334155',
-    padding: '10px',
-    fontSize: '11px',
+    color: '#D7B84C',
+    background: 'rgba(201,162,39,0.08)',
+    fontSize: 11,
+    letterSpacing: '0.14em',
     textTransform: 'uppercase',
   },
   td: {
-    borderBottom: '1px solid #1e293b',
-    padding: '10px',
-    color: '#e2e8f0',
+    padding: '16px',
+    color: '#DCE1E8',
+    borderTop: '1px solid rgba(255,255,255,0.08)',
+    fontSize: 13,
+    lineHeight: 1.55,
     verticalAlign: 'top',
-    fontWeight: 700,
-    fontSize: '13px',
   },
-  primaryButton: {
-    padding: '10px 14px',
-    borderRadius: '12px',
-    border: 'none',
-    background: '#c4b5fd',
-    color: '#2e1065',
-    fontWeight: 900,
-    cursor: 'pointer',
-    fontSize: '14px',
-    whiteSpace: 'nowrap',
+  orderPanel: {
+    padding: 28,
+    borderRadius: 28,
+    background: '#FFFFFF',
+    color: '#0B0B0B',
   },
   summaryBox: {
+    marginTop: 20,
+    padding: 22,
+    borderRadius: 20,
+    background: '#0A0A0A',
+    color: '#F8F6F1',
     whiteSpace: 'pre-wrap',
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '16px',
-    padding: '16px',
-    color: '#e2e8f0',
-    lineHeight: 1.55,
-    minHeight: '260px',
-    fontSize: '14px',
+    fontSize: 13,
+    lineHeight: 1.7,
     overflowX: 'auto',
+  },
+  doctrineCard: {
+    display: 'grid',
+    gap: 10,
+    padding: 24,
+    borderRadius: 24,
+    background: '#050505',
+    border: '1px solid rgba(201,162,39,0.42)',
+    color: '#FFFFFF',
+    lineHeight: 1.7,
   },
 }
