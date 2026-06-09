@@ -3,6 +3,10 @@ import {
   type CGIExecutiveMemoryCompression,
 } from './cgiExecutiveMemoryCompressionEngine'
 import {
+  buildCGIInstitutionalMemory,
+  type CGIInstitutionalMemoryOutput,
+} from './cgiInstitutionalMemoryEngine'
+import {
   reviewCGIHistoricalContinuity,
   type CGIHistoricalContinuityReview,
   type CGIHistoricalContinuitySnapshot,
@@ -25,6 +29,7 @@ export type CGIExecutiveMemoryBoardUrgency =
 export type CGIExecutiveMemoryBoard = {
   historicalReview: CGIHistoricalContinuityReview
   compression: CGIExecutiveMemoryCompression
+  institutionalMemory: CGIInstitutionalMemoryOutput
   boardPosture: CGIExecutiveMemoryBoardPosture
   boardPostureLabel: string
   boardUrgency: CGIExecutiveMemoryBoardUrgency
@@ -45,7 +50,7 @@ export type CGIExecutiveMemoryBoard = {
 }
 
 export function buildCGIExecutiveMemoryBoard(
-  snapshots: CGIHistoricalContinuitySnapshot[]
+  snapshots: CGIHistoricalContinuitySnapshot[],
 ): CGIExecutiveMemoryBoard {
   const historicalReview = reviewCGIHistoricalContinuity(snapshots)
   const compression = compressCGIExecutiveMemory(historicalReview)
@@ -72,9 +77,29 @@ export function buildCGIExecutiveMemoryBoard(
   const evidenceGapVisible =
     compression.evidenceAttentionRequired || historicalReview.evidenceGap
 
+  const institutionalMemory = buildCGIInstitutionalMemory({
+    historicalRecords: historicalReview.snapshotCount,
+    recurringInstabilityCount: recurrencePatternVisible ? 1 : 0,
+    recoveryFailureCount:
+      evidenceGapVisible || survivabilityExposureVisible ? 1 : 0,
+    verifiedRecoveryCount:
+      stabilizationCredibilityVisible && !evidenceGapVisible ? 1 : 0,
+    commandInterventionCount: escalationRequired ? 1 : 0,
+    coordinationIssueCount: evidenceGapVisible ? 1 : 0,
+    crossSiteSignalCount:
+      recurrencePatternVisible || survivabilityExposureVisible ? 1 : 0,
+    executiveReviewCount:
+      escalationRequired || boardUrgency === 'EXECUTIVE_REVIEW' ? 1 : 0,
+    auditReconstructionCount: historicalReview.snapshotCount > 0 ? 1 : 0,
+    survivabilityThreatCount: survivabilityExposureVisible ? 1 : 0,
+    unresolvedMemoryGaps: evidenceGapVisible ? 1 : 0,
+    lastKnownPattern: compression.dominantMemoryConcern,
+  })
+
   const dominantBoardConcern = deriveDominantBoardConcern({
     historicalReview,
     compression,
+    institutionalMemory,
     escalationRequired,
     survivabilityExposureVisible,
     recurrencePatternVisible,
@@ -85,6 +110,7 @@ export function buildCGIExecutiveMemoryBoard(
     boardPosture,
     boardUrgency,
     compression,
+    institutionalMemory,
     escalationRequired,
     survivabilityExposureVisible,
     recurrencePatternVisible,
@@ -94,6 +120,7 @@ export function buildCGIExecutiveMemoryBoard(
   const requiredBoardEvidence = deriveRequiredBoardEvidence({
     historicalReview,
     compression,
+    institutionalMemory,
     survivabilityExposureVisible,
     recurrencePatternVisible,
     evidenceGapVisible,
@@ -102,6 +129,7 @@ export function buildCGIExecutiveMemoryBoard(
   const executiveSummary = buildExecutiveSummary({
     historicalReview,
     compression,
+    institutionalMemory,
     boardPosture,
     boardUrgency,
     dominantBoardConcern,
@@ -111,17 +139,24 @@ export function buildCGIExecutiveMemoryBoard(
   const boardReading = buildBoardReading({
     historicalReview,
     compression,
+    institutionalMemory,
     boardPosture,
     boardUrgency,
     escalationRequired,
   })
 
-  const memoryDoctrineStatement =
-    'The CGI Executive Memory Board compresses governed continuity memory into executive meaning. It does not replace operational records, assign blame, or create surveillance. It preserves continuity posture, recurrence, survivability pressure, evidence credibility, and escalation meaning across time.'
+  const memoryDoctrineStatement = [
+    'The CGI Executive Memory Board compresses governed continuity memory into executive meaning.',
+    'It does not replace operational records, assign blame, or create surveillance.',
+    'It preserves continuity posture, recurrence, survivability pressure, evidence credibility, escalation meaning, and doctrine-derived trust across time.',
+    `Doctrine trust reading: ${institutionalMemory.doctrine.trustReading}.`,
+    `Doctrine movement: ${institutionalMemory.doctrine.requiredMovement}`,
+  ].join(' ')
 
   return {
     historicalReview,
     compression,
+    institutionalMemory,
     boardPosture,
     boardPostureLabel: formatCGIExecutiveMemoryBoardPosture(boardPosture),
     boardUrgency,
@@ -145,24 +180,18 @@ export function buildCGIExecutiveMemoryBoard(
 }
 
 function deriveBoardPosture(
-  compression: CGIExecutiveMemoryCompression
+  compression: CGIExecutiveMemoryCompression,
 ): CGIExecutiveMemoryBoardPosture {
   if (compression.memoryPosture === 'NO_MEMORY') return 'NO_MEMORY'
-  if (compression.memoryPosture === 'CRITICAL_MEMORY') {
-    return 'CRITICAL_BOARD'
-  }
-  if (compression.memoryPosture === 'ELEVATED_MEMORY') {
-    return 'ELEVATED_BOARD'
-  }
-  if (compression.memoryPosture === 'WATCHED_MEMORY') {
-    return 'WATCHED_BOARD'
-  }
+  if (compression.memoryPosture === 'CRITICAL_MEMORY') return 'CRITICAL_BOARD'
+  if (compression.memoryPosture === 'ELEVATED_MEMORY') return 'ELEVATED_BOARD'
+  if (compression.memoryPosture === 'WATCHED_MEMORY') return 'WATCHED_BOARD'
 
   return 'STABLE_BOARD'
 }
 
 function deriveBoardUrgency(
-  compression: CGIExecutiveMemoryCompression
+  compression: CGIExecutiveMemoryCompression,
 ): CGIExecutiveMemoryBoardUrgency {
   if (compression.urgency === 'NONE') return 'NONE'
   if (compression.urgency === 'LOW') return 'ROUTINE'
@@ -175,6 +204,7 @@ function deriveBoardUrgency(
 function deriveDominantBoardConcern({
   historicalReview,
   compression,
+  institutionalMemory,
   escalationRequired,
   survivabilityExposureVisible,
   recurrencePatternVisible,
@@ -182,6 +212,7 @@ function deriveDominantBoardConcern({
 }: {
   historicalReview: CGIHistoricalContinuityReview
   compression: CGIExecutiveMemoryCompression
+  institutionalMemory: CGIInstitutionalMemoryOutput
   escalationRequired: boolean
   survivabilityExposureVisible: boolean
   recurrencePatternVisible: boolean
@@ -192,7 +223,7 @@ function deriveDominantBoardConcern({
   }
 
   if (escalationRequired) {
-    return 'Executive memory indicates continuity exposure that should remain visible until stabilization credibility improves.'
+    return institutionalMemory.doctrine.boardLevelWarning
   }
 
   if (survivabilityExposureVisible) {
@@ -200,7 +231,7 @@ function deriveDominantBoardConcern({
   }
 
   if (recurrencePatternVisible) {
-    return 'Recurrence is visible in the memory record and should be interpreted as a structural pattern.'
+    return institutionalMemory.doctrine.institutionalMeaning
   }
 
   if (evidenceGapVisible) {
@@ -218,6 +249,7 @@ function deriveRequiredBoardAction({
   boardPosture,
   boardUrgency,
   compression,
+  institutionalMemory,
   escalationRequired,
   survivabilityExposureVisible,
   recurrencePatternVisible,
@@ -226,6 +258,7 @@ function deriveRequiredBoardAction({
   boardPosture: CGIExecutiveMemoryBoardPosture
   boardUrgency: CGIExecutiveMemoryBoardUrgency
   compression: CGIExecutiveMemoryCompression
+  institutionalMemory: CGIInstitutionalMemoryOutput
   escalationRequired: boolean
   survivabilityExposureVisible: boolean
   recurrencePatternVisible: boolean
@@ -236,7 +269,7 @@ function deriveRequiredBoardAction({
   }
 
   if (escalationRequired || boardUrgency === 'EXECUTIVE_ACTION') {
-    return 'Keep executive action visible until continuity exposure, survivability pressure, and evidence gaps are resolved.'
+    return institutionalMemory.doctrine.executiveDecision
   }
 
   if (boardUrgency === 'EXECUTIVE_REVIEW') {
@@ -247,12 +280,8 @@ function deriveRequiredBoardAction({
     return 'Keep survivability exposure visible until recovery credibility is verified.'
   }
 
-  if (recurrencePatternVisible) {
-    return 'Review recurrence patterns and require structural stabilization ownership.'
-  }
-
-  if (evidenceGapVisible) {
-    return 'Require evidence follow-up before accepting stabilization credibility.'
+  if (recurrencePatternVisible || evidenceGapVisible) {
+    return institutionalMemory.doctrine.requiredMovement
   }
 
   return compression.requiredExecutiveAction
@@ -261,12 +290,14 @@ function deriveRequiredBoardAction({
 function deriveRequiredBoardEvidence({
   historicalReview,
   compression,
+  institutionalMemory,
   survivabilityExposureVisible,
   recurrencePatternVisible,
   evidenceGapVisible,
 }: {
   historicalReview: CGIHistoricalContinuityReview
   compression: CGIExecutiveMemoryCompression
+  institutionalMemory: CGIInstitutionalMemoryOutput
   survivabilityExposureVisible: boolean
   recurrencePatternVisible: boolean
   evidenceGapVisible: boolean
@@ -276,7 +307,7 @@ function deriveRequiredBoardEvidence({
   }
 
   if (evidenceGapVisible) {
-    return 'Verified stabilization evidence is required for unresolved continuity memory.'
+    return institutionalMemory.evidenceToPreserve
   }
 
   if (survivabilityExposureVisible) {
@@ -293,6 +324,7 @@ function deriveRequiredBoardEvidence({
 function buildExecutiveSummary({
   historicalReview,
   compression,
+  institutionalMemory,
   boardPosture,
   boardUrgency,
   dominantBoardConcern,
@@ -300,6 +332,7 @@ function buildExecutiveSummary({
 }: {
   historicalReview: CGIHistoricalContinuityReview
   compression: CGIExecutiveMemoryCompression
+  institutionalMemory: CGIInstitutionalMemoryOutput
   boardPosture: CGIExecutiveMemoryBoardPosture
   boardUrgency: CGIExecutiveMemoryBoardUrgency
   dominantBoardConcern: string
@@ -313,6 +346,7 @@ function buildExecutiveSummary({
     `Board posture is ${formatCGIExecutiveMemoryBoardPosture(boardPosture)}.`,
     `Board urgency is ${formatCGIExecutiveMemoryBoardUrgency(boardUrgency)}.`,
     `Memory posture is ${compression.memoryPostureLabel}.`,
+    `Doctrine trust is ${institutionalMemory.doctrine.trustReading}.`,
     `Historical direction is ${historicalReview.directionLabel}.`,
     `Dominant concern: ${dominantBoardConcern}`,
     `Required action: ${requiredBoardAction}`,
@@ -322,12 +356,14 @@ function buildExecutiveSummary({
 function buildBoardReading({
   historicalReview,
   compression,
+  institutionalMemory,
   boardPosture,
   boardUrgency,
   escalationRequired,
 }: {
   historicalReview: CGIHistoricalContinuityReview
   compression: CGIExecutiveMemoryCompression
+  institutionalMemory: CGIInstitutionalMemoryOutput
   boardPosture: CGIExecutiveMemoryBoardPosture
   boardUrgency: CGIExecutiveMemoryBoardUrgency
   escalationRequired: boolean
@@ -341,6 +377,7 @@ function buildBoardReading({
     `Board posture: ${formatCGIExecutiveMemoryBoardPosture(boardPosture)}.`,
     `Urgency: ${formatCGIExecutiveMemoryBoardUrgency(boardUrgency)}.`,
     `Compression confidence: ${compression.confidenceLabel}.`,
+    `Doctrine trust level: ${institutionalMemory.doctrine.trustLevel}.`,
     `Escalation required: ${escalationRequired ? 'YES' : 'NO'}.`,
     `Institutional memory pressure: ${historicalReview.institutionalMemoryPressureLabel}.`,
     `Continuity persistence severity: ${historicalReview.continuityPersistenceSeverityLabel}.`,
@@ -348,7 +385,7 @@ function buildBoardReading({
 }
 
 export function formatCGIExecutiveMemoryBoardPosture(
-  posture: CGIExecutiveMemoryBoardPosture
+  posture: CGIExecutiveMemoryBoardPosture,
 ) {
   const labels: Record<CGIExecutiveMemoryBoardPosture, string> = {
     NO_MEMORY: 'NO MEMORY',
@@ -362,7 +399,7 @@ export function formatCGIExecutiveMemoryBoardPosture(
 }
 
 export function formatCGIExecutiveMemoryBoardUrgency(
-  urgency: CGIExecutiveMemoryBoardUrgency
+  urgency: CGIExecutiveMemoryBoardUrgency,
 ) {
   const labels: Record<CGIExecutiveMemoryBoardUrgency, string> = {
     NONE: 'NONE',
