@@ -1,6 +1,12 @@
+import { buildContinuityDerivationStandard } from './cgiContinuityDerivationStandard'
+import { buildContinuityTrustAssessment } from './cgiContinuityTrustEngine'
+import type {
+  ContinuityTrustAssessment,
+  ContinuityTrustInput,
+} from './cgiContinuityTrustEngine'
 import {
-  getCGIPreferredTerm,
   getCGIExecutiveUse,
+  getCGIPreferredTerm,
 } from './cgiExecutiveSemanticRegistry'
 
 export type CGIRouteSynthesisPosture =
@@ -30,6 +36,15 @@ export type CGICrossRouteContinuitySynthesis = {
   requiredEvidence: string
   governanceSafeInterpretation: string
   semanticBasis: string[]
+  trustAssessment: ContinuityTrustAssessment
+  continuityStandard: {
+    whatIsVisible: string
+    whyItMatters: string
+    continuityRisk: string
+    requiredMovement: string
+    trustLevel: string
+    institutionalMeaning: string
+  }
 }
 
 const postureWeight: Record<CGIRouteSynthesisPosture, number> = {
@@ -40,24 +55,22 @@ const postureWeight: Record<CGIRouteSynthesisPosture, number> = {
 }
 
 function strongestPosture(
-  postures: CGIRouteSynthesisPosture[]
+  postures: CGIRouteSynthesisPosture[],
 ): CGIRouteSynthesisPosture {
   return postures.reduce((strongest, current) =>
-    postureWeight[current] > postureWeight[strongest]
-      ? current
-      : strongest
+    postureWeight[current] > postureWeight[strongest] ? current : strongest,
   )
 }
 
 function countPosture(
   postures: CGIRouteSynthesisPosture[],
-  target: CGIRouteSynthesisPosture
+  target: CGIRouteSynthesisPosture,
 ): number {
   return postures.filter((posture) => posture === target).length
 }
 
 function deriveSynthesisPosture(
-  input: CGIRouteSynthesisInput
+  input: CGIRouteSynthesisInput,
 ): CGIRouteSynthesisPosture {
   const postures = [
     input.pressurePosture,
@@ -97,9 +110,7 @@ function deriveSynthesisPosture(
   return strongestPosture(postures)
 }
 
-function deriveDominantConcern(
-  input: CGIRouteSynthesisInput
-): string {
+function deriveDominantConcern(input: CGIRouteSynthesisInput): string {
   const concerns: Array<{
     label: string
     posture: CGIRouteSynthesisPosture
@@ -127,105 +138,180 @@ function deriveDominantConcern(
   ]
 
   return concerns.sort(
-    (a, b) => postureWeight[b.posture] - postureWeight[a.posture]
+    (a, b) => postureWeight[b.posture] - postureWeight[a.posture],
   )[0].label
 }
 
-function deriveExecutiveReading(
-  posture: CGIRouteSynthesisPosture
-): string {
-  if (posture === 'CRITICAL') {
-    return 'Continuity cannot yet be trusted without direct executive coordination and verified stabilization evidence.'
-  }
-
-  if (posture === 'ELEVATED') {
-    return 'Continuity remains exposed and requires active executive review before stabilization can be trusted.'
-  }
-
-  if (posture === 'WATCHED') {
-    return 'Continuity is holding under observation but still requires confirmation before closure confidence.'
-  }
-
-  return 'Continuity appears stable across the reviewed intelligence surfaces.'
-}
-
-function deriveExecutiveMeaning(
-  posture: CGIRouteSynthesisPosture,
-  dominantConcern: string
-): string {
-  if (posture === 'CRITICAL') {
-    return `${dominantConcern} is strong enough to threaten continuity credibility. Leadership should treat the condition as an active stabilization concern, not a routine operational variation.`
-  }
-
-  if (posture === 'ELEVATED') {
-    return `${dominantConcern} is the leading concern in the current continuity reading. Stabilization may be present, but it is not yet dependable enough for relaxed oversight.`
-  }
-
-  if (posture === 'WATCHED') {
-    return `${dominantConcern} remains visible. Continuity may be holding, but executive confidence should remain conditional until evidence confirms durability.`
-  }
-
-  return `${dominantConcern} is not currently showing enough pressure to weaken continuity trust. Routine confirmation remains appropriate.`
-}
-
-function deriveRequiredAction(
-  posture: CGIRouteSynthesisPosture
-): string {
-  if (posture === 'CRITICAL') {
-    return 'Activate executive coordination, confirm ownership, require stabilization evidence, and keep survivability protection visible until continuity credibility is restored.'
-  }
-
-  if (posture === 'ELEVATED') {
-    return 'Maintain active executive review, verify recovery credibility, and monitor whether pressure, trajectory, or trustworthiness deteriorates further.'
-  }
-
-  if (posture === 'WATCHED') {
-    return 'Continue governance monitoring and confirm that recovery evidence remains consistent across the next continuity review.'
-  }
-
-  return 'Maintain routine continuity monitoring and preserve the evidence trail.'
-}
-
-function deriveRequiredEvidence(
+function buildRouteTrustInput(
   input: CGIRouteSynthesisInput,
-  posture: CGIRouteSynthesisPosture
-): string {
-  if (input.evidenceVerified && posture === 'STABLE') {
-    return 'Current evidence supports routine continuity confidence, with continued monitoring.'
+  synthesisPosture: CGIRouteSynthesisPosture,
+): ContinuityTrustInput {
+  const postures = [
+    input.pressurePosture,
+    input.trajectoryPosture,
+    input.predictivePosture,
+    input.recoveryPosture,
+    input.reliabilityPosture,
+  ]
+
+  const criticalCount = countPosture(postures, 'CRITICAL')
+  const elevatedCount = countPosture(postures, 'ELEVATED')
+  const watchedCount = countPosture(postures, 'WATCHED')
+
+  return {
+    activeInstability: criticalCount + elevatedCount + watchedCount,
+    recoveryRecords:
+      input.recoveryPosture === 'STABLE'
+        ? 1
+        : input.recoveryPosture === 'WATCHED'
+          ? 1
+          : input.recoveryPosture === 'ELEVATED'
+            ? 1
+            : 1,
+    fragileRecovery:
+      input.recoveryPosture === 'WATCHED' ||
+      input.recoveryPosture === 'ELEVATED' ||
+      input.recoveryPosture === 'CRITICAL'
+        ? 1
+        : 0,
+    commandPressure:
+      synthesisPosture === 'CRITICAL' || synthesisPosture === 'ELEVATED'
+        ? 1
+        : 0,
+    evidenceReturn: input.evidenceVerified ? 0 : 1,
+    absorbable:
+      synthesisPosture === 'STABLE' &&
+      input.evidenceVerified &&
+      !input.accountabilityActive &&
+      !input.structuralMemoryVisible
+        ? 1
+        : 0,
+    historicalMemory: input.structuralMemoryVisible ? 1 : 0,
+    recurrenceVisible:
+      input.structuralMemoryVisible ||
+      input.trajectoryPosture === 'ELEVATED' ||
+      input.trajectoryPosture === 'CRITICAL'
+        ? 1
+        : 0,
+    coordinationPressure: input.accountabilityActive ? 1 : 0,
+    crossSitePressure:
+      input.pressurePosture === 'ELEVATED' ||
+      input.pressurePosture === 'CRITICAL'
+        ? 1
+        : 0,
+    auditPressure: input.evidenceVerified ? 0 : 1,
+    safeguardingVisible: criticalCount,
+    posture: synthesisPosture,
+  }
+}
+
+function deriveVisibleSignal(
+  input: CGIRouteSynthesisInput,
+  synthesisPosture: CGIRouteSynthesisPosture,
+  dominantConcern: string,
+) {
+  if (synthesisPosture === 'CRITICAL') {
+    return `Critical cross-route continuity pressure led by ${dominantConcern}`
   }
 
-  if (input.evidenceVerified) {
-    return 'Evidence exists, but continued verification is required because continuity pressure remains visible.'
+  if (synthesisPosture === 'ELEVATED') {
+    return `Elevated cross-route continuity exposure led by ${dominantConcern}`
   }
 
-  return 'Verified stabilization evidence is required before continuity can be trusted as durable.'
+  if (synthesisPosture === 'WATCHED') {
+    return `Watched cross-route continuity condition led by ${dominantConcern}`
+  }
+
+  if (!input.evidenceVerified) {
+    return 'Evidence credibility gap'
+  }
+
+  return `Stable cross-route continuity condition led by ${dominantConcern}`
+}
+
+function deriveRequiredEvidence({
+  input,
+  trustAssessment,
+}: {
+  input: CGIRouteSynthesisInput
+  trustAssessment: ContinuityTrustAssessment
+}) {
+  if (!input.evidenceVerified) {
+    return 'Verified stabilization evidence is required before continuity can be trusted as durable.'
+  }
+
+  if (trustAssessment.trustLevel === 'WITHHELD') {
+    return 'Cross-route evidence, recurrence history, executive rationale, and audit reconstruction must remain attached before stability is trusted.'
+  }
+
+  if (trustAssessment.trustLevel === 'LOW') {
+    return 'Evidence exists, but additional verification is required because continuity pressure remains visible.'
+  }
+
+  if (trustAssessment.trustLevel === 'CONDITIONAL') {
+    return 'Preserve evidence, recurrence memory, and stabilization proof before reducing visibility.'
+  }
+
+  return 'Current evidence supports routine continuity confidence, with continued monitoring.'
 }
 
 export function buildCGICrossRouteContinuitySynthesis(
-  input: CGIRouteSynthesisInput
+  input: CGIRouteSynthesisInput,
 ): CGICrossRouteContinuitySynthesis {
   const synthesisPosture = deriveSynthesisPosture(input)
   const dominantConcern = deriveDominantConcern(input)
 
+  const trustInput = buildRouteTrustInput(input, synthesisPosture)
+  const trustAssessment = buildContinuityTrustAssessment(trustInput)
+
+  const derivation = buildContinuityDerivationStandard({
+    ...trustInput,
+    visibleSignal: deriveVisibleSignal(input, synthesisPosture, dominantConcern),
+    stage: 'Cross Route Continuity Synthesis',
+    posture: synthesisPosture,
+    currentMeaning: trustAssessment.institutionalMeaning,
+    nextMovement: trustAssessment.executiveDecision,
+  })
+
+  const continuityStandard = {
+    whatIsVisible: derivation.whatIsVisible,
+    whyItMatters: derivation.whyItMatters,
+    continuityRisk: derivation.continuityRisk,
+    requiredMovement: derivation.requiredMovement,
+    trustLevel: derivation.trustLevel,
+    institutionalMeaning: derivation.institutionalMeaning,
+  }
+
+  const executiveContinuityReading = trustAssessment.finalInterpretation
+
+  const executiveMeaning = trustAssessment.institutionalMeaning
+
+  const requiredExecutiveAction = trustAssessment.executiveDecision
+
+  const requiredEvidence = deriveRequiredEvidence({
+    input,
+    trustAssessment,
+  })
+
+  const governanceSafeInterpretation = [
+    'This synthesis does not judge individuals or assign blame.',
+    'It compresses pressure, trajectory, early warning, recovery credibility, and trustworthiness into one governance-safe continuity reading.',
+    trustAssessment.trustMeaning,
+  ].join(' ')
+
   return {
-    executiveContinuityReading:
-      deriveExecutiveReading(synthesisPosture),
+    executiveContinuityReading,
     continuityTrustQuestion:
       'Can continuity still be trusted under operational pressure?',
-    dominantConcern,
+    dominantConcern:
+      trustAssessment.primaryVulnerability === 'No active vulnerability visible'
+        ? dominantConcern
+        : trustAssessment.primaryVulnerability,
     synthesisPosture,
-    executiveMeaning: deriveExecutiveMeaning(
-      synthesisPosture,
-      dominantConcern
-    ),
-    requiredExecutiveAction:
-      deriveRequiredAction(synthesisPosture),
-    requiredEvidence: deriveRequiredEvidence(
-      input,
-      synthesisPosture
-    ),
-    governanceSafeInterpretation:
-      'This synthesis does not judge individuals or assign blame. It compresses pressure, trajectory, early warning, recovery credibility, and trustworthiness into one governance-safe continuity reading.',
+    executiveMeaning,
+    requiredExecutiveAction,
+    requiredEvidence,
+    governanceSafeInterpretation,
     semanticBasis: [
       getCGIExecutiveUse('PRESSURE'),
       getCGIExecutiveUse('TRAJECTORY'),
@@ -234,5 +320,7 @@ export function buildCGICrossRouteContinuitySynthesis(
       getCGIExecutiveUse('RELIABILITY'),
       getCGIExecutiveUse('SYNTHESIS'),
     ],
+    trustAssessment,
+    continuityStandard,
   }
 }
