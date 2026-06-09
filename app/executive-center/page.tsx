@@ -5,6 +5,12 @@ import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
+import { buildContinuityDerivationStandard } from '@/lib/cgiContinuityDerivationStandard'
+import {
+  buildContinuityTrustAssessment,
+  type ContinuityTrustAssessment,
+  type ContinuityTrustInput,
+} from '@/lib/cgiContinuityTrustEngine'
 import {
   buildCGIExecutiveContinuityChain,
   type CGIExecutiveContinuityChain,
@@ -53,13 +59,6 @@ type ExecutivePosture =
   | 'EXECUTIVE REVIEW REQUIRED'
   | 'STABILITY ABSORPTION READY'
 
-type EnterpriseTrustReading =
-  | 'TRUSTED'
-  | 'CONDITIONALLY TRUSTED'
-  | 'NOT YET TRUSTED'
-  | 'STRUCTURALLY UNTRUSTED'
-  | 'NO ACTIVE TRUST QUESTION'
-
 type RecoveryDisposition =
   | 'MOVE_TO_STABILITY_BOARD'
   | 'MOVE_TO_COMMAND_WATCH'
@@ -80,38 +79,26 @@ type RecoveryMemoryRecord = {
   movementReason: string
 }
 
-type ExecutiveSynthesis = {
+type ExecutiveSynthesis = ContinuityTrustInput & {
   posture: ExecutivePosture
   meaning: string
   executiveQuestion: string
   whatIsHappening: string
-  whyItMatters: string
   nextMovement: string
   leadershipAction: string
   memoryStatus: string
   evidenceStatus: string
   recoveryCredibility: string
   survivabilityMeaning: string
-  activeInstability: number
   stabilized: number
-  recoveryRecords: number
-  fragileRecovery: number
-  commandPressure: number
-  evidenceReturn: number
-  absorbable: number
-  historicalMemory: number
-  recurrenceVisible: number
-  coordinationPressure: number
-  crossSitePressure: number
-  auditPressure: number
-  safeguardingVisible: number
 }
 
 type EnterpriseContinuityReading = {
   continuityThesis: string
   institutionalMeaning: string
-  trustReading: EnterpriseTrustReading
+  trustReading: ContinuityTrustAssessment['trustReading']
   trustMeaning: string
+  trustLevel: ContinuityTrustAssessment['trustLevel']
   primaryVulnerability: string
   secondaryVulnerability: string
   stabilityThesis: string
@@ -119,6 +106,10 @@ type EnterpriseContinuityReading = {
   executiveDecision: string
   boardLevelWarning: string
   finalInterpretation: string
+  whatIsVisible: string
+  whyItMatters: string
+  continuityRisk: string
+  requiredMovement: string
 }
 
 const CASE_SAMPLE_LIMIT = 120
@@ -303,6 +294,10 @@ function ExecutiveCenterContent() {
 
           <div style={styles.apexStack}>
             <MemoryMetric
+              label="Trust Level"
+              value={enterpriseReading.trustLevel}
+            />
+            <MemoryMetric
               label="Primary Vulnerability"
               value={enterpriseReading.primaryVulnerability}
             />
@@ -313,6 +308,41 @@ function ExecutiveCenterContent() {
             <MemoryMetric
               label="Executive Decision"
               value={enterpriseReading.executiveDecision}
+            />
+          </div>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Continuity Derivation Standard</p>
+
+          <h2 style={styles.cardTitle}>
+            Executive Center now derives meaning through the CGI doctrine layer.
+          </h2>
+
+          <div style={styles.priorityGrid}>
+            <PriorityItem
+              title="What Is Visible"
+              body={enterpriseReading.whatIsVisible}
+            />
+            <PriorityItem
+              title="Why It Matters"
+              body={enterpriseReading.whyItMatters}
+            />
+            <PriorityItem
+              title="Continuity Risk"
+              body={enterpriseReading.continuityRisk}
+            />
+            <PriorityItem
+              title="Required Movement"
+              body={enterpriseReading.requiredMovement}
+            />
+            <PriorityItem
+              title="Trust Level"
+              body={enterpriseReading.trustLevel}
+            />
+            <PriorityItem
+              title="Institutional Meaning"
+              body={enterpriseReading.institutionalMeaning}
             />
           </div>
         </section>
@@ -456,12 +486,14 @@ function ExecutiveCenterContent() {
 
         <section style={styles.gridTwo}>
           <Panel title="What Is Happening?">{synthesis.whatIsHappening}</Panel>
-          <Panel title="Why It Matters">{synthesis.whyItMatters}</Panel>
+          <Panel title="Why It Matters">{enterpriseReading.whyItMatters}</Panel>
         </section>
 
         <section style={styles.gridTwo}>
           <Panel title="Lifecycle Movement">{synthesis.nextMovement}</Panel>
-          <Panel title="Leadership Action">{synthesis.leadershipAction}</Panel>
+          <Panel title="Leadership Action">
+            {enterpriseReading.executiveDecision}
+          </Panel>
         </section>
 
         <section style={styles.signalStrip}>
@@ -552,7 +584,7 @@ function ExecutiveCenterContent() {
 
           <h2 style={styles.cardTitle}>{synthesis.posture}</h2>
 
-          <p style={styles.bodyText}>{synthesis.leadershipAction}</p>
+          <p style={styles.bodyText}>{enterpriseReading.executiveDecision}</p>
 
           <div style={styles.priorityGrid}>
             <PriorityItem
@@ -858,7 +890,6 @@ function buildExecutiveSynthesis(
       crossSitePressure,
       recurrenceVisible,
     }),
-    whyItMatters: deriveWhyItMatters(posture),
     nextMovement,
     leadershipAction,
     memoryStatus: 'MEMORY PRESERVED',
@@ -899,49 +930,49 @@ function buildEnterpriseContinuityReading(
   synthesis: ExecutiveSynthesis,
   chain: CGIExecutiveContinuityChain,
 ): EnterpriseContinuityReading {
-  const trustReading = deriveTrustReading(synthesis)
+  const trustAssessment = buildContinuityTrustAssessment(synthesis)
+
+  const derivationStandard = buildContinuityDerivationStandard({
+    ...synthesis,
+    visibleSignal: deriveVisibleSignal(synthesis, chain),
+    stage: 'Executive Center',
+    posture: synthesis.posture,
+    currentMeaning: synthesis.meaning,
+    nextMovement: synthesis.nextMovement,
+  })
 
   return {
     continuityThesis: deriveContinuityThesis(synthesis, chain),
-    institutionalMeaning: deriveInstitutionalMeaning(synthesis),
-    trustReading,
-    trustMeaning: deriveTrustMeaning(trustReading),
-    primaryVulnerability: derivePrimaryVulnerability(synthesis),
-    secondaryVulnerability: deriveSecondaryVulnerability(synthesis),
-    stabilityThesis: deriveStabilityThesis(synthesis, trustReading),
-    ceoSentence: deriveCeoSentence(synthesis, trustReading),
-    executiveDecision: deriveExecutiveDecision(synthesis, trustReading),
-    boardLevelWarning: deriveBoardWarning(synthesis, trustReading),
-    finalInterpretation: deriveFinalInterpretation(synthesis, trustReading),
+    institutionalMeaning: derivationStandard.institutionalMeaning,
+    trustReading: trustAssessment.trustReading,
+    trustMeaning: trustAssessment.trustMeaning,
+    trustLevel: trustAssessment.trustLevel,
+    primaryVulnerability: trustAssessment.primaryVulnerability,
+    secondaryVulnerability: trustAssessment.secondaryVulnerability,
+    stabilityThesis: trustAssessment.stabilityThesis,
+    ceoSentence: trustAssessment.ceoSentence,
+    executiveDecision: trustAssessment.executiveDecision,
+    boardLevelWarning: trustAssessment.boardLevelWarning,
+    finalInterpretation: trustAssessment.finalInterpretation,
+    whatIsVisible: derivationStandard.whatIsVisible,
+    whyItMatters: derivationStandard.whyItMatters,
+    continuityRisk: derivationStandard.continuityRisk,
+    requiredMovement: derivationStandard.requiredMovement,
   }
 }
 
-function deriveTrustReading(synthesis: ExecutiveSynthesis): EnterpriseTrustReading {
-  if (
-    synthesis.crossSitePressure > 1 &&
-    (synthesis.recurrenceVisible > 0 || synthesis.auditPressure > 0)
-  ) {
-    return 'STRUCTURALLY UNTRUSTED'
-  }
-
-  if (
-    synthesis.commandPressure > 0 ||
-    synthesis.evidenceReturn > 0 ||
-    synthesis.fragileRecovery > 0 ||
-    synthesis.coordinationPressure > 0
-  ) {
-    return 'NOT YET TRUSTED'
-  }
-
-  if (synthesis.absorbable > 0) {
-    return 'CONDITIONALLY TRUSTED'
-  }
-
-  if (synthesis.activeInstability === 0 && synthesis.recoveryRecords === 0) {
-    return 'NO ACTIVE TRUST QUESTION'
-  }
-
-  return 'CONDITIONALLY TRUSTED'
+function deriveVisibleSignal(
+  synthesis: ExecutiveSynthesis,
+  chain: CGIExecutiveContinuityChain,
+) {
+  if (chain.dominantOrigin === 'CROSS_SITE') return 'Cross-site continuity exposure'
+  if (synthesis.coordinationPressure > 0) return 'Coordination pressure'
+  if (synthesis.commandPressure > 0) return 'Command pressure'
+  if (synthesis.evidenceReturn > 0) return 'Evidence return requirement'
+  if (synthesis.fragileRecovery > 0) return 'Fragile recovery'
+  if (synthesis.activeInstability > 0) return 'Active instability'
+  if (synthesis.absorbable > 0) return 'Absorbable recovery'
+  return 'No active continuity pressure'
 }
 
 function deriveContinuityThesis(
@@ -973,182 +1004,6 @@ function deriveContinuityThesis(
   }
 
   return 'Executive Center is clear; no active continuity condition currently requires leadership synthesis.'
-}
-
-function deriveInstitutionalMeaning(synthesis: ExecutiveSynthesis) {
-  if (synthesis.crossSitePressure > 1) {
-    return 'The institution may be carrying a structural continuity exposure rather than an isolated operational issue.'
-  }
-
-  if (synthesis.coordinationPressure > 0) {
-    return 'The institution needs stronger synchronization discipline before continuity confidence can be restored.'
-  }
-
-  if (synthesis.commandPressure > 0) {
-    return 'The institution still needs leadership attention because command pressure has not resolved into trusted stability.'
-  }
-
-  if (synthesis.fragileRecovery > 0) {
-    return 'The institution is improving, but improvement is not yet the same as durable stability.'
-  }
-
-  if (synthesis.absorbable > 0) {
-    return 'The institution can absorb stability while preserving the lesson that produced the instability.'
-  }
-
-  return 'The institution currently shows no executive continuity pressure requiring leadership intervention.'
-}
-
-function derivePrimaryVulnerability(synthesis: ExecutiveSynthesis) {
-  if (synthesis.crossSitePressure > 1) return 'Cross-site dependency exposure'
-  if (synthesis.coordinationPressure > 0) return 'Ownership and synchronization weakness'
-  if (synthesis.commandPressure > 0) return 'Unresolved command pressure'
-  if (synthesis.evidenceReturn > 0) return 'Evidence credibility weakness'
-  if (synthesis.fragileRecovery > 0) return 'Recovery durability weakness'
-  if (synthesis.activeInstability > 0) return 'Active instability visibility'
-  if (synthesis.absorbable > 0) return 'Memory preservation during absorption'
-  return 'No active vulnerability visible'
-}
-
-function deriveSecondaryVulnerability(synthesis: ExecutiveSynthesis) {
-  if (synthesis.auditPressure > 0) return 'Audit reconstructability risk'
-  if (synthesis.recurrenceVisible > 0) return 'Recurrence memory risk'
-  if (synthesis.safeguardingVisible > 0) return 'Safeguarding visibility risk'
-  if (synthesis.historicalMemory > 0) return 'Historical pattern interpretation risk'
-  return 'No secondary vulnerability visible'
-}
-
-function deriveStabilityThesis(
-  synthesis: ExecutiveSynthesis,
-  trustReading: EnterpriseTrustReading,
-) {
-  if (trustReading === 'STRUCTURALLY UNTRUSTED') {
-    return 'Operational improvement may be visible, but institutional stability is not yet credible.'
-  }
-
-  if (trustReading === 'NOT YET TRUSTED') {
-    return 'The institution may be moving toward stabilization, but leadership should not restore full confidence yet.'
-  }
-
-  if (trustReading === 'CONDITIONALLY TRUSTED') {
-    return 'Stability may be accepted conditionally if evidence, recurrence memory, and unresolved risk remain attached.'
-  }
-
-  if (trustReading === 'TRUSTED') {
-    return 'Continuity is currently trusted and no major executive restriction is visible.'
-  }
-
-  return synthesis.posture === 'EXECUTIVE CENTER CLEAR'
-    ? 'No active stability decision is currently required.'
-    : 'Stability requires continued executive interpretation.'
-}
-
-function deriveCeoSentence(
-  synthesis: ExecutiveSynthesis,
-  trustReading: EnterpriseTrustReading,
-) {
-  if (trustReading === 'STRUCTURALLY UNTRUSTED') {
-    return 'Do not restore confidence yet; the instability may be structural, distributed, and not fully resolved.'
-  }
-
-  if (trustReading === 'NOT YET TRUSTED') {
-    return 'Keep this visible until ownership, evidence, recovery, and command meaning are stronger.'
-  }
-
-  if (trustReading === 'CONDITIONALLY TRUSTED') {
-    return 'Accept progress, but preserve memory and evidence before reducing visibility.'
-  }
-
-  if (synthesis.posture === 'EXECUTIVE CENTER CLEAR') {
-    return 'No active executive intervention is required, but memory remains available.'
-  }
-
-  return 'Continue executive interpretation until continuity confidence is clear.'
-}
-
-function deriveExecutiveDecision(
-  synthesis: ExecutiveSynthesis,
-  trustReading: EnterpriseTrustReading,
-) {
-  if (trustReading === 'STRUCTURALLY UNTRUSTED') {
-    return 'Hold executive visibility and require cross-site, audit, and memory preservation.'
-  }
-
-  if (trustReading === 'NOT YET TRUSTED') {
-    return 'Require evidence strengthening before reducing command or executive visibility.'
-  }
-
-  if (trustReading === 'CONDITIONALLY TRUSTED') {
-    return 'Allow cautious movement toward stability absorption with memory preserved.'
-  }
-
-  if (synthesis.activeInstability === 0) {
-    return 'Maintain monitoring without manufacturing escalation.'
-  }
-
-  return 'Continue governed lifecycle movement.'
-}
-
-function deriveBoardWarning(
-  synthesis: ExecutiveSynthesis,
-  trustReading: EnterpriseTrustReading,
-) {
-  if (trustReading === 'STRUCTURALLY UNTRUSTED') {
-    return 'The board should not confuse local recovery with enterprise stability.'
-  }
-
-  if (trustReading === 'NOT YET TRUSTED') {
-    return 'The board should require evidence before accepting stability claims.'
-  }
-
-  if (trustReading === 'CONDITIONALLY TRUSTED') {
-    return 'The board can accept progress only with memory and audit trail attached.'
-  }
-
-  if (synthesis.posture === 'EXECUTIVE CENTER CLEAR') {
-    return 'No board-level warning is currently active.'
-  }
-
-  return 'Board interpretation should remain evidence-aware.'
-}
-
-function deriveFinalInterpretation(
-  synthesis: ExecutiveSynthesis,
-  trustReading: EnterpriseTrustReading,
-) {
-  if (trustReading === 'STRUCTURALLY UNTRUSTED') {
-    return 'The institution may be seeing operational relief, but CGI is preserving the deeper continuity concern: distributed exposure can survive visible recovery.'
-  }
-
-  if (trustReading === 'NOT YET TRUSTED') {
-    return 'The institution is not yet ready to treat improvement as stability because unresolved evidence, recovery, command, or coordination signals remain visible.'
-  }
-
-  if (trustReading === 'CONDITIONALLY TRUSTED') {
-    return 'The institution can cautiously move forward, but CGI must preserve recurrence history, evidence meaning, and audit reconstructability.'
-  }
-
-  return 'Executive Center is not manufacturing urgency. It remains ready to synthesize future instability when evidence appears.'
-}
-
-function deriveTrustMeaning(reading: EnterpriseTrustReading) {
-  if (reading === 'STRUCTURALLY UNTRUSTED') {
-    return 'Leadership should not trust stability because the visible signal may reflect structural or distributed continuity exposure.'
-  }
-
-  if (reading === 'NOT YET TRUSTED') {
-    return 'Leadership should continue visibility because recovery, command, evidence, or coordination conditions remain unresolved.'
-  }
-
-  if (reading === 'CONDITIONALLY TRUSTED') {
-    return 'Leadership may cautiously accept progress, but only with memory, evidence, recurrence, and audit visibility preserved.'
-  }
-
-  if (reading === 'TRUSTED') {
-    return 'Leadership can currently trust stability based on available continuity evidence.'
-  }
-
-  return 'No active continuity condition currently requires a trust decision.'
 }
 
 function deriveWhatIsHappening(input: {
@@ -1193,30 +1048,6 @@ function deriveWhatIsHappening(input: {
   return 'The current lifecycle is clear. Executive Center remains available as the synthesis layer when instability, recovery, command pressure, coordination pressure, cross-site exposure, or evidence gaps appear.'
 }
 
-function deriveWhyItMatters(posture: ExecutivePosture) {
-  if (posture === 'EXECUTIVE REVIEW REQUIRED') {
-    return 'Leadership risk increases when command pressure, cross-site pressure, or recurrence disappears before continuity credibility is proven.'
-  }
-
-  if (posture === 'EVIDENCE REVIEW REQUIRED') {
-    return 'Without evidence, stabilization becomes an assumption rather than a governed continuity conclusion.'
-  }
-
-  if (posture === 'RECOVERY WATCH') {
-    return 'Fragile recovery can look stable too early. CGI preserves watch until durability becomes credible.'
-  }
-
-  if (posture === 'ACTIVE CONTINUITY WATCH') {
-    return 'Visible instability must continue moving through governed action rather than fragmenting across pages.'
-  }
-
-  if (posture === 'STABILITY ABSORPTION READY') {
-    return 'Stable posture has value only if memory, recurrence, and unresolved risk remain visible after recovery.'
-  }
-
-  return 'A clear executive center prevents false escalation while keeping institutional memory ready for future recurrence.'
-}
-
 function deriveDominantConcern(synthesis: ExecutiveSynthesis) {
   if (synthesis.crossSitePressure > 1 && synthesis.recurrenceVisible > 0) {
     return 'Cross-site recurrence or distributed continuity exposure may be visible.'
@@ -1250,7 +1081,17 @@ function buildCopyReadyExecutiveBrief(
     '',
     `Trust Reading: ${enterprise.trustReading}`,
     '',
+    `Trust Level: ${enterprise.trustLevel}`,
+    '',
     `Trust Meaning: ${enterprise.trustMeaning}`,
+    '',
+    `What Is Visible: ${enterprise.whatIsVisible}`,
+    '',
+    `Why It Matters: ${enterprise.whyItMatters}`,
+    '',
+    `Continuity Risk: ${enterprise.continuityRisk}`,
+    '',
+    `Required Movement: ${enterprise.requiredMovement}`,
     '',
     `Primary Vulnerability: ${enterprise.primaryVulnerability}`,
     '',
@@ -1278,13 +1119,11 @@ function buildCopyReadyExecutiveBrief(
     '',
     `What is happening: ${synthesis.whatIsHappening}`,
     '',
-    `Why it matters: ${synthesis.whyItMatters}`,
-    '',
     `Lifecycle movement: ${synthesis.nextMovement}`,
     '',
     `Next required movement: ${chain.nextRequiredMovement}`,
     '',
-    `Leadership action: ${synthesis.leadershipAction}`,
+    `Leadership action: ${enterprise.executiveDecision}`,
     '',
     `Audit meaning: ${chain.auditMeaning}`,
     '',
