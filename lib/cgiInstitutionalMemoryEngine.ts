@@ -1,3 +1,5 @@
+import { buildInstitutionalMemoryDoctrine } from './cgiInstitutionalMemoryDoctrineEngine'
+
 export type CGIInstitutionalMemoryPosture =
   | 'NO_MEMORY'
   | 'EMERGING_MEMORY'
@@ -41,6 +43,19 @@ export type CGIInstitutionalMemoryOutput = {
   continuityLearning: string
   memoryNarrative: string
   evidenceToPreserve: string
+  doctrine: {
+    whatIsVisible: string
+    whyItMatters: string
+    continuityRisk: string
+    requiredMovement: string
+    trustLevel: string
+    institutionalMeaning: string
+    trustReading: string
+    trustMeaning: string
+    executiveDecision: string
+    boardLevelWarning: string
+    ceoSentence: string
+  }
 }
 
 function hasNoMemory(input: CGIInstitutionalMemoryInput): boolean {
@@ -58,16 +73,18 @@ function hasNoMemory(input: CGIInstitutionalMemoryInput): boolean {
 }
 
 function deriveDominantMemoryDomain(
-  input: CGIInstitutionalMemoryInput
+  input: CGIInstitutionalMemoryInput,
 ): CGIInstitutionalMemoryDomain {
   if (input.survivabilityThreatCount > 0) return 'SURVIVABILITY'
   if (input.crossSiteSignalCount > 0) return 'CROSS_SITE'
   if (input.commandInterventionCount > 0) return 'COMMAND'
   if (input.executiveReviewCount > 0) return 'EXECUTIVE'
   if (input.recurringInstabilityCount > 0) return 'RECURRENCE'
+
   if (input.recoveryFailureCount > 0 || input.verifiedRecoveryCount > 0) {
     return 'RECOVERY'
   }
+
   if (input.coordinationIssueCount > 0) return 'COORDINATION'
   if (input.auditReconstructionCount > 0) return 'AUDIT'
 
@@ -75,7 +92,7 @@ function deriveDominantMemoryDomain(
 }
 
 function deriveMemoryPosture(
-  input: CGIInstitutionalMemoryInput
+  input: CGIInstitutionalMemoryInput,
 ): CGIInstitutionalMemoryPosture {
   if (hasNoMemory(input)) return 'NO_MEMORY'
 
@@ -111,7 +128,7 @@ function deriveMemoryPosture(
 
 function buildMemoryMeaning(
   posture: CGIInstitutionalMemoryPosture,
-  domain: CGIInstitutionalMemoryDomain
+  domain: CGIInstitutionalMemoryDomain,
 ): string {
   if (posture === 'NO_MEMORY') {
     return 'No institutional continuity memory is currently visible.'
@@ -134,7 +151,7 @@ function buildMemoryMeaning(
 
 function buildMemoryRisk(
   posture: CGIInstitutionalMemoryPosture,
-  domain: CGIInstitutionalMemoryDomain
+  domain: CGIInstitutionalMemoryDomain,
 ): string {
   if (posture === 'NO_MEMORY') {
     return 'The main risk is false confidence if future instability appears without preserved context.'
@@ -157,7 +174,7 @@ function buildMemoryRisk(
 
 function buildMemoryRecommendation(
   posture: CGIInstitutionalMemoryPosture,
-  domain: CGIInstitutionalMemoryDomain
+  domain: CGIInstitutionalMemoryDomain,
 ): string {
   if (posture === 'NO_MEMORY') {
     return 'Begin preserving continuity records before instability, recovery, or executive decisions disappear from institutional visibility.'
@@ -180,7 +197,7 @@ function buildMemoryRecommendation(
 
 function buildPersistenceRequirement(
   posture: CGIInstitutionalMemoryPosture,
-  domain: CGIInstitutionalMemoryDomain
+  domain: CGIInstitutionalMemoryDomain,
 ): string {
   if (posture === 'NO_MEMORY') {
     return 'Preserve baseline continuity records, timestamps, owners, and route context.'
@@ -203,7 +220,7 @@ function buildPersistenceRequirement(
 
 function buildExecutiveQuestion(
   posture: CGIInstitutionalMemoryPosture,
-  domain: CGIInstitutionalMemoryDomain
+  domain: CGIInstitutionalMemoryDomain,
 ): string {
   if (posture === 'NO_MEMORY') {
     return 'What must we start preserving before the organization forgets?'
@@ -227,7 +244,7 @@ function buildExecutiveQuestion(
 function buildContinuityLearning(
   input: CGIInstitutionalMemoryInput,
   posture: CGIInstitutionalMemoryPosture,
-  domain: CGIInstitutionalMemoryDomain
+  domain: CGIInstitutionalMemoryDomain,
 ): string {
   if (posture === 'NO_MEMORY') {
     return 'CGI has not yet accumulated enough memory to identify repeated continuity behavior.'
@@ -270,7 +287,7 @@ function buildContinuityLearning(
 
 function buildEvidenceToPreserve(
   posture: CGIInstitutionalMemoryPosture,
-  domain: CGIInstitutionalMemoryDomain
+  domain: CGIInstitutionalMemoryDomain,
 ): string {
   const commonEvidence =
     'timestamp, owner, route, action taken, evidence result, recovery outcome, recurrence status, and audit reconstruction.'
@@ -316,6 +333,7 @@ function buildMemoryNarrative(input: {
   meaning: string
   risk: string
   recommendation: string
+  doctrineInstitutionalMeaning: string
 }): string {
   return [
     `Institutional memory posture is ${input.posture}.`,
@@ -323,46 +341,47 @@ function buildMemoryNarrative(input: {
     input.meaning,
     input.risk,
     input.recommendation,
+    `Doctrine meaning: ${input.doctrineInstitutionalMeaning}`,
   ].join(' ')
 }
 
 export function buildCGIInstitutionalMemory(
-  input: CGIInstitutionalMemoryInput
+  input: CGIInstitutionalMemoryInput,
 ): CGIInstitutionalMemoryOutput {
   const dominantMemoryDomain = deriveDominantMemoryDomain(input)
   const memoryPosture = deriveMemoryPosture(input)
 
-  const memoryMeaning = buildMemoryMeaning(
+  const doctrine = buildInstitutionalMemoryDoctrine({
+    ...input,
     memoryPosture,
-    dominantMemoryDomain
-  )
+    dominantMemoryDomain,
+  })
 
-  const memoryRisk = buildMemoryRisk(memoryPosture, dominantMemoryDomain)
+  const memoryMeaning = buildMemoryMeaning(memoryPosture, dominantMemoryDomain)
 
-  const memoryRecommendation = buildMemoryRecommendation(
-    memoryPosture,
-    dominantMemoryDomain
-  )
+  const memoryRisk = doctrine.continuityRisk
+
+  const memoryRecommendation = doctrine.requiredMovement
 
   const memoryPersistenceRequirement = buildPersistenceRequirement(
     memoryPosture,
-    dominantMemoryDomain
+    dominantMemoryDomain,
   )
 
   const executiveQuestion = buildExecutiveQuestion(
     memoryPosture,
-    dominantMemoryDomain
+    dominantMemoryDomain,
   )
 
   const continuityLearning = buildContinuityLearning(
     input,
     memoryPosture,
-    dominantMemoryDomain
+    dominantMemoryDomain,
   )
 
   const evidenceToPreserve = buildEvidenceToPreserve(
     memoryPosture,
-    dominantMemoryDomain
+    dominantMemoryDomain,
   )
 
   return {
@@ -380,7 +399,9 @@ export function buildCGIInstitutionalMemory(
       meaning: memoryMeaning,
       risk: memoryRisk,
       recommendation: memoryRecommendation,
+      doctrineInstitutionalMeaning: doctrine.institutionalMeaning,
     }),
     evidenceToPreserve,
+    doctrine,
   }
 }
