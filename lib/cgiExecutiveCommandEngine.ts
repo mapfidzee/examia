@@ -1,3 +1,9 @@
+import { buildContinuityDerivationStandard } from './cgiContinuityDerivationStandard'
+import { buildContinuityTrustAssessment } from './cgiContinuityTrustEngine'
+import type {
+  ContinuityTrustAssessment,
+  ContinuityTrustInput,
+} from './cgiContinuityTrustEngine'
 import type { CGIDerivationOutput } from './cgiDerivationEngine'
 import type {
   CGINextContinuityDestination,
@@ -27,6 +33,15 @@ export type CGICommandOutput = {
   auditRequired: boolean
   handoffReason: string
   commandNarrative: string
+  trustAssessment: ContinuityTrustAssessment
+  continuityStandard: {
+    whatIsVisible: string
+    whyItMatters: string
+    continuityRisk: string
+    requiredMovement: string
+    trustLevel: string
+    institutionalMeaning: string
+  }
 }
 
 export type CGICommandInput = {
@@ -113,47 +128,96 @@ function deriveDeadline(urgency: CGICommandUrgency): string {
   return 'Continue monitoring through the next review cycle.'
 }
 
-function deriveContinuityRisk(input: CGICommandInput): string {
+function buildCommandTrustInput(input: CGICommandInput): ContinuityTrustInput {
   const condition = input.derivation.continuityCondition
   const confidence = input.derivation.continuityConfidence
   const pressure = input.derivation.survivabilityPressure
 
-  if (input.stateDecision.crossSiteRequired) {
-    return 'Continuity risk may no longer be contained within one site or operational lane.'
-  }
+  const isSevere =
+    condition === 'SURVIVABILITY_THREAT' ||
+    condition === 'ESCALATED_INSTABILITY'
 
-  if (condition === 'SURVIVABILITY_THREAT') {
-    return 'Institutional survivability may weaken if leadership does not intervene.'
-  }
+  const isActive =
+    condition === 'ACTIVE_INSTABILITY' ||
+    condition === 'EARLY_STRAIN' ||
+    condition === 'RECURRENCE_RISK'
 
-  if (condition === 'RECURRENCE_RISK') {
-    return 'Repeated instability may become normalized as structural weakness.'
-  }
+  const isFragileRecovery = condition === 'FRAGILE_RECOVERY'
 
-  if (condition === 'FRAGILE_RECOVERY') {
-    return 'Visible recovery may collapse if durability is not verified.'
-  }
+  const hasCommandPressure =
+    input.stateDecision.executiveReviewRequired ||
+    input.derivation.executivePosture === 'COMMAND' ||
+    input.derivation.executivePosture === 'EXECUTIVE_INTERVENTION' ||
+    isSevere
 
-  if (condition === 'ESCALATED_INSTABILITY') {
-    return 'Escalated instability may spread or intensify without command control.'
-  }
+    const hasEvidenceGap =
+    input.stateDecision.auditRequired ||
+    input.stateDecision.requiredEvidence.trim().length > 0 ||
+    confidence !== 'HIGH'
 
-  if (condition === 'ACTIVE_INSTABILITY') {
-    return 'Active instability may escalate if coordination remains weak.'
+  return {
+    activeInstability: isSevere || isActive || isFragileRecovery ? 1 : 0,
+    recoveryRecords: isFragileRecovery || confidence === 'HIGH' ? 1 : 0,
+    fragileRecovery: isFragileRecovery ? 1 : 0,
+    commandPressure: hasCommandPressure ? 1 : 0,
+    evidenceReturn: hasEvidenceGap ? 1 : 0,
+    absorbable:
+      condition === 'STABLE' ||
+      (confidence === 'HIGH' &&
+        pressure === 'LOW' &&
+        !input.stateDecision.executiveReviewRequired &&
+        !input.stateDecision.auditRequired)
+        ? 1
+        : 0,
+    historicalMemory: input.stateDecision.auditRequired ? 1 : 0,
+    recurrenceVisible: condition === 'RECURRENCE_RISK' ? 1 : 0,
+    coordinationPressure: input.stateDecision.coordinationRequired ? 1 : 0,
+    crossSitePressure: input.stateDecision.crossSiteRequired ? 2 : 0,
+    auditPressure: input.stateDecision.auditRequired ? 1 : 0,
+    safeguardingVisible: condition === 'SURVIVABILITY_THREAT' ? 1 : 0,
+    posture: input.derivation.executivePosture,
   }
-
-  if (condition === 'EARLY_STRAIN') {
-    return 'Early strain may mature into visible disruption if left unattended.'
-  }
-
-  if (confidence === 'HIGH' && pressure === 'LOW') {
-    return 'Current continuity risk is low.'
-  }
-
-  return 'Stabilization reliability may weaken if monitoring is not maintained.'
 }
 
-function deriveConsequenceIfUnresolved(input: CGICommandInput): string {
+function deriveVisibleSignal(input: CGICommandInput) {
+  if (input.stateDecision.crossSiteRequired) {
+    return 'Cross-site command continuity exposure'
+  }
+
+  if (input.derivation.continuityCondition === 'SURVIVABILITY_THREAT') {
+    return 'Survivability threat requiring command visibility'
+  }
+
+  if (input.derivation.continuityCondition === 'ESCALATED_INSTABILITY') {
+    return 'Escalated instability requiring command control'
+  }
+
+  if (input.derivation.continuityCondition === 'RECURRENCE_RISK') {
+    return 'Recurring instability requiring reinforcement'
+  }
+
+  if (input.derivation.continuityCondition === 'FRAGILE_RECOVERY') {
+    return 'Fragile recovery requiring verification'
+  }
+
+  if (input.derivation.continuityCondition === 'ACTIVE_INSTABILITY') {
+    return 'Active instability requiring coordination'
+  }
+
+  if (input.derivation.continuityCondition === 'EARLY_STRAIN') {
+    return 'Early strain requiring visibility'
+  }
+
+  return input.derivation.dominantOperationalTruth
+}
+
+function deriveConsequenceIfUnresolved({
+  input,
+  trustAssessment,
+}: {
+  input: CGICommandInput
+  trustAssessment: ContinuityTrustAssessment
+}) {
   const condition = input.derivation.continuityCondition
 
   if (input.stateDecision.crossSiteRequired) {
@@ -184,7 +248,7 @@ function deriveConsequenceIfUnresolved(input: CGICommandInput): string {
     return 'Failure to prepare may allow early strain to mature into visible disruption.'
   }
 
-  return 'Failure to monitor may reduce early warning visibility.'
+  return trustAssessment.boardLevelWarning
 }
 
 function buildCommandNarrative(input: {
@@ -197,10 +261,16 @@ function buildCommandNarrative(input: {
   consequence: string
   nextDestination: CGINextContinuityDestination
   handoffReason: string
-}): string {
+  trustReading: string
+  trustLevel: string
+  institutionalMeaning: string
+}) {
   return [
     input.dominantTruth,
     input.primaryDriver,
+    `Trust reading: ${input.trustReading}.`,
+    `Trust level: ${input.trustLevel}.`,
+    `Institutional meaning: ${input.institutionalMeaning}`,
     `${input.owner} is responsible for ensuring the required action is completed.`,
     `Required action: ${input.action}`,
     `Timing expectation: ${input.deadline}`,
@@ -212,36 +282,79 @@ function buildCommandNarrative(input: {
 }
 
 export function buildCGIExecutiveCommand(
-  input: CGICommandInput
+  input: CGICommandInput,
 ): CGICommandOutput {
   const urgency = normalizeUrgency(input.derivation.timePressure)
   const accountableOwner = deriveOwnerRole(input)
   const actionDeadline = deriveDeadline(urgency)
-  const continuityRisk = deriveContinuityRisk(input)
-  const consequenceIfUnresolved = deriveConsequenceIfUnresolved(input)
+
+  const trustInput = buildCommandTrustInput(input)
+  const trustAssessment = buildContinuityTrustAssessment(trustInput)
+
+  const derivation = buildContinuityDerivationStandard({
+    ...trustInput,
+    visibleSignal: deriveVisibleSignal(input),
+    stage: 'Executive Command',
+    posture: input.derivation.executivePosture,
+    currentMeaning: trustAssessment.institutionalMeaning,
+    nextMovement: input.stateDecision.handoffReason,
+  })
+
+  const continuityStandard = {
+    whatIsVisible: derivation.whatIsVisible,
+    whyItMatters: derivation.whyItMatters,
+    continuityRisk: derivation.continuityRisk,
+    requiredMovement: derivation.requiredMovement,
+    trustLevel: derivation.trustLevel,
+    institutionalMeaning: derivation.institutionalMeaning,
+  }
+
+  const requiredAction =
+    trustAssessment.trustLevel === 'HIGH' ||
+    trustAssessment.trustLevel === 'NOT_APPLICABLE'
+      ? input.derivation.requiredAction
+      : trustAssessment.executiveDecision
+
+  const requiredEvidence =
+    trustAssessment.trustLevel === 'HIGH'
+      ? input.stateDecision.requiredEvidence
+      : [
+          input.stateDecision.requiredEvidence,
+          trustAssessment.trustMeaning,
+        ]
+          .filter(Boolean)
+          .join(' ')
+
+  const consequenceIfUnresolved = deriveConsequenceIfUnresolved({
+    input,
+    trustAssessment,
+  })
 
   const commandNarrative = buildCommandNarrative({
     dominantTruth: input.derivation.dominantOperationalTruth,
     primaryDriver: input.derivation.primaryDriver,
     owner: accountableOwner,
-    action: input.derivation.requiredAction,
+    action: requiredAction,
     deadline: actionDeadline,
-    evidence: input.stateDecision.requiredEvidence,
+    evidence: requiredEvidence,
     consequence: consequenceIfUnresolved,
     nextDestination: input.stateDecision.nextDestination,
     handoffReason: input.stateDecision.handoffReason,
+    trustReading: trustAssessment.trustReading,
+    trustLevel: trustAssessment.trustLevel,
+    institutionalMeaning: trustAssessment.institutionalMeaning,
   })
 
   return {
     dominantTruth: input.derivation.dominantOperationalTruth,
     primaryDriver: input.derivation.primaryDriver,
     executivePosture: input.derivation.executivePosture,
-    requiredAction: input.derivation.requiredAction,
+    requiredAction,
     accountableOwner,
     actionDeadline,
-    requiredEvidence: input.stateDecision.requiredEvidence,
+    requiredEvidence,
     consequenceIfUnresolved,
-    continuityRisk,
+    continuityRisk: continuityStandard.continuityRisk,
     nextDestination: input.stateDecision.nextDestination,
     coordinationRequired: input.stateDecision.coordinationRequired,
     crossSiteRequired: input.stateDecision.crossSiteRequired,
@@ -249,5 +362,7 @@ export function buildCGIExecutiveCommand(
     auditRequired: input.stateDecision.auditRequired,
     handoffReason: input.stateDecision.handoffReason,
     commandNarrative,
+    trustAssessment,
+    continuityStandard,
   }
 }
