@@ -1,11 +1,17 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import InfrastructureNav from '@/components/InfrastructureNav'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
+import { buildContinuityDerivationStandard } from '@/lib/cgiContinuityDerivationStandard'
+import { buildContinuityTrustAssessment } from '@/lib/cgiContinuityTrustEngine'
+import type {
+  ContinuityTrustAssessment,
+  ContinuityTrustInput,
+} from '@/lib/cgiContinuityTrustEngine'
 import { buildCGIDemoScenario } from '@/lib/cgiDemoScenarioEngine'
 import {
   loadCGIExecutiveReports,
@@ -32,6 +38,7 @@ type ExecutiveConclusionReport = {
   currentPosture: string
   trajectory: string
   trustReading: string
+  trustLevel: string
   stabilityDecision: StabilityDecision
   stabilityBoardEligibility: StabilityBoardEligibility
   enterpriseConclusion: string
@@ -44,6 +51,14 @@ type ExecutiveConclusionReport = {
   dominantConcern: string
   requiredExecutiveAction: string
   requiredEvidence: string
+  continuityStandard: {
+    whatIsVisible: string
+    whyItMatters: string
+    continuityRisk: string
+    requiredMovement: string
+    trustLevel: string
+    institutionalMeaning: string
+  }
   memoryTransfer: {
     structuralLesson: string
     recurrenceRisk: string
@@ -77,9 +92,17 @@ function ExecutiveReportContent() {
   const [loadingReports, setLoadingReports] = useState(false)
   const [reportMessage, setReportMessage] = useState('')
 
-  const featured = buildCGIDemoScenario('FUEL_LOGISTICS_CHAIN_PROOF')
+  const featured = useMemo(
+    () => buildCGIDemoScenario('FUEL_LOGISTICS_CHAIN_PROOF'),
+    [],
+  )
+
   const pilotThread = featured.pilotThread
-  const executiveReport = buildExecutiveConclusionReport(featured)
+
+  const executiveReport = useMemo(
+    () => buildExecutiveConclusionReport(featured),
+    [featured],
+  )
 
   async function loadReports() {
     try {
@@ -123,6 +146,7 @@ function ExecutiveReportContent() {
           featured,
           pilotThread,
           executiveReport,
+          continuityStandard: executiveReport.continuityStandard,
           stabilityDecision: executiveReport.stabilityDecision,
           stabilityBoardEligibility:
             executiveReport.stabilityBoardEligibility,
@@ -193,6 +217,7 @@ function ExecutiveReportContent() {
               title="Trust Reading"
               body={executiveReport.trustReading}
             />
+            <PriorityItem title="Trust Level" body={executiveReport.trustLevel} />
             <PriorityItem
               title="Stability Board Eligibility"
               body={executiveReport.stabilityBoardEligibility}
@@ -200,6 +225,41 @@ function ExecutiveReportContent() {
             <PriorityItem
               title="Audit Confidence"
               body={executiveReport.auditConfidence}
+            />
+          </div>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Continuity Derivation Standard</p>
+
+          <h2 style={styles.cardTitle}>
+            The report conclusion now derives from one CGI doctrine layer.
+          </h2>
+
+          <div style={styles.memoryGrid}>
+            <PriorityItem
+              title="What Is Visible"
+              body={executiveReport.continuityStandard.whatIsVisible}
+            />
+            <PriorityItem
+              title="Why It Matters"
+              body={executiveReport.continuityStandard.whyItMatters}
+            />
+            <PriorityItem
+              title="Continuity Risk"
+              body={executiveReport.continuityStandard.continuityRisk}
+            />
+            <PriorityItem
+              title="Required Movement"
+              body={executiveReport.continuityStandard.requiredMovement}
+            />
+            <PriorityItem
+              title="Trust Level"
+              body={executiveReport.continuityStandard.trustLevel}
+            />
+            <PriorityItem
+              title="Institutional Meaning"
+              body={executiveReport.continuityStandard.institutionalMeaning}
             />
           </div>
         </section>
@@ -518,38 +578,43 @@ function buildExecutiveConclusionReport(
 ): ExecutiveConclusionReport {
   const pilotThread = featured.pilotThread
 
+  const trustInput = buildReportTrustInput(featured)
+  const trustAssessment = buildContinuityTrustAssessment(trustInput)
+
+  const derivationStandard = buildContinuityDerivationStandard({
+    ...trustInput,
+    visibleSignal: 'Cross-site supplier concentration exposure',
+    stage: 'Executive Report',
+    posture: featured.derivation.executivePosture,
+    currentMeaning:
+      'Recovery is visible, but supplier concentration continues to create cross-site continuity exposure.',
+    nextMovement: trustAssessment.executiveDecision,
+  })
+
   const classification = 'INSTITUTIONAL_CONTINUITY_CONCLUSION_REPORT'
   const title = 'Institutional Continuity Conclusion Report'
-  const trustReading = 'CONDITIONALLY TRUSTED'
-  const stabilityDecision: StabilityDecision = 'CONDITIONAL_STABILITY'
-  const stabilityBoardEligibility: StabilityBoardEligibility =
-    'CONDITIONALLY_ELIGIBLE'
 
-  const enterpriseConclusion =
-    'Recovery is visible, but continuity confidence remains conditional because supplier concentration continues to create cross-site exposure.'
+  const stabilityDecision = deriveStabilityDecision(trustAssessment)
+  const stabilityBoardEligibility =
+    deriveStabilityBoardEligibility(trustAssessment)
 
-  const institutionalStabilityDecision =
-    'Conditional stability may be acknowledged, but full trust should not be restored until supplier resilience, recovery durability, and audit evidence remain attached.'
+  const enterpriseConclusion = trustAssessment.finalInterpretation
 
-  const ceoSentence =
-    'Visible recovery occurred, but executive confidence should remain restricted until supplier dependency risk is materially reduced.'
+  const institutionalStabilityDecision = trustAssessment.stabilityThesis
 
-  const boardBrief =
-    'The institution should treat the fuel logistics disruption as a continuity dependency exposure, not only a resolved logistics delay. Operations improved, but the structural lesson remains active because multiple sites depended on the same supplier chain.'
+  const ceoSentence = trustAssessment.ceoSentence
 
-  const executiveRecommendation =
-    'Maintain cross-site monitoring, preserve supplier concentration as institutional memory, and require durability evidence before posture reduction.'
+  const boardBrief = trustAssessment.boardLevelWarning
 
-  const primaryVulnerability = 'Supplier concentration exposure'
+  const executiveRecommendation = trustAssessment.executiveDecision
 
-  const secondaryVulnerability =
-    'Uneven recovery durability and recurrence memory risk'
+  const primaryVulnerability = trustAssessment.primaryVulnerability
 
-  const dominantConcern =
-    'Supplier concentration created cross-site continuity exposure while recovery remained uneven.'
+  const secondaryVulnerability = trustAssessment.secondaryVulnerability
 
-  const requiredExecutiveAction =
-    'Maintain executive visibility, confirm supplier resilience, preserve audit evidence, and require durability confirmation before reducing continuity posture.'
+  const dominantConcern = deriveDominantConcern(trustAssessment)
+
+  const requiredExecutiveAction = trustAssessment.executiveDecision
 
   const requiredEvidence =
     'Request record, triage decision, case history, routing owner, intervention actions, outcome verification, recovery evidence, command rationale, coordination handoff, cross-site pattern, situation room reading, executive center thesis, executive report, memory statement, and audit trace.'
@@ -558,13 +623,15 @@ function buildExecutiveConclusionReport(
     structuralLesson:
       'Supplier concentration created enterprise exposure across North, South, and East operations.',
     recurrenceRisk:
-      'Moderate. Recurrence remains possible until supplier alternatives and durability evidence are proven.',
+      trustInput.recurrenceVisible > 0
+        ? 'Moderate. Recurrence remains possible until supplier alternatives and durability evidence are proven.'
+        : 'Low to moderate. Recurrence memory should remain attached until durability is confirmed.',
     durabilityStatus:
-      'Partial. Recovery is visible, but durability remains conditional.',
-    evidenceStatus:
-      'Evidence must remain attached until stability absorption is approved.',
-    institutionalLearning:
-      'The institution must not confuse restored availability with resilient continuity.',
+      trustInput.fragileRecovery > 0
+        ? 'Partial. Recovery is visible, but durability remains conditional.'
+        : 'Conditionally absorbable with evidence and memory preserved.',
+    evidenceStatus: trustAssessment.trustMeaning,
+    institutionalLearning: trustAssessment.institutionalMeaning,
   }
 
   const auditConfidence =
@@ -576,12 +643,22 @@ function buildExecutiveConclusionReport(
   const executiveSummary =
     'Repeated fuel logistics disruption was governed as a continuity event, not treated as isolated operational noise. CGI preserved the chain from first report through recovery, command visibility, coordination, cross-site interpretation, situation room synthesis, executive center thesis, institutional conclusion, memory transfer, and audit reconstruction.'
 
+  const continuityStandard = {
+    whatIsVisible: derivationStandard.whatIsVisible,
+    whyItMatters: derivationStandard.whyItMatters,
+    continuityRisk: derivationStandard.continuityRisk,
+    requiredMovement: derivationStandard.requiredMovement,
+    trustLevel: derivationStandard.trustLevel,
+    institutionalMeaning: derivationStandard.institutionalMeaning,
+  }
+
   const copyReadySummary = [
     'TSINAXA CGI Executive Report Summary',
     '',
     `Case: ${pilotThread.scenarioName}`,
     `Case ID: ${pilotThread.caseId}`,
-    `Trust Reading: ${trustReading}`,
+    `Trust Reading: ${trustAssessment.trustReading}`,
+    `Trust Level: ${trustAssessment.trustLevel}`,
     `Stability Decision: ${stabilityDecision}`,
     `Stability Board Eligibility: ${stabilityBoardEligibility}`,
     '',
@@ -602,9 +679,18 @@ function buildExecutiveConclusionReport(
     `Report Subject: ${pilotThread.scenarioName}`,
     `Current Continuity Posture: ${featured.derivation.executivePosture}`,
     `Continuity Condition: ${featured.derivation.continuityCondition}`,
-    `Trust Reading: ${trustReading}`,
+    `Trust Reading: ${trustAssessment.trustReading}`,
+    `Trust Level: ${trustAssessment.trustLevel}`,
     `Stability Decision: ${stabilityDecision}`,
     `Stability Board Eligibility: ${stabilityBoardEligibility}`,
+    '',
+    'Continuity Derivation Standard:',
+    `- What Is Visible: ${continuityStandard.whatIsVisible}`,
+    `- Why It Matters: ${continuityStandard.whyItMatters}`,
+    `- Continuity Risk: ${continuityStandard.continuityRisk}`,
+    `- Required Movement: ${continuityStandard.requiredMovement}`,
+    `- Trust Level: ${continuityStandard.trustLevel}`,
+    `- Institutional Meaning: ${continuityStandard.institutionalMeaning}`,
     '',
     `Enterprise Continuity Conclusion: ${enterpriseConclusion}`,
     '',
@@ -651,7 +737,8 @@ function buildExecutiveConclusionReport(
     subject: pilotThread.scenarioName,
     currentPosture: featured.derivation.executivePosture,
     trajectory: 'ELEVATED WATCH',
-    trustReading,
+    trustReading: trustAssessment.trustReading,
+    trustLevel: trustAssessment.trustLevel,
     stabilityDecision,
     stabilityBoardEligibility,
     enterpriseConclusion,
@@ -664,6 +751,7 @@ function buildExecutiveConclusionReport(
     dominantConcern,
     requiredExecutiveAction,
     requiredEvidence,
+    continuityStandard,
     memoryTransfer,
     auditConfidence,
     auditMeaning,
@@ -671,6 +759,68 @@ function buildExecutiveConclusionReport(
     copyReadySummary,
     copyReadyReport,
   }
+}
+
+function buildReportTrustInput(
+  featured: ReturnType<typeof buildCGIDemoScenario>,
+): ContinuityTrustInput {
+  return {
+    activeInstability: 0,
+    recoveryRecords: 1,
+    fragileRecovery: 1,
+    commandPressure: 0,
+    evidenceReturn: 0,
+    absorbable: 1,
+    historicalMemory: featured.pilotThread.chain.length,
+    recurrenceVisible: 1,
+    coordinationPressure: 1,
+    crossSitePressure: featured.pilotThread.sites.length,
+    auditPressure: 1,
+    safeguardingVisible: 0,
+    posture: featured.derivation.executivePosture,
+  }
+}
+
+function deriveStabilityDecision(
+  trustAssessment: ContinuityTrustAssessment,
+): StabilityDecision {
+  if (
+    trustAssessment.trustReading === 'STRUCTURALLY UNTRUSTED' ||
+    trustAssessment.trustReading === 'NOT YET TRUSTED'
+  ) {
+    return 'DO_NOT_TRUST_STABILITY'
+  }
+
+  if (trustAssessment.trustReading === 'CONDITIONALLY TRUSTED') {
+    return 'CONDITIONAL_STABILITY'
+  }
+
+  return 'STABILITY_ABSORPTION_READY'
+}
+
+function deriveStabilityBoardEligibility(
+  trustAssessment: ContinuityTrustAssessment,
+): StabilityBoardEligibility {
+  if (
+    trustAssessment.trustReading === 'STRUCTURALLY UNTRUSTED' ||
+    trustAssessment.trustReading === 'NOT YET TRUSTED'
+  ) {
+    return 'NOT_ELIGIBLE'
+  }
+
+  if (trustAssessment.trustReading === 'CONDITIONALLY TRUSTED') {
+    return 'CONDITIONALLY_ELIGIBLE'
+  }
+
+  return 'READY_FOR_ABSORPTION'
+}
+
+function deriveDominantConcern(trustAssessment: ContinuityTrustAssessment) {
+  if (trustAssessment.primaryVulnerability !== 'No active vulnerability visible') {
+    return trustAssessment.primaryVulnerability
+  }
+
+  return trustAssessment.secondaryVulnerability
 }
 
 function formatLabel(value: string): string {
