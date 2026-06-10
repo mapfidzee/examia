@@ -5,89 +5,11 @@ import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
-import { interpretPredictive } from '@/lib/cgi/interpreters/interpretPredictive'
-import { buildCGIExecutiveBriefing } from '@/lib/cgiExecutiveBriefingGenerator'
 import {
-  formatCGIExecutivePosture,
-  formatCGIEvidenceLanguage,
-  formatCGISurvivabilityLanguage,
-  formatCGIGovernanceSafeLanguage,
-} from '@/lib/cgiExecutivePostureFormatter'
+  buildCGIPredictiveDoctrine,
+  type CGIPredictiveMetric,
+} from '@/lib/cgiPredictiveDoctrineEngine'
 import { supabase } from '../../lib/supabase'
-
-type CgiOperationalMetric = {
-  id: string
-  created_at: string
-  scope: string
-  continuity_state: string
-  pressure_propagation_state: string
-  trajectory_direction: string
-  structural_memory_state: string
-  propagation_risk: number
-  trajectory_risk: number
-  structural_memory_risk: number
-  unresolved_momentum: number
-  stabilization_drag: number
-  continuity_drift: number
-  escalation_pressure_index: number
-  operational_survivability_score: number
-  recovery_reliability_score: number
-  dominant_pressure_source: string | null
-  dominant_trajectory_signal: string | null
-  dominant_memory_pattern: string | null
-}
-
-type Interpretation = {
-  posture: string
-  meaning: string
-  action: string
-}
-
-type EnterpriseForecastCondition =
-  | 'STABILITY LIKELY'
-  | 'FRAGILE RECOVERY LIKELY'
-  | 'RECURRENCE LIKELY'
-  | 'ESCALATION LIKELY'
-  | 'SURVIVABILITY RISK LIKELY'
-  | 'INSUFFICIENT FORESIGHT MEMORY'
-
-type ForecastConfidence =
-  | 'HIGH CONFIDENCE'
-  | 'MODERATE CONFIDENCE'
-  | 'WEAK CONFIDENCE'
-  | 'INSUFFICIENT EVIDENCE'
-
-type ForecastHorizon =
-  | 'IMMEDIATE HORIZON'
-  | 'NEAR HORIZON'
-  | 'MONITORED HORIZON'
-  | 'STABILITY HORIZON'
-  | 'UNKNOWN HORIZON'
-
-type EnterpriseForesight = {
-  condition: EnterpriseForecastCondition
-  confidence: ForecastConfidence
-  horizon: ForecastHorizon
-  question: string
-  thesis: string
-  dominantFutureDriver: string
-  pressureForecast: string
-  trajectoryForecast: string
-  reliabilityForecast: string
-  recoveryForecast: string
-  memoryForecast: string
-  crossSiteForecast: string
-  likelyToWorsen: string
-  likelyToStabilize: string
-  likelyToRecur: string
-  likelyToPropagate: string
-  executivePreventionThesis: string
-  preventionAction: string
-  evidenceRequirement: string
-  memoryRequirement: string
-  boardWarning: string
-  copyReadyBrief: string
-}
 
 const SAMPLE_LIMIT = 120
 
@@ -104,7 +26,7 @@ export default function PredictivePage() {
 }
 
 function PredictiveContent() {
-  const [metrics, setMetrics] = useState<CgiOperationalMetric[]>([])
+  const [metrics, setMetrics] = useState<CGIPredictiveMetric[]>([])
   const [message, setMessage] = useState('')
 
   useEffect(() => {
@@ -112,7 +34,7 @@ function PredictiveContent() {
   }, [])
 
   async function loadPredictiveMetrics() {
-    setMessage('Loading enterprise foresight memory...')
+    setMessage('Loading enterprise predictive memory...')
 
     const { data, error } = await supabase
       .from('cgi_operational_metrics')
@@ -122,404 +44,134 @@ function PredictiveContent() {
 
     if (error) {
       console.error(error)
-      setMessage('Enterprise foresight memory could not be loaded.')
+      setMessage('Enterprise predictive memory could not be loaded.')
       return
     }
 
-    setMetrics(data || [])
-    setMessage('Enterprise foresight memory loaded.')
+    setMetrics((data || []) as CGIPredictiveMetric[])
+    setMessage('Enterprise predictive memory loaded.')
   }
 
-  const predictive = useMemo(() => {
-    const ordered = [...metrics].sort(
-      (a, b) =>
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-    )
-
-    const latest = ordered[ordered.length - 1] || null
-
-    const propagationRisk = average(
-      ordered.map((item) => item.propagation_risk),
-    )
-
-    const trajectoryRisk = average(
-      ordered.map((item) => item.trajectory_risk),
-    )
-
-    const structuralMemoryRisk = average(
-      ordered.map((item) => item.structural_memory_risk),
-    )
-
-    const unresolvedMomentum = average(
-      ordered.map((item) => item.unresolved_momentum),
-    )
-
-    const stabilizationDrag = average(
-      ordered.map((item) => item.stabilization_drag),
-    )
-
-    const continuityDrift = average(
-      ordered.map((item) => item.continuity_drift),
-    )
-
-    const escalationPressure = average(
-      ordered.map((item) => item.escalation_pressure_index),
-    )
-
-    const survivabilityWeakness =
-      100 -
-      average(ordered.map((item) => item.operational_survivability_score))
-
-    const reliabilityWeakness =
-      100 - average(ordered.map((item) => item.recovery_reliability_score))
-
-    const predictiveInterpretation = interpretPredictive({
-      propagationRisk,
-      trajectoryRisk,
-      structuralMemoryRisk,
-      unresolvedMomentum,
-      stabilizationDrag,
-    })
-
-    const propagationMeaning = interpretRisk(propagationRisk, 'PROPAGATION')
-    const trajectoryMeaning = interpretRisk(trajectoryRisk, 'TRAJECTORY')
-    const memoryMeaning = interpretRisk(
-      structuralMemoryRisk,
-      'STRUCTURAL MEMORY',
-    )
-    const unresolvedMeaning = interpretMomentum(unresolvedMomentum)
-    const dragMeaning = interpretDrag(stabilizationDrag)
-    const driftMeaning = interpretDrift(continuityDrift)
-    const survivabilityMeaning = interpretWeakness(
-      survivabilityWeakness,
-      'SURVIVABILITY',
-    )
-    const reliabilityMeaning = interpretWeakness(
-      reliabilityWeakness,
-      'RELIABILITY',
-    )
-    const pressureMeaning = interpretPressure(escalationPressure)
-    const historyMeaning = interpretHistory(ordered.length)
-
-    const dominantForecastDriver = strongestDriver({
-      'Propagation risk': propagationRisk,
-      'Trajectory risk': trajectoryRisk,
-      'Structural memory risk': structuralMemoryRisk,
-      'Unresolved momentum': unresolvedMomentum,
-      'Stabilization drag': stabilizationDrag,
-      'Continuity drift': continuityDrift,
-      'Escalation pressure': escalationPressure,
-      'Survivability weakness': survivabilityWeakness,
-      'Reliability weakness': reliabilityWeakness,
-    })
-
-    const foresight = buildEnterpriseForesight({
-      recordCount: ordered.length,
-      propagationRisk,
-      trajectoryRisk,
-      structuralMemoryRisk,
-      unresolvedMomentum,
-      stabilizationDrag,
-      continuityDrift,
-      escalationPressure,
-      survivabilityWeakness,
-      reliabilityWeakness,
-      dominantForecastDriver,
-    })
-
-    const executiveSummary = `${foresight.thesis} ${predictiveInterpretation.summary}`
-
-    const actionCue = compactAction([
-      foresight.preventionAction,
-      predictiveInterpretation.executiveAction,
-      propagationMeaning.action,
-      unresolvedMeaning.action,
-      dragMeaning.action,
-    ])
-
-    return {
-      latest,
-      foresight,
-      predictiveInterpretation,
-      propagationMeaning,
-      trajectoryMeaning,
-      memoryMeaning,
-      unresolvedMeaning,
-      dragMeaning,
-      driftMeaning,
-      survivabilityMeaning,
-      reliabilityMeaning,
-      pressureMeaning,
-      historyMeaning,
-      dominantForecastDriver,
-      executiveSummary,
-      actionCue,
-    }
-  }, [metrics])
-
-  const synchronizedBriefing = buildCGIExecutiveBriefing({
-    pressurePosture: predictive.pressureMeaning.posture.includes('HIGH')
-      ? 'CRITICAL'
-      : predictive.pressureMeaning.posture.includes('VISIBLE')
-        ? 'ELEVATED'
-        : 'WATCHED',
-
-    trajectoryPosture: predictive.trajectoryMeaning.posture.includes('HIGH')
-      ? 'CRITICAL'
-      : predictive.trajectoryMeaning.posture.includes('VISIBLE')
-        ? 'ELEVATED'
-        : 'WATCHED',
-
-    predictivePosture:
-      predictive.foresight.condition.includes('SURVIVABILITY') ||
-      predictive.foresight.condition.includes('ESCALATION')
-        ? 'CRITICAL'
-        : predictive.foresight.condition.includes('RECURRENCE') ||
-            predictive.foresight.condition.includes('FRAGILE')
-          ? 'ELEVATED'
-          : 'WATCHED',
-
-    recoveryPosture: predictive.dragMeaning.posture.includes('HIGH')
-      ? 'CRITICAL'
-      : predictive.dragMeaning.posture.includes('VISIBLE')
-        ? 'ELEVATED'
-        : 'WATCHED',
-
-    reliabilityPosture: predictive.reliabilityMeaning.posture.includes('HIGH')
-      ? 'CRITICAL'
-      : predictive.reliabilityMeaning.posture.includes('VISIBLE')
-        ? 'ELEVATED'
-        : 'WATCHED',
-
-    evidenceVerified: false,
-    accountabilityActive: true,
-    structuralMemoryVisible: true,
-  })
-
-  const synchronizedPosture = formatCGIExecutivePosture(
-    synchronizedBriefing.synthesis.synthesisPosture,
+  const predictive = useMemo(
+    () => buildCGIPredictiveDoctrine(metrics),
+    [metrics],
   )
 
-  const synchronizedEvidence = formatCGIEvidenceLanguage(
-    false,
-    synchronizedBriefing.synthesis.synthesisPosture,
-  )
-
-  const synchronizedSurvivability = formatCGISurvivabilityLanguage(
-    synchronizedBriefing.synthesis.synthesisPosture,
-  )
-
-  const synchronizedGovernance = formatCGIGovernanceSafeLanguage()
-
-  const brief = buildPredictiveBrief({
-    foresight: predictive.foresight,
-    synchronizedPosture: synchronizedPosture.label,
-    evidence: synchronizedEvidence,
-    survivability: synchronizedSurvivability,
-    governance: synchronizedGovernance,
-    warningPosture: predictive.predictiveInterpretation.posture,
-    propagation: predictive.propagationMeaning.posture,
-    trajectory: predictive.trajectoryMeaning.posture,
-    memory: predictive.memoryMeaning.posture,
-    unresolved: predictive.unresolvedMeaning.posture,
-    drag: predictive.dragMeaning.posture,
-    drift: predictive.driftMeaning.posture,
-    survivabilityWeakness: predictive.survivabilityMeaning.posture,
-    reliabilityWeakness: predictive.reliabilityMeaning.posture,
-    actionCue: predictive.actionCue,
-  })
-    return (
+  return (
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.hero}>
           <div>
-            <p style={styles.kicker}>TSINAXA CGI • ENTERPRISE FORESIGHT</p>
-            <h1 style={styles.title}>Enterprise Continuity Foresight Intelligence</h1>
+            <p style={styles.kicker}>TSINAXA CGI • PREDICTIVE</p>
+            <h1 style={styles.title}>Enterprise Predictive Intelligence</h1>
             <p style={styles.subtitle}>
-              Predictive intelligence identifies what continuity risk is likely
-              to become visible next if pressure, trajectory, memory,
-              reliability, and recovery patterns continue unchanged.
+              Predictive intelligence governs the continuity risk most likely
+              to return, spread, worsen, or become visible before leadership
+              loses time.
             </p>
           </div>
 
           <div style={styles.statusBox}>
-            <p style={styles.statusLabel}>FORECAST CONDITION</p>
-            <p style={styles.statusValue}>{predictive.foresight.condition}</p>
-            <p style={styles.statusMeaning}>{predictive.foresight.thesis}</p>
+            <p style={styles.statusLabel}>TRUST READING</p>
+            <p style={styles.statusValue}>
+              {predictive.trustAssessment.trustReading}
+            </p>
+            <p style={styles.statusMeaning}>
+              {predictive.trustAssessment.trustMeaning}
+            </p>
           </div>
         </section>
 
         {message && <div style={styles.message}>{message}</div>}
 
-        <section style={styles.commandDeck}>
-          <div style={styles.primaryCard}>
-            <p style={styles.sectionKicker}>Executive Foresight Question</p>
-            <h2 style={styles.commandTitle}>{predictive.foresight.question}</h2>
-            <p style={styles.primaryText}>
-              {predictive.foresight.executivePreventionThesis}
+        <section style={styles.gridTwo}>
+          <Panel title="Executive Predictive Question">
+            <h2 style={styles.bigText}>{predictive.predictiveQuestion}</h2>
+            <p style={styles.bodyText}>{predictive.predictiveConclusion}</p>
+          </Panel>
+
+          <Panel title="Predictive Conclusion">
+            <h2 style={styles.bigText}>{predictive.predictiveThesis}</h2>
+            <p style={styles.bodyText}>
+              {predictive.trustAssessment.finalInterpretation}
             </p>
-
-            <div style={styles.commandMetaGrid}>
-              <MiniStat label="Horizon" value={predictive.foresight.horizon} />
-              <MiniStat label="Confidence" value={predictive.foresight.confidence} />
-              <MiniStat
-                label="Dominant Driver"
-                value={predictive.foresight.dominantFutureDriver}
-              />
-              <MiniStat label="Memory" value={predictive.historyMeaning.posture} />
-            </div>
-          </div>
-
-          <div style={styles.consequenceCard}>
-            <p style={styles.sectionKicker}>Board Warning</p>
-            <h2 style={styles.consequenceTitle}>Do not wait for visible failure.</h2>
-            <p style={styles.bodyText}>{predictive.foresight.boardWarning}</p>
-          </div>
+          </Panel>
         </section>
 
-        <section style={styles.metricsGrid}>
-          <Metric label="Propagation" value={predictive.propagationMeaning.posture} />
-          <Metric label="Trajectory" value={predictive.trajectoryMeaning.posture} />
-          <Metric label="Memory" value={predictive.memoryMeaning.posture} />
-          <Metric label="Unresolved" value={predictive.unresolvedMeaning.posture} />
-          <Metric label="Drag" value={predictive.dragMeaning.posture} />
-          <Metric label="Pressure" value={predictive.pressureMeaning.posture} />
+        <section style={styles.metricGrid}>
+          <Metric label="Predictive Risk" value={predictive.scores.predictiveRisk} />
+          <Metric label="Escalation" value={predictive.scores.escalationPressure} />
+          <Metric label="Propagation" value={predictive.scores.propagationRisk} />
+          <Metric label="Trajectory" value={predictive.scores.trajectoryRisk} />
+          <Metric label="Memory Risk" value={predictive.scores.structuralMemoryRisk} />
+          <Metric label="Volatility" value={predictive.scores.forecastVolatility} />
         </section>
 
-        <section style={styles.gridFour}>
-          <ExecutiveCard
-            title="Pressure Forecast"
-            value={predictive.foresight.pressureForecast}
-            body="What pressure may become visible next."
-          />
-
-          <ExecutiveCard
-            title="Trajectory Forecast"
-            value={predictive.foresight.trajectoryForecast}
-            body="Where continuity direction may move next."
-          />
-
-          <ExecutiveCard
-            title="Reliability Forecast"
-            value={predictive.foresight.reliabilityForecast}
-            body="Whether repeated stabilization may remain trustworthy."
-          />
-
-          <ExecutiveCard
-            title="Recovery Forecast"
-            value={predictive.foresight.recoveryForecast}
-            body="Whether recovery may hold, stall, or weaken."
-          />
-        </section>
-
-        <section style={styles.gridFour}>
-          <ExecutiveCard
-            title="Memory Forecast"
-            value={predictive.foresight.memoryForecast}
-            body="Whether structural memory may re-enter the chain."
-          />
-
-          <ExecutiveCard
-            title="Cross-Site Forecast"
-            value={predictive.foresight.crossSiteForecast}
-            body="Whether emerging risk may spread across sites."
-          />
-
-          <ExecutiveCard
-            title="Likely To Recur"
-            value={predictive.foresight.likelyToRecur}
-            body="Whether the same instability may return."
-          />
-
-          <ExecutiveCard
-            title="Likely To Propagate"
-            value={predictive.foresight.likelyToPropagate}
-            body="Whether risk may spread before it is governed."
-          />
-        </section>
-
-        <section style={styles.panel}>
-          <p style={styles.sectionKicker}>Synchronized Continuity Reading</p>
-          <h2 style={styles.panelTitle}>{synchronizedPosture.label}</h2>
-          <p style={styles.bodyText}>{synchronizedPosture.description}</p>
-
-          <div style={styles.infoList}>
-            <Info label="Evidence" value={synchronizedEvidence} />
-            <Info label="Survivability" value={synchronizedSurvivability} />
-            <Info label="Governance" value={synchronizedGovernance} />
-          </div>
-        </section>
-
-        <section style={styles.postureGrid}>
-          <PostureCard
-            title="Propagation Risk"
-            interpretation={predictive.propagationMeaning}
-          />
-
-          <PostureCard
-            title="Trajectory Risk"
-            interpretation={predictive.trajectoryMeaning}
-          />
-
-          <PostureCard
-            title="Structural Memory Risk"
-            interpretation={predictive.memoryMeaning}
-          />
-
-          <PostureCard
-            title="Unresolved Momentum"
-            interpretation={predictive.unresolvedMeaning}
-          />
-
-          <PostureCard
-            title="Stabilization Drag"
-            interpretation={predictive.dragMeaning}
-          />
-
-          <PostureCard
-            title="Continuity Drift"
-            interpretation={predictive.driftMeaning}
-          />
-        </section>
-
-        <section style={styles.memoryPanel}>
-          <p style={styles.sectionKicker}>Foresight Memory</p>
-          <h2 style={styles.panelTitle}>
-            Prediction must remain evidence-bound and reconstructable.
-          </h2>
-
-          <div style={styles.memoryGrid}>
-            <MiniStat label="Memory Depth" value={predictive.historyMeaning.posture} />
-            <MiniStat label="Dominant Driver" value={predictive.dominantForecastDriver} />
-            <MiniStat
-              label="Survivability"
-              value={predictive.survivabilityMeaning.posture}
+        <Panel title="Continuity Derivation Standard">
+          <div style={styles.infoGrid}>
+            <Info
+              label="What Is Visible"
+              value={predictive.continuityStandard.whatIsVisible}
             />
-            <MiniStat
-              label="Reliability"
-              value={predictive.reliabilityMeaning.posture}
+            <Info
+              label="Why It Matters"
+              value={predictive.continuityStandard.whyItMatters}
+            />
+            <Info
+              label="Continuity Risk"
+              value={predictive.continuityStandard.continuityRisk}
+            />
+            <Info
+              label="Required Movement"
+              value={predictive.continuityStandard.requiredMovement}
+            />
+            <Info
+              label="Trust Level"
+              value={predictive.continuityStandard.trustLevel}
+            />
+            <Info
+              label="Institutional Meaning"
+              value={predictive.continuityStandard.institutionalMeaning}
             />
           </div>
+        </Panel>
+
+        <section style={styles.gridThree}>
+          <Card
+            title="Trust Doctrine"
+            value={predictive.trustAssessment.executiveDecision}
+            body={predictive.trustAssessment.trustMeaning}
+          />
+          <Card
+            title="Memory Doctrine"
+            value={predictive.memoryDoctrine.trustReading}
+            body={predictive.memoryDoctrine.institutionalMeaning}
+          />
+          <Card
+            title="Audit Doctrine"
+            value={predictive.auditDoctrine.auditCredibility}
+            body={predictive.auditDoctrine.evidenceGap}
+          />
         </section>
 
         <section style={styles.gridTwo}>
-          <Panel title="Enterprise Prevention Requirements">
+          <Panel title="Enterprise Predictive Requirements">
             <Info
-              label="Prevention Action"
-              value={predictive.foresight.preventionAction}
+              label="Evidence Requirement"
+              value={predictive.evidenceRequirement}
             />
-
             <Info
-              label="Evidence"
-              value={predictive.foresight.evidenceRequirement}
+              label="Executive Action"
+              value={predictive.trustAssessment.executiveDecision}
             />
-
             <Info
-              label="Memory"
-              value={predictive.foresight.memoryRequirement}
+              label="Board Warning"
+              value={predictive.trustAssessment.boardLevelWarning}
             />
-
-            <Info label="Action Cue" value={predictive.actionCue} />
+            <Info
+              label="Dominant Signal"
+              value={predictive.dominantPredictiveSignal}
+            />
           </Panel>
 
           <Panel title="Latest Continuity Context">
@@ -527,26 +179,22 @@ function PredictiveContent() {
               label="Continuity State"
               value={predictive.latest?.continuity_state || 'Not recorded'}
             />
-
             <Info
               label="Pressure State"
               value={
                 predictive.latest?.pressure_propagation_state || 'Not recorded'
               }
             />
-
             <Info
               label="Trajectory Direction"
               value={predictive.latest?.trajectory_direction || 'Not recorded'}
             />
-
             <Info
               label="Structural Memory"
               value={
                 predictive.latest?.structural_memory_state || 'Not recorded'
               }
             />
-
             <Info
               label="Dominant Memory Pattern"
               value={
@@ -556,18 +204,37 @@ function PredictiveContent() {
           </Panel>
         </section>
 
-        <section style={styles.panel}>
-          <div style={styles.cardHeader}>
-            <div>
-              <p style={styles.sectionKicker}>Recent Enterprise Foresight Memory</p>
-              <h2 style={styles.panelTitle}>Continuity foresight snapshots</h2>
-              <p style={styles.bodyText}>
-                Recent snapshots are shown as continuity foresight readings, not
-                personal performance judgments.
-              </p>
-            </div>
+        <section style={styles.gridFour}>
+          <Card
+            title="Command"
+            value={predictive.commandImplication}
+            body="How command should interpret predictive warning."
+          />
+          <Card
+            title="Executive Report"
+            value={predictive.executiveReportImplication}
+            body="How predictive risk should appear in executive reporting."
+          />
+          <Card
+            title="Memory Board"
+            value={predictive.memoryBoardImplication}
+            body="What institutional memory must preserve."
+          />
+          <Card
+            title="Audit"
+            value={predictive.auditImplication}
+            body="What audit must reconstruct."
+          />
+        </section>
 
-            <button onClick={loadPredictiveMetrics} style={styles.primaryButton}>
+        <Panel title="Recent Predictive Memory Trail">
+          <div style={styles.cardHeader}>
+            <p style={styles.bodyText}>
+              Predictive readings are continuity observations, not personal
+              performance judgments.
+            </p>
+
+            <button onClick={loadPredictiveMetrics} style={styles.button}>
               Refresh
             </button>
           </div>
@@ -577,10 +244,10 @@ function PredictiveContent() {
               <thead>
                 <tr>
                   <th style={styles.th}>Created</th>
-                  <th style={styles.th}>Warning</th>
                   <th style={styles.th}>Propagation</th>
                   <th style={styles.th}>Trajectory</th>
-                  <th style={styles.th}>Memory</th>
+                  <th style={styles.th}>Memory Risk</th>
+                  <th style={styles.th}>Unresolved</th>
                   <th style={styles.th}>Drag</th>
                 </tr>
               </thead>
@@ -589,68 +256,40 @@ function PredictiveContent() {
                 {metrics.length === 0 && (
                   <tr>
                     <td style={styles.td} colSpan={6}>
-                      No persisted continuity foresight memory found yet.
+                      No persisted predictive memory found yet.
                     </td>
                   </tr>
                 )}
 
-                {metrics.slice(0, 8).map((item) => {
-                  const rowPredictive = interpretPredictive({
-                    propagationRisk: item.propagation_risk,
-                    trajectoryRisk: item.trajectory_risk,
-                    structuralMemoryRisk: item.structural_memory_risk,
-                    unresolvedMomentum: item.unresolved_momentum,
-                    stabilizationDrag: item.stabilization_drag,
-                  })
-
-                  return (
-                    <tr key={item.id}>
-                      <td style={styles.td}>{formatDate(item.created_at)}</td>
-                      <td style={styles.td}>{rowPredictive.posture}</td>
-                      <td style={styles.td}>
-                        {
-                          interpretRisk(item.propagation_risk, 'PROPAGATION')
-                            .posture
-                        }
-                      </td>
-                      <td style={styles.td}>
-                        {
-                          interpretRisk(item.trajectory_risk, 'TRAJECTORY')
-                            .posture
-                        }
-                      </td>
-                      <td style={styles.td}>
-                        {
-                          interpretRisk(
-                            item.structural_memory_risk,
-                            'STRUCTURAL MEMORY',
-                          ).posture
-                        }
-                      </td>
-                      <td style={styles.td}>
-                        {interpretDrag(item.stabilization_drag).posture}
-                      </td>
-                    </tr>
-                  )
-                })}
+                {metrics.slice(0, 10).map((item) => (
+                  <tr key={item.id}>
+                    <td style={styles.td}>{formatDate(item.created_at)}</td>
+                    <td style={styles.td}>{item.propagation_risk}</td>
+                    <td style={styles.td}>{item.trajectory_risk}</td>
+                    <td style={styles.td}>{item.structural_memory_risk}</td>
+                    <td style={styles.td}>{item.unresolved_momentum}</td>
+                    <td style={styles.td}>{item.stabilization_drag}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-        </section>
+        </Panel>
 
-        <section style={styles.orderPanel}>
-          <p style={styles.sectionKicker}>Copy-Ready Foresight Brief</p>
-          <h2 style={styles.panelTitle}>
-            What continuity risk is likely to become visible next?
+        <section style={styles.reportPanel}>
+          <p style={styles.kicker}>COPY-READY PREDICTIVE BRIEF</p>
+          <h2 style={styles.bigText}>
+            What visible instability is likely to return, spread, or worsen?
           </h2>
-          <pre style={styles.summaryBox}>{brief}</pre>
+          <pre style={styles.pre}>{predictive.copyReadyBrief}</pre>
         </section>
 
         <section style={styles.doctrineCard}>
-          <strong>ENTERPRISE FORESIGHT DOCTRINE</strong>
+          <strong>ENTERPRISE PREDICTIVE DOCTRINE</strong>
           <span>
             Predictive intelligence does not guess the future. It governs the
-            most probable continuity risk before it becomes visible instability.
+            most probable continuity exposure before visible instability returns,
+            spreads, or becomes normalized.
           </span>
         </section>
       </div>
@@ -658,721 +297,12 @@ function PredictiveContent() {
   )
 }
 
-function buildEnterpriseForesight(input: {
-  recordCount: number
-  propagationRisk: number
-  trajectoryRisk: number
-  structuralMemoryRisk: number
-  unresolvedMomentum: number
-  stabilizationDrag: number
-  continuityDrift: number
-  escalationPressure: number
-  survivabilityWeakness: number
-  reliabilityWeakness: number
-  dominantForecastDriver: string
-}): EnterpriseForesight {
-  const condition = deriveForecastCondition(input)
-  const confidence = deriveForecastConfidence(input)
-  const horizon = deriveForecastHorizon(input)
-
-  const question =
-    'What continuity risk is likely to become visible next if current patterns persist?'
-
-  const pressureForecast = derivePressureForecast(input)
-  const trajectoryForecast = deriveTrajectoryForecast(input)
-  const reliabilityForecast = deriveReliabilityForecast(input)
-  const recoveryForecast = deriveRecoveryForecast(input)
-  const memoryForecast = deriveMemoryForecast(input)
-  const crossSiteForecast = deriveCrossSiteForecast(input)
-
-  const likelyToWorsen = deriveLikelyToWorsen(input)
-  const likelyToStabilize = deriveLikelyToStabilize(input)
-  const likelyToRecur = deriveLikelyToRecur(input)
-  const likelyToPropagate = deriveLikelyToPropagate(input)
-
-  const executivePreventionThesis = deriveExecutivePreventionThesis(
-    condition,
-    input,
-  )
-
-  const preventionAction = derivePreventionAction(condition)
-  const evidenceRequirement =
-    'Preserve propagation risk, trajectory risk, structural memory risk, unresolved momentum, stabilization drag, continuity drift, escalation pressure, survivability weakness, reliability weakness, and dominant forecast driver.'
-
-  const memoryRequirement =
-    input.recordCount < 3
-      ? 'Continue saving foresight snapshots before making strong prevention claims.'
-      : 'Preserve forecast memory so leadership can reconstruct why prevention action was recommended before visible instability returned.'
-
-  const boardWarning = deriveBoardWarning(condition)
-
-  const thesis = `${condition}: ${executivePreventionThesis} Dominant future driver: ${input.dominantForecastDriver}.`
-
-  const copyReadyBrief = [
-    'TSINAXA CGI ENTERPRISE CONTINUITY FORESIGHT BRIEF',
-    '',
-    `Foresight Question: ${question}`,
-    '',
-    `Most Probable Future Condition: ${condition}`,
-    '',
-    `Forecast Confidence: ${confidence}`,
-    '',
-    `Forecast Horizon: ${horizon}`,
-    '',
-    `Dominant Future Driver: ${input.dominantForecastDriver}`,
-    '',
-    `Enterprise Forecast Thesis: ${thesis}`,
-    '',
-    `Pressure Forecast: ${pressureForecast}`,
-    '',
-    `Trajectory Forecast: ${trajectoryForecast}`,
-    '',
-    `Reliability Forecast: ${reliabilityForecast}`,
-    '',
-    `Recovery Forecast: ${recoveryForecast}`,
-    '',
-    `Memory Forecast: ${memoryForecast}`,
-    '',
-    `Cross-Site Forecast: ${crossSiteForecast}`,
-    '',
-    `Likely To Worsen: ${likelyToWorsen}`,
-    '',
-    `Likely To Stabilize: ${likelyToStabilize}`,
-    '',
-    `Likely To Recur: ${likelyToRecur}`,
-    '',
-    `Likely To Propagate: ${likelyToPropagate}`,
-    '',
-    `Evidence Requirement: ${evidenceRequirement}`,
-    '',
-    `Memory Requirement: ${memoryRequirement}`,
-    '',
-    `Board Warning: ${boardWarning}`,
-    '',
-    `Prevention Action: ${preventionAction}`,
-  ].join('\n')
-
-  return {
-    condition,
-    confidence,
-    horizon,
-    question,
-    thesis,
-    dominantFutureDriver: input.dominantForecastDriver,
-    pressureForecast,
-    trajectoryForecast,
-    reliabilityForecast,
-    recoveryForecast,
-    memoryForecast,
-    crossSiteForecast,
-    likelyToWorsen,
-    likelyToStabilize,
-    likelyToRecur,
-    likelyToPropagate,
-    executivePreventionThesis,
-    preventionAction,
-    evidenceRequirement,
-    memoryRequirement,
-    boardWarning,
-    copyReadyBrief,
-  }
-}
-function deriveForecastCondition(input: {
-  recordCount: number
-  propagationRisk: number
-  trajectoryRisk: number
-  structuralMemoryRisk: number
-  unresolvedMomentum: number
-  stabilizationDrag: number
-  continuityDrift: number
-  escalationPressure: number
-  survivabilityWeakness: number
-  reliabilityWeakness: number
-}): EnterpriseForecastCondition {
-  if (input.recordCount < 3) return 'INSUFFICIENT FORESIGHT MEMORY'
-
-  if (
-    input.survivabilityWeakness >= 70 ||
-    input.escalationPressure >= 75 ||
-    input.trajectoryRisk >= 75
-  ) {
-    return 'SURVIVABILITY RISK LIKELY'
-  }
-
-  if (
-    input.unresolvedMomentum >= 65 ||
-    input.stabilizationDrag >= 65 ||
-    input.escalationPressure >= 65
-  ) {
-    return 'ESCALATION LIKELY'
-  }
-
-  if (
-    input.structuralMemoryRisk >= 60 ||
-    input.continuityDrift >= 60 ||
-    input.reliabilityWeakness >= 60
-  ) {
-    return 'RECURRENCE LIKELY'
-  }
-
-  if (
-    input.trajectoryRisk >= 45 ||
-    input.stabilizationDrag >= 45 ||
-    input.reliabilityWeakness >= 45
-  ) {
-    return 'FRAGILE RECOVERY LIKELY'
-  }
-
-  return 'STABILITY LIKELY'
-}
-
-function deriveForecastConfidence(input: {
-  recordCount: number
-  propagationRisk: number
-  trajectoryRisk: number
-  structuralMemoryRisk: number
-  unresolvedMomentum: number
-  stabilizationDrag: number
-  escalationPressure: number
-}): ForecastConfidence {
-  if (input.recordCount < 3) return 'INSUFFICIENT EVIDENCE'
-
-  const signalStrength = average([
-    input.propagationRisk,
-    input.trajectoryRisk,
-    input.structuralMemoryRisk,
-    input.unresolvedMomentum,
-    input.stabilizationDrag,
-    input.escalationPressure,
-  ])
-
-  if (input.recordCount >= 10 && signalStrength >= 65) return 'HIGH CONFIDENCE'
-  if (input.recordCount >= 10 && signalStrength >= 45) {
-    return 'MODERATE CONFIDENCE'
-  }
-
-  if (input.recordCount >= 3 && signalStrength >= 55) {
-    return 'MODERATE CONFIDENCE'
-  }
-
-  return input.recordCount >= 10 ? 'MODERATE CONFIDENCE' : 'WEAK CONFIDENCE'
-}
-
-function deriveForecastHorizon(input: {
-  escalationPressure: number
-  unresolvedMomentum: number
-  stabilizationDrag: number
-  trajectoryRisk: number
-  structuralMemoryRisk: number
-  survivabilityWeakness: number
-}): ForecastHorizon {
-  if (
-    input.survivabilityWeakness >= 70 ||
-    input.escalationPressure >= 75 ||
-    input.unresolvedMomentum >= 75
-  ) {
-    return 'IMMEDIATE HORIZON'
-  }
-
-  if (
-    input.escalationPressure >= 60 ||
-    input.stabilizationDrag >= 60 ||
-    input.trajectoryRisk >= 60
-  ) {
-    return 'NEAR HORIZON'
-  }
-
-  if (input.structuralMemoryRisk >= 45 || input.trajectoryRisk >= 45) {
-    return 'MONITORED HORIZON'
-  }
-
-  if (
-    input.escalationPressure < 35 &&
-    input.trajectoryRisk < 35 &&
-    input.structuralMemoryRisk < 35
-  ) {
-    return 'STABILITY HORIZON'
-  }
-
-  return 'UNKNOWN HORIZON'
-}
-
-function derivePressureForecast(input: {
-  escalationPressure: number
-  unresolvedMomentum: number
-  propagationRisk: number
-}) {
-  if (input.escalationPressure >= 65 || input.unresolvedMomentum >= 65) {
-    return 'Pressure is likely to become visible before stability is restored.'
-  }
-
-  if (input.propagationRisk >= 45) {
-    return 'Pressure may spread if coordination does not tighten.'
-  }
-
-  return 'Pressure appears watchable under continued monitoring.'
-}
-
-function deriveTrajectoryForecast(input: {
-  trajectoryRisk: number
-  continuityDrift: number
-}) {
-  if (input.trajectoryRisk >= 65 || input.continuityDrift >= 60) {
-    return 'Trajectory may move toward deterioration or recurrence.'
-  }
-
-  if (input.trajectoryRisk >= 45) {
-    return 'Trajectory remains fragile and should stay under review.'
-  }
-
-  return 'Trajectory appears compatible with stability if evidence holds.'
-}
-
-function deriveReliabilityForecast(input: {
-  reliabilityWeakness: number
-  structuralMemoryRisk: number
-}) {
-  if (input.reliabilityWeakness >= 60 || input.structuralMemoryRisk >= 60) {
-    return 'Reliability may weaken unless recurrence memory and durability evidence improve.'
-  }
-
-  if (input.reliabilityWeakness >= 40) {
-    return 'Reliability should remain conditional.'
-  }
-
-  return 'Reliability appears watchable if recovery evidence remains attached.'
-}
-
-function deriveRecoveryForecast(input: {
-  stabilizationDrag: number
-  unresolvedMomentum: number
-}) {
-  if (input.stabilizationDrag >= 65 || input.unresolvedMomentum >= 65) {
-    return 'Recovery may stall or reverse if unresolved pressure remains active.'
-  }
-
-  if (input.stabilizationDrag >= 40) {
-    return 'Recovery may continue but durability is not yet fully credible.'
-  }
-
-  return 'Recovery appears capable of holding under continued monitoring.'
-}
-
-function deriveMemoryForecast(input: {
-  structuralMemoryRisk: number
-  continuityDrift: number
-}) {
-  if (input.structuralMemoryRisk >= 60 || input.continuityDrift >= 60) {
-    return 'Structural memory is likely to re-enter executive visibility.'
-  }
-
-  if (input.structuralMemoryRisk >= 40) {
-    return 'Memory risk remains visible and should not be dismissed.'
-  }
-
-  return 'Memory risk appears contained but should remain preserved.'
-}
-
-function deriveCrossSiteForecast(input: {
-  propagationRisk: number
-  structuralMemoryRisk: number
-}) {
-  if (input.propagationRisk >= 60 && input.structuralMemoryRisk >= 45) {
-    return 'Cross-site pattern review may be required if the same pressure appears elsewhere.'
-  }
-
-  if (input.propagationRisk >= 45) {
-    return 'Propagation risk should remain visible for cross-site comparison.'
-  }
-
-  return 'Cross-site spread is not yet strongly indicated.'
-}
-
-function deriveLikelyToWorsen(input: { dominantForecastDriver: string }) {
-  return `${input.dominantForecastDriver} is the most likely worsening driver if no prevention action is taken.`
-}
-
-function deriveLikelyToStabilize(input: {
-  escalationPressure: number
-  trajectoryRisk: number
-  stabilizationDrag: number
-}) {
-  if (
-    input.escalationPressure < 40 &&
-    input.trajectoryRisk < 40 &&
-    input.stabilizationDrag < 40
-  ) {
-    return 'Continuity may stabilize if evidence remains attached.'
-  }
-
-  return 'Stabilization remains conditional and cannot be assumed.'
-}
-
-function deriveLikelyToRecur(input: {
-  structuralMemoryRisk: number
-  continuityDrift: number
-  reliabilityWeakness: number
-}) {
-  if (
-    input.structuralMemoryRisk >= 55 ||
-    input.continuityDrift >= 55 ||
-    input.reliabilityWeakness >= 55
-  ) {
-    return 'Recurrence is likely enough to require memory preservation.'
-  }
-
-  return 'Recurrence is not the dominant forecast but should remain monitored.'
-}
-
-function deriveLikelyToPropagate(input: {
-  propagationRisk: number
-  escalationPressure: number
-}) {
-  if (input.propagationRisk >= 55 || input.escalationPressure >= 65) {
-    return 'Propagation is likely enough to require coordination and cross-site watch.'
-  }
-
-  return 'Propagation is currently watchable.'
-}
-
-function deriveExecutivePreventionThesis(
-  condition: EnterpriseForecastCondition,
-  input: {
-    dominantForecastDriver: string
-  },
-) {
-  if (condition === 'STABILITY LIKELY') {
-    return 'Current signals suggest stability may hold, but evidence and memory must remain attached.'
-  }
-
-  if (condition === 'FRAGILE RECOVERY LIKELY') {
-    return 'The most probable next condition is fragile recovery, not durable stabilization.'
-  }
-
-  if (condition === 'RECURRENCE LIKELY') {
-    return 'The same instability may return unless memory and reliability evidence improve.'
-  }
-
-  if (condition === 'ESCALATION LIKELY') {
-    return 'Current pressure may become command-visible if prevention does not tighten.'
-  }
-
-  if (condition === 'SURVIVABILITY RISK LIKELY') {
-    return 'Continuity may move toward survivability risk unless executive intervention remains active.'
-  }
-
-  return `Foresight memory is insufficient. Dominant available driver: ${input.dominantForecastDriver}.`
-}
-
-function derivePreventionAction(condition: EnterpriseForecastCondition) {
-  if (condition === 'SURVIVABILITY RISK LIKELY') {
-    return 'Hold executive visibility and require immediate prevention evidence.'
-  }
-
-  if (condition === 'ESCALATION LIKELY') {
-    return 'Prepare command escalation and tighten ownership before visible disruption expands.'
-  }
-
-  if (condition === 'RECURRENCE LIKELY') {
-    return 'Preserve structural memory and extend reliability monitoring.'
-  }
-
-  if (condition === 'FRAGILE RECOVERY LIKELY') {
-    return 'Keep recovery monitoring active and require durability evidence.'
-  }
-
-  if (condition === 'STABILITY LIKELY') {
-    return 'Continue proportional monitoring and preserve proof before reducing visibility.'
-  }
-
-  return 'Build foresight memory before making strong prevention claims.'
-}
-
-function deriveBoardWarning(condition: EnterpriseForecastCondition) {
-  if (condition === 'STABILITY LIKELY') {
-    return 'Do not declare stability without evidence preserved.'
-  }
-
-  if (condition === 'FRAGILE RECOVERY LIKELY') {
-    return 'Do not confuse predicted improvement with durable recovery.'
-  }
-
-  if (condition === 'RECURRENCE LIKELY') {
-    return 'Do not treat recurrence risk as noise.'
-  }
-
-  if (condition === 'ESCALATION LIKELY') {
-    return 'Do not wait for visible failure before prevention action.'
-  }
-
-  if (condition === 'SURVIVABILITY RISK LIKELY') {
-    return 'Do not allow survivability risk to remain below executive attention.'
-  }
-
-  return 'Do not overstate prediction without memory.'
-}
-function buildPredictiveBrief(input: {
-  foresight: EnterpriseForesight
-  synchronizedPosture: string
-  evidence: string
-  survivability: string
-  governance: string
-  warningPosture: string
-  propagation: string
-  trajectory: string
-  memory: string
-  unresolved: string
-  drag: string
-  drift: string
-  survivabilityWeakness: string
-  reliabilityWeakness: string
-  actionCue: string
-}) {
-  return [
-    input.foresight.copyReadyBrief,
-    '',
-    'SYNCHRONIZED CGI READING',
-    '',
-    `Synchronized Executive Posture: ${input.synchronizedPosture}`,
-    '',
-    `Evidence Requirement: ${input.evidence}`,
-    '',
-    `Survivability Language: ${input.survivability}`,
-    '',
-    `Governance-Safe Meaning: ${input.governance}`,
-    '',
-    'SUPPORTING FORESIGHT SIGNALS',
-    '',
-    `Early-Warning Posture: ${input.warningPosture}`,
-    '',
-    `Propagation Risk: ${input.propagation}`,
-    '',
-    `Trajectory Risk: ${input.trajectory}`,
-    '',
-    `Structural Memory Risk: ${input.memory}`,
-    '',
-    `Unresolved Momentum: ${input.unresolved}`,
-    '',
-    `Stabilization Drag: ${input.drag}`,
-    '',
-    `Continuity Drift: ${input.drift}`,
-    '',
-    `Survivability Weakness: ${input.survivabilityWeakness}`,
-    '',
-    `Reliability Weakness: ${input.reliabilityWeakness}`,
-    '',
-    `Action Cue: ${input.actionCue}`,
-  ].join('\n')
-}
-
-function average(values: number[]) {
-  const valid = values.filter((value) => Number.isFinite(value))
-  if (valid.length === 0) return 0
-
-  return Math.round(
-    valid.reduce((sum, value) => sum + value, 0) / valid.length,
-  )
-}
-
-function strongestDriver(scores: Record<string, number>) {
-  return (
-    Object.entries(scores).sort((a, b) => b[1] - a[1])[0]?.[0] ||
-    'No dominant early-warning driver detected'
-  )
-}
-
-function interpretRisk(value: number, label: string): Interpretation {
-  const normalizedLabel = label.toLowerCase()
-
-  if (value >= 70) {
-    return {
-      posture: `${label} RISK HIGH`,
-      meaning: `${normalizedLabel} risk is high enough to threaten continuity prevention.`,
-      action: `Escalate ${normalizedLabel} risk review.`,
-    }
-  }
-
-  if (value >= 45) {
-    return {
-      posture: `${label} RISK VISIBLE`,
-      meaning: `${normalizedLabel} risk is visible and should remain under governance review.`,
-      action: `Keep ${normalizedLabel} risk visible.`,
-    }
-  }
-
-  return {
-    posture: `${label} RISK CONTAINED`,
-    meaning: `${normalizedLabel} risk appears contained.`,
-    action: 'Maintain monitoring.',
-  }
-}
-
-function interpretMomentum(value: number): Interpretation {
-  if (value >= 65) {
-    return {
-      posture: 'UNRESOLVED MOMENTUM HIGH',
-      meaning:
-        'Unresolved momentum may convert early warning into visible disruption.',
-      action: 'Escalate unresolved momentum review.',
-    }
-  }
-
-  if (value >= 40) {
-    return {
-      posture: 'UNRESOLVED MOMENTUM VISIBLE',
-      meaning: 'Unresolved momentum remains visible in continuity memory.',
-      action: 'Keep follow-up active.',
-    }
-  }
-
-  return {
-    posture: 'UNRESOLVED MOMENTUM CONTAINED',
-    meaning: 'Unresolved momentum appears contained.',
-    action: 'Maintain monitoring.',
-  }
-}
-
-function interpretDrag(value: number): Interpretation {
-  if (value >= 65) {
-    return {
-      posture: 'STABILIZATION DRAG HIGH',
-      meaning:
-        'Stabilization drag may delay prevention and weaken recovery credibility.',
-      action: 'Escalate stabilization drag review.',
-    }
-  }
-
-  if (value >= 40) {
-    return {
-      posture: 'STABILIZATION DRAG VISIBLE',
-      meaning:
-        'Stabilization drag remains visible and should stay under review.',
-      action: 'Keep drag visible until recovery holds.',
-    }
-  }
-
-  return {
-    posture: 'STABILIZATION DRAG CONTAINED',
-    meaning: 'Stabilization drag appears contained.',
-    action: 'Maintain monitoring.',
-  }
-}
-
-function interpretDrift(value: number): Interpretation {
-  if (value >= 60) {
-    return {
-      posture: 'CONTINUITY DRIFT HIGH',
-      meaning: 'Continuity drift may undermine prevention credibility.',
-      action: 'Escalate continuity drift review.',
-    }
-  }
-
-  if (value >= 35) {
-    return {
-      posture: 'CONTINUITY DRIFT VISIBLE',
-      meaning:
-        'Continuity drift remains visible and must stay under governance review.',
-      action: 'Keep drift visible.',
-    }
-  }
-
-  return {
-    posture: 'CONTINUITY DRIFT CONTAINED',
-    meaning: 'Continuity drift is currently contained.',
-    action: 'Maintain monitoring.',
-  }
-}
-
-function interpretWeakness(value: number, label: string): Interpretation {
-  const normalizedLabel = label.toLowerCase()
-
-  if (value >= 60) {
-    return {
-      posture: `${label} WEAKNESS HIGH`,
-      meaning: `${normalizedLabel} weakness may undermine continuity prevention.`,
-      action: `Escalate ${normalizedLabel} weakness review.`,
-    }
-  }
-
-  if (value >= 35) {
-    return {
-      posture: `${label} WEAKNESS VISIBLE`,
-      meaning: `${normalizedLabel} weakness remains visible.`,
-      action: `Keep ${normalizedLabel} weakness under review.`,
-    }
-  }
-
-  return {
-    posture: `${label} WEAKNESS CONTAINED`,
-    meaning: `${normalizedLabel} weakness appears contained.`,
-    action: 'Maintain monitoring.',
-  }
-}
-
-function interpretPressure(value: number): Interpretation {
-  if (value >= 70) {
-    return {
-      posture: 'PRESSURE HIGH',
-      meaning: 'Escalation pressure may accelerate continuity disruption.',
-      action: 'Escalate pressure review.',
-    }
-  }
-
-  if (value >= 45) {
-    return {
-      posture: 'PRESSURE VISIBLE',
-      meaning:
-        'Escalation pressure is visible and should remain under review.',
-      action: 'Keep pressure visible.',
-    }
-  }
-
-  return {
-    posture: 'PRESSURE CONTAINED',
-    meaning: 'Escalation pressure appears contained.',
-    action: 'Maintain monitoring.',
-  }
-}
-
-function interpretHistory(count: number): Interpretation {
-  if (count < 3) {
-    return {
-      posture: 'INSUFFICIENT MEMORY',
-      meaning:
-        'Too few snapshots exist for reliable early-warning interpretation.',
-      action: 'Continue saving operational snapshots.',
-    }
-  }
-
-  if (count < 10) {
-    return {
-      posture: 'EARLY WARNING MEMORY',
-      meaning:
-        'Continuity early-warning memory has started but remains early.',
-      action: 'Continue building continuity memory.',
-    }
-  }
-
-  return {
-    posture: 'EARLY WARNING MEMORY ESTABLISHED',
-    meaning:
-      'Persisted memory supports continuity prevention interpretation.',
-    action:
-      'Use early-warning posture to guide executive prevention review.',
-  }
-}
-
-function compactAction(actions: string[]) {
-  return Array.from(new Set(actions)).join(' ')
-}
-
 function formatDate(value: string) {
   if (!value) return 'Not recorded'
-
   return new Date(value).toLocaleString()
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({ label, value }: { label: string; value: number }) {
   return (
     <article style={styles.metricCard}>
       <p style={styles.metricLabel}>{label}</p>
@@ -1381,32 +311,7 @@ function Metric({ label, value }: { label: string; value: string }) {
   )
 }
 
-function MiniStat({ label, value }: { label: string; value: string }) {
-  return (
-    <article style={styles.miniStat}>
-      <p style={styles.metricLabel}>{label}</p>
-      <p style={styles.miniValue}>{value}</p>
-    </article>
-  )
-}
-
-function PostureCard({
-  title,
-  interpretation,
-}: {
-  title: string
-  interpretation: Interpretation
-}) {
-  return (
-    <article style={styles.postureCard}>
-      <p style={styles.sectionKicker}>{title}</p>
-      <h3 style={styles.cardValue}>{interpretation.posture}</h3>
-      <p style={styles.panelBody}>{interpretation.meaning}</p>
-    </article>
-  )
-}
-
-function ExecutiveCard({
+function Card({
   title,
   value,
   body,
@@ -1416,10 +321,10 @@ function ExecutiveCard({
   body: string
 }) {
   return (
-    <article style={styles.panelCard}>
-      <p style={styles.sectionKicker}>{title}</p>
+    <article style={styles.card}>
+      <p style={styles.kicker}>{title}</p>
       <h3 style={styles.cardValue}>{value}</h3>
-      <p style={styles.panelBody}>{body}</p>
+      <p style={styles.bodyText}>{body}</p>
     </article>
   )
 }
@@ -1427,8 +332,8 @@ function ExecutiveCard({
 function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section style={styles.panel}>
-      <p style={styles.sectionKicker}>{title}</p>
-      <div style={styles.infoList}>{children}</div>
+      <p style={styles.kicker}>{title}</p>
+      {children}
     </section>
   )
 }
@@ -1446,8 +351,8 @@ const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
     background:
-      'radial-gradient(circle at top left, rgba(201, 162, 39, 0.14), transparent 34%), linear-gradient(135deg, #050505 0%, #0B0B0B 45%, #111111 100%)',
-    color: '#FFFFFF',
+      'radial-gradient(circle at top left, rgba(201,162,39,0.14), transparent 34%), linear-gradient(135deg, #050505 0%, #0b0b0b 45%, #111111 100%)',
+    color: '#fff',
     padding: '40px 24px 72px',
   },
   container: {
@@ -1461,18 +366,16 @@ const styles: Record<string, CSSProperties> = {
     gridTemplateColumns: 'minmax(0, 1.45fr) minmax(320px, 0.75fr)',
     gap: 24,
     padding: 32,
-    border: '1px solid rgba(201, 162, 39, 0.34)',
+    border: '1px solid rgba(201,162,39,0.34)',
     borderRadius: 28,
-    background:
-      'linear-gradient(135deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018))',
-    boxShadow: '0 28px 80px rgba(0,0,0,0.38)',
+    background: 'rgba(255,255,255,0.045)',
   },
   kicker: {
     margin: 0,
-    color: '#C9A227',
-    fontSize: 12,
-    fontWeight: 900,
-    letterSpacing: '0.22em',
+    color: '#c9a227',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.18em',
     textTransform: 'uppercase',
   },
   title: {
@@ -1485,19 +388,20 @@ const styles: Record<string, CSSProperties> = {
   subtitle: {
     maxWidth: 880,
     margin: '18px 0 0',
-    color: '#C8CDD4',
+    color: '#c8cdd4',
     fontSize: 17,
     lineHeight: 1.8,
   },
   statusBox: {
-    border: '1px solid rgba(201, 162, 39, 0.5)',
+    border: '1px solid rgba(201,162,39,0.5)',
     borderRadius: 24,
     padding: 24,
-    background: 'linear-gradient(180deg, rgba(201,162,39,0.18), rgba(0,0,0,0.38))',
+    background:
+      'linear-gradient(180deg, rgba(201,162,39,0.18), rgba(0,0,0,0.38))',
   },
   statusLabel: {
     margin: 0,
-    color: '#D7B84C',
+    color: '#d7b84c',
     fontSize: 11,
     fontWeight: 950,
     letterSpacing: '0.2em',
@@ -1511,76 +415,34 @@ const styles: Record<string, CSSProperties> = {
   },
   statusMeaning: {
     margin: '12px 0 0',
-    color: '#ECE7D7',
+    color: '#ece7d7',
     fontSize: 14,
     lineHeight: 1.7,
   },
   message: {
     padding: '14px 18px',
     borderRadius: 16,
-    color: '#D7B84C',
+    color: '#d7b84c',
     background: 'rgba(201,162,39,0.1)',
     border: '1px solid rgba(201,162,39,0.22)',
     fontWeight: 800,
   },
-  commandDeck: {
+  gridTwo: {
     display: 'grid',
-    gridTemplateColumns: '1.4fr 0.8fr',
-    gap: 24,
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 16,
   },
-  primaryCard: {
-    padding: 30,
-    borderRadius: 28,
-    background: '#FFFFFF',
-    color: '#0B0B0B',
-    border: '1px solid rgba(255,255,255,0.12)',
+  gridThree: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: 16,
   },
-  consequenceCard: {
-    padding: 30,
-    borderRadius: 28,
-    background: 'rgba(0,0,0,0.38)',
-    border: '1px solid rgba(201,162,39,0.28)',
-  },
-  sectionKicker: {
-    margin: 0,
-    color: '#C9A227',
-    fontSize: 11,
-    fontWeight: 950,
-    letterSpacing: '0.18em',
-    textTransform: 'uppercase',
-  },
-  commandTitle: {
-    margin: '14px 0',
-    fontSize: 'clamp(1.8rem, 3vw, 3.2rem)',
-    lineHeight: 1.05,
-    letterSpacing: '-0.05em',
-    fontWeight: 950,
-  },
-  primaryText: {
-    margin: 0,
-    color: '#4A4A4A',
-    lineHeight: 1.7,
-    fontSize: 14,
-  },
-  consequenceTitle: {
-    margin: '14px 0',
-    fontSize: 28,
-    lineHeight: 1.1,
-    letterSpacing: '-0.04em',
-  },
-  bodyText: {
-    margin: '8px 0 0',
-    color: '#AEB6C2',
-    lineHeight: 1.7,
-    fontSize: 14,
-  },
-  commandMetaGrid: {
+  gridFour: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: 12,
-    marginTop: 24,
+    gap: 16,
   },
-  metricsGrid: {
+  metricGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
     gap: 14,
@@ -1593,7 +455,7 @@ const styles: Record<string, CSSProperties> = {
   },
   metricLabel: {
     margin: 0,
-    color: '#858D98',
+    color: '#858d98',
     fontSize: 10,
     fontWeight: 950,
     letterSpacing: '0.14em',
@@ -1601,40 +463,10 @@ const styles: Record<string, CSSProperties> = {
   },
   metricValue: {
     margin: '10px 0 0',
-    color: '#FFFFFF',
-    fontSize: 20,
+    color: '#fff',
+    fontSize: 26,
     fontWeight: 950,
     lineHeight: 1.15,
-    overflowWrap: 'anywhere',
-  },
-  miniStat: {
-    padding: 14,
-    borderRadius: 16,
-    background: 'rgba(255,255,255,0.055)',
-    border: '1px solid rgba(255,255,255,0.09)',
-  },
-  miniValue: {
-    margin: '8px 0 0',
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: 850,
-    lineHeight: 1.45,
-    overflowWrap: 'anywhere',
-  },
-  gridFour: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: 16,
-  },
-  gridTwo: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: 16,
-  },
-  postureGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: 16,
   },
   panel: {
     padding: 28,
@@ -1642,42 +474,37 @@ const styles: Record<string, CSSProperties> = {
     background: 'rgba(255,255,255,0.045)',
     border: '1px solid rgba(255,255,255,0.1)',
   },
-  panelCard: {
+  card: {
     padding: 22,
     borderRadius: 22,
     background: 'rgba(255,255,255,0.045)',
     border: '1px solid rgba(255,255,255,0.09)',
     minHeight: 150,
-  },
-  postureCard: {
-    padding: 22,
-    borderRadius: 22,
-    background: 'rgba(255,255,255,0.045)',
-    border: '1px solid rgba(255,255,255,0.09)',
-    minHeight: 150,
-  },
-  panelTitle: {
-    margin: '12px 0 0',
-    fontSize: 26,
-    lineHeight: 1.15,
-    letterSpacing: '-0.045em',
   },
   cardValue: {
     margin: '12px 0 0',
-    color: '#FFFFFF',
+    color: '#fff',
     fontSize: 19,
     lineHeight: 1.25,
     overflowWrap: 'anywhere',
   },
-  panelBody: {
-    marginTop: 10,
-    color: '#AEB6C2',
-    fontSize: 14,
-    lineHeight: 1.65,
+  bigText: {
+    margin: '14px 0',
+    fontSize: 'clamp(1.55rem, 3vw, 2.7rem)',
+    lineHeight: 1.05,
+    letterSpacing: '-0.05em',
+    fontWeight: 950,
   },
-  infoList: {
+  bodyText: {
+    margin: '10px 0 0',
+    color: '#aeb6c2',
+    lineHeight: 1.7,
+    fontSize: 14,
+  },
+  infoGrid: {
     display: 'grid',
-    gap: 10,
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 12,
     marginTop: 18,
   },
   infoRow: {
@@ -1690,28 +517,16 @@ const styles: Record<string, CSSProperties> = {
     border: '1px solid rgba(255,255,255,0.08)',
   },
   infoLabel: {
-    color: '#858D98',
+    color: '#858d98',
     fontWeight: 900,
     fontSize: 12,
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
   },
   infoValue: {
-    color: '#FFFFFF',
+    color: '#fff',
     lineHeight: 1.5,
     overflowWrap: 'anywhere',
-  },
-  memoryPanel: {
-    padding: 28,
-    borderRadius: 28,
-    background: 'linear-gradient(135deg, rgba(201,162,39,0.13), rgba(255,255,255,0.035))',
-    border: '1px solid rgba(201,162,39,0.32)',
-  },
-  memoryGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: 12,
-    marginTop: 20,
   },
   cardHeader: {
     display: 'flex',
@@ -1719,11 +534,11 @@ const styles: Record<string, CSSProperties> = {
     gap: 16,
     alignItems: 'flex-start',
   },
-  primaryButton: {
+  button: {
     border: 'none',
     borderRadius: 999,
     padding: '12px 18px',
-    background: '#C9A227',
+    background: '#c9a227',
     color: '#090909',
     fontWeight: 950,
     cursor: 'pointer',
@@ -1743,32 +558,32 @@ const styles: Record<string, CSSProperties> = {
   th: {
     padding: '14px 16px',
     textAlign: 'left',
-    color: '#D7B84C',
+    color: '#d7b84c',
     background: 'rgba(201,162,39,0.08)',
     fontSize: 11,
     letterSpacing: '0.14em',
     textTransform: 'uppercase',
   },
   td: {
-    padding: '16px',
-    color: '#DCE1E8',
+    padding: 16,
+    color: '#dce1e8',
     borderTop: '1px solid rgba(255,255,255,0.08)',
     fontSize: 13,
     lineHeight: 1.55,
     verticalAlign: 'top',
   },
-  orderPanel: {
+  reportPanel: {
     padding: 28,
     borderRadius: 28,
-    background: '#FFFFFF',
-    color: '#0B0B0B',
+    background: '#fff',
+    color: '#0b0b0b',
   },
-  summaryBox: {
+  pre: {
     marginTop: 20,
     padding: 22,
     borderRadius: 20,
-    background: '#0A0A0A',
-    color: '#F8F6F1',
+    background: '#0a0a0a',
+    color: '#f8f6f1',
     whiteSpace: 'pre-wrap',
     fontSize: 13,
     lineHeight: 1.7,
@@ -1781,7 +596,7 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: 24,
     background: '#050505',
     border: '1px solid rgba(201,162,39,0.42)',
-    color: '#FFFFFF',
+    color: '#fff',
     lineHeight: 1.7,
   },
 }
