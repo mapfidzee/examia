@@ -1,81 +1,17 @@
 'use client'
 
+import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
-import { evaluateCGILiveOperationalIntegration } from '@/lib/cgiLiveOperationalIntegrationEngine'
-import { buildCGIExecutiveBriefing } from '@/lib/cgiExecutiveBriefingGenerator'
 import {
-  formatCGIExecutivePosture,
-  formatCGIEvidenceLanguage,
-  formatCGISurvivabilityLanguage,
-  formatCGIGovernanceSafeLanguage,
-} from '@/lib/cgiExecutivePostureFormatter'
-import type { CGIRouteSynthesisPosture } from '@/lib/cgiCrossRouteContinuitySynthesisEngine'
+  buildCGIPressureDoctrine,
+  type CGIPressureMetric,
+} from '@/lib/cgiPressureDoctrineEngine'
+import { supabase } from '../../lib/supabase'
 
-type PressurePosture =
-  | 'PRESSURE CONTAINED'
-  | 'PRESSURE ACCUMULATING'
-  | 'PRESSURE CONVERGING'
-  | 'PRESSURE STRUCTURAL'
-  | 'PRESSURE COMMAND THRESHOLD'
-
-type EnterprisePressureIntelligence = {
-  posture: PressurePosture
-  thesis: string
-  pressureQuestion: string
-  concentration: string
-  propagation: string
-  convergence: string
-  structuralSignal: string
-  escalationThreshold: string
-  survivabilityMeaning: string
-  commandImplication: string
-  coordinationImplication: string
-  crossSiteImplication: string
-  reliabilityImplication: string
-  executiveAction: string
-  evidenceRequirement: string
-  memoryRequirement: string
-  forecast: string
-  boardWarning: string
-  copyReadyBrief: string
-}
-
-function formatLabel(value: string): string {
-  return value.replaceAll('_', ' ')
-}
-
-function mapToSynthesisPosture(value: unknown): CGIRouteSynthesisPosture {
-  const normalized = String(value).toUpperCase()
-
-  if (
-    normalized.includes('SURVIVABILITY_THREAT') ||
-    normalized.includes('CRITICAL') ||
-    normalized.includes('HIGH') ||
-    normalized.includes('FAILED') ||
-    normalized.includes('SEVERE')
-  ) {
-    return 'CRITICAL'
-  }
-
-  if (
-    normalized.includes('ELEVATED') ||
-    normalized.includes('MODERATE') ||
-    normalized.includes('ACTIVE_INSTABILITY') ||
-    normalized.includes('FRAGILE') ||
-    normalized.includes('PARTIAL') ||
-    normalized.includes('UNCERTAIN') ||
-    normalized.includes('LOW') ||
-    normalized.includes('WEAK') ||
-    normalized.includes('CONDITIONAL')
-  ) {
-    return 'ELEVATED'
-  }
-
-  return 'WATCHED'
-}
+const SAMPLE_LIMIT = 120
 
 export default function PressurePage() {
   return (
@@ -90,347 +26,262 @@ export default function PressurePage() {
 }
 
 function PressureContent() {
-  const pressureInput = {
-    route: 'PRESSURE' as const,
-    openCases: 11,
-    escalatedCases: 5,
-    repeatedInstabilityCount: 5,
-    unresolvedCriticalCount: 1,
-    recoveryFailures: 2,
-    verifiedRecoveries: 0,
-    coordinationIssues: 6,
-    averageUnresolvedDays: 16,
-    unresolvedDurationDays: 16,
-    reburnCount: 1,
-    priorEscalationCount: 5,
-    priorSurvivabilityThreatCount: 0,
-    ownerAssigned: true,
-    actionStarted: true,
-    evidenceSubmitted: false,
-    evidenceVerified: false,
-    deadlineMissed: true,
+  const [metrics, setMetrics] = useState<CGIPressureMetric[]>([])
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    loadPressureMetrics()
+  }, [])
+
+  async function loadPressureMetrics() {
+    setMessage('Loading pressure intelligence...')
+
+    const { data, error } = await supabase
+      .from('cgi_operational_metrics')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(SAMPLE_LIMIT)
+
+    if (error) {
+      console.error(error)
+      setMessage('Pressure intelligence could not be loaded.')
+      return
+    }
+
+    setMetrics((data || []) as CGIPressureMetric[])
+    setMessage('Pressure intelligence loaded.')
   }
 
-  const pressureIntelligence =
-    evaluateCGILiveOperationalIntegration(pressureInput)
-
-  const enterprisePressure =
-    buildEnterprisePressureIntelligence(pressureInput)
-
-  const synchronizedBriefing = buildCGIExecutiveBriefing({
-    pressurePosture: mapToSynthesisPosture(
-      pressureIntelligence.derivation.survivabilityPressure,
-    ),
-    trajectoryPosture: mapToSynthesisPosture(
-      pressureIntelligence.derivation.continuityCondition,
-    ),
-    predictivePosture: mapToSynthesisPosture(
-      pressureIntelligence.memory.memoryRiskLevel,
-    ),
-    recoveryPosture: mapToSynthesisPosture(
-      pressureIntelligence.derivation.recoveryCredibility,
-    ),
-    reliabilityPosture: mapToSynthesisPosture(
-      pressureIntelligence.derivation.continuityConfidence,
-    ),
-    evidenceVerified: false,
-    accountabilityActive: true,
-    structuralMemoryVisible: true,
-  })
-
-  const synchronizedPosture = formatCGIExecutivePosture(
-    synchronizedBriefing.synthesis.synthesisPosture,
+  const pressure = useMemo(
+    () => buildCGIPressureDoctrine(metrics),
+    [metrics],
   )
-
-  const synchronizedEvidence = formatCGIEvidenceLanguage(
-    false,
-    synchronizedBriefing.synthesis.synthesisPosture,
-  )
-
-  const synchronizedSurvivability = formatCGISurvivabilityLanguage(
-    synchronizedBriefing.synthesis.synthesisPosture,
-  )
-
-  const synchronizedGovernance = formatCGIGovernanceSafeLanguage()
 
   return (
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.hero}>
           <div>
-            <p style={styles.kicker}>TSINAXA CGI • ENTERPRISE PRESSURE</p>
+            <p style={styles.kicker}>TSINAXA CGI • PRESSURE</p>
             <h1 style={styles.title}>Enterprise Pressure Intelligence</h1>
             <p style={styles.subtitle}>
-              Pressure identifies where instability is accumulating before it
-              forces Command action. CGI treats pressure as continuity strain,
-              not simple workload.
+              Pressure answers whether continuity strain is still contained
+              before it forces command action. CGI treats pressure as governed
+              continuity exposure, not simple workload.
             </p>
           </div>
 
           <div style={styles.statusBox}>
-            <p style={styles.statusLabel}>PRESSURE POSTURE</p>
-            <p style={styles.statusValue}>{enterprisePressure.posture}</p>
-            <p style={styles.statusMeaning}>{enterprisePressure.thesis}</p>
-          </div>
-        </section>
-
-        <section style={styles.commandDeck}>
-          <div style={styles.primaryCard}>
-            <p style={styles.sectionKicker}>Executive Pressure Question</p>
-            <h2 style={styles.commandTitle}>
-              {enterprisePressure.pressureQuestion}
-            </h2>
-            <p style={styles.bodyText}>
-              Pressure becomes enterprise-significant when it concentrates
-              across unresolved work, spreads across coordination channels,
-              repeats across time, or weakens the institution&apos;s ability to
-              stabilize itself.
+            <p style={styles.statusLabel}>TRUST READING</p>
+            <p style={styles.statusValue}>
+              {pressure.trustAssessment.trustReading}
             </p>
-
-            <div style={styles.commandMetaGrid}>
-              <MiniStat label="Threshold" value={enterprisePressure.escalationThreshold} />
-              <MiniStat label="Open Cases" value={String(pressureInput.openCases)} />
-              <MiniStat label="Escalated" value={String(pressureInput.escalatedCases)} />
-              <MiniStat label="Repeated" value={String(pressureInput.repeatedInstabilityCount)} />
-            </div>
-          </div>
-
-          <div style={styles.consequenceCard}>
-            <p style={styles.sectionKicker}>Board Warning</p>
-            <h2 style={styles.consequenceTitle}>Do not confuse activity with relief.</h2>
-            <p style={styles.bodyText}>{enterprisePressure.boardWarning}</p>
+            <p style={styles.statusMeaning}>
+              {pressure.trustAssessment.trustMeaning}
+            </p>
           </div>
         </section>
 
-        <section style={styles.metricsGrid}>
-          <Metric label="Coordination Issues" value={String(pressureInput.coordinationIssues)} />
-          <Metric label="Recovery Failures" value={String(pressureInput.recoveryFailures)} />
-          <Metric label="Reburn Count" value={String(pressureInput.reburnCount)} />
-          <Metric label="Critical Unresolved" value={String(pressureInput.unresolvedCriticalCount)} />
-          <Metric label="Unresolved Days" value={String(pressureInput.averageUnresolvedDays)} />
-          <Metric label="Evidence Verified" value={pressureInput.evidenceVerified ? 'YES' : 'NO'} />
+        {message && <div style={styles.message}>{message}</div>}
+
+        <section style={styles.gridTwo}>
+          <Panel title="Executive Pressure Question">
+            <h2 style={styles.bigText}>{pressure.pressureQuestion}</h2>
+            <p style={styles.bodyText}>{pressure.pressureConclusion}</p>
+          </Panel>
+
+          <Panel title="Pressure Conclusion">
+            <h2 style={styles.bigText}>{pressure.pressureThesis}</h2>
+            <p style={styles.bodyText}>
+              {pressure.trustAssessment.finalInterpretation}
+            </p>
+          </Panel>
         </section>
 
-        <section style={styles.gridFour}>
-          <ExecutiveCard
-            title="Concentration"
-            value={enterprisePressure.concentration}
-            body="Where pressure is becoming dense enough to weaken continuity."
-          />
-
-          <ExecutiveCard
-            title="Propagation"
-            value={enterprisePressure.propagation}
-            body="Whether pressure is spreading beyond one local problem."
-          />
-
-          <ExecutiveCard
-            title="Convergence"
-            value={enterprisePressure.convergence}
-            body="Whether multiple pressure types are combining."
-          />
-
-          <ExecutiveCard
-            title="Structural Signal"
-            value={enterprisePressure.structuralSignal}
-            body="Whether pressure has become part of institutional pattern."
-          />
+        <section style={styles.metricGrid}>
+          <Metric label="Escalation" value={pressure.scores.escalation} />
+          <Metric label="Propagation" value={pressure.scores.propagation} />
+          <Metric label="Routing" value={pressure.scores.routing} />
+          <Metric label="Coordination" value={pressure.scores.coordination} />
+          <Metric label="Containment" value={pressure.scores.containment} />
+          <Metric label="Volatility" value={pressure.scores.volatility} />
         </section>
 
-        <section style={styles.panel}>
-          <p style={styles.sectionKicker}>Synchronized Continuity Reading</p>
-          <h2 style={styles.panelTitle}>{synchronizedPosture.label}</h2>
-          <p style={styles.bodyText}>{synchronizedPosture.description}</p>
-
-          <div style={styles.infoList}>
-            <Info label="Evidence" value={synchronizedEvidence} />
-            <Info label="Survivability" value={synchronizedSurvivability} />
-            <Info label="Governance" value={synchronizedGovernance} />
+        <Panel title="Continuity Derivation Standard">
+          <div style={styles.infoGrid}>
+            <Info
+              label="What Is Visible"
+              value={pressure.continuityStandard.whatIsVisible}
+            />
+            <Info
+              label="Why It Matters"
+              value={pressure.continuityStandard.whyItMatters}
+            />
+            <Info
+              label="Continuity Risk"
+              value={pressure.continuityStandard.continuityRisk}
+            />
+            <Info
+              label="Required Movement"
+              value={pressure.continuityStandard.requiredMovement}
+            />
+            <Info
+              label="Trust Level"
+              value={pressure.continuityStandard.trustLevel}
+            />
+            <Info
+              label="Institutional Meaning"
+              value={pressure.continuityStandard.institutionalMeaning}
+            />
           </div>
-        </section>
+        </Panel>
 
         <section style={styles.gridThree}>
-          <Panel
-            title="Survivability Pressure"
-            value={formatLabel(
-              pressureIntelligence.derivation.survivabilityPressure,
-            )}
-          >
-            {enterprisePressure.survivabilityMeaning}
-          </Panel>
-
-          <Panel
-            title="Continuity Condition"
-            value={formatLabel(
-              pressureIntelligence.derivation.continuityCondition,
-            )}
-          >
-            {pressureIntelligence.shell.continuityPanel.interpretation}
-          </Panel>
-
-          <Panel
-            title="Continuity Confidence"
-            value={formatLabel(
-              pressureIntelligence.derivation.continuityConfidence,
-            )}
-          >
-            {pressureIntelligence.shell.confidencePanel.interpretation}
-          </Panel>
+          <Card
+            title="Trust Doctrine"
+            value={pressure.trustAssessment.executiveDecision}
+            body={pressure.trustAssessment.trustMeaning}
+          />
+          <Card
+            title="Memory Doctrine"
+            value={pressure.memoryDoctrine.trustReading}
+            body={pressure.memoryDoctrine.institutionalMeaning}
+          />
+          <Card
+            title="Audit Doctrine"
+            value={pressure.auditDoctrine.auditCredibility}
+            body={pressure.auditDoctrine.evidenceGap}
+          />
         </section>
 
         <section style={styles.gridTwo}>
-          <Panel title="Dominant Pressure Truth">
-            {pressureIntelligence.command.dominantTruth}
+          <Panel title="Enterprise Pressure Requirements">
+            <Info
+              label="Evidence Requirement"
+              value={pressure.evidenceRequirement}
+            />
+            <Info
+              label="Executive Action"
+              value={pressure.trustAssessment.executiveDecision}
+            />
+            <Info
+              label="Board Warning"
+              value={pressure.trustAssessment.boardLevelWarning}
+            />
+            <Info
+              label="Dominant Driver"
+              value={pressure.dominantPressureDriver}
+            />
           </Panel>
 
-          <Panel title="Primary Pressure Driver">
-            {pressureIntelligence.command.primaryDriver}
-          </Panel>
-        </section>
-
-        <section style={styles.gridFour}>
-          <ExecutiveCard
-            title="Command"
-            value={enterprisePressure.commandImplication}
-            body="How Command should treat the pressure posture."
-          />
-
-          <ExecutiveCard
-            title="Coordination"
-            value={enterprisePressure.coordinationImplication}
-            body="Whether ownership synchronization is required."
-          />
-
-          <ExecutiveCard
-            title="Cross-Site"
-            value={enterprisePressure.crossSiteImplication}
-            body="Whether pressure may no longer be isolated."
-          />
-
-          <ExecutiveCard
-            title="Reliability"
-            value={enterprisePressure.reliabilityImplication}
-            body="How pressure affects repeated stabilization trust."
-          />
-        </section>
-
-        <section style={styles.memoryPanel}>
-          <p style={styles.sectionKicker}>Pressure Memory</p>
-          <h2 style={styles.panelTitle}>
-            Pressure that repeats must not be treated as isolated workload.
-          </h2>
-
-          <div style={styles.memoryGrid}>
-            <MiniStat
-              label="Structural Memory"
-              value={formatLabel(
-                pressureIntelligence.memory.primaryMemorySignal,
-              )}
+          <Panel title="Latest Pressure Context">
+            <Info
+              label="Continuity State"
+              value={pressure.latest?.continuity_state || 'Not recorded'}
             />
-            <MiniStat
-              label="Memory Risk"
-              value={formatLabel(pressureIntelligence.memory.memoryRiskLevel)}
-            />
-            <MiniStat
-              label="Fragility"
+            <Info
+              label="Pressure State"
               value={
-                pressureIntelligence.memory.institutionalFragilityDetected
-                  ? 'YES'
-                  : 'NO'
+                pressure.latest?.pressure_propagation_state || 'Not recorded'
               }
             />
-            <MiniStat label="Memory Requirement" value={enterprisePressure.memoryRequirement} />
+            <Info
+              label="Trajectory Direction"
+              value={pressure.latest?.trajectory_direction || 'Not recorded'}
+            />
+            <Info
+              label="Structural Memory"
+              value={
+                pressure.latest?.structural_memory_state || 'Not recorded'
+              }
+            />
+            <Info
+              label="Dominant Pressure"
+              value={
+                pressure.latest?.dominant_pressure_source || 'Not recorded'
+              }
+            />
+          </Panel>
+        </section>
+
+        <section style={styles.gridFour}>
+          <Card
+            title="Command"
+            value={pressure.commandImplication}
+            body="How command should interpret pressure."
+          />
+          <Card
+            title="Executive Report"
+            value={pressure.executiveReportImplication}
+            body="How pressure should appear in executive reporting."
+          />
+          <Card
+            title="Memory Board"
+            value={pressure.memoryBoardImplication}
+            body="What institutional memory must preserve."
+          />
+          <Card
+            title="Audit"
+            value={pressure.auditImplication}
+            body="What audit must reconstruct."
+          />
+        </section>
+
+        <Panel title="Recent Pressure Memory Trail">
+          <div style={styles.cardHeader}>
+            <p style={styles.bodyText}>
+              Pressure readings are continuity observations, not personal
+              performance judgments.
+            </p>
+
+            <button onClick={loadPressureMetrics} style={styles.button}>
+              Refresh
+            </button>
           </div>
-        </section>
 
-        <section style={styles.panel}>
-          <p style={styles.sectionKicker}>Enterprise Pressure Doctrine</p>
-          <h2 style={styles.panelTitle}>
-            Pressure becomes dangerous when it weakens continuity credibility.
+          <div style={styles.tableWrap}>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Created</th>
+                  <th style={styles.th}>Escalation</th>
+                  <th style={styles.th}>Propagation</th>
+                  <th style={styles.th}>Routing</th>
+                  <th style={styles.th}>Coordination</th>
+                  <th style={styles.th}>Drag</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {metrics.length === 0 && (
+                  <tr>
+                    <td style={styles.td} colSpan={6}>
+                      No persisted pressure memory found yet.
+                    </td>
+                  </tr>
+                )}
+
+                {metrics.slice(0, 10).map((item) => (
+                  <tr key={item.id}>
+                    <td style={styles.td}>{formatDate(item.created_at)}</td>
+                    <td style={styles.td}>{item.escalation_pressure_index}</td>
+                    <td style={styles.td}>{item.propagation_risk}</td>
+                    <td style={styles.td}>{item.routing_friction}</td>
+                    <td style={styles.td}>{item.coordination_instability}</td>
+                    <td style={styles.td}>{item.stabilization_drag}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Panel>
+
+        <section style={styles.reportPanel}>
+          <p style={styles.kicker}>COPY-READY PRESSURE BRIEF</p>
+          <h2 style={styles.bigText}>
+            Can continuity pressure still be contained?
           </h2>
-          <p style={styles.bodyText}>
-            CGI does not treat pressure as simple workload. Pressure becomes
-            command-relevant when it accumulates, concentrates, repeats, delays
-            recovery, weakens reliability, exposes coordination gaps, or
-            threatens the institution&apos;s ability to stabilize itself under
-            strain.
-          </p>
-        </section>
-
-        <section style={styles.gridTwo}>
-          <Panel title="Required Pressure Action">
-            {enterprisePressure.executiveAction}
-          </Panel>
-
-          <Panel title="Required Evidence">
-            {enterprisePressure.evidenceRequirement}
-          </Panel>
-        </section>
-
-        <section style={styles.gridThree}>
-          <Panel
-            title="Accountability Status"
-            value={formatLabel(
-              pressureIntelligence.accountability.accountabilityStatus,
-            )}
-          >
-            {pressureIntelligence.accountability.escalationRule}
-          </Panel>
-
-          <Panel
-            title="Accountability Risk"
-            value={formatLabel(
-              pressureIntelligence.accountability.accountabilityRisk,
-            )}
-          >
-            Accountability must tighten when pressure remains unresolved.
-          </Panel>
-
-          <Panel title="Unresolved Duration Warning" value="Duration Active">
-            {pressureIntelligence.accountability.unresolvedDurationWarning}
-          </Panel>
-        </section>
-
-        <section style={styles.panel}>
-          <p style={styles.sectionKicker}>Pressure Interpretation</p>
-          <h2 style={styles.panelTitle}>
-            Pressure must be interpreted before it becomes survivability risk.
-          </h2>
-          <p style={styles.bodyText}>
-            {pressureIntelligence.operationalNarrative}
-          </p>
-        </section>
-
-        <section style={styles.gridTwo}>
-          <PressurePrinciple
-            title="Pressure is not only volume"
-            body="A small number of unresolved critical pressures may be more important than many low-significance events."
-          />
-
-          <PressurePrinciple
-            title="Pressure concentrates"
-            body="When escalation, coordination weakness, and unresolved duration combine, continuity credibility weakens."
-          />
-
-          <PressurePrinciple
-            title="Pressure repeats"
-            body="Recurring pressure is a structural warning, especially when recovery fails to hold."
-          />
-
-          <PressurePrinciple
-            title="Pressure requires evidence"
-            body="Relief must be evidenced. CGI should not assume pressure is resolved simply because action started."
-          />
-        </section>
-
-        <section style={styles.orderPanel}>
-          <p style={styles.sectionKicker}>Copy-Ready Pressure Brief</p>
-          <h2 style={styles.panelTitle}>
-            Where is instability accumulating before it forces command action?
-          </h2>
-          <pre style={styles.summaryBox}>
-            {enterprisePressure.copyReadyBrief}
-          </pre>
+          <pre style={styles.pre}>{pressure.copyReadyBrief}</pre>
         </section>
 
         <section style={styles.doctrineCard}>
@@ -446,235 +297,12 @@ function PressureContent() {
   )
 }
 
-function buildEnterprisePressureIntelligence(input: {
-  openCases: number
-  escalatedCases: number
-  repeatedInstabilityCount: number
-  unresolvedCriticalCount: number
-  recoveryFailures: number
-  verifiedRecoveries: number
-  coordinationIssues: number
-  averageUnresolvedDays: number
-  unresolvedDurationDays: number
-  reburnCount: number
-  priorEscalationCount: number
-  priorSurvivabilityThreatCount: number
-  ownerAssigned: boolean
-  actionStarted: boolean
-  evidenceSubmitted: boolean
-  evidenceVerified: boolean
-  deadlineMissed: boolean
-}): EnterprisePressureIntelligence {
-  const pressureScore =
-    input.openCases +
-    input.escalatedCases * 2 +
-    input.repeatedInstabilityCount * 2 +
-    input.unresolvedCriticalCount * 3 +
-    input.recoveryFailures * 2 +
-    input.coordinationIssues +
-    input.reburnCount * 2 +
-    input.priorEscalationCount +
-    (input.deadlineMissed ? 3 : 0) +
-    (!input.evidenceVerified ? 2 : 0)
-
-  const posture = derivePressurePosture(pressureScore, input)
-
-  const concentration =
-    input.escalatedCases > 0 || input.unresolvedCriticalCount > 0
-      ? 'Pressure is concentrated around escalation, critical unresolved risk, and delayed evidence.'
-      : 'Pressure is visible but not yet concentrated around critical escalation.'
-
-  const propagation =
-    input.coordinationIssues >= 4
-      ? 'Pressure is propagating through coordination channels and may require synchronization.'
-      : 'Pressure has not yet shown strong coordination propagation.'
-
-  const convergence =
-    input.repeatedInstabilityCount > 0 &&
-    input.recoveryFailures > 0 &&
-    input.coordinationIssues > 0
-      ? 'Recurrence, failed recovery, and coordination strain are converging.'
-      : 'Pressure signals are visible but not fully converged.'
-
-  const structuralSignal =
-    input.repeatedInstabilityCount >= 3 || input.reburnCount > 0
-      ? 'Pressure has structural memory and should not be treated as temporary workload.'
-      : 'Pressure memory is emerging but not yet structurally dominant.'
-
-  const escalationThreshold =
-    pressureScore >= 35
-      ? 'COMMAND THRESHOLD'
-      : pressureScore >= 22
-        ? 'ELEVATED WATCH'
-        : pressureScore >= 12
-          ? 'WATCH'
-          : 'CONTAINED'
-
-  const survivabilityMeaning =
-    posture === 'PRESSURE COMMAND THRESHOLD' ||
-    posture === 'PRESSURE STRUCTURAL'
-      ? 'Pressure is strong enough to threaten survivability credibility if command action does not remain visible.'
-      : 'Pressure is visible and should remain under proportional survivability watch.'
-
-  const commandImplication =
-    posture === 'PRESSURE COMMAND THRESHOLD'
-      ? 'Command must hold visibility.'
-      : posture === 'PRESSURE STRUCTURAL'
-        ? 'Command should remain active until recurrence and evidence are resolved.'
-        : posture === 'PRESSURE CONVERGING'
-          ? 'Command should prepare escalation if convergence continues.'
-          : 'Command can monitor proportionally.'
-
-  const coordinationImplication =
-    input.coordinationIssues >= 4
-      ? 'Coordination synchronization is required.'
-      : 'Coordination remains conditional.'
-
-  const crossSiteImplication =
-    input.repeatedInstabilityCount >= 4 || input.coordinationIssues >= 5
-      ? 'Cross-site review may be required if the same pressure appears across sites.'
-      : 'Cross-site review is not yet required.'
-
-  const reliabilityImplication =
-    input.recoveryFailures > 0 || input.reburnCount > 0
-      ? 'Reliability cannot be trusted until pressure stops returning after recovery.'
-      : 'Reliability remains watchable if evidence stays attached.'
-
-  const evidenceRequirement =
-    'Preserve unresolved duration, escalation reason, coordination strain, recurrence history, recovery failure evidence, owner action, deadline status, and survivability meaning.'
-
-  const memoryRequirement =
-    input.repeatedInstabilityCount > 0 || input.reburnCount > 0
-      ? 'Preserve repeated pressure and reburn memory so pressure is not falsely treated as isolated.'
-      : 'Preserve pressure evidence for future comparison.'
-
-  const forecast =
-    posture === 'PRESSURE COMMAND THRESHOLD'
-      ? 'Pressure is likely to force command action if evidence and coordination do not improve.'
-      : posture === 'PRESSURE STRUCTURAL'
-        ? 'Pressure may keep returning unless structural memory is addressed.'
-        : posture === 'PRESSURE CONVERGING'
-          ? 'Pressure may escalate if recurrence, coordination, and recovery weakness continue to combine.'
-          : 'Pressure can remain contained if evidence, ownership, and recovery confirmation improve.'
-
-  const boardWarning =
-    'Do not confuse activity with pressure relief. Pressure is relieved only when evidence shows survivability, coordination, and recovery credibility are improving.'
-
-  const executiveAction =
-    posture === 'PRESSURE COMMAND THRESHOLD'
-      ? 'Hold command visibility, require evidence correction, and synchronize coordination within 24 hours.'
-      : posture === 'PRESSURE STRUCTURAL'
-        ? 'Preserve structural pressure memory and require durability evidence before posture reduction.'
-        : posture === 'PRESSURE CONVERGING'
-          ? 'Monitor convergence and prepare command escalation if pressure continues accumulating.'
-          : 'Continue proportional monitoring and preserve pressure evidence.'
-
-  const pressureQuestion =
-    'Where is instability accumulating before it forces command action?'
-
-  const thesis = `${posture}: ${convergence} ${structuralSignal}`
-
-  const copyReadyBrief = [
-    'TSINAXA CGI ENTERPRISE PRESSURE BRIEF',
-    '',
-    `Pressure Question: ${pressureQuestion}`,
-    '',
-    `Pressure Posture: ${posture}`,
-    '',
-    `Enterprise Thesis: ${thesis}`,
-    '',
-    `Concentration: ${concentration}`,
-    '',
-    `Propagation: ${propagation}`,
-    '',
-    `Convergence: ${convergence}`,
-    '',
-    `Structural Signal: ${structuralSignal}`,
-    '',
-    `Escalation Threshold: ${escalationThreshold}`,
-    '',
-    `Survivability Meaning: ${survivabilityMeaning}`,
-    '',
-    `Command Implication: ${commandImplication}`,
-    '',
-    `Coordination Implication: ${coordinationImplication}`,
-    '',
-    `Cross-Site Implication: ${crossSiteImplication}`,
-    '',
-    `Reliability Implication: ${reliabilityImplication}`,
-    '',
-    `Evidence Requirement: ${evidenceRequirement}`,
-    '',
-    `Memory Requirement: ${memoryRequirement}`,
-    '',
-    `Forecast: ${forecast}`,
-    '',
-    `Board Warning: ${boardWarning}`,
-    '',
-    `Executive Action: ${executiveAction}`,
-  ].join('\n')
-
-  return {
-    posture,
-    thesis,
-    pressureQuestion,
-    concentration,
-    propagation,
-    convergence,
-    structuralSignal,
-    escalationThreshold,
-    survivabilityMeaning,
-    commandImplication,
-    coordinationImplication,
-    crossSiteImplication,
-    reliabilityImplication,
-    executiveAction,
-    evidenceRequirement,
-    memoryRequirement,
-    forecast,
-    boardWarning,
-    copyReadyBrief,
-  }
+function formatDate(value: string) {
+  if (!value) return 'Not recorded'
+  return new Date(value).toLocaleString()
 }
 
-function derivePressurePosture(
-  score: number,
-  input: {
-    repeatedInstabilityCount: number
-    recoveryFailures: number
-    coordinationIssues: number
-    reburnCount: number
-    escalatedCases: number
-    unresolvedCriticalCount: number
-  },
-): PressurePosture {
-  if (score >= 35 || input.escalatedCases >= 5) {
-    return 'PRESSURE COMMAND THRESHOLD'
-  }
-
-  if (
-    input.repeatedInstabilityCount >= 4 ||
-    input.reburnCount > 0 ||
-    input.recoveryFailures >= 2
-  ) {
-    return 'PRESSURE STRUCTURAL'
-  }
-
-  if (
-    input.coordinationIssues >= 4 &&
-    (input.repeatedInstabilityCount > 0 || input.unresolvedCriticalCount > 0)
-  ) {
-    return 'PRESSURE CONVERGING'
-  }
-
-  if (score >= 12) {
-    return 'PRESSURE ACCUMULATING'
-  }
-
-  return 'PRESSURE CONTAINED'
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({ label, value }: { label: string; value: number }) {
   return (
     <article style={styles.metricCard}>
       <p style={styles.metricLabel}>{label}</p>
@@ -683,48 +311,30 @@ function Metric({ label, value }: { label: string; value: string }) {
   )
 }
 
-function MiniStat({ label, value }: { label: string; value: string }) {
-  return (
-    <article style={styles.miniStat}>
-      <p style={styles.metricLabel}>{label}</p>
-      <p style={styles.miniValue}>{value}</p>
-    </article>
-  )
-}
-
-function Panel({
-  title,
-  value,
-  children,
-}: {
-  title: string
-  value?: string
-  children?: ReactNode
-}) {
-  return (
-    <section style={styles.panelCard}>
-      <p style={styles.sectionKicker}>{title}</p>
-      {value ? <h3 style={styles.cardValue}>{value}</h3> : null}
-      {children ? <div style={styles.panelBody}>{children}</div> : null}
-    </section>
-  )
-}
-
-function ExecutiveCard({
+function Card({
   title,
   value,
   body,
 }: {
   title: string
   value: string
-  body: ReactNode
+  body: string
 }) {
   return (
-    <article style={styles.panelCard}>
-      <p style={styles.sectionKicker}>{title}</p>
+    <article style={styles.card}>
+      <p style={styles.kicker}>{title}</p>
       <h3 style={styles.cardValue}>{value}</h3>
-      <div style={styles.panelBody}>{body}</div>
+      <p style={styles.bodyText}>{body}</p>
     </article>
+  )
+}
+
+function Panel({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section style={styles.panel}>
+      <p style={styles.kicker}>{title}</p>
+      {children}
+    </section>
   )
 }
 
@@ -737,28 +347,12 @@ function Info({ label, value }: { label: string; value: string }) {
   )
 }
 
-function PressurePrinciple({
-  title,
-  body,
-}: {
-  title: string
-  body: ReactNode
-}) {
-  return (
-    <article style={styles.principleCard}>
-      <p style={styles.sectionKicker}>CGI Pressure Principle</p>
-      <h3 style={styles.principleTitle}>{title}</h3>
-      <p style={styles.bodyText}>{body}</p>
-    </article>
-  )
-}
-
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
     background:
-      'radial-gradient(circle at top left, rgba(201, 162, 39, 0.14), transparent 34%), linear-gradient(135deg, #050505 0%, #0B0B0B 45%, #111111 100%)',
-    color: '#FFFFFF',
+      'radial-gradient(circle at top left, rgba(201,162,39,0.14), transparent 34%), linear-gradient(135deg, #050505 0%, #0b0b0b 45%, #111111 100%)',
+    color: '#fff',
     padding: '40px 24px 72px',
   },
   container: {
@@ -772,18 +366,16 @@ const styles: Record<string, CSSProperties> = {
     gridTemplateColumns: 'minmax(0, 1.45fr) minmax(320px, 0.75fr)',
     gap: 24,
     padding: 32,
-    border: '1px solid rgba(201, 162, 39, 0.34)',
+    border: '1px solid rgba(201,162,39,0.34)',
     borderRadius: 28,
-    background:
-      'linear-gradient(135deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018))',
-    boxShadow: '0 28px 80px rgba(0,0,0,0.38)',
+    background: 'rgba(255,255,255,0.045)',
   },
   kicker: {
     margin: 0,
-    color: '#C9A227',
-    fontSize: 12,
-    fontWeight: 900,
-    letterSpacing: '0.22em',
+    color: '#c9a227',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.18em',
     textTransform: 'uppercase',
   },
   title: {
@@ -796,19 +388,20 @@ const styles: Record<string, CSSProperties> = {
   subtitle: {
     maxWidth: 880,
     margin: '18px 0 0',
-    color: '#C8CDD4',
+    color: '#c8cdd4',
     fontSize: 17,
     lineHeight: 1.8,
   },
   statusBox: {
-    border: '1px solid rgba(201, 162, 39, 0.5)',
+    border: '1px solid rgba(201,162,39,0.5)',
     borderRadius: 24,
     padding: 24,
-    background: 'linear-gradient(180deg, rgba(201,162,39,0.18), rgba(0,0,0,0.38))',
+    background:
+      'linear-gradient(180deg, rgba(201,162,39,0.18), rgba(0,0,0,0.38))',
   },
   statusLabel: {
     margin: 0,
-    color: '#D7B84C',
+    color: '#d7b84c',
     fontSize: 11,
     fontWeight: 950,
     letterSpacing: '0.2em',
@@ -822,62 +415,34 @@ const styles: Record<string, CSSProperties> = {
   },
   statusMeaning: {
     margin: '12px 0 0',
-    color: '#ECE7D7',
+    color: '#ece7d7',
     fontSize: 14,
     lineHeight: 1.7,
   },
-  commandDeck: {
+  message: {
+    padding: '14px 18px',
+    borderRadius: 16,
+    color: '#d7b84c',
+    background: 'rgba(201,162,39,0.1)',
+    border: '1px solid rgba(201,162,39,0.22)',
+    fontWeight: 800,
+  },
+  gridTwo: {
     display: 'grid',
-    gridTemplateColumns: '1.4fr 0.8fr',
-    gap: 24,
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 16,
   },
-  primaryCard: {
-    padding: 30,
-    borderRadius: 28,
-    background: '#FFFFFF',
-    color: '#0B0B0B',
-    border: '1px solid rgba(255,255,255,0.12)',
+  gridThree: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: 16,
   },
-  consequenceCard: {
-    padding: 30,
-    borderRadius: 28,
-    background: 'rgba(0,0,0,0.38)',
-    border: '1px solid rgba(201,162,39,0.28)',
-  },
-  sectionKicker: {
-    margin: 0,
-    color: '#C9A227',
-    fontSize: 11,
-    fontWeight: 950,
-    letterSpacing: '0.18em',
-    textTransform: 'uppercase',
-  },
-  commandTitle: {
-    margin: '14px 0',
-    fontSize: 'clamp(1.8rem, 3vw, 3.2rem)',
-    lineHeight: 1.05,
-    letterSpacing: '-0.05em',
-    fontWeight: 950,
-  },
-  consequenceTitle: {
-    margin: '14px 0',
-    fontSize: 28,
-    lineHeight: 1.1,
-    letterSpacing: '-0.04em',
-  },
-  bodyText: {
-    margin: '8px 0 0',
-    color: '#AEB6C2',
-    lineHeight: 1.7,
-    fontSize: 14,
-  },
-  commandMetaGrid: {
+  gridFour: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: 12,
-    marginTop: 24,
+    gap: 16,
   },
-  metricsGrid: {
+  metricGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
     gap: 14,
@@ -890,7 +455,7 @@ const styles: Record<string, CSSProperties> = {
   },
   metricLabel: {
     margin: 0,
-    color: '#858D98',
+    color: '#858d98',
     fontSize: 10,
     fontWeight: 950,
     letterSpacing: '0.14em',
@@ -898,38 +463,10 @@ const styles: Record<string, CSSProperties> = {
   },
   metricValue: {
     margin: '10px 0 0',
-    color: '#FFFFFF',
-    fontSize: 30,
+    color: '#fff',
+    fontSize: 26,
     fontWeight: 950,
-  },
-  miniStat: {
-    padding: 14,
-    borderRadius: 16,
-    background: 'rgba(255,255,255,0.055)',
-    border: '1px solid rgba(255,255,255,0.09)',
-  },
-  miniValue: {
-    margin: '8px 0 0',
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: 850,
-    lineHeight: 1.45,
-    overflowWrap: 'anywhere',
-  },
-  gridFour: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: 16,
-  },
-  gridThree: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: 16,
-  },
-  gridTwo: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: 16,
+    lineHeight: 1.15,
   },
   panel: {
     padding: 28,
@@ -937,34 +474,37 @@ const styles: Record<string, CSSProperties> = {
     background: 'rgba(255,255,255,0.045)',
     border: '1px solid rgba(255,255,255,0.1)',
   },
-  panelCard: {
+  card: {
     padding: 22,
     borderRadius: 22,
     background: 'rgba(255,255,255,0.045)',
     border: '1px solid rgba(255,255,255,0.09)',
     minHeight: 150,
   },
-  panelTitle: {
-    margin: '12px 0 0',
-    fontSize: 26,
-    lineHeight: 1.15,
-    letterSpacing: '-0.045em',
-  },
   cardValue: {
     margin: '12px 0 0',
-    color: '#FFFFFF',
+    color: '#fff',
     fontSize: 19,
     lineHeight: 1.25,
+    overflowWrap: 'anywhere',
   },
-  panelBody: {
-    marginTop: 10,
-    color: '#AEB6C2',
+  bigText: {
+    margin: '14px 0',
+    fontSize: 'clamp(1.55rem, 3vw, 2.7rem)',
+    lineHeight: 1.05,
+    letterSpacing: '-0.05em',
+    fontWeight: 950,
+  },
+  bodyText: {
+    margin: '10px 0 0',
+    color: '#aeb6c2',
+    lineHeight: 1.7,
     fontSize: 14,
-    lineHeight: 1.65,
   },
-  infoList: {
+  infoGrid: {
     display: 'grid',
-    gap: 10,
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 12,
     marginTop: 18,
   },
   infoRow: {
@@ -977,53 +517,73 @@ const styles: Record<string, CSSProperties> = {
     border: '1px solid rgba(255,255,255,0.08)',
   },
   infoLabel: {
-    color: '#858D98',
+    color: '#858d98',
     fontWeight: 900,
     fontSize: 12,
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
   },
   infoValue: {
-    color: '#FFFFFF',
+    color: '#fff',
     lineHeight: 1.5,
+    overflowWrap: 'anywhere',
   },
-  memoryPanel: {
-    padding: 28,
-    borderRadius: 28,
-    background: 'linear-gradient(135deg, rgba(201,162,39,0.13), rgba(255,255,255,0.035))',
-    border: '1px solid rgba(201,162,39,0.32)',
+  cardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: 16,
+    alignItems: 'flex-start',
   },
-  memoryGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: 12,
+  button: {
+    border: 'none',
+    borderRadius: 999,
+    padding: '12px 18px',
+    background: '#c9a227',
+    color: '#090909',
+    fontWeight: 950,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  },
+  tableWrap: {
     marginTop: 20,
+    overflowX: 'auto',
+    borderRadius: 20,
+    border: '1px solid rgba(255,255,255,0.1)',
   },
-  principleCard: {
-    padding: 22,
-    borderRadius: 22,
-    background: 'rgba(255,255,255,0.045)',
-    border: '1px solid rgba(255,255,255,0.09)',
-    minHeight: 160,
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    minWidth: 860,
   },
-  principleTitle: {
-    margin: '12px 0 0',
-    color: '#FFFFFF',
-    fontSize: 22,
-    lineHeight: 1.15,
+  th: {
+    padding: '14px 16px',
+    textAlign: 'left',
+    color: '#d7b84c',
+    background: 'rgba(201,162,39,0.08)',
+    fontSize: 11,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
   },
-  orderPanel: {
+  td: {
+    padding: 16,
+    color: '#dce1e8',
+    borderTop: '1px solid rgba(255,255,255,0.08)',
+    fontSize: 13,
+    lineHeight: 1.55,
+    verticalAlign: 'top',
+  },
+  reportPanel: {
     padding: 28,
     borderRadius: 28,
-    background: '#FFFFFF',
-    color: '#0B0B0B',
+    background: '#fff',
+    color: '#0b0b0b',
   },
-  summaryBox: {
+  pre: {
     marginTop: 20,
     padding: 22,
     borderRadius: 20,
-    background: '#0A0A0A',
-    color: '#F8F6F1',
+    background: '#0a0a0a',
+    color: '#f8f6f1',
     whiteSpace: 'pre-wrap',
     fontSize: 13,
     lineHeight: 1.7,
@@ -1036,7 +596,7 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: 24,
     background: '#050505',
     border: '1px solid rgba(201,162,39,0.42)',
-    color: '#FFFFFF',
+    color: '#fff',
     lineHeight: 1.7,
   },
 }
