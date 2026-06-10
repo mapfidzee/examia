@@ -1,4 +1,4 @@
- import { buildCGIExecutiveBriefing } from './cgiExecutiveBriefingGenerator'
+import { buildCGIExecutiveBriefing } from './cgiExecutiveBriefingGenerator'
 import type { CGIRouteSynthesisPosture } from './cgiCrossRouteContinuitySynthesisEngine'
 
 export type CGISiteContinuityProfile = {
@@ -165,7 +165,7 @@ export function buildCrossSitePattern(
     new Set(
       siteBriefings
         .map(({ site }) => site.sharedDependency)
-        .filter((value) => value.trim().length > 0),
+        .filter((dependency) => dependency.trim().length > 0),
     ),
   )
 
@@ -197,7 +197,9 @@ export function buildCrossSitePattern(
     affectedSites,
     dominantSite: dominant.siteName,
     sharedDependency:
-      dependencies.length > 0 ? dependencies.join(', ') : 'No shared dependency recorded',
+      dependencies.length > 0
+        ? dependencies.join(', ')
+        : 'No shared dependency recorded',
     executiveQuestion: 'Is instability isolated or becoming enterprise-wide?',
     enterpriseExposure: deriveEnterpriseExposure(maturity),
     recoveryPattern: deriveRecoveryPattern(maturity, evidenceGaps),
