@@ -7,29 +7,15 @@ import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import InfrastructureNav from '@/components/InfrastructureNav'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { buildCGIDemoScenario } from '@/lib/cgiDemoScenarioEngine'
-import { buildCGIExecutiveMemoryBoard } from '@/lib/cgiExecutiveMemoryBoardEngine'
-import { buildCGIInstitutionalMemory } from '@/lib/cgiInstitutionalMemoryEngine'
-import type { CGIHistoricalContinuitySnapshot } from '@/lib/cgiHistoricalContinuityEngine'
+import {
+  buildCGIMemoryDoctrine,
+  formatMemoryDate,
+  formatMemoryLabel,
+  type PersistedContinuitySnapshotForMemory,
+} from '@/lib/cgiMemoryDoctrineEngine'
 import { loadCGIContinuitySnapshots } from '@/lib/cgiPersistenceEngine'
 
-type PersistedContinuitySnapshot = CGIHistoricalContinuitySnapshot & {
-  id: string
-  created_at: string
-  snapshot_label: string | null
-  source_route: string
-  continuity_confidence: string | null
-  survivability_pressure: string | null
-  recovery_credibility: string | null
-  recurrence_severity: string | null
-  dominant_concern: string | null
-  executive_reading: string | null
-  required_action: string | null
-  required_evidence: string | null
-  evidence_verified: boolean
-  accountability_active: boolean
-  structural_memory_visible: boolean
-  raw_payload: Record<string, unknown>
-}
+type PersistedContinuitySnapshot = PersistedContinuitySnapshotForMemory
 
 export default function CGIMemoryBoardPage() {
   return (
@@ -48,7 +34,11 @@ function CGIMemoryBoardContent() {
   const [message, setMessage] = useState('Loading executive memory board...')
   const [loading, setLoading] = useState(false)
 
-  const featured = buildCGIDemoScenario('FUEL_LOGISTICS_CHAIN_PROOF')
+  const featured = useMemo(
+    () => buildCGIDemoScenario('FUEL_LOGISTICS_CHAIN_PROOF'),
+    [],
+  )
+
   const pilotThread = featured.pilotThread
 
   useEffect(() => {
@@ -76,57 +66,12 @@ function CGIMemoryBoardContent() {
     }
   }
 
-  const board = useMemo(
-    () => buildCGIExecutiveMemoryBoard(snapshots),
+  const memoryDoctrine = useMemo(
+    () => buildCGIMemoryDoctrine(snapshots),
     [snapshots],
   )
 
-  const institutionalMemory = useMemo(
-    () =>
-      buildCGIInstitutionalMemory({
-        historicalRecords: snapshots.length,
-        recurringInstabilityCount: snapshots.filter((item) =>
-          String(item.recurrence_severity || '').toUpperCase().includes('RECUR'),
-        ).length,
-        recoveryFailureCount: snapshots.filter((item) =>
-          String(item.recovery_credibility || '')
-            .toUpperCase()
-            .includes('UNVERIFIED'),
-        ).length,
-        verifiedRecoveryCount: snapshots.filter((item) =>
-          Boolean(item.evidence_verified),
-        ).length,
-        commandInterventionCount: snapshots.filter((item) =>
-          String(item.required_action || '').toUpperCase().includes('COMMAND'),
-        ).length,
-        coordinationIssueCount: snapshots.filter((item) =>
-          String(item.required_action || '').toUpperCase().includes('COORDIN'),
-        ).length,
-        crossSiteSignalCount: snapshots.filter((item) =>
-          String(item.source_route || '').toUpperCase().includes('CROSS'),
-        ).length,
-        executiveReviewCount: snapshots.filter((item) =>
-          String(item.executive_reading || '')
-            .toUpperCase()
-            .includes('EXECUTIVE'),
-        ).length,
-        auditReconstructionCount: snapshots.filter((item) =>
-          String(item.required_evidence || '').toUpperCase().includes('AUDIT'),
-        ).length,
-        survivabilityThreatCount: snapshots.filter((item) =>
-          String(item.survivability_pressure || '')
-            .toUpperCase()
-            .includes('SEVERE'),
-        ).length,
-        unresolvedMemoryGaps: snapshots.filter((item) => !item.evidence_verified)
-          .length,
-        lastKnownPattern:
-          snapshots[0]?.dominant_concern ||
-          snapshots[0]?.executive_reading ||
-          pilotThread.executiveMemory,
-      }),
-    [snapshots, pilotThread.executiveMemory],
-  )
+  const { board, institutionalMemory } = memoryDoctrine
 
   return (
     <main style={styles.page}>
@@ -157,42 +102,40 @@ function CGIMemoryBoardContent() {
           </div>
 
           <div style={styles.statusBox}>
-            <p style={styles.statusLabel}>Memory Posture</p>
+            <p style={styles.statusLabel}>Memory Question</p>
 
-            <p style={styles.statusValue}>STRUCTURAL MEMORY ACTIVE</p>
+            <p style={styles.statusValue}>{memoryDoctrine.memoryQuestion}</p>
           </div>
         </section>
 
         <section style={styles.card}>
           <p style={styles.sectionKicker}>What The Institution Must Remember</p>
 
-          <h2 style={styles.cardTitle}>
-            Supplier concentration created cross-site continuity exposure.
-          </h2>
+          <h2 style={styles.cardTitle}>{memoryDoctrine.memoryThesis}</h2>
 
           <p style={styles.bodyText}>
-            The disruption was not preserved as a closed incident. CGI preserves
-            it as an institutional lesson: recovery can occur before the
-            structural vulnerability has been removed.
+            Memory Board preserves the meaning of instability after visible
+            recovery so structural lessons, recurrence risk, evidence gaps, and
+            survivability exposure do not disappear.
           </p>
 
           <div style={styles.gridThreeInline}>
             <SignalCard
               title="Remembered Vulnerability"
-              value="Supplier Concentration"
-              body="A shared dependency exposed multiple operational sites to the same continuity weakness."
+              value={memoryDoctrine.rememberedVulnerability}
+              body="The structural weakness CGI must keep visible after the event appears resolved."
             />
 
             <SignalCard
               title="Remembered Pattern"
-              value="Cross-Site Exposure"
-              body="North, South, and East operations did not carry equal risk, but they shared the same structural dependency."
+              value={memoryDoctrine.rememberedPattern}
+              body="The institutional pattern that should influence future continuity decisions."
             />
 
             <SignalCard
               title="Remembered Rule"
-              value="Recovery Is Not Closure"
-              body="Durability evidence must remain attached after visible recovery."
+              value={memoryDoctrine.rememberedRule}
+              body="The doctrine rule that prevents false closure and memory loss."
             />
           </div>
         </section>
@@ -222,7 +165,7 @@ function CGIMemoryBoardContent() {
                 style={styles.memoryChainItem}
               >
                 <p style={styles.panelKicker}>
-                  Step {index + 1} • {formatLabel(stage.stage)}
+                  Step {index + 1} • {formatMemoryLabel(stage.stage)}
                 </p>
 
                 <h3 style={styles.memoryTitle}>{stage.title}</h3>
@@ -285,7 +228,7 @@ function CGIMemoryBoardContent() {
 
             <h2 style={styles.heroTitle}>{board.boardPostureLabel}</h2>
 
-            <p style={styles.heroMeaning}>{board.executiveSummary}</p>
+            <p style={styles.heroMeaning}>{memoryDoctrine.boardMeaning}</p>
           </div>
 
           <div style={styles.statusBox}>
@@ -304,7 +247,7 @@ function CGIMemoryBoardContent() {
             </h2>
 
             <p style={styles.heroMeaning}>
-              {institutionalMemory.memoryMeaning}
+              {memoryDoctrine.institutionalMeaning}
             </p>
           </div>
 
@@ -353,7 +296,7 @@ function CGIMemoryBoardContent() {
           <SignalCard
             title="Memory Risk"
             value={institutionalMemory.memoryRisk}
-            body="The risk created if institutional memory is ignored."
+            body={memoryDoctrine.memoryRiskMeaning}
           />
         </section>
 
@@ -370,18 +313,18 @@ function CGIMemoryBoardContent() {
             <SignalCard
               title="Executive Question"
               value={institutionalMemory.executiveQuestion}
-              body="The leadership question created by institutional memory."
+              body={memoryDoctrine.memoryQuestion}
             />
 
             <SignalCard
               title="Continuity Learning"
-              value={institutionalMemory.continuityLearning}
+              value={memoryDoctrine.continuityLearning}
               body="What CGI has learned from preserved continuity records."
             />
 
             <SignalCard
               title="Evidence To Preserve"
-              value={institutionalMemory.evidenceToPreserve}
+              value={memoryDoctrine.evidenceToPreserve}
               body="The proof that should remain attached to future decisions."
             />
           </div>
@@ -448,13 +391,13 @@ function CGIMemoryBoardContent() {
         <section style={styles.gridTwo}>
           <Panel title="Memory Recommendation">
             <p style={styles.panelText}>
-              {institutionalMemory.memoryRecommendation}
+              {memoryDoctrine.memoryRecommendation}
             </p>
           </Panel>
 
           <Panel title="Memory Persistence Requirement">
             <p style={styles.panelText}>
-              {institutionalMemory.memoryPersistenceRequirement}
+              {memoryDoctrine.persistenceRequirement}
             </p>
           </Panel>
         </section>
@@ -482,6 +425,19 @@ function CGIMemoryBoardContent() {
         </section>
 
         <section style={styles.card}>
+          <p style={styles.sectionKicker}>Copy-Ready Memory Brief</p>
+
+          <h2 style={styles.cardTitle}>
+            Institutional memory must remain portable, board-readable, and
+            audit-aware.
+          </h2>
+
+          <pre style={styles.summaryBox}>
+            {memoryDoctrine.copyReadyMemoryBrief}
+          </pre>
+        </section>
+
+        <section style={styles.card}>
           <p style={styles.sectionKicker}>Compressed Memory Timeline</p>
 
           <h2 style={styles.cardTitle}>
@@ -497,7 +453,7 @@ function CGIMemoryBoardContent() {
               snapshots.slice(0, 10).map((snapshot) => (
                 <MemoryItem
                   key={snapshot.id}
-                  title={`${snapshot.continuity_posture} • ${formatDate(
+                  title={`${snapshot.continuity_posture} • ${formatMemoryDate(
                     snapshot.created_at,
                   )}`}
                   body={
@@ -513,20 +469,6 @@ function CGIMemoryBoardContent() {
       </div>
     </main>
   )
-}
-
-function formatLabel(value: string) {
-  return value.replaceAll('_', ' ')
-}
-
-function formatDate(value: string) {
-  if (!value) return 'Not recorded'
-
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) return value
-
-  return date.toLocaleString()
 }
 
 function SignalCard({
@@ -865,5 +807,17 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.6,
     margin: 0,
     fontWeight: 700,
+  },
+  summaryBox: {
+    marginTop: '16px',
+    padding: '18px',
+    borderRadius: '18px',
+    background: '#0f172a',
+    border: '1px solid #334155',
+    color: '#e2e8f0',
+    whiteSpace: 'pre-wrap',
+    fontSize: '13px',
+    lineHeight: 1.65,
+    overflowX: 'auto',
   },
 }
