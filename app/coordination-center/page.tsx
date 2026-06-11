@@ -1,109 +1,25 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import InfrastructureNav from '@/components/InfrastructureNav'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
-import { buildCGIExecutiveBriefing } from '@/lib/cgiExecutiveBriefingGenerator'
 import {
-  formatCGIExecutivePosture,
-  formatCGIEvidenceLanguage,
-  formatCGISurvivabilityLanguage,
-  formatCGIGovernanceSafeLanguage,
-} from '@/lib/cgiExecutivePostureFormatter'
+  buildCGICoordinationCenterDoctrine,
+} from '@/lib/cgiCoordinationCenterDoctrineEngine'
 import {
   loadCGICoordinationReviews,
   saveCGICoordinationReview,
 } from '@/lib/cgiPersistenceEngine'
-import type { CGIRouteSynthesisPosture } from '@/lib/cgiCrossRouteContinuitySynthesisEngine'
-
-type CoordinationSite = {
-  name: string
-  region: string
-  coordinationNeed: 'ROUTINE' | 'ACTIVE' | 'EXECUTIVE'
-  pressurePosture: CGIRouteSynthesisPosture
-  trajectoryPosture: CGIRouteSynthesisPosture
-  predictivePosture: CGIRouteSynthesisPosture
-  recoveryPosture: CGIRouteSynthesisPosture
-  reliabilityPosture: CGIRouteSynthesisPosture
-  evidenceVerified: boolean
-  accountabilityActive: boolean
-  structuralMemoryVisible: boolean
-}
 
 type PersistedCoordinationReview = Record<string, any>
-
-const coordinationSites: CoordinationSite[] = [
-  {
-    name: 'North Unit',
-    region: 'Primary Operations',
-    coordinationNeed: 'ACTIVE',
-    pressurePosture: 'ELEVATED',
-    trajectoryPosture: 'ELEVATED',
-    predictivePosture: 'ELEVATED',
-    recoveryPosture: 'WATCHED',
-    reliabilityPosture: 'ELEVATED',
-    evidenceVerified: false,
-    accountabilityActive: true,
-    structuralMemoryVisible: true,
-  },
-  {
-    name: 'South Unit',
-    region: 'Secondary Operations',
-    coordinationNeed: 'ROUTINE',
-    pressurePosture: 'WATCHED',
-    trajectoryPosture: 'WATCHED',
-    predictivePosture: 'WATCHED',
-    recoveryPosture: 'WATCHED',
-    reliabilityPosture: 'WATCHED',
-    evidenceVerified: true,
-    accountabilityActive: true,
-    structuralMemoryVisible: false,
-  },
-  {
-    name: 'East Unit',
-    region: 'High Demand Operations',
-    coordinationNeed: 'EXECUTIVE',
-    pressurePosture: 'CRITICAL',
-    trajectoryPosture: 'ELEVATED',
-    predictivePosture: 'ELEVATED',
-    recoveryPosture: 'ELEVATED',
-    reliabilityPosture: 'CRITICAL',
-    evidenceVerified: false,
-    accountabilityActive: true,
-    structuralMemoryVisible: true,
-  },
-]
-
-const postureWeight: Record<CGIRouteSynthesisPosture, number> = {
-  STABLE: 1,
-  WATCHED: 2,
-  ELEVATED: 3,
-  CRITICAL: 4,
-}
-
-function strongestCoordinationSite(sites: CoordinationSite[]) {
-  return [...sites].sort((a, b) => {
-    const aBriefing = buildCGIExecutiveBriefing(a)
-    const bBriefing = buildCGIExecutiveBriefing(b)
-
-    return (
-      postureWeight[bBriefing.synthesis.synthesisPosture] -
-      postureWeight[aBriefing.synthesis.synthesisPosture]
-    )
-  })[0]
-}
 
 export default function CoordinationCenterPage() {
   return (
     <GovernanceRouteGuard
-      allowedRoles={[
-        'SUPER_ADMIN',
-        'COMMAND_ADMIN',
-        'GOVERNANCE_OFFICER',
-      ]}
+      allowedRoles={['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']}
     >
       <CGIGovernanceShell>
         <CoordinationCenterContent />
@@ -119,42 +35,10 @@ function CoordinationCenterContent() {
   const [loadingReviews, setLoadingReviews] = useState(false)
   const [reviewMessage, setReviewMessage] = useState('')
 
-  const siteBriefings = coordinationSites.map((site) => ({
-    site,
-    briefing: buildCGIExecutiveBriefing(site),
-  }))
-
-  const dominantSite = strongestCoordinationSite(coordinationSites)
-  const dominantBriefing = buildCGIExecutiveBriefing(dominantSite)
-
-  const executivePosture = formatCGIExecutivePosture(
-    dominantBriefing.synthesis.synthesisPosture
+  const coordination = useMemo(
+    () => buildCGICoordinationCenterDoctrine(),
+    [],
   )
-
-  const evidenceLanguage = formatCGIEvidenceLanguage(
-    false,
-    dominantBriefing.synthesis.synthesisPosture
-  )
-
-  const survivabilityLanguage = formatCGISurvivabilityLanguage(
-    dominantBriefing.synthesis.synthesisPosture
-  )
-
-  const governanceLanguage = formatCGIGovernanceSafeLanguage()
-
-  const executiveCoordinationCount = coordinationSites.filter(
-    (site) => site.coordinationNeed === 'EXECUTIVE'
-  ).length
-
-  const activeCoordinationCount = coordinationSites.filter(
-    (site) => site.coordinationNeed === 'ACTIVE'
-  ).length
-
-  const structuralMemoryCount = coordinationSites.filter(
-    (site) => site.structuralMemoryVisible
-  ).length
-
-  const coordinationScope = `${coordinationSites.length} sites reviewed • ${executiveCoordinationCount} executive • ${activeCoordinationCount} active`
 
   async function loadCoordinationReviews() {
     try {
@@ -184,22 +68,27 @@ function CoordinationCenterContent() {
 
       await saveCGICoordinationReview({
         reviewTitle: 'Executive Continuity Coordination Center',
-        coordinationScope,
-        dominantSiteName: dominantSite.name,
-        coordinationPosture: dominantBriefing.synthesis.synthesisPosture,
-        executiveCoordinationCount,
-        activeCoordinationCount,
-        structuralMemoryCount,
-        coordinationReading: dominantBriefing.executiveSummary,
-        requiredAction: executivePosture.actionLanguage,
-        requiredEvidence: evidenceLanguage,
+        coordinationScope: coordination.coordinationScope,
+        dominantSiteName: coordination.dominantSite.name,
+        coordinationPosture:
+          coordination.dominantBriefing.synthesis.synthesisPosture,
+        executiveCoordinationCount: coordination.executiveCoordinationCount,
+        activeCoordinationCount: coordination.activeCoordinationCount,
+        structuralMemoryCount: coordination.structuralMemoryCount,
+        coordinationReading: coordination.dominantBriefing.executiveSummary,
+        requiredAction: coordination.executivePosture.actionLanguage,
+        requiredEvidence: coordination.evidenceLanguage,
         rawPayload: {
-          dominantSite,
-          dominantBriefing,
-          siteBriefings,
-          executiveCoordinationCount,
-          activeCoordinationCount,
-          structuralMemoryCount,
+          dominantSite: coordination.dominantSite,
+          dominantBriefing: coordination.dominantBriefing,
+          siteBriefings: coordination.siteBriefings,
+          executiveCoordinationCount: coordination.executiveCoordinationCount,
+          activeCoordinationCount: coordination.activeCoordinationCount,
+          structuralMemoryCount: coordination.structuralMemoryCount,
+          coordinationQuestion: coordination.coordinationQuestion,
+          coordinationThesis: coordination.coordinationThesis,
+          coordinationDoctrine: coordination.coordinationDoctrine,
+          stabilizationLogic: coordination.stabilizationLogic,
           savedFrom: '/coordination-center',
         },
       })
@@ -241,18 +130,34 @@ function CoordinationCenterContent() {
               Enterprise Coordination Reading
             </p>
 
-            <h2 style={styles.heroTitle}>{executivePosture.label}</h2>
+            <h2 style={styles.heroTitle}>
+              {coordination.executivePosture.label}
+            </h2>
 
             <p style={styles.heroMeaning}>
-              {dominantBriefing.executiveSummary}
+              {coordination.coordinationThesis}
             </p>
           </div>
 
           <div style={styles.statusBox}>
             <p style={styles.statusLabel}>Coordination Priority</p>
 
-            <p style={styles.statusValue}>{dominantSite.name}</p>
+            <p style={styles.statusValue}>
+              {coordination.dominantSite.name}
+            </p>
           </div>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Executive Coordination Question</p>
+
+          <h2 style={styles.cardTitle}>
+            {coordination.coordinationQuestion}
+          </h2>
+
+          <p style={styles.bodyText}>
+            {coordination.dominantBriefing.executiveSummary}
+          </p>
         </section>
 
         <section style={styles.actionPanel}>
@@ -320,19 +225,19 @@ function CoordinationCenterContent() {
         <section style={styles.gridThree}>
           <SignalCard
             title="Executive Coordination"
-            value={String(executiveCoordinationCount)}
+            value={String(coordination.executiveCoordinationCount)}
             body="Sites requiring direct executive synchronization before continuity can be trusted."
           />
 
           <SignalCard
             title="Active Coordination"
-            value={String(activeCoordinationCount)}
+            value={String(coordination.activeCoordinationCount)}
             body="Sites requiring active coordination oversight, evidence follow-up, or stabilization review."
           />
 
           <SignalCard
             title="Structural Memory"
-            value={String(structuralMemoryCount)}
+            value={String(coordination.structuralMemoryCount)}
             body="Sites where prior instability remains relevant to current continuity governance."
           />
         </section>
@@ -340,21 +245,28 @@ function CoordinationCenterContent() {
         <section style={styles.card}>
           <p style={styles.sectionKicker}>Coordination Action Posture</p>
 
-          <h2 style={styles.cardTitle}>{executivePosture.headline}</h2>
+          <h2 style={styles.cardTitle}>
+            {coordination.executivePosture.headline}
+          </h2>
 
-          <p style={styles.bodyText}>{executivePosture.actionLanguage}</p>
+          <p style={styles.bodyText}>
+            {coordination.executivePosture.actionLanguage}
+          </p>
 
           <div style={styles.priorityGrid}>
-            <PriorityItem title="Evidence" body={evidenceLanguage} />
+            <PriorityItem
+              title="Evidence"
+              body={coordination.evidenceLanguage}
+            />
 
             <PriorityItem
               title="Survivability"
-              body={survivabilityLanguage}
+              body={coordination.survivabilityLanguage}
             />
 
             <PriorityItem
               title="Governance Meaning"
-              body={governanceLanguage}
+              body={coordination.governanceLanguage}
             />
           </div>
         </section>
@@ -366,9 +278,7 @@ function CoordinationCenterContent() {
             Coordination reviews retrieved from Supabase.
           </h2>
 
-          <p style={styles.bodyText}>
-            Review Count: {reviews.length}
-          </p>
+          <p style={styles.bodyText}>Review Count: {reviews.length}</p>
 
           <div style={styles.archiveList}>
             {reviews.length === 0 ? (
@@ -413,7 +323,7 @@ function CoordinationCenterContent() {
                       body={
                         getReviewValue(
                           item,
-                          'executiveCoordinationCount'
+                          'executiveCoordinationCount',
                         ) ?? '0'
                       }
                     />
@@ -421,8 +331,7 @@ function CoordinationCenterContent() {
                     <PriorityItem
                       title="Structural Memory"
                       body={
-                        getReviewValue(item, 'structuralMemoryCount') ??
-                        '0'
+                        getReviewValue(item, 'structuralMemoryCount') ?? '0'
                       }
                     />
                   </div>
@@ -445,7 +354,7 @@ function CoordinationCenterContent() {
           </h2>
 
           <div style={styles.siteList}>
-            {siteBriefings.map(({ site, briefing }) => (
+            {coordination.siteBriefings.map(({ site, briefing }) => (
               <article key={site.name} style={styles.siteCard}>
                 <div>
                   <p style={styles.siteRegion}>{site.region}</p>
@@ -460,9 +369,7 @@ function CoordinationCenterContent() {
                 <div style={styles.siteStatus}>
                   <p style={styles.statusLabel}>Need</p>
 
-                  <p style={styles.sitePosture}>
-                    {site.coordinationNeed}
-                  </p>
+                  <p style={styles.sitePosture}>{site.coordinationNeed}</p>
 
                   <p style={styles.siteMeta}>
                     {briefing.synthesis.synthesisPosture}
@@ -475,17 +382,25 @@ function CoordinationCenterContent() {
 
         <section style={styles.gridTwo}>
           <Panel title="Coordination Doctrine">
-            CGI coordination does not route blame. It identifies where
-            continuity exposure requires synchronized leadership attention,
-            stabilization ownership, and verified evidence before confidence
-            improves.
+            {coordination.coordinationDoctrine}
           </Panel>
 
           <Panel title="Enterprise Stabilization Logic">
-            Coordination becomes executive-relevant when pressure, trajectory,
-            recovery credibility, and trustworthiness concerns concentrate
-            across one or more continuity environments.
+            {coordination.stabilizationLogic}
           </Panel>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Copy-Ready Coordination Brief</p>
+
+          <h2 style={styles.cardTitle}>
+            Coordination must remain executive-readable, evidence-bound, and
+            reconstructable.
+          </h2>
+
+          <pre style={styles.summaryBox}>
+            {coordination.copyReadyCoordinationBrief}
+          </pre>
         </section>
       </div>
     </main>
@@ -911,5 +826,17 @@ const styles: Record<string, CSSProperties> = {
     color: '#cbd5e1',
     lineHeight: 1.6,
     margin: 0,
+  },
+  summaryBox: {
+    marginTop: '16px',
+    padding: '18px',
+    borderRadius: '18px',
+    background: '#0f172a',
+    border: '1px solid #334155',
+    color: '#e2e8f0',
+    whiteSpace: 'pre-wrap',
+    fontSize: '13px',
+    lineHeight: 1.65,
+    overflowX: 'auto',
   },
 }
