@@ -5,102 +5,42 @@ import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
-import { buildAuditDoctrine } from '@/lib/cgiAuditDoctrineEngine'
+import {
+  buildAuditMemory,
+  buildChainReconstruction,
+  buildEvidenceGapDashboard,
+  buildEvidenceProvenance,
+  buildEvidenceSummary,
+  getActor,
+  getActorKey,
+  getEvidenceReason,
+  getInstitution,
+  getLinkedSnapshot,
+  getMaturityMeaning,
+  getRecordType,
+  getVisibilityLevel,
+  hasInstitutionScope,
+  hasLinkedSnapshot,
+  hasVisibilityClassification,
+  isImmutableRecord,
+  maturityOrder,
+  normalizeSeverity,
+  resolveEvidenceMaturity,
+  safeText,
+  severityOrder,
+  type AuditDetails,
+  type AuditLogForDoctrine,
+  type AuditMemoryItem,
+  type ChainStage,
+  type EvidenceGapItem,
+  type EvidenceMaturity,
+  type ProvenanceStage,
+} from '@/lib/cgiAuditDoctrineEngine'
 import { buildCGIDemoScenario } from '@/lib/cgiDemoScenarioEngine'
 import { supabase } from '../../lib/supabase'
 
-type AuditDetails = Record<string, unknown>
-
-type AuditLog = {
-  id: string
-  user_id?: string | null
-  email?: string | null
-  role?: string | null
-  action_type?: string | null
-  route?: string | null
-  record_type?: string | null
-  record_id?: string | null
-  summary?: string | null
-  severity?: string | null
-  created_at?: string | null
+type AuditLog = AuditLogForDoctrine & {
   details?: AuditDetails | null
-  actor_id?: string | null
-  actor_email?: string | null
-  actor_role?: string | null
-  institution_id?: string | null
-}
-
-type EvidenceMaturity =
-  | 'LEGACY EVIDENCE'
-  | 'HARDENED GOVERNANCE EVIDENCE'
-  | 'EXECUTIVE RECONSTRUCTABLE'
-
-type EvidenceSummary = {
-  total: number
-  critical: number
-  high: number
-  governanceActions: number
-  uniqueActors: number
-  institutionScoped: number
-  immutableRecords: number
-  visibilityClassified: number
-  linkedSnapshots: number
-  legacyEvidence: number
-  hardenedEvidence: number
-  executiveReconstructable: number
-  executiveTrustScore: number
-  doctrine: ReturnType<typeof buildAuditDoctrine>
-}
-
-type ProvenanceStage = {
-  label: string
-  count: number
-  status: string
-  meaning: string
-}
-
-type EvidenceGapItem = {
-  label: string
-  count: number
-  meaning: string
-}
-
-type AuditMemoryItem = {
-  label: string
-  count: number
-  meaning: string
-}
-
-type ChainStage = {
-  label: string
-  count: number
-  status: string
-  meaning: string
-}
-
-type ChainReconstruction = {
-  activeStages: number
-  missingStages: number
-  auditLinkVisible: boolean
-  executiveLinkVisible: boolean
-  memoryBoardLinkVisible: boolean
-  weakestLink: string
-  chainTrust: string
-  stages: ChainStage[]
-}
-
-const severityOrder: Record<string, number> = {
-  CRITICAL: 4,
-  HIGH: 3,
-  MODERATE: 2,
-  LOW: 1,
-  INFO: 0,
-}
-
-const maturityOrder: Record<EvidenceMaturity, number> = {
-  'EXECUTIVE RECONSTRUCTABLE': 3,
-  'HARDENED GOVERNANCE EVIDENCE': 2,
-  'LEGACY EVIDENCE': 1,
 }
 
 const LEDGER_DOCTRINE = [
@@ -108,24 +48,6 @@ const LEDGER_DOCTRINE = [
   'Continuity memory must be reconstructable.',
   'Audit history must not become a developer log.',
   'Evidence protects lifecycle credibility.',
-]
-
-const PROVENANCE_STAGES = [
-  { label: 'Request', terms: ['REQUEST', '/REQUEST'] },
-  { label: 'Triage', terms: ['TRIAGE', '/TRIAGE'] },
-  { label: 'Cases', terms: ['CASE', 'CASES', '/CASES'] },
-  { label: 'Routing', terms: ['ROUTING', 'ROUTED', '/ROUTING'] },
-  { label: 'Intervention', terms: ['INTERVENTION', 'INTERVENTIONS', '/INTERVENTIONS'] },
-  { label: 'Outcomes', terms: ['OUTCOME', 'OUTCOMES', '/OUTCOMES'] },
-  { label: 'Recovery', terms: ['RECOVERY', '/RECOVERY', 'DURABILITY'] },
-  { label: 'Command', terms: ['COMMAND', '/COMMAND', 'ESCALATION'] },
-  { label: 'Coordination', terms: ['COORDINATION', '/COORDINATION', 'SYNCHRONIZATION'] },
-  { label: 'Cross-Site', terms: ['CROSS-SITE', '/CROSS-SITE', 'ENTERPRISE PATTERN'] },
-  { label: 'Situation Room', terms: ['SITUATION ROOM', '/SITUATION-ROOM', 'TRAJECTORY'] },
-  { label: 'Executive Center', terms: ['EXECUTIVE CENTER', '/EXECUTIVE-CENTER', 'EXECUTIVE'] },
-  { label: 'Executive Report', terms: ['EXECUTIVE REPORT', '/EXECUTIVE-REPORT', 'BOARD REPORT'] },
-  { label: 'Memory Board', terms: ['MEMORY BOARD', '/CGI-MEMORY-BOARD', 'INSTITUTIONAL MEMORY'] },
-  { label: 'Audit', terms: ['AUDIT', '/AUDIT', 'RECONSTRUCTION'] },
 ]
 
 export default function AuditPage() {
@@ -225,10 +147,7 @@ function GovernanceEvidenceLedger() {
     [filteredLogs],
   )
 
-  const auditMemory = useMemo(
-    () => buildAuditMemory(filteredLogs),
-    [filteredLogs],
-  )
+  const auditMemory = useMemo(() => buildAuditMemory(filteredLogs), [filteredLogs])
 
   const recentExecutiveReview = useMemo(() => {
     return filteredLogs
@@ -292,9 +211,8 @@ function GovernanceEvidenceLedger() {
             <p style={styles.sectionKicker}>Pilot Audit Subject</p>
             <h2 style={styles.heroTitle}>{pilotThread.scenarioName}</h2>
             <p style={styles.heroMeaning}>
-              Audit confirms whether the full pilot story remains
-              reconstructable as evidence, memory, executive report, and
-              governance meaning.
+              Audit confirms whether the full pilot story remains reconstructable
+              as evidence, memory, executive report, and governance meaning.
             </p>
           </div>
 
@@ -313,7 +231,10 @@ function GovernanceEvidenceLedger() {
             <Info label="What Is Visible" value={summary.doctrine.whatIsVisible} />
             <Info label="Why It Matters" value={summary.doctrine.whyItMatters} />
             <Info label="Continuity Risk" value={summary.doctrine.continuityRisk} />
-            <Info label="Required Movement" value={summary.doctrine.requiredMovement} />
+            <Info
+              label="Required Movement"
+              value={summary.doctrine.requiredMovement}
+            />
             <Info label="Trust Reading" value={summary.doctrine.trustReading} />
             <Info label="Trust Level" value={summary.doctrine.trustLevel} />
           </div>
@@ -378,7 +299,9 @@ function GovernanceEvidenceLedger() {
         <section style={styles.heroCard}>
           <div>
             <p style={styles.sectionKicker}>Live Evidence Integrity Posture</p>
-            <h2 style={styles.heroTitle}>{summary.doctrine.reconstructionPosture}</h2>
+            <h2 style={styles.heroTitle}>
+              {summary.doctrine.reconstructionPosture}
+            </h2>
             <p style={styles.heroMeaning}>{summary.doctrine.trustMeaning}</p>
           </div>
 
@@ -394,7 +317,9 @@ function GovernanceEvidenceLedger() {
         <section style={styles.chainHero}>
           <div>
             <p style={styles.sectionKicker}>Live Chain Reconstruction</p>
-            <h2 style={styles.cardTitle}>{summary.doctrine.reconstructionPosture}</h2>
+            <h2 style={styles.cardTitle}>
+              {summary.doctrine.reconstructionPosture}
+            </h2>
             <p style={styles.bodyText}>{summary.doctrine.evidenceGap}</p>
           </div>
 
@@ -533,7 +458,10 @@ function GovernanceEvidenceLedger() {
           <Panel title="What Evidence Exists?">
             <div style={styles.infoList}>
               <Info label="Total Records" value={String(summary.total)} />
-              <Info label="Governance Actions" value={String(summary.governanceActions)} />
+              <Info
+                label="Governance Actions"
+                value={String(summary.governanceActions)}
+              />
               <Info
                 label="Visibility Classified"
                 value={String(summary.visibilityClassified)}
@@ -765,12 +693,24 @@ function GovernanceEvidenceLedger() {
 
                     <div style={styles.evidenceGrid}>
                       <EvidenceLine label="Actor" value={getActor(log)} />
-                      <EvidenceLine label="Route / Source" value={safeText(log.route)} />
+                      <EvidenceLine
+                        label="Route / Source"
+                        value={safeText(log.route)}
+                      />
                       <EvidenceLine label="Record Type" value={getRecordType(log)} />
                       <EvidenceLine label="Institution" value={getInstitution(log)} />
-                      <EvidenceLine label="Visibility" value={getVisibilityLevel(log)} />
-                      <EvidenceLine label="Linked Snapshot" value={getLinkedSnapshot(log)} />
-                      <EvidenceLine label="Governance Reason" value={getEvidenceReason(log)} />
+                      <EvidenceLine
+                        label="Visibility"
+                        value={getVisibilityLevel(log)}
+                      />
+                      <EvidenceLine
+                        label="Linked Snapshot"
+                        value={getLinkedSnapshot(log)}
+                      />
+                      <EvidenceLine
+                        label="Governance Reason"
+                        value={getEvidenceReason(log)}
+                      />
                     </div>
 
                     {log.details && (
@@ -807,284 +747,6 @@ function GovernanceEvidenceLedger() {
   )
 }
 
-function buildEvidenceSummary(
-  logs: AuditLog[],
-  chain: ChainReconstruction,
-): EvidenceSummary {
-  const critical = logs.filter(
-    (log) => normalizeSeverity(log.severity) === 'CRITICAL',
-  ).length
-
-  const high = logs.filter(
-    (log) => normalizeSeverity(log.severity) === 'HIGH',
-  ).length
-
-  const governanceActions = logs.filter((log) =>
-    safeText(log.action_type, '').toUpperCase().includes('GOVERNANCE'),
-  ).length
-
-  const uniqueActors = new Set(logs.map(getActorKey).filter(Boolean)).size
-  const institutionScoped = logs.filter(hasInstitutionScope).length
-  const immutableRecords = logs.filter(isImmutableRecord).length
-  const visibilityClassified = logs.filter(hasVisibilityClassification).length
-  const linkedSnapshots = logs.filter(hasLinkedSnapshot).length
-
-  const legacyEvidence = logs.filter(
-    (log) => resolveEvidenceMaturity(log) === 'LEGACY EVIDENCE',
-  ).length
-
-  const hardenedEvidence = logs.filter(
-    (log) => resolveEvidenceMaturity(log) === 'HARDENED GOVERNANCE EVIDENCE',
-  ).length
-
-  const executiveReconstructable = logs.filter(
-    (log) => resolveEvidenceMaturity(log) === 'EXECUTIVE RECONSTRUCTABLE',
-  ).length
-
-  const executiveTrustScore = buildTrustScore({
-    total: logs.length,
-    immutableRecords,
-    institutionScoped,
-    visibilityClassified,
-    linkedSnapshots,
-    executiveReconstructable,
-    high,
-    critical,
-  })
-
-  const doctrine = buildAuditDoctrine({
-    total: logs.length,
-    critical,
-    high,
-    governanceActions,
-    uniqueActors,
-    institutionScoped,
-    immutableRecords,
-    visibilityClassified,
-    linkedSnapshots,
-    legacyEvidence,
-    hardenedEvidence,
-    executiveReconstructable,
-    activeChainStages: chain.activeStages,
-    missingChainStages: chain.missingStages,
-    auditLinkVisible: chain.auditLinkVisible,
-    executiveLinkVisible: chain.executiveLinkVisible,
-    memoryBoardLinkVisible: chain.memoryBoardLinkVisible,
-  })
-
-  return {
-    total: logs.length,
-    critical,
-    high,
-    governanceActions,
-    uniqueActors,
-    institutionScoped,
-    immutableRecords,
-    visibilityClassified,
-    linkedSnapshots,
-    legacyEvidence,
-    hardenedEvidence,
-    executiveReconstructable,
-    executiveTrustScore,
-    doctrine,
-  }
-}
-
-function buildEvidenceProvenance(logs: AuditLog[]): ProvenanceStage[] {
-  return PROVENANCE_STAGES.map((stage) => {
-    const count = logs.filter((log) => {
-      const text = fullEvidenceText(log)
-      const route = safeText(log.route, '').toUpperCase()
-      return stage.terms.some((term) => text.includes(term) || route.includes(term))
-    }).length
-
-    return {
-      label: stage.label,
-      count,
-      status:
-        count === 0
-          ? 'NO EVIDENCE YET'
-          : count >= 3
-            ? 'EVIDENCE ACTIVE'
-            : 'EVIDENCE PRESENT',
-      meaning:
-        count === 0
-          ? `${stage.label} evidence has not yet appeared in the audit ledger.`
-          : `${stage.label} evidence can be reconstructed from preserved audit records.`,
-    }
-  })
-}
-
-function buildChainReconstruction(logs: AuditLog[]): ChainReconstruction {
-  const stages: ChainStage[] = PROVENANCE_STAGES.map((stage) => {
-    const count = logs.filter((log) => {
-      const text = fullEvidenceText(log)
-      const route = safeText(log.route, '').toUpperCase()
-      return stage.terms.some((term) => text.includes(term) || route.includes(term))
-    }).length
-
-    return {
-      label: stage.label,
-      count,
-      status:
-        count === 0
-          ? 'MISSING'
-          : count >= 3
-            ? 'RECONSTRUCTABLE'
-            : 'VISIBLE',
-      meaning:
-        count === 0
-          ? `${stage.label} is not yet reconstructable from the current audit evidence.`
-          : `${stage.label} has preserved evidence for continuity reconstruction.`,
-    }
-  })
-
-  const activeStages = stages.filter((stage) => stage.count > 0).length
-  const missingStages = stages.filter((stage) => stage.count === 0)
-  const auditStage = stages.find((stage) => stage.label === 'Audit')
-  const executiveCenterStage = stages.find(
-    (stage) => stage.label === 'Executive Center',
-  )
-  const executiveReportStage = stages.find(
-    (stage) => stage.label === 'Executive Report',
-  )
-  const memoryBoardStage = stages.find((stage) => stage.label === 'Memory Board')
-
-  const weakestLink =
-    missingStages.length === 0
-      ? 'No major chain gap is visible.'
-      : missingStages.map((stage) => stage.label).join(', ')
-
-  return {
-    activeStages,
-    missingStages: missingStages.length,
-    auditLinkVisible: Boolean(auditStage && auditStage.count > 0),
-    executiveLinkVisible: Boolean(
-      (executiveCenterStage && executiveCenterStage.count > 0) ||
-        (executiveReportStage && executiveReportStage.count > 0),
-    ),
-    memoryBoardLinkVisible: Boolean(memoryBoardStage && memoryBoardStage.count > 0),
-    weakestLink,
-    chainTrust:
-      auditStage && auditStage.count > 0
-        ? 'AUDIT LINK VISIBLE'
-        : 'AUDIT LINK NEEDS STRENGTHENING',
-    stages,
-  }
-}
-
-function buildEvidenceGapDashboard(logs: AuditLog[]): EvidenceGapItem[] {
-  return [
-    {
-      label: 'Missing Request Evidence',
-      count: countMissingStage(logs, ['REQUEST']),
-      meaning: 'Entry visibility may be difficult to reconstruct.',
-    },
-    {
-      label: 'Missing Triage Evidence',
-      count: countMissingStage(logs, ['TRIAGE']),
-      meaning: 'Eligibility decision may be difficult to reconstruct.',
-    },
-    {
-      label: 'Missing Routing Evidence',
-      count: countMissingStage(logs, ['ROUTING']),
-      meaning: 'Ownership direction may be difficult to reconstruct.',
-    },
-    {
-      label: 'Missing Intervention Evidence',
-      count: countMissingStage(logs, ['INTERVENTION', 'INTERVENTIONS']),
-      meaning: 'Intervention action may be difficult to reconstruct.',
-    },
-    {
-      label: 'Missing Outcome Evidence',
-      count: countMissingStage(logs, ['OUTCOME', 'OUTCOMES']),
-      meaning: 'Outcome credibility may be difficult to verify.',
-    },
-    {
-      label: 'Missing Recovery Verification',
-      count: countMissingStage(logs, ['RECOVERY', 'DURABILITY']),
-      meaning: 'Recovery durability may not yet be auditable.',
-    },
-    {
-      label: 'Missing Executive Report',
-      count: countMissingStage(logs, ['EXECUTIVE REPORT', '/EXECUTIVE-REPORT']),
-      meaning: 'Board-ready executive interpretation may not yet be auditable.',
-    },
-    {
-      label: 'Missing Memory Board',
-      count: countMissingStage(logs, ['MEMORY BOARD', 'INSTITUTIONAL MEMORY']),
-      meaning: 'Institutional lesson preservation may not yet be auditable.',
-    },
-  ]
-}
-
-function buildAuditMemory(logs: AuditLog[]): AuditMemoryItem[] {
-  return [
-    {
-      label: 'Recurring Evidence Gaps',
-      count: logs.filter((log) => resolveEvidenceMaturity(log) === 'LEGACY EVIDENCE')
-        .length,
-      meaning: 'Legacy evidence may recur without full reconstruction depth.',
-    },
-    {
-      label: 'Recurring Scope Gaps',
-      count: logs.filter((log) => !hasInstitutionScope(log)).length,
-      meaning: 'Institution scope may repeatedly be absent from records.',
-    },
-    {
-      label: 'Recurring Visibility Gaps',
-      count: logs.filter((log) => !hasVisibilityClassification(log)).length,
-      meaning: 'Visibility classification may repeatedly be missing.',
-    },
-    {
-      label: 'Recurring Snapshot Gaps',
-      count: logs.filter((log) => !hasLinkedSnapshot(log)).length,
-      meaning: 'Linked lifecycle records may repeatedly be missing.',
-    },
-  ]
-}
-
-function countMissingStage(logs: AuditLog[], terms: string[]) {
-  if (logs.length === 0) return 0
-
-  const found = logs.some((log) => {
-    const text = fullEvidenceText(log)
-    const route = safeText(log.route, '').toUpperCase()
-    return terms.some((term) => text.includes(term) || route.includes(term))
-  })
-
-  return found ? 0 : 1
-}
-
-function buildTrustScore(input: {
-  total: number
-  immutableRecords: number
-  institutionScoped: number
-  visibilityClassified: number
-  linkedSnapshots: number
-  executiveReconstructable: number
-  high: number
-  critical: number
-}) {
-  if (input.total === 0) return 0
-
-  const base =
-    (input.immutableRecords / input.total) * 20 +
-    (input.institutionScoped / input.total) * 20 +
-    (input.visibilityClassified / input.total) * 15 +
-    (input.linkedSnapshots / input.total) * 15 +
-    (input.executiveReconstructable / input.total) * 30
-
-  const severityPenalty = input.critical * 12 + input.high * 5
-
-  return Math.max(0, Math.min(100, Math.round(base - severityPenalty)))
-}
-
-function safeText(value: unknown, fallback = 'Not recorded') {
-  if (value === null || value === undefined || value === '') return fallback
-  return String(value)
-}
-
 function formatLabel(value: string) {
   return value.replaceAll('_', ' ')
 }
@@ -1097,171 +759,6 @@ function formatDate(value?: string | null) {
   if (Number.isNaN(date.getTime())) return value
 
   return date.toLocaleString()
-}
-
-function normalizeSeverity(value?: string | null) {
-  return safeText(value, 'INFO').toUpperCase()
-}
-
-function detailValue(log: AuditLog, key: string) {
-  return log.details?.[key]
-}
-
-function fullEvidenceText(log: AuditLog) {
-  return `${log.route || ''} ${log.action_type || ''} ${log.record_type || ''} ${
-    log.summary || ''
-  } ${JSON.stringify(log.details || {})}`.toUpperCase()
-}
-
-function getActor(log: AuditLog) {
-  return safeText(
-    log.email ||
-      log.actor_email ||
-      log.user_id ||
-      log.actor_id ||
-      detailValue(log, 'actor_email') ||
-      detailValue(log, 'actor_id') ||
-      detailValue(log, 'actor') ||
-      detailValue(log, 'user_email'),
-    'Actor not recorded',
-  )
-}
-
-function getActorKey(log: AuditLog) {
-  return safeText(
-    log.email ||
-      log.user_id ||
-      log.actor_email ||
-      log.actor_id ||
-      detailValue(log, 'actor_email') ||
-      detailValue(log, 'actor_id') ||
-      detailValue(log, 'user_email'),
-    '',
-  )
-}
-
-function getInstitution(log: AuditLog) {
-  const text = log.summary || ''
-  const summaryInstitution = text.match(/Institution scope:\s*([^.]*)\./i)
-
-  return safeText(
-    log.institution_id ||
-      detailValue(log, 'institution_id') ||
-      detailValue(log, 'governance_institution') ||
-      detailValue(log, 'institution') ||
-      detailValue(log, 'institution_name') ||
-      summaryInstitution?.[1],
-    'Institution not recorded',
-  )
-}
-
-function getVisibilityLevel(log: AuditLog) {
-  const text = log.summary || ''
-  const summaryVisibility = text.match(/Visibility level:\s*([^.]*)\./i)
-
-  return safeText(
-    detailValue(log, 'visibility_level') ||
-      detailValue(log, 'visibility') ||
-      detailValue(log, 'visibility_tier') ||
-      detailValue(log, 'access_level') ||
-      summaryVisibility?.[1],
-    'Standard governance visibility',
-  )
-}
-
-function getLinkedSnapshot(log: AuditLog) {
-  return safeText(
-    log.record_id ||
-      detailValue(log, 'snapshot_id') ||
-      detailValue(log, 'metric_id') ||
-      detailValue(log, 'cgi_operational_metric_id') ||
-      detailValue(log, 'linked_snapshot_id'),
-    'No linked snapshot recorded',
-  )
-}
-
-function getEvidenceReason(log: AuditLog) {
-  return safeText(
-    log.summary ||
-      detailValue(log, 'reason') ||
-      detailValue(log, 'governance_reason') ||
-      detailValue(log, 'executive_reason') ||
-      detailValue(log, 'message') ||
-      detailValue(log, 'summary'),
-    'Governance reason not recorded',
-  )
-}
-
-function getRecordType(log: AuditLog) {
-  return safeText(
-    log.record_type ||
-      detailValue(log, 'evidence_type') ||
-      detailValue(log, 'record_type'),
-    'Governance evidence',
-  )
-}
-
-function hasInstitutionScope(log: AuditLog) {
-  return getInstitution(log) !== 'Institution not recorded'
-}
-
-function hasVisibilityClassification(log: AuditLog) {
-  return getVisibilityLevel(log) !== 'Standard governance visibility'
-}
-
-function hasLinkedSnapshot(log: AuditLog) {
-  return getLinkedSnapshot(log) !== 'No linked snapshot recorded'
-}
-
-function isImmutableRecord(log: AuditLog) {
-  return Boolean(log.id && log.created_at)
-}
-
-function resolveEvidenceMaturity(log: AuditLog): EvidenceMaturity {
-  const text = fullEvidenceText(log)
-
-  const hasActor = getActor(log) !== 'Actor not recorded'
-  const hasInstitution = hasInstitutionScope(log)
-  const hasVisibility = hasVisibilityClassification(log)
-  const hasLinkedRecord = hasLinkedSnapshot(log)
-  const hasReason = getEvidenceReason(log) !== 'Governance reason not recorded'
-  const hasImmutability = isImmutableRecord(log)
-
-  if (
-    text.includes('EXECUTIVE_RECONSTRUCTABLE') ||
-    (hasActor &&
-      hasInstitution &&
-      hasVisibility &&
-      hasLinkedRecord &&
-      hasReason &&
-      hasImmutability)
-  ) {
-    return 'EXECUTIVE RECONSTRUCTABLE'
-  }
-
-  if (
-    text.includes('HARDENED') ||
-    text.includes('GOVERNANCE REASON') ||
-    text.includes('VISIBILITY LEVEL') ||
-    text.includes('NON-PUNITIVE') ||
-    (hasActor && hasReason && hasImmutability)
-  ) {
-    return 'HARDENED GOVERNANCE EVIDENCE'
-  }
-
-  return 'LEGACY EVIDENCE'
-}
-
-function getMaturityMeaning(maturity: EvidenceMaturity) {
-  if (maturity === 'EXECUTIVE RECONSTRUCTABLE') {
-    return 'This record preserves enough evidence for leadership to reconstruct who acted, what changed, why it mattered, where it applied, and what continuity posture was preserved.'
-  }
-
-  if (maturity === 'HARDENED GOVERNANCE EVIDENCE') {
-    return 'This record preserves strengthened governance meaning, but may not yet contain every enterprise-grade reconstruction field.'
-  }
-
-  return 'This is historical evidence created before the current CGI hardening standard. It remains valid, but its reconstruction depth is limited.'
 }
 
 function MetricCard({ title, value }: { title: string; value: number }) {
