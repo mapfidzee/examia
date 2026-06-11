@@ -1,10 +1,20 @@
 'use client'
 
+import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { evaluateCGILiveOperationalIntegration } from '@/lib/cgiLiveOperationalIntegrationEngine'
+import {
+  buildCGIOperationsLiveDataInput,
+  type OperationsCase,
+  type OperationsIntervention,
+  type OperationsOutcome,
+  type OperationsRoutingAction,
+  type OperationsTimelineEvent,
+} from '@/lib/cgiOperationsLiveDataEngine'
+import { supabase } from '../../lib/supabase'
 
 function formatLabel(value: string): string {
   return value.replaceAll('_', ' ')
@@ -27,26 +37,97 @@ export default function OperationsPage() {
 }
 
 function OperationsContent() {
-  const operationsIntelligence = evaluateCGILiveOperationalIntegration({
-    route: 'OPERATIONS',
-    openCases: 7,
-    escalatedCases: 2,
-    repeatedInstabilityCount: 3,
-    unresolvedCriticalCount: 0,
-    recoveryFailures: 1,
-    verifiedRecoveries: 1,
-    coordinationIssues: 4,
-    averageUnresolvedDays: 8,
-    unresolvedDurationDays: 8,
-    reburnCount: 1,
-    priorEscalationCount: 2,
-    priorSurvivabilityThreatCount: 0,
-    ownerAssigned: true,
-    actionStarted: true,
-    evidenceSubmitted: false,
-    evidenceVerified: false,
-    deadlineMissed: false,
-  })
+  const [cases, setCases] = useState<OperationsCase[]>([])
+  const [routingActions, setRoutingActions] = useState<
+    OperationsRoutingAction[]
+  >([])
+  const [interventions, setInterventions] = useState<
+    OperationsIntervention[]
+  >([])
+  const [outcomes, setOutcomes] = useState<OperationsOutcome[]>([])
+  const [timelineEvents, setTimelineEvents] = useState<
+    OperationsTimelineEvent[]
+  >([])
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    loadOperationsData()
+  }, [])
+
+  async function loadOperationsData() {
+    setMessage('Loading live operational continuity intelligence...')
+
+    const [
+      casesResult,
+      routingResult,
+      interventionsResult,
+      outcomesResult,
+      timelineResult,
+    ] = await Promise.all([
+      supabase
+        .from('beneficiary_cases')
+        .select('id, case_status, severity_level, safeguarding_flag, created_at, updated_at')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('case_routing_actions')
+        .select('id, case_id, assigned_responder_id, created_at')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('case_interventions')
+        .select('id, case_id, intervention_status, evidence_summary, created_at')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('case_outcomes')
+        .select('id, case_id, outcome_status, outcome_summary, created_at')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('case_timeline')
+        .select('id, case_id, event_type, event_summary, created_at')
+        .order('created_at', { ascending: false }),
+    ])
+
+    if (casesResult.error) console.error(casesResult.error)
+    if (routingResult.error) console.error(routingResult.error)
+    if (interventionsResult.error) console.error(interventionsResult.error)
+    if (outcomesResult.error) console.error(outcomesResult.error)
+    if (timelineResult.error) console.error(timelineResult.error)
+
+    if (
+      casesResult.error ||
+      routingResult.error ||
+      interventionsResult.error ||
+      outcomesResult.error ||
+      timelineResult.error
+    ) {
+      setMessage('Some live operational continuity intelligence failed to load.')
+      return
+    }
+
+    setCases((casesResult.data || []) as OperationsCase[])
+    setRoutingActions((routingResult.data || []) as OperationsRoutingAction[])
+    setInterventions((interventionsResult.data || []) as OperationsIntervention[])
+    setOutcomes((outcomesResult.data || []) as OperationsOutcome[])
+    setTimelineEvents((timelineResult.data || []) as OperationsTimelineEvent[])
+
+    setMessage('Live operational continuity intelligence loaded.')
+  }
+
+  const liveOperationalInput = useMemo(
+    () =>
+      buildCGIOperationsLiveDataInput({
+        cases,
+        routingActions,
+        interventions,
+        outcomes,
+        timelineEvents,
+      }),
+    [cases, routingActions, interventions, outcomes, timelineEvents],
+  )
+
+  const operationsIntelligence = useMemo(
+    () => evaluateCGILiveOperationalIntegration(liveOperationalInput),
+    [liveOperationalInput],
+  )
 
   return (
     <main style={styles.page}>
@@ -62,6 +143,8 @@ function OperationsContent() {
             stabilization capacity.
           </p>
         </section>
+
+        {message && <div style={styles.message}>{message}</div>}
 
         <section style={styles.heroCard}>
           <div>
@@ -85,10 +168,30 @@ function OperationsContent() {
         </section>
 
         <section style={styles.gridThree}>
+          <Panel title="Open Cases" value={String(liveOperationalInput.openCases)}>
+            Active operational records currently visible to CGI.
+          </Panel>
+
+          <Panel
+            title="Escalated Cases"
+            value={String(liveOperationalInput.escalatedCases)}
+          >
+            Cases already carrying escalation or governance review posture.
+          </Panel>
+
+          <Panel
+            title="Coordination Issues"
+            value={String(liveOperationalInput.coordinationIssues)}
+          >
+            Routing or ownership issues that may block movement.
+          </Panel>
+        </section>
+
+        <section style={styles.gridThree}>
           <Panel
             title="Continuity Condition"
             value={formatLabel(
-              operationsIntelligence.derivation.continuityCondition
+              operationsIntelligence.derivation.continuityCondition,
             )}
           >
             {operationsIntelligence.shell.continuityPanel.interpretation}
@@ -97,7 +200,7 @@ function OperationsContent() {
           <Panel
             title="Continuity Confidence"
             value={formatLabel(
-              operationsIntelligence.derivation.continuityConfidence
+              operationsIntelligence.derivation.continuityConfidence,
             )}
           >
             {operationsIntelligence.shell.confidencePanel.interpretation}
@@ -106,7 +209,7 @@ function OperationsContent() {
           <Panel
             title="Operational Posture"
             value={formatLabel(
-              operationsIntelligence.derivation.executivePosture
+              operationsIntelligence.derivation.executivePosture,
             )}
           >
             {operationsIntelligence.shell.commandPanel.interpretation}
@@ -127,7 +230,7 @@ function OperationsContent() {
           <Panel
             title="Recovery Credibility"
             value={formatLabel(
-              operationsIntelligence.derivation.recoveryCredibility
+              operationsIntelligence.derivation.recoveryCredibility,
             )}
           >
             {operationsIntelligence.shell.recoveryPanel.interpretation}
@@ -136,7 +239,7 @@ function OperationsContent() {
           <Panel
             title="Structural Memory"
             value={formatLabel(
-              operationsIntelligence.memory.primaryMemorySignal
+              operationsIntelligence.memory.primaryMemorySignal,
             )}
           >
             {operationsIntelligence.memory.executiveMemoryWarning}
@@ -145,7 +248,7 @@ function OperationsContent() {
           <Panel
             title="Accountability"
             value={formatLabel(
-              operationsIntelligence.accountability.accountabilityStatus
+              operationsIntelligence.accountability.accountabilityStatus,
             )}
           >
             {operationsIntelligence.accountability.escalationRule}
@@ -212,17 +315,21 @@ function OperationsContent() {
         </section>
 
         <section style={styles.card}>
-          <p style={styles.sectionKicker}>Legacy Preservation</p>
+          <p style={styles.sectionKicker}>Live Data Upgrade</p>
 
           <h2 style={styles.cardTitle}>
-            Previous operations intelligence is preserved.
+            Operations is now derived from live Supabase continuity records.
           </h2>
 
           <p style={styles.bodyText}>
-            The earlier operations page was backed up as{' '}
-            <strong>app/operations/page.legacy.tsx</strong>. Valuable legacy
-            logic can now be reintroduced later as smaller governed components.
+            Static operational scenario inputs have been replaced by live
+            derivation from cases, routing actions, interventions, outcomes, and
+            timeline memory.
           </p>
+
+          <button onClick={loadOperationsData} style={styles.primaryButton}>
+            Refresh Live Operations
+          </button>
         </section>
       </div>
     </main>
@@ -300,6 +407,15 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.65,
     fontSize: '16px',
     margin: 0,
+  },
+  message: {
+    background: '#082f49',
+    border: '1px solid #0ea5e9',
+    borderRadius: '16px',
+    color: '#cffafe',
+    fontWeight: 900,
+    marginBottom: '16px',
+    padding: '12px 14px',
   },
   heroCard: {
     display: 'grid',
@@ -441,5 +557,17 @@ const styles: Record<string, CSSProperties> = {
     color: '#cbd5e1',
     lineHeight: 1.6,
     margin: 0,
+  },
+  primaryButton: {
+    border: 'none',
+    borderRadius: '14px',
+    background: '#67e8f9',
+    color: '#082f49',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 900,
+    marginTop: '16px',
+    minHeight: '46px',
+    padding: '0 18px',
   },
 }
