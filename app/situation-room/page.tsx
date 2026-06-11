@@ -12,6 +12,10 @@ import { reviewCGIExecutiveHistory } from '@/lib/cgiExecutiveHistoryEngine'
 import { buildCGIExecutiveReportPackage } from '@/lib/cgiExecutiveReportingEngine'
 import { buildCGIContinuityTrajectory } from '@/lib/cgiContinuityTrajectoryEngine'
 import {
+  buildCGISituationRoomBriefingReport,
+  buildCGISituationRoomOperatingPicture,
+} from '@/lib/cgiSituationRoomDoctrineEngine'
+import {
   loadCGISituationReviews,
   saveCGISituationReview,
 } from '@/lib/cgiPersistenceEngine'
@@ -23,25 +27,6 @@ import {
 } from '@/lib/cgiExecutivePostureFormatter'
 
 type PersistedSituationReview = Record<string, any>
-
-type EnterpriseOperatingPicture = {
-  posture: string
-  operatingQuestion: string
-  pressureReading: string
-  trajectoryReading: string
-  predictiveReading: string
-  recoveryReading: string
-  reliabilityReading: string
-  commandReading: string
-  coordinationReading: string
-  crossSiteReading: string
-  executiveMeaning: string
-  nextDestination: string
-  evidenceStandard: string
-  boardWarning: string
-  requiredAction: string
-  watchNext: string
-}
 
 export default function SituationRoomPage() {
   return (
@@ -138,11 +123,21 @@ function SituationRoomContent() {
     historyReview,
   })
 
-  const operatingPicture = buildEnterpriseOperatingPicture({
+  const operatingPicture = buildCGISituationRoomOperatingPicture({
     pilotThread,
     briefing,
     trajectory,
     historyReview,
+    report,
+  })
+
+  const situationReport = buildCGISituationRoomBriefingReport({
+    operatingPicture,
+    trajectory,
+    briefing,
+    historyReview,
+    report,
+    pilotThread,
   })
 
   const executivePosture = formatCGIExecutivePosture(
@@ -197,14 +192,7 @@ function SituationRoomContent() {
         reportClassification: report.classification,
         requiredExecutiveAction: operatingPicture.requiredAction,
         requiredEvidence: operatingPicture.evidenceStandard,
-        copyReadySituationReport: buildSituationReport({
-          operatingPicture,
-          trajectory,
-          briefing,
-          historyReview,
-          report,
-          pilotThread,
-        }),
+        copyReadySituationReport: situationReport,
         rawPayload: {
           operatingPicture,
           briefing,
@@ -291,7 +279,8 @@ function SituationRoomContent() {
             <p style={styles.bodyText}>{operatingPicture.boardWarning}</p>
           </div>
         </section>
-                <section style={styles.metricsGrid}>
+
+        <section style={styles.metricsGrid}>
           <Metric label="Pressure" value="ELEVATED" />
           <Metric label="Trajectory" value={trajectory.trajectory} />
           <Metric label="Predictive" value="ELEVATED" />
@@ -301,7 +290,7 @@ function SituationRoomContent() {
         </section>
 
         <section style={styles.gridFour}>
-                   <ExecutiveCard
+          <ExecutiveCard
             title="Pressure"
             value="ELEVATED"
             body={operatingPicture.pressureReading}
@@ -397,7 +386,10 @@ function SituationRoomContent() {
               label="Continuity Drift"
               value={historyReview.continuityDriftDetected ? 'YES' : 'NO'}
             />
-            <Info label="Next Destination" value={operatingPicture.nextDestination} />
+            <Info
+              label="Next Destination"
+              value={operatingPicture.nextDestination}
+            />
           </Panel>
         </section>
 
@@ -466,13 +458,11 @@ function SituationRoomContent() {
             <div>
               <p style={styles.sectionKicker}>Enterprise Situation Memory</p>
 
-              <h2 style={styles.panelTitle}>
-                Persisted operating pictures
-              </h2>
+              <h2 style={styles.panelTitle}>Persisted operating pictures</h2>
 
               <p style={styles.bodyText}>
-                Situation memory preserves prior enterprise operating
-                conditions so continuity decisions remain reconstructable.
+                Situation memory preserves prior enterprise operating conditions
+                so continuity decisions remain reconstructable.
               </p>
             </div>
           </div>
@@ -541,23 +531,15 @@ function SituationRoomContent() {
             )}
           </div>
         </section>
-                <section style={styles.orderPanel}>
+
+        <section style={styles.orderPanel}>
           <p style={styles.sectionKicker}>Copy-Ready Situation Brief</p>
 
           <h2 style={styles.panelTitle}>
             Can the institution explain its current continuity condition?
           </h2>
 
-          <pre style={styles.summaryBox}>
-            {buildSituationReport({
-              operatingPicture,
-              trajectory,
-              briefing,
-              historyReview,
-              report,
-              pilotThread,
-            })}
-          </pre>
+          <pre style={styles.summaryBox}>{situationReport}</pre>
         </section>
 
         <section style={styles.doctrineCard}>
@@ -574,103 +556,6 @@ function SituationRoomContent() {
       </div>
     </main>
   )
-}
-
-function buildEnterpriseOperatingPicture(input: {
-  pilotThread: ReturnType<typeof buildCGIDemoScenario>['pilotThread']
-  briefing: ReturnType<typeof buildCGIExecutiveBriefing>
-  trajectory: ReturnType<typeof buildCGIContinuityTrajectory>
-  historyReview: ReturnType<typeof reviewCGIExecutiveHistory>
-}): EnterpriseOperatingPicture {
-  return {
-    posture: 'ENTERPRISE CONTINUITY WATCH',
-    operatingQuestion:
-      'Can the institution explain its current continuity condition?',
-    pressureReading:
-      'Operational pressure remains elevated because fuel logistics disruption has affected multiple sites.',
-    trajectoryReading: input.trajectory.trajectoryDirection,
-    predictiveReading:
-      'Predictive warning remains elevated because supplier concentration can produce recurrence before recovery durability is proven.',
-    recoveryReading:
-      'Recovery is visible but uneven. North is stabilizing, South remains under watch, and East still carries recurrence exposure.',
-    reliabilityReading:
-      'Reliability remains provisional until supplier alternatives, recovery evidence, and cross-site durability are confirmed.',
-    commandReading:
-      'Command visibility remains justified because recovery credibility is not yet fully proven.',
-    coordinationReading:
-      'Coordination must synchronize ownership, routing, supplier alternatives, evidence, and site-level recovery proof.',
-    crossSiteReading:
-      'Cross-site intelligence shows shared supplier dependency and enterprise continuity exposure.',
-    executiveMeaning: input.pilotThread.executiveThesis,
-    nextDestination: 'Executive Center',
-    evidenceStandard:
-      'Preserve pressure reading, trajectory direction, predictive warning, recovery status, reliability posture, command posture, coordination need, cross-site pattern, executive meaning, required action, and audit reconstruction trail.',
-    boardWarning:
-      'Do not separate pressure, trajectory, prediction, recovery, reliability, command, coordination, and cross-site exposure when they are converging into one institutional condition.',
-    requiredAction: input.trajectory.trajectoryRecommendation,
-    watchNext: input.trajectory.watchNext,
-  }
-}
-
-function buildSituationReport(input: {
-  operatingPicture: EnterpriseOperatingPicture
-  trajectory: ReturnType<typeof buildCGIContinuityTrajectory>
-  briefing: ReturnType<typeof buildCGIExecutiveBriefing>
-  historyReview: ReturnType<typeof reviewCGIExecutiveHistory>
-  report: ReturnType<typeof buildCGIExecutiveReportPackage>
-  pilotThread: ReturnType<typeof buildCGIDemoScenario>['pilotThread']
-}) {
-  return [
-    'TSINAXA CGI ENTERPRISE SITUATION ROOM BRIEF',
-    '',
-    `Pilot Scenario: ${input.pilotThread.scenarioName}`,
-    '',
-    `Continuity Condition: ${input.operatingPicture.posture}`,
-    '',
-    `Executive Situation Question: ${input.operatingPicture.operatingQuestion}`,
-    '',
-    `Pressure Reading: ${input.operatingPicture.pressureReading}`,
-    '',
-    `Trajectory: ${input.trajectory.trajectory}`,
-    '',
-    `Momentum: ${input.trajectory.momentum}`,
-    '',
-    `Direction: ${input.trajectory.trajectoryDirection}`,
-    '',
-    `Predictive Reading: ${input.operatingPicture.predictiveReading}`,
-    '',
-    `Recovery Reading: ${input.operatingPicture.recoveryReading}`,
-    '',
-    `Reliability Reading: ${input.operatingPicture.reliabilityReading}`,
-    '',
-    `Command Reading: ${input.operatingPicture.commandReading}`,
-    '',
-    `Coordination Reading: ${input.operatingPicture.coordinationReading}`,
-    '',
-    `Cross-Site Reading: ${input.operatingPicture.crossSiteReading}`,
-    '',
-    `Required Action: ${input.operatingPicture.requiredAction}`,
-    '',
-    `Watch Next: ${input.operatingPicture.watchNext}`,
-    '',
-    `Executive Meaning: ${input.operatingPicture.executiveMeaning}`,
-    '',
-    `Continuity Posture: ${input.briefing.synthesis.synthesisPosture}`,
-    '',
-    `Dominant Concern: ${input.briefing.dominantConcern}`,
-    '',
-    `History Direction: ${input.historyReview.direction}`,
-    '',
-    `Continuity Drift Detected: ${
-      input.historyReview.continuityDriftDetected ? 'YES' : 'NO'
-    }`,
-    '',
-    `Evidence Standard: ${input.operatingPicture.evidenceStandard}`,
-    '',
-    `Board Warning: ${input.operatingPicture.boardWarning}`,
-    '',
-    `Report Classification: ${input.report.classification}`,
-  ].join('\n')
 }
 
 function getReviewValue(
