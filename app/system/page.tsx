@@ -5,176 +5,25 @@ import type { CSSProperties } from 'react'
 
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import {
-  deriveCommandActionPosture,
-  deriveCommandImplication,
-  deriveCommandPosture,
-  explainCommandPosture,
-  type CGICommandPosture,
-} from '@/lib/cgi/deriveCommandPosture'
-import { combineExecutiveActions } from '@/lib/cgi/interpreters/combineExecutiveActions'
-import { interpretBottleneck } from '@/lib/cgi/interpreters/interpretBottleneck'
-import { interpretPredictive } from '@/lib/cgi/interpreters/interpretPredictive'
-import { interpretPressure } from '@/lib/cgi/interpreters/interpretPressure'
-import { interpretRecovery } from '@/lib/cgi/interpreters/interpretRecovery'
-import { interpretReliability } from '@/lib/cgi/interpreters/interpretReliability'
-import { interpretTrajectory } from '@/lib/cgi/interpreters/interpretTrajectory'
+  buildInterpretiveBoard,
+  explainMemory,
+  explainPressure,
+  explainRecovery,
+  explainSurvivability,
+  formatSystemDate,
+  type CgiOperationalMetric,
+} from '@/lib/cgiSystemExecutiveInterpretationEngine'
+import {
+  buildStabilityBoardRecords,
+  buildStabilityBoardSummary,
+  STABILITY_BOARD_DOCTRINE,
+  type OutcomeRecord,
+  type StabilityCase,
+} from '@/lib/cgiSystemStabilityDoctrineEngine'
 import { supabase } from '../../lib/supabase'
-
-type CgiOperationalMetric = {
-  id: string
-  created_at: string
-  scope: string
-  continuity_integrity_score: number
-  stabilization_confidence_score: number
-  escalation_pressure_index: number
-  recovery_reliability_score: number
-  operational_survivability_score: number
-  continuity_state: string
-  propagation_risk: number
-  routing_friction: number
-  responder_pressure: number
-  escalation_velocity: number
-  coordination_instability: number
-  stabilization_drag: number
-  pressure_propagation_state: string
-  trajectory_risk: number
-  continuity_drift: number
-  escalation_momentum: number
-  recovery_direction: number
-  stabilization_trend: number
-  unresolved_momentum: number
-  trajectory_direction: string
-  structural_memory_risk: number
-  routing_failure_recurrence: number
-  escalation_corridor_recurrence: number
-  institutional_fragility_signature: number
-  intervention_failure_pattern: number
-  responder_strain_recurrence: number
-  continuity_collapse_recurrence: number
-  structural_memory_state: string
-  dominant_pressure_source: string | null
-  dominant_trajectory_signal: string | null
-  dominant_memory_pattern: string | null
-  executive_summary: string | null
-  action_cue: string | null
-  executive_priority_score: number | null
-  survivability_threat_level: string | null
-  executive_action_urgency: string | null
-  structural_deterioration_state: string | null
-  executive_action_deadline: string | null
-}
-
-type StabilityCase = {
-  id: string
-  beneficiary_name: string
-  beneficiary_level: string | null
-  support_domain: string
-  case_status: string
-  severity_level: string
-  region: string | null
-  institution_name: string | null
-  safeguarding_flag: boolean
-  intervention_summary: string | null
-  outcome_summary: string | null
-  created_at?: string | null
-  updated_at?: string | null
-}
-
-type OutcomeRecord = {
-  id: string
-  case_id: string
-  outcome_status: string | null
-  outcome_summary: string | null
-  created_at?: string | null
-}
-
-type InterpretiveThreshold =
-  | 'CONTAINED'
-  | 'WATCHABLE'
-  | 'DESTABILIZING'
-  | 'SURVIVABILITY THREAT'
-
-type StabilityAbsorptionClass =
-  | 'STABILITY_ABSORBABLE'
-  | 'STABILITY_WATCH'
-  | 'COMMAND_PRESSURE'
-  | 'EVIDENCE_RETURN'
-  | 'RECOVERY_MONITORING'
-  | 'NO_RECOVERY_MEMORY'
-
-type StabilityBoardRecord = {
-  caseItem: StabilityCase
-  latestRecoveryReview?: OutcomeRecord
-  recoveryDisposition: string
-  recommendedMovement: string
-  movementReason: string
-  recoveryMaturity: string
-  commandPosture: string
-  durabilityResult: string
-  reburnSignal: string
-  recoveryConfidence: string
-  memoryImpact: string
-  absorptionClass: StabilityAbsorptionClass
-  stabilityMeaning: string
-}
-
-type StabilityBoardSummary = {
-  totalRecords: number
-  absorbable: number
-  watch: number
-  commandPressure: number
-  evidenceReturn: number
-  recoveryMonitoring: number
-  activeInstability: number
-  stabilized: number
-  fragileRecovery: number
-  unresolvedCommandPressure: number
-  memoryPreserved: number
-  currentLifecycleClear: boolean
-  boardPosture: string
-  boardMeaning: string
-}
-
-type InterpretiveBoard = {
-  latest: CgiOperationalMetric
-  commandPosture: CGICommandPosture
-  commandMeaning: string
-  executiveImplication: string
-  actionPosture: string
-  actionDeadline: string
-  actionCue: string
-  pressureThreshold: InterpretiveThreshold
-  trajectoryThreshold: InterpretiveThreshold
-  survivabilityThreshold: InterpretiveThreshold
-  memoryThreshold: InterpretiveThreshold
-  recoveryThreshold: InterpretiveThreshold
-  survivabilityInterpretation: string
-  structuralPattern: string
-}
 
 const SAMPLE_LIMIT = 80
 const CASE_SAMPLE_LIMIT = 120
-
-const DOCTRINE = [
-  'Current lifecycle truth overrides old metrics.',
-  'Final posture must be absorbed, not hidden.',
-  'Recovery is not durability.',
-  'Memory must survive stabilization.',
-]
-
-const ACTIVE_CASE_STATUSES = [
-  'NEW',
-  'TRIAGE',
-  'UNDER_REVIEW',
-  'ROUTED',
-  'RESPONDER_ASSIGNED',
-  'INTERVENTION_ACTIVE',
-  'FOLLOW_UP_REQUIRED',
-  'REOPENED',
-  'RECOVERY_MONITORING',
-  'PARTIAL_STABILIZATION',
-  'IMPROVING',
-]
 
 export default function SystemPage() {
   return (
@@ -266,7 +115,7 @@ function ExecutiveStabilityBoard() {
           <section style={styles.doctrinePanel}>
             <p style={styles.doctrineTitle}>STABILITY BOARD DOCTRINE</p>
             <div style={styles.doctrineGrid}>
-              {DOCTRINE.map((item) => (
+              {STABILITY_BOARD_DOCTRINE.map((item) => (
                 <div key={item} style={styles.doctrineCard}>
                   {item}
                 </div>
@@ -279,7 +128,9 @@ function ExecutiveStabilityBoard() {
 
         <section style={styles.stabilityPanel}>
           <div>
-            <p style={styles.panelEyebrow}>Current Institutional Stability Posture</p>
+            <p style={styles.panelEyebrow}>
+              Current Institutional Stability Posture
+            </p>
             <h2 style={styles.stabilityPosture}>
               {stabilitySummary.boardPosture}
             </h2>
@@ -436,7 +287,9 @@ function ExecutiveStabilityBoard() {
           <>
             <section style={styles.commandPanel}>
               <div>
-                <p style={styles.panelEyebrow}>Current Executive Continuity Reading</p>
+                <p style={styles.panelEyebrow}>
+                  Current Executive Continuity Reading
+                </p>
                 <h2 style={styles.commandPosture}>
                   {historicalBoard.commandPosture}
                 </h2>
@@ -485,7 +338,9 @@ function ExecutiveStabilityBoard() {
             <section style={styles.actionPanel}>
               <div>
                 <p style={styles.panelEyebrow}>Executive Action Requirement</p>
-                <h2 style={styles.actionThreshold}>{historicalBoard.actionPosture}</h2>
+                <h2 style={styles.actionThreshold}>
+                  {historicalBoard.actionPosture}
+                </h2>
                 <p style={styles.bodyText}>{historicalBoard.actionCue}</p>
               </div>
 
@@ -525,7 +380,9 @@ function ExecutiveStabilityBoard() {
 
         {!historicalBoard && (
           <section style={styles.card}>
-            <h2 style={styles.sectionTitle}>No continuity metrics available yet.</h2>
+            <h2 style={styles.sectionTitle}>
+              No continuity metrics available yet.
+            </h2>
             <p style={styles.bodyText}>
               Stability Board absorption can still read lifecycle records. The
               historical metric layer will activate when governed snapshots are
@@ -561,7 +418,9 @@ function ExecutiveStabilityBoard() {
 
                   return (
                     <tr key={item.id}>
-                      <td style={styles.td}>{formatDate(item.created_at)}</td>
+                      <td style={styles.td}>
+                        {formatSystemDate(item.created_at)}
+                      </td>
                       <td style={styles.td}>{row.commandPosture}</td>
                       <td style={styles.td}>{row.recoveryThreshold}</td>
                       <td style={styles.td}>{row.memoryThreshold}</td>
@@ -589,476 +448,6 @@ function ExecutiveStabilityBoard() {
       </div>
     </main>
   )
-}
-
-function buildStabilityBoardRecords(
-  cases: StabilityCase[],
-  outcomes: OutcomeRecord[],
-): StabilityBoardRecord[] {
-  const records: StabilityBoardRecord[] = []
-
-  cases.forEach((caseItem) => {
-    const caseOutcomes = outcomes.filter(
-      (outcome) => outcome.case_id === caseItem.id,
-    )
-
-    const latestRecoveryReview = caseOutcomes.find((outcome) =>
-      isRecoveryReview(outcome),
-    )
-
-    const summary =
-      latestRecoveryReview?.outcome_summary || caseItem.outcome_summary || ''
-
-    if (!summary || !isRecoverySummary(summary)) return
-
-    const recoveryDisposition =
-      extractField(summary, 'RECOVERY DISPOSITION') ||
-      deriveDispositionFromLegacySummary(summary)
-
-    const recommendedMovement =
-      extractField(summary, 'RECOMMENDED NEXT MOVEMENT') ||
-      deriveLegacyMovement(recoveryDisposition)
-
-    const movementReason =
-      extractField(summary, 'MOVEMENT REASON') ||
-      'Movement reason was not explicitly preserved.'
-
-    const recoveryMaturity =
-      extractField(summary, 'RECOVERY MATURITY') || 'RECOVERY_MATURITY_UNRECORDED'
-
-    const commandPosture =
-      extractField(summary, 'COMMAND POSTURE') || 'COMMAND_POSTURE_UNRECORDED'
-
-    const durabilityResult =
-      extractField(summary, 'DURABILITY RESULT') ||
-      latestRecoveryReview?.outcome_status ||
-      'DURABILITY_UNRECORDED'
-
-    const reburnSignal =
-      extractField(summary, 'REBURN SIGNAL') || 'REBURN_SIGNAL_UNRECORDED'
-
-    const recoveryConfidence =
-      extractField(summary, 'RECOVERY CONFIDENCE') ||
-      'RECOVERY_CONFIDENCE_UNRECORDED'
-
-    const memoryImpact =
-      extractField(summary, 'MEMORY IMPACT') || 'MEMORY_IMPACT_UNRECORDED'
-
-    const absorptionClass = deriveAbsorptionClass(recoveryDisposition)
-
-    records.push({
-      caseItem,
-      latestRecoveryReview,
-      recoveryDisposition,
-      recommendedMovement,
-      movementReason,
-      recoveryMaturity,
-      commandPosture,
-      durabilityResult,
-      reburnSignal,
-      recoveryConfidence,
-      memoryImpact,
-      absorptionClass,
-      stabilityMeaning: deriveStabilityMeaning(absorptionClass),
-    })
-  })
-
-  return records
-}
-
-function buildStabilityBoardSummary(
-  cases: StabilityCase[],
-  records: StabilityBoardRecord[],
-): StabilityBoardSummary {
-  const activeInstability = cases.filter((caseItem) =>
-    ACTIVE_CASE_STATUSES.includes(caseItem.case_status),
-  ).length
-
-  const stabilized = cases.filter(
-    (caseItem) => caseItem.case_status === 'STABILIZED',
-  ).length
-
-  const absorbable = records.filter(
-    (record) => record.absorptionClass === 'STABILITY_ABSORBABLE',
-  ).length
-
-  const watch = records.filter(
-    (record) => record.absorptionClass === 'STABILITY_WATCH',
-  ).length
-
-  const commandPressure = records.filter(
-    (record) => record.absorptionClass === 'COMMAND_PRESSURE',
-  ).length
-
-  const evidenceReturn = records.filter(
-    (record) => record.absorptionClass === 'EVIDENCE_RETURN',
-  ).length
-
-  const recoveryMonitoring = records.filter(
-    (record) => record.absorptionClass === 'RECOVERY_MONITORING',
-  ).length
-
-  const memoryPreserved = records.filter(
-    (record) =>
-      record.memoryImpact.includes('MEMORY') ||
-      record.memoryImpact.includes('STRUCTURAL'),
-  ).length
-
-  const fragileRecovery = watch + evidenceReturn + recoveryMonitoring
-
-  const currentLifecycleClear =
-    activeInstability === 0 &&
-    records.length === 0 &&
-    commandPressure === 0 &&
-    evidenceReturn === 0 &&
-    fragileRecovery === 0
-
-  let boardPosture = 'STABILITY BOARD CLEAR'
-  let boardMeaning =
-    'No active final-posture pressure is currently visible. Stability Board remains available for lifecycle absorption.'
-
-  if (commandPressure > 0) {
-    boardPosture = 'COMMAND PRESSURE UNRESOLVED'
-    boardMeaning =
-      'One or more recovery records still require Command Watch or Command Escalation. Stability cannot absorb these cases as closure.'
-  } else if (evidenceReturn > 0) {
-    boardPosture = 'EVIDENCE RETURN REQUIRED'
-    boardMeaning =
-      'One or more recovery records require Outcomes or Intervention review before final posture can be trusted.'
-  } else if (fragileRecovery > 0) {
-    boardPosture = 'FRAGILE RECOVERY VISIBLE'
-    boardMeaning =
-      'Recovery is visible but not fully absorbable. Stability Board must preserve fragility until durability matures.'
-  } else if (absorbable > 0) {
-    boardPosture = 'STABILITY ABSORPTION READY'
-    boardMeaning =
-      'Durable recovery evidence is available for institutional absorption while structural memory remains preserved.'
-  } else if (activeInstability > 0) {
-    boardPosture = 'ACTIVE INSTABILITY PRESENT'
-    boardMeaning =
-      'Active lifecycle instability remains visible. Stability Board should not express final closure.'
-  }
-
-  return {
-    totalRecords: records.length,
-    absorbable,
-    watch,
-    commandPressure,
-    evidenceReturn,
-    recoveryMonitoring,
-    activeInstability,
-    stabilized,
-    fragileRecovery,
-    unresolvedCommandPressure: commandPressure,
-    memoryPreserved,
-    currentLifecycleClear,
-    boardPosture,
-    boardMeaning,
-  }
-}
-
-function isRecoveryReview(outcome: OutcomeRecord) {
-  return isRecoverySummary(outcome.outcome_summary || '')
-}
-
-function isRecoverySummary(summary: string) {
-  return (
-    summary.includes('DURABILITY RESULT') ||
-    summary.includes('RECOVERY TRAJECTORY') ||
-    summary.includes('RECOVERY MATURITY') ||
-    summary.includes('RECOVERY CONFIDENCE') ||
-    summary.includes('RECOVERY DISPOSITION') ||
-    summary.includes('RECOMMENDED NEXT MOVEMENT')
-  )
-}
-
-function deriveDispositionFromLegacySummary(summary: string) {
-  const durabilityResult = extractField(summary, 'DURABILITY RESULT')
-  const confidence = extractField(summary, 'RECOVERY CONFIDENCE')
-  const reburnSignal = extractField(summary, 'REBURN SIGNAL')
-
-  if (
-    durabilityResult === 'RECOVERY_COLLAPSE' ||
-    durabilityResult === 'REBURN_DETECTED' ||
-    reburnSignal === 'REBURN_DETECTED' ||
-    reburnSignal === 'RECURRENT_REBURN_PATTERN'
-  ) {
-    return 'MOVE_TO_COMMAND_ESCALATION'
-  }
-
-  if (durabilityResult === 'DURABLE_RECOVERY_CONFIRMED') {
-    return 'MOVE_TO_STABILITY_BOARD'
-  }
-
-  if (confidence === 'LOW') {
-    return 'RETURN_TO_INTERVENTION_REVIEW'
-  }
-
-  if (
-    durabilityResult === 'RECOVERY_HOLDING' ||
-    durabilityResult === 'STABILITY_UNDER_VARIANCE'
-  ) {
-    return 'MOVE_TO_COMMAND_WATCH'
-  }
-
-  return 'CONTINUE_RECOVERY_MONITORING'
-}
-
-function deriveLegacyMovement(disposition: string) {
-  if (disposition === 'MOVE_TO_STABILITY_BOARD') {
-    return '/system Stability Board — absorb into institutional continuity posture.'
-  }
-
-  if (disposition === 'MOVE_TO_COMMAND_ESCALATION') {
-    return '/command Command Escalation — executive continuity review required.'
-  }
-
-  if (disposition === 'MOVE_TO_COMMAND_WATCH') {
-    return '/command Command Watch — preserve executive visibility without full escalation.'
-  }
-
-  if (disposition === 'RETURN_TO_OUTCOMES_REVIEW') {
-    return '/outcomes Outcomes Review — verification evidence requires strengthening.'
-  }
-
-  if (disposition === 'RETURN_TO_INTERVENTION_REVIEW') {
-    return '/interventions Intervention Review — stabilization action requires renewed review.'
-  }
-
-  return '/recovery Recovery Monitoring — continue durability observation.'
-}
-
-function deriveAbsorptionClass(disposition: string): StabilityAbsorptionClass {
-  if (disposition === 'MOVE_TO_STABILITY_BOARD') {
-    return 'STABILITY_ABSORBABLE'
-  }
-
-  if (
-    disposition === 'MOVE_TO_COMMAND_ESCALATION' ||
-    disposition === 'MOVE_TO_COMMAND_WATCH'
-  ) {
-    return 'COMMAND_PRESSURE'
-  }
-
-  if (
-    disposition === 'RETURN_TO_OUTCOMES_REVIEW' ||
-    disposition === 'RETURN_TO_INTERVENTION_REVIEW'
-  ) {
-    return 'EVIDENCE_RETURN'
-  }
-
-  if (disposition === 'CONTINUE_RECOVERY_MONITORING') {
-    return 'RECOVERY_MONITORING'
-  }
-
-  return 'NO_RECOVERY_MEMORY'
-}
-
-function deriveStabilityMeaning(absorptionClass: StabilityAbsorptionClass) {
-  switch (absorptionClass) {
-    case 'STABILITY_ABSORBABLE':
-      return 'Durable recovery can be absorbed into institutional posture without erasing memory.'
-    case 'STABILITY_WATCH':
-      return 'Stability remains watchable and should not be treated as closure.'
-    case 'COMMAND_PRESSURE':
-      return 'Command pressure remains unresolved and must stay visible.'
-    case 'EVIDENCE_RETURN':
-      return 'Evidence or intervention credibility requires return review before stability can be trusted.'
-    case 'RECOVERY_MONITORING':
-      return 'Recovery remains under durability observation.'
-    default:
-      return 'No recovery memory is currently available for absorption.'
-  }
-}
-
-function buildInterpretiveBoard(latest: CgiOperationalMetric): InterpretiveBoard {
-  const centralizedPressure = interpretPressure({
-    escalationPressure: latest.escalation_pressure_index,
-    propagationRisk: latest.propagation_risk,
-    unresolvedMomentum: latest.unresolved_momentum,
-    continuityDrift: latest.continuity_drift,
-  })
-
-  const centralizedTrajectory = interpretTrajectory({
-    trajectoryRisk: latest.trajectory_risk,
-    continuityDrift: latest.continuity_drift,
-    unresolvedMomentum: latest.unresolved_momentum,
-    survivabilityRisk: 100 - latest.operational_survivability_score,
-  })
-
-  const centralizedRecovery = interpretRecovery({
-    stabilizationConfidence: latest.stabilization_confidence_score,
-    recoveryReliability: latest.recovery_reliability_score,
-    survivabilityScore: latest.operational_survivability_score,
-    continuityDrift: latest.continuity_drift,
-    unresolvedMomentum: latest.unresolved_momentum,
-  })
-
-  const centralizedPredictive = interpretPredictive({
-    propagationRisk: latest.propagation_risk,
-    trajectoryRisk: latest.trajectory_risk,
-    structuralMemoryRisk: latest.structural_memory_risk,
-    unresolvedMomentum: latest.unresolved_momentum,
-    stabilizationDrag: latest.stabilization_drag,
-  })
-
-  const centralizedBottleneck = interpretBottleneck({
-    routingCongestion: latest.routing_friction,
-    responderConcentration: latest.responder_pressure,
-    unresolvedMomentum: latest.unresolved_momentum,
-    continuityDrift: latest.continuity_drift,
-    propagationRisk: latest.propagation_risk,
-  })
-
-  const recurrenceRate =
-    average([
-      latest.routing_failure_recurrence,
-      latest.escalation_corridor_recurrence,
-      latest.intervention_failure_pattern,
-      latest.continuity_collapse_recurrence,
-    ]) / 100
-
-  const centralizedReliability = interpretReliability({
-    unresolvedCases: Math.round(latest.unresolved_momentum / 10),
-    overdueCases: Math.round(latest.routing_friction / 10),
-    failedRecoveries: Math.round(latest.intervention_failure_pattern / 10),
-    recurrenceRate,
-  })
-
-  const commandPosture = deriveCommandPosture({
-    pressureSeverity: centralizedPressure.severity,
-    trajectorySeverity: centralizedTrajectory.severity,
-    recoverySeverity: centralizedRecovery.severity,
-    predictiveSeverity: centralizedPredictive.severity,
-    bottleneckSeverity: centralizedBottleneck.severity,
-    reliabilitySeverity: centralizedReliability.severity,
-  })
-
-  return {
-    latest,
-    commandPosture,
-    commandMeaning: explainCommandPosture(commandPosture),
-    executiveImplication: deriveCommandImplication(commandPosture),
-    actionPosture: deriveCommandActionPosture(commandPosture),
-    actionDeadline: latest.executive_action_deadline || 'Next governance cycle',
-    actionCue: combineExecutiveActions([
-      centralizedPressure.executiveAction,
-      centralizedTrajectory.executiveAction,
-      centralizedRecovery.executiveAction,
-      centralizedPredictive.executiveAction,
-      centralizedBottleneck.executiveAction,
-      centralizedReliability.executiveAction,
-    ]),
-    pressureThreshold: severityToThreshold(centralizedPressure.severity),
-    trajectoryThreshold: severityToThreshold(centralizedTrajectory.severity),
-    survivabilityThreshold: severityToThreshold(centralizedRecovery.severity),
-    memoryThreshold: severityToThreshold(centralizedPredictive.severity),
-    recoveryThreshold: severityToThreshold(centralizedReliability.severity),
-    survivabilityInterpretation: centralizedRecovery.summary,
-    structuralPattern:
-      latest.dominant_memory_pattern || centralizedPredictive.summary,
-  }
-}
-
-function explainPressure(board: InterpretiveBoard) {
-  if (board.pressureThreshold === 'SURVIVABILITY THREAT') {
-    return 'Pressure is threatening operational survivability.'
-  }
-
-  if (board.pressureThreshold === 'DESTABILIZING') {
-    return 'Pressure is intensifying and requires governance attention.'
-  }
-
-  if (board.pressureThreshold === 'WATCHABLE') {
-    return 'Pressure remains visible and should continue under review.'
-  }
-
-  return 'Pressure is currently contained.'
-}
-
-function explainRecovery(board: InterpretiveBoard) {
-  if (board.recoveryThreshold === 'SURVIVABILITY THREAT') {
-    return 'Recovery credibility is weak and should not support closure.'
-  }
-
-  if (board.recoveryThreshold === 'DESTABILIZING') {
-    return 'Recovery remains fragile and requires stabilization reinforcement.'
-  }
-
-  if (board.recoveryThreshold === 'WATCHABLE') {
-    return 'Recovery is visible but durability still requires confirmation.'
-  }
-
-  return 'Recovery posture is currently credible.'
-}
-
-function explainSurvivability(board: InterpretiveBoard) {
-  if (board.survivabilityThreshold === 'SURVIVABILITY THREAT') {
-    return 'Survivability posture requires executive attention.'
-  }
-
-  if (board.survivabilityThreshold === 'DESTABILIZING') {
-    return 'Survivability is vulnerable and should remain under governance review.'
-  }
-
-  if (board.survivabilityThreshold === 'WATCHABLE') {
-    return 'Survivability exists but remains watchable.'
-  }
-
-  return 'Survivability posture is currently stable.'
-}
-
-function explainMemory(board: InterpretiveBoard) {
-  if (board.memoryThreshold === 'SURVIVABILITY THREAT') {
-    return 'Structural recurrence is materially threatening survivability.'
-  }
-
-  if (board.memoryThreshold === 'DESTABILIZING') {
-    return 'Recurring instability patterns remain operationally significant.'
-  }
-
-  if (board.memoryThreshold === 'WATCHABLE') {
-    return 'Structural recurrence remains visible.'
-  }
-
-  return 'No dominant recurrence pattern is currently driving instability.'
-}
-
-function severityToThreshold(severity: string): InterpretiveThreshold {
-  if (severity === 'CRITICAL') return 'SURVIVABILITY THREAT'
-  if (severity === 'HIGH') return 'DESTABILIZING'
-  if (severity === 'MODERATE') return 'WATCHABLE'
-  return 'CONTAINED'
-}
-
-function average(values: number[]) {
-  const valid = values.filter((value) => Number.isFinite(value))
-
-  if (valid.length === 0) return 0
-
-  return Math.round(
-    valid.reduce((sum, value) => sum + value, 0) / valid.length,
-  )
-}
-
-function formatDate(value: string) {
-  return new Date(value).toLocaleString()
-}
-
-function extractField(summary: string, label: string) {
-  if (!summary) return ''
-
-  const lines = summary
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-
-  const target = label.trim().toLowerCase()
-  const index = lines.findIndex((line) => line.toLowerCase() === target)
-
-  if (index === -1) return ''
-
-  return lines[index + 1] || ''
 }
 
 function MetricCard({
