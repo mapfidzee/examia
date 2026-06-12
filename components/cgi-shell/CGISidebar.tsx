@@ -8,15 +8,19 @@ export default function CGISidebar() {
   const pathname = usePathname()
 
   return (
-    <aside className="flex h-full min-h-screen w-full max-w-72 flex-col border-r border-neutral-800 bg-neutral-950 text-neutral-100">
-      <div className="border-b border-neutral-800 px-5 py-5">
-        <p className="text-xs font-black uppercase tracking-[0.28em] text-cyan-400">
+    <aside className="flex h-full min-h-screen w-full max-w-72 flex-col border-r border-[#2a2418] bg-[#070707] text-neutral-100">
+      <div className="border-b border-[#2a2418] px-5 py-5">
+        <p className="text-xs font-black uppercase tracking-[0.28em] text-amber-400">
           TSINAXA CGI
         </p>
 
         <h1 className="mt-2 text-lg font-black tracking-tight text-white">
           Executive Continuity Intelligence
         </h1>
+
+        <p className="mt-2 text-xs text-neutral-500">
+          Continuity Governance Infrastructure
+        </p>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-4 py-5">
@@ -40,10 +44,10 @@ export default function CGISidebar() {
                       key={item.href}
                       href={item.href}
                       className={[
-                        'block rounded-xl border px-3 py-2.5 transition',
+                        'block rounded-xl border px-3 py-2.5 transition-all duration-200',
                         isActive
-                          ? 'border-cyan-500/60 bg-cyan-500/10 text-white'
-                          : 'border-transparent text-neutral-400 hover:border-neutral-800 hover:bg-neutral-900/70 hover:text-neutral-100',
+                          ? 'border-amber-500/60 bg-amber-500/10 text-white shadow-[0_0_0_1px_rgba(245,158,11,0.15)]'
+                          : 'border-transparent text-neutral-400 hover:border-[#2a2418] hover:bg-[#111827]/40 hover:text-neutral-100',
                       ].join(' ')}
                     >
                       <div className="flex items-center justify-between gap-3">
@@ -52,8 +56,10 @@ export default function CGISidebar() {
                         </span>
 
                         {item.status !== 'ACTIVE' && (
-                          <span className="rounded-full border border-neutral-700 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
-                            {item.status === 'FUTURE_RLI' ? 'RLI' : 'Legacy'}
+                          <span className="rounded-full border border-[#3b3424] bg-[#16120a] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
+                            {item.status === 'FUTURE_RLI'
+                              ? 'RLI'
+                              : 'Legacy'}
                           </span>
                         )}
                       </div>
