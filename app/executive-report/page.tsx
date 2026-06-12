@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
-import InfrastructureNav from '@/components/InfrastructureNav'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { buildCGIDemoScenario } from '@/lib/cgiDemoScenarioEngine'
 import { buildExecutiveConclusionReport } from '@/lib/cgiExecutiveReportDoctrineEngine'
@@ -110,8 +109,6 @@ function ExecutiveReportContent() {
   return (
     <main style={styles.page}>
       <div style={styles.container}>
-        <InfrastructureNav />
-
         <section style={styles.header}>
           <p style={styles.kicker}>TSINAXA CGI • EXECUTIVE REPORT</p>
 
@@ -597,7 +594,7 @@ function Panel({
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    color: 'white',
+    color: '#fff8e7',
     overflowX: 'hidden',
   },
   container: {
@@ -612,19 +609,20 @@ const styles: Record<string, CSSProperties> = {
     paddingTop: '4px',
   },
   kicker: {
-    color: '#67e8f9',
+    color: '#d6b25e',
     fontSize: '12px',
     fontWeight: 900,
     letterSpacing: '2px',
     margin: 0,
   },
   title: {
+    color: '#fff8e7',
     fontSize: 'clamp(34px, 5vw, 52px)',
     lineHeight: 1.05,
     margin: '10px 0',
   },
   subtitle: {
-    color: '#cbd5e1',
+    color: '#cfc7b5',
     maxWidth: '860px',
     lineHeight: 1.65,
     fontSize: '16px',
@@ -634,8 +632,9 @@ const styles: Record<string, CSSProperties> = {
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1.35fr) minmax(260px, 0.65fr)',
     gap: '16px',
-    background: '#020617',
-    border: '1px solid #67e8f9',
+    background:
+      'linear-gradient(135deg, rgba(214,178,94,0.1), rgba(255,255,255,0.02))',
+    border: '1px solid rgba(214,178,94,0.28)',
     borderRadius: '26px',
     padding: '24px',
     marginBottom: '16px',
@@ -645,8 +644,9 @@ const styles: Record<string, CSSProperties> = {
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1.1fr) minmax(300px, 0.9fr)',
     gap: '16px',
-    background: '#020617',
-    border: '1px solid #facc15',
+    background:
+      'linear-gradient(135deg, rgba(214,178,94,0.1), rgba(255,255,255,0.02))',
+    border: '1px solid rgba(214,178,94,0.34)',
     borderRadius: '26px',
     padding: '24px',
     marginBottom: '16px',
@@ -657,7 +657,7 @@ const styles: Record<string, CSSProperties> = {
     gap: '12px',
   },
   sectionKicker: {
-    color: '#94a3b8',
+    color: '#d6b25e',
     fontWeight: 900,
     letterSpacing: '0.14em',
     textTransform: 'uppercase',
@@ -665,28 +665,28 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '12px',
   },
   heroTitle: {
-    color: '#a5f3fc',
+    color: '#fff8e7',
     fontSize: 'clamp(32px, 5vw, 50px)',
     lineHeight: 1,
     margin: '10px 0 14px',
     letterSpacing: '-0.04em',
   },
   heroMeaning: {
-    color: '#e0f2fe',
+    color: '#cfc7b5',
     lineHeight: 1.65,
     margin: 0,
     maxWidth: '760px',
     fontSize: '16px',
   },
   statusBox: {
-    background: '#083344',
-    border: '1px solid #22d3ee',
+    background: 'rgba(214,178,94,0.12)',
+    border: '1px solid rgba(214,178,94,0.28)',
     borderRadius: '20px',
     padding: '18px',
     alignSelf: 'stretch',
   },
   statusLabel: {
-    color: '#67e8f9',
+    color: '#d6b25e',
     fontWeight: 900,
     margin: '0 0 10px',
     fontSize: '12px',
@@ -694,7 +694,7 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: '0.12em',
   },
   statusValue: {
-    color: '#cffafe',
+    color: '#fff8e7',
     fontSize: '22px',
     lineHeight: 1.25,
     margin: 0,
@@ -713,23 +713,23 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: '16px',
   },
   signalCard: {
-    background: '#0f172a',
-    border: '1px solid #334155',
+    background: '#11100d',
+    border: '1px solid rgba(214,178,94,0.18)',
     borderRadius: '18px',
     padding: '16px',
     minHeight: '150px',
     boxSizing: 'border-box',
   },
   signalValue: {
-    color: '#f8fafc',
+    color: '#fff8e7',
     fontSize: '22px',
     lineHeight: 1.15,
     margin: '10px 0',
     overflowWrap: 'anywhere',
   },
   card: {
-    background: '#020617',
-    border: '1px solid #1e293b',
+    background: '#090807',
+    border: '1px solid rgba(214,178,94,0.18)',
     borderRadius: '22px',
     padding: '20px',
     marginBottom: '16px',
@@ -738,13 +738,13 @@ const styles: Record<string, CSSProperties> = {
     overflow: 'hidden',
   },
   cardTitle: {
-    color: '#f8fafc',
+    color: '#fff8e7',
     fontSize: '26px',
     lineHeight: 1.15,
     margin: '10px 0 10px',
   },
   bodyText: {
-    color: '#cbd5e1',
+    color: '#cfc7b5',
     lineHeight: 1.7,
     margin: 0,
     maxWidth: '900px',
@@ -756,13 +756,13 @@ const styles: Record<string, CSSProperties> = {
     marginTop: '16px',
   },
   priorityItem: {
-    background: '#0f172a',
-    border: '1px solid #334155',
+    background: '#11100d',
+    border: '1px solid rgba(214,178,94,0.18)',
     borderRadius: '16px',
     padding: '14px',
   },
   priorityBody: {
-    color: '#e2e8f0',
+    color: '#fff8e7',
     lineHeight: 1.55,
     margin: '10px 0 0',
     fontWeight: 700,
@@ -784,10 +784,10 @@ const styles: Record<string, CSSProperties> = {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '8px',
-    background: '#0f172a',
-    border: '1px solid #334155',
+    background: '#11100d',
+    border: '1px solid rgba(214,178,94,0.18)',
     borderRadius: '999px',
-    color: '#e2e8f0',
+    color: '#fff8e7',
     fontSize: '13px',
     fontWeight: 800,
     padding: '8px 12px',
@@ -799,14 +799,14 @@ const styles: Record<string, CSSProperties> = {
     width: '22px',
     height: '22px',
     borderRadius: '999px',
-    background: '#083344',
-    color: '#67e8f9',
+    background: 'rgba(214,178,94,0.16)',
+    color: '#d6b25e',
     fontSize: '12px',
     fontWeight: 900,
   },
   panel: {
-    background: '#0f172a',
-    border: '1px solid #334155',
+    background: '#11100d',
+    border: '1px solid rgba(214,178,94,0.18)',
     borderRadius: '18px',
     padding: '16px',
     minHeight: '220px',
@@ -814,7 +814,7 @@ const styles: Record<string, CSSProperties> = {
     overflow: 'hidden',
   },
   panelKicker: {
-    color: '#94a3b8',
+    color: '#d6b25e',
     fontSize: '12px',
     fontWeight: 900,
     letterSpacing: '0.12em',
@@ -822,13 +822,13 @@ const styles: Record<string, CSSProperties> = {
     margin: 0,
   },
   panelBody: {
-    color: '#cbd5e1',
+    color: '#cfc7b5',
     fontSize: '14px',
     lineHeight: 1.6,
     marginTop: '10px',
   },
   panelText: {
-    color: '#cbd5e1',
+    color: '#cfc7b5',
     lineHeight: 1.7,
     margin: '0 0 12px',
   },
@@ -842,35 +842,36 @@ const styles: Record<string, CSSProperties> = {
     gridTemplateColumns: 'minmax(0, 1fr) auto',
     gap: '16px',
     alignItems: 'center',
-    background: '#082f49',
-    border: '1px solid #0ea5e9',
+    background:
+      'linear-gradient(135deg, rgba(214,178,94,0.12), rgba(255,255,255,0.02))',
+    border: '1px solid rgba(214,178,94,0.28)',
     borderRadius: '22px',
     padding: '18px',
     marginBottom: '16px',
     boxSizing: 'border-box',
   },
   actionTitle: {
-    color: '#f8fafc',
+    color: '#fff8e7',
     fontSize: '22px',
     lineHeight: 1.2,
     margin: '8px 0',
   },
   actionText: {
-    color: '#cbd5e1',
+    color: '#cfc7b5',
     lineHeight: 1.55,
     margin: 0,
     maxWidth: '760px',
   },
   saveMessage: {
-    color: '#cffafe',
+    color: '#d6b25e',
     fontWeight: 900,
     margin: '12px 0 0',
   },
   primaryButton: {
     border: 'none',
     borderRadius: '14px',
-    background: '#67e8f9',
-    color: '#082f49',
+    background: '#c9a227',
+    color: '#050505',
     cursor: 'pointer',
     fontSize: '14px',
     fontWeight: 900,
@@ -879,10 +880,10 @@ const styles: Record<string, CSSProperties> = {
     whiteSpace: 'nowrap',
   },
   secondaryButton: {
-    border: '1px solid #67e8f9',
+    border: '1px solid rgba(214,178,94,0.34)',
     borderRadius: '14px',
-    background: '#0f172a',
-    color: '#cffafe',
+    background: 'rgba(214,178,94,0.1)',
+    color: '#fff8e7',
     cursor: 'pointer',
     fontSize: '14px',
     fontWeight: 900,
@@ -896,11 +897,11 @@ const styles: Record<string, CSSProperties> = {
   },
   compactPre: {
     whiteSpace: 'pre-wrap',
-    background: '#020617',
-    border: '1px solid #1e293b',
+    background: '#050505',
+    border: '1px solid rgba(214,178,94,0.18)',
     borderRadius: '14px',
     padding: '14px',
-    color: '#e2e8f0',
+    color: '#fff8e7',
     lineHeight: 1.5,
     fontSize: '13px',
     overflowX: 'auto',
@@ -912,8 +913,8 @@ const styles: Record<string, CSSProperties> = {
     marginTop: '16px',
   },
   archiveItem: {
-    background: '#0f172a',
-    border: '1px solid #334155',
+    background: '#11100d',
+    border: '1px solid rgba(214,178,94,0.18)',
     borderRadius: '18px',
     padding: '16px',
   },
@@ -925,13 +926,13 @@ const styles: Record<string, CSSProperties> = {
     marginBottom: '14px',
   },
   archiveTitle: {
-    color: '#f8fafc',
+    color: '#fff8e7',
     fontSize: '20px',
     lineHeight: 1.2,
     margin: '8px 0 0',
   },
   archiveDate: {
-    color: '#a5f3fc',
+    color: '#d6b25e',
     fontWeight: 800,
     fontSize: '13px',
     lineHeight: 1.4,
@@ -945,12 +946,12 @@ const styles: Record<string, CSSProperties> = {
     gap: '12px',
   },
   archiveSummary: {
-    color: '#cbd5e1',
+    color: '#cfc7b5',
     lineHeight: 1.65,
     margin: '14px 0 0',
   },
   emptyText: {
-    color: '#cbd5e1',
+    color: '#cfc7b5',
     lineHeight: 1.6,
     margin: 0,
   },
