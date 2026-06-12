@@ -1,62 +1,84 @@
-import Link from "next/link";
+import Link from 'next/link'
 
-const quickLinks = [
-  { label: "System", href: "/system" },
-  { label: "Domains", href: "/domains" },
-  { label: "Case Flow", href: "/case-flow" },
-  { label: "Action Cues", href: "/action-cues" },
-  { label: "Command", href: "/command" },
-  { label: "Audit", href: "/audit" },
-  { label: "Governance", href: "/governance" },
-  { label: "Pressure", href: "/pressure" },
-  { label: "Bottlenecks", href: "/bottlenecks" },
-  { label: "Recovery", href: "/recovery" },
-  { label: "Predictive", href: "/predictive" },
-  { label: "Reliability", href: "/reliability" },
-  { label: "Operations", href: "/operations" },
-  { label: "Coordination", href: "/coordination" },
-  { label: "Request", href: "/request" },
-  { label: "Cases", href: "/cases" },
-  { label: "Routing", href: "/routing" },
-  { label: "Interventions", href: "/interventions" },
-  { label: "Outcomes", href: "/outcomes" },
-  { label: "Trajectory", href: "/trajectory" },
-];
+const quickGroups = [
+  {
+    title: 'Lifecycle',
+    links: [
+      { label: 'Request', href: '/request' },
+      { label: 'Triage', href: '/triage' },
+      { label: 'Cases', href: '/cases' },
+      { label: 'Routing', href: '/routing' },
+      { label: 'Interventions', href: '/interventions' },
+      { label: 'Outcomes', href: '/outcomes' },
+      { label: 'Recovery', href: '/recovery' },
+    ],
+  },
+  {
+    title: 'Executive',
+    links: [
+      { label: 'Situation Room', href: '/situation-room' },
+      { label: 'Executive Center', href: '/executive-center' },
+      { label: 'Command', href: '/command' },
+      { label: 'Executive Report', href: '/executive-report' },
+    ],
+  },
+  {
+    title: 'Intelligence',
+    links: [
+      { label: 'Pressure', href: '/pressure' },
+      { label: 'Trajectory', href: '/trajectory' },
+      { label: 'Predictive', href: '/predictive' },
+      { label: 'Reliability', href: '/reliability' },
+      { label: 'Bottlenecks', href: '/bottlenecks' },
+    ],
+  },
+]
 
 export default function InfrastructureQuickNav() {
   return (
-    <nav className="rounded-3xl border border-blue-900/60 bg-[#0B1B30] p-4 shadow-xl shadow-black/20">
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
+    <nav className="rounded-3xl border border-[#2a2418] bg-[#070707]/95 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">
-              EXAMIA Quick Navigation
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-400">
+              TSINAXA CGI
             </p>
-            <h2 className="mt-1 text-lg font-bold text-white">
-              Governed Stabilization Routes
+
+            <h2 className="mt-1 text-lg font-black text-white">
+              Executive Continuity Navigation
             </h2>
           </div>
 
           <Link
             href="/system"
-            className="rounded-2xl border border-cyan-400/40 bg-cyan-400/10 px-4 py-3 text-center text-sm font-semibold text-cyan-100 transition hover:border-cyan-300 hover:bg-cyan-400/20"
+            className="rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-center text-sm font-semibold text-amber-100 transition hover:border-amber-400 hover:bg-amber-500/20"
           >
-            Full System Map
+            System Stability Board
           </Link>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {quickLinks.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-full border border-blue-800/70 bg-[#07111F] px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-cyan-300 hover:bg-[#102744] hover:text-cyan-100"
-            >
-              {item.label}
-            </Link>
+        <div className="space-y-4">
+          {quickGroups.map((group) => (
+            <div key={group.title}>
+              <p className="mb-2 text-xs font-black uppercase tracking-[0.18em] text-neutral-500">
+                {group.title}
+              </p>
+
+              <div className="flex flex-wrap gap-2">
+                {group.links.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="rounded-full border border-[#2a2418] bg-[#111827]/40 px-4 py-2 text-xs font-semibold text-neutral-200 transition hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-white"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       </div>
     </nav>
-  );
+  )
 }
