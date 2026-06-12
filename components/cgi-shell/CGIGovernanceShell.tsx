@@ -13,9 +13,9 @@ export default function CGIGovernanceShell({
   return (
     <div className="min-h-screen bg-[#050505] text-neutral-100">
       <div className="flex min-h-screen">
-        <aside className="hidden w-80 shrink-0 border-r border-[#2a2418] bg-[#070707] lg:block">
+        <div className="hidden w-80 shrink-0 lg:block">
           <CGISidebar />
-        </aside>
+        </div>
 
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
           <CGITopbar />
