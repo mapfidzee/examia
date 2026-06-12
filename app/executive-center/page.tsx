@@ -190,9 +190,7 @@ function ExecutiveCenterContent() {
         <section style={styles.heroCard}>
           <div>
             <p style={styles.sectionKicker}>Enterprise Continuity Thesis</p>
-
             <h2 style={styles.heroTitle}>{enterpriseReading.trustReading}</h2>
-
             <p style={styles.heroMeaning}>
               {enterpriseReading.continuityThesis}
             </p>
@@ -200,7 +198,6 @@ function ExecutiveCenterContent() {
 
           <div style={styles.questionBox}>
             <p style={styles.metricLabel}>CEO Sentence</p>
-
             <p style={styles.questionText}>{enterpriseReading.ceoSentence}</p>
           </div>
         </section>
@@ -208,11 +205,9 @@ function ExecutiveCenterContent() {
         <section style={styles.apexCard}>
           <div>
             <p style={styles.sectionKicker}>Executive Decision Layer</p>
-
             <h2 style={styles.cardTitle}>
               {enterpriseReading.stabilityThesis}
             </h2>
-
             <p style={styles.bodyText}>
               {enterpriseReading.finalInterpretation}
             </p>
@@ -238,18 +233,38 @@ function ExecutiveCenterContent() {
           </div>
         </section>
 
+        <section style={styles.postureCard}>
+          <p style={styles.sectionKicker}>Executive Action Posture</p>
+
+          <h2 style={styles.cardTitle}>{synthesis.posture}</h2>
+
+          <p style={styles.bodyText}>{enterpriseReading.executiveDecision}</p>
+
+          <div style={styles.priorityGrid}>
+            <PriorityItem
+              title="Dominant Concern"
+              body={deriveDominantConcern(synthesis)}
+            />
+            <PriorityItem
+              title="Evidence Meaning"
+              body={synthesis.evidenceStatus}
+            />
+            <PriorityItem
+              title="Governance Meaning"
+              body="Leadership visibility must remain proportional, non-punitive, evidence-aware, chain-aware, and memory-preserving."
+            />
+          </div>
+        </section>
+
         <section style={styles.trustPanel}>
           <div>
             <p style={styles.sectionKicker}>Trust Question</p>
-
             <h2 style={styles.cardTitle}>{enterpriseReading.trustReading}</h2>
-
             <p style={styles.bodyText}>{enterpriseReading.trustMeaning}</p>
           </div>
 
           <div style={styles.questionBox}>
             <p style={styles.metricLabel}>Board-Level Warning</p>
-
             <p style={styles.questionText}>
               {enterpriseReading.boardLevelWarning}
             </p>
@@ -294,17 +309,14 @@ function ExecutiveCenterContent() {
         <section style={styles.chainHero}>
           <div>
             <p style={styles.sectionKicker}>Executive Continuity Chain</p>
-
             <h2 style={styles.cardTitle}>
               Origin: {continuityChain.dominantOrigin}
             </h2>
-
             <p style={styles.bodyText}>{continuityChain.chainNarrative}</p>
           </div>
 
           <div style={styles.chainConfidenceBox}>
             <p style={styles.metricLabel}>Chain Confidence</p>
-
             <p style={styles.chainConfidence}>
               {continuityChain.chainConfidence}
             </p>
@@ -389,9 +401,7 @@ function ExecutiveCenterContent() {
         <section style={styles.memoryCard}>
           <div>
             <p style={styles.sectionKicker}>Institutional Memory</p>
-
             <h2 style={styles.cardTitle}>{synthesis.memoryStatus}</h2>
-
             <p style={styles.bodyText}>
               {enterpriseReading.institutionalMeaning}
             </p>
@@ -408,6 +418,18 @@ function ExecutiveCenterContent() {
               value={synthesis.survivabilityMeaning}
             />
           </div>
+        </section>
+
+        <section style={styles.briefCard}>
+          <p style={styles.sectionKicker}>Copy-Ready CEO Brief</p>
+
+          <h2 style={styles.cardTitle}>
+            One enterprise reading across pressure, recovery, evidence, command,
+            coordination, cross-site exposure, situation posture, audit, and
+            institutional memory.
+          </h2>
+
+          <pre style={styles.summaryBox}>{copyReadyExecutiveBrief}</pre>
         </section>
 
         <section style={styles.gridTwo}>
@@ -458,29 +480,6 @@ function ExecutiveCenterContent() {
           />
         </section>
 
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Executive Action Posture</p>
-
-          <h2 style={styles.cardTitle}>{synthesis.posture}</h2>
-
-          <p style={styles.bodyText}>{enterpriseReading.executiveDecision}</p>
-
-          <div style={styles.priorityGrid}>
-            <PriorityItem
-              title="Dominant Concern"
-              body={deriveDominantConcern(synthesis)}
-            />
-            <PriorityItem
-              title="Evidence Meaning"
-              body={synthesis.evidenceStatus}
-            />
-            <PriorityItem
-              title="Governance Meaning"
-              body="Leadership visibility must remain proportional, non-punitive, evidence-aware, chain-aware, and memory-preserving."
-            />
-          </div>
-        </section>
-
         {recoveryMemory.length > 0 && (
           <section style={styles.card}>
             <p style={styles.sectionKicker}>Recovery-to-Executive Synthesis</p>
@@ -527,18 +526,6 @@ function ExecutiveCenterContent() {
             </div>
           </section>
         )}
-
-        <section style={styles.briefCard}>
-          <p style={styles.sectionKicker}>Copy-Ready CEO Brief</p>
-
-          <h2 style={styles.cardTitle}>
-            One enterprise reading across pressure, recovery, evidence, command,
-            coordination, cross-site exposure, situation posture, audit, and
-            institutional memory.
-          </h2>
-
-          <pre style={styles.summaryBox}>{copyReadyExecutiveBrief}</pre>
-        </section>
 
         <section style={styles.card}>
           <p style={styles.sectionKicker}>Historical Memory Trail</p>
@@ -751,7 +738,9 @@ const styles: Record<string, CSSProperties> = {
     gap: 14,
   },
 
+  postureCard: v.briefPanel,
   trustPanel: v.warningPanel,
+
   chainHero: v.executiveHeroSplit,
   chainConfidenceBox: v.executiveQuestionCard,
   chainConfidence: v.executiveMetricValue,
