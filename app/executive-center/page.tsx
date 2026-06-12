@@ -183,18 +183,6 @@ function ExecutiveCenterContent() {
             evidence, audit meaning, and institutional memory into one executive
             continuity thesis.
           </p>
-
-          <section style={styles.doctrinePanel}>
-            <p style={styles.doctrineTitle}>EXECUTIVE CENTER DOCTRINE</p>
-
-            <div style={styles.doctrineGrid}>
-              {DOCTRINE.map((item) => (
-                <div key={item} style={styles.doctrineCard}>
-                  {item}
-                </div>
-              ))}
-            </div>
-          </section>
         </section>
 
         {message && <div style={styles.message}>{message}</div>}
@@ -219,7 +207,7 @@ function ExecutiveCenterContent() {
 
         <section style={styles.apexCard}>
           <div>
-            <p style={styles.sectionKicker}>Institutional Stability Thesis</p>
+            <p style={styles.sectionKicker}>Executive Decision Layer</p>
 
             <h2 style={styles.cardTitle}>
               {enterpriseReading.stabilityThesis}
@@ -232,6 +220,10 @@ function ExecutiveCenterContent() {
 
           <div style={styles.apexStack}>
             <MemoryMetric
+              label="Executive Decision"
+              value={enterpriseReading.executiveDecision}
+            />
+            <MemoryMetric
               label="Trust Level"
               value={enterpriseReading.trustLevel}
             />
@@ -243,18 +235,32 @@ function ExecutiveCenterContent() {
               label="Secondary Vulnerability"
               value={enterpriseReading.secondaryVulnerability}
             />
-            <MemoryMetric
-              label="Executive Decision"
-              value={enterpriseReading.executiveDecision}
-            />
+          </div>
+        </section>
+
+        <section style={styles.trustPanel}>
+          <div>
+            <p style={styles.sectionKicker}>Trust Question</p>
+
+            <h2 style={styles.cardTitle}>{enterpriseReading.trustReading}</h2>
+
+            <p style={styles.bodyText}>{enterpriseReading.trustMeaning}</p>
+          </div>
+
+          <div style={styles.questionBox}>
+            <p style={styles.metricLabel}>Board-Level Warning</p>
+
+            <p style={styles.questionText}>
+              {enterpriseReading.boardLevelWarning}
+            </p>
           </div>
         </section>
 
         <section style={styles.card}>
-          <p style={styles.sectionKicker}>Continuity Derivation Standard</p>
+          <p style={styles.sectionKicker}>Required Movement</p>
 
           <h2 style={styles.cardTitle}>
-            Executive Center now derives meaning through the CGI doctrine layer.
+            Executive Center derives meaning through the CGI doctrine layer.
           </h2>
 
           <div style={styles.priorityGrid}>
@@ -334,24 +340,6 @@ function ExecutiveCenterContent() {
           </ChainPanel>
         </section>
 
-        <section style={styles.trustPanel}>
-          <div>
-            <p style={styles.sectionKicker}>Enterprise Trust Reading</p>
-
-            <h2 style={styles.cardTitle}>{enterpriseReading.trustReading}</h2>
-
-            <p style={styles.bodyText}>{enterpriseReading.trustMeaning}</p>
-          </div>
-
-          <div style={styles.questionBox}>
-            <p style={styles.metricLabel}>Board-Level Warning</p>
-
-            <p style={styles.questionText}>
-              {enterpriseReading.boardLevelWarning}
-            </p>
-          </div>
-        </section>
-
         <section style={styles.summaryGrid}>
           <MetricCard
             label="Active Instability"
@@ -400,7 +388,7 @@ function ExecutiveCenterContent() {
 
         <section style={styles.memoryCard}>
           <div>
-            <p style={styles.sectionKicker}>Institutional Meaning</p>
+            <p style={styles.sectionKicker}>Institutional Memory</p>
 
             <h2 style={styles.cardTitle}>{synthesis.memoryStatus}</h2>
 
@@ -470,6 +458,29 @@ function ExecutiveCenterContent() {
           />
         </section>
 
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Executive Action Posture</p>
+
+          <h2 style={styles.cardTitle}>{synthesis.posture}</h2>
+
+          <p style={styles.bodyText}>{enterpriseReading.executiveDecision}</p>
+
+          <div style={styles.priorityGrid}>
+            <PriorityItem
+              title="Dominant Concern"
+              body={deriveDominantConcern(synthesis)}
+            />
+            <PriorityItem
+              title="Evidence Meaning"
+              body={synthesis.evidenceStatus}
+            />
+            <PriorityItem
+              title="Governance Meaning"
+              body="Leadership visibility must remain proportional, non-punitive, evidence-aware, chain-aware, and memory-preserving."
+            />
+          </div>
+        </section>
+
         {recoveryMemory.length > 0 && (
           <section style={styles.card}>
             <p style={styles.sectionKicker}>Recovery-to-Executive Synthesis</p>
@@ -517,30 +528,7 @@ function ExecutiveCenterContent() {
           </section>
         )}
 
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Executive Action Posture</p>
-
-          <h2 style={styles.cardTitle}>{synthesis.posture}</h2>
-
-          <p style={styles.bodyText}>{enterpriseReading.executiveDecision}</p>
-
-          <div style={styles.priorityGrid}>
-            <PriorityItem
-              title="Dominant Concern"
-              body={deriveDominantConcern(synthesis)}
-            />
-            <PriorityItem
-              title="Evidence Meaning"
-              body={synthesis.evidenceStatus}
-            />
-            <PriorityItem
-              title="Governance Meaning"
-              body="Leadership visibility must remain proportional, non-punitive, evidence-aware, chain-aware, and memory-preserving."
-            />
-          </div>
-        </section>
-
-        <section style={styles.card}>
+        <section style={styles.briefCard}>
           <p style={styles.sectionKicker}>Copy-Ready CEO Brief</p>
 
           <h2 style={styles.cardTitle}>
@@ -609,6 +597,18 @@ function ExecutiveCenterContent() {
           <button onClick={loadExecutiveCenter} style={styles.primaryButton}>
             Refresh Executive Center
           </button>
+        </section>
+
+        <section style={styles.doctrinePanel}>
+          <p style={styles.doctrineTitle}>EXECUTIVE CENTER DOCTRINE</p>
+
+          <div style={styles.doctrineGrid}>
+            {DOCTRINE.map((item) => (
+              <div key={item} style={styles.doctrineCard}>
+                {item}
+              </div>
+            ))}
+          </div>
         </section>
       </div>
     </main>
@@ -721,40 +721,43 @@ function Panel({ title, children }: { title: string; children: ReactNode }) {
 
 const styles: Record<string, CSSProperties> = {
   page: v.page,
-  container: v.container,
+  container: v.executivePageStack,
+
   header: {
-    marginBottom: 28,
+    marginBottom: 2,
   },
   kicker: v.kicker,
   title: v.pageTitle,
   subtitle: v.subtitle,
 
-  doctrinePanel: v.darkPanel,
-  doctrineTitle: v.sectionKicker,
-  doctrineGrid: v.gridFour,
-  doctrineCard: mergeCGIStyles(v.goldCard, {
-    color: '#fff8e7',
-    fontSize: 12,
-    lineHeight: 1.45,
-    fontWeight: 800,
-  }),
-
   message: v.message,
 
-  heroCard: v.heroSplit,
-  apexCard: v.emphasisPanel,
+  heroCard: v.executiveHeroSplit,
+  heroTitle: v.executiveTitle,
+  heroMeaning: v.executiveBodyText,
+  questionBox: v.executiveQuestionCard,
+  questionText: {
+    color: '#fff8e7',
+    fontSize: 22,
+    lineHeight: 1.25,
+    margin: '10px 0 0',
+    fontWeight: 900,
+  },
+
+  apexCard: v.decisionPanel,
   apexStack: {
     display: 'grid',
     gridTemplateColumns: '1fr',
     gap: 14,
   },
-  trustPanel: v.heroSplit,
-  chainHero: v.heroSplit,
-  chainConfidenceBox: v.goldCard,
-  chainConfidence: v.metricValueGold,
 
-  chainPath: v.gridFive,
-  chainStep: v.card,
+  trustPanel: v.warningPanel,
+  chainHero: v.executiveHeroSplit,
+  chainConfidenceBox: v.executiveQuestionCard,
+  chainConfidence: v.executiveMetricValue,
+
+  chainPath: v.executiveChainPath,
+  chainStep: v.quietCard,
   chainStepActive: v.goldCard,
   chainStepValue: {
     color: '#fff8e7',
@@ -764,26 +767,15 @@ const styles: Record<string, CSSProperties> = {
     margin: '8px 0 0',
   },
   chainGrid: v.gridFour,
-  chainPanelCard: v.card,
+  chainPanelCard: v.quietCard,
 
   sectionKicker: v.sectionKicker,
-  heroTitle: v.pageTitle,
-  heroMeaning: v.bodyText,
-  questionBox: v.goldCard,
-  questionText: {
-    color: '#fff8e7',
-    fontSize: 22,
-    lineHeight: 1.25,
-    margin: '10px 0 0',
-    fontWeight: 900,
-  },
-
-  summaryGrid: v.gridFour,
-  metricCard: v.card,
+  summaryGrid: v.executiveMetricStrip,
+  metricCard: v.executiveMetricCard,
   metricLabel: v.metricLabel,
-  metricValue: v.metricValueGold,
+  metricValue: v.executiveMetricValue,
 
-  memoryCard: v.emphasisPanel,
+  memoryCard: v.memoryPanel,
   memoryGrid: {
     display: 'grid',
     gridTemplateColumns: '1fr',
@@ -799,8 +791,8 @@ const styles: Record<string, CSSProperties> = {
   },
 
   gridTwo: v.gridTwo,
-  signalStrip: v.gridThree,
-  signalCard: v.card,
+  signalStrip: v.executiveSignalStrip,
+  signalCard: v.executiveMetricCard,
   signalValue: {
     color: '#d6b25e',
     fontSize: 20,
@@ -811,8 +803,9 @@ const styles: Record<string, CSSProperties> = {
   },
 
   card: v.darkPanel,
-  cardTitle: v.panelTitle,
-  bodyText: v.bodyText,
+  briefCard: v.briefPanel,
+  cardTitle: v.executivePanelTitle,
+  bodyText: v.executiveBodyText,
   priorityGrid: v.gridThree,
   priorityItem: v.goldCard,
   priorityBody: {
@@ -823,7 +816,7 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 700,
   },
 
-  panel: v.card,
+  panel: v.quietCard,
   panelKicker: v.sectionKicker,
   panelBody: {
     color: '#cfc7b5',
@@ -832,12 +825,22 @@ const styles: Record<string, CSSProperties> = {
     marginTop: 10,
   },
 
+  doctrinePanel: v.doctrinePanel,
+  doctrineTitle: v.sectionKicker,
+  doctrineGrid: v.gridFour,
+  doctrineCard: mergeCGIStyles(v.goldCard, {
+    color: '#fff8e7',
+    fontSize: 12,
+    lineHeight: 1.45,
+    fontWeight: 800,
+  }),
+
   emptyState: v.emptyState,
   tableWrap: v.tableWrap,
   table: v.table,
   th: v.th,
   td: v.td,
-  summaryBox: v.summaryBox,
+  summaryBox: v.executiveSummaryBox,
   primaryButton: mergeCGIStyles(v.primaryButton, {
     width: '100%',
     borderRadius: 14,
