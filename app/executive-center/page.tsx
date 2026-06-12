@@ -5,6 +5,11 @@ import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
+import ExecutiveActionPlanPanel from '@/components/executive/ExecutiveActionPlanPanel'
+import ExecutiveConfidencePanel from '@/components/executive/ExecutiveConfidencePanel'
+import ExecutiveDeltaPanel from '@/components/executive/ExecutiveDeltaPanel'
+import ExecutiveRecommendationPanel from '@/components/executive/ExecutiveRecommendationPanel'
+import ExecutiveRiskPanel from '@/components/executive/ExecutiveRiskPanel'
 import { buildCGIExecutiveActionPlan } from '@/lib/cgiExecutiveActionPlanEngine'
 import { buildCGIExecutiveConfidenceReading } from '@/lib/cgiExecutiveConfidenceEngine'
 import { buildCGIExecutiveContinuityChain } from '@/lib/cgiExecutiveContinuityChainEngine'
@@ -335,276 +340,17 @@ function ExecutiveCenterContent() {
           </div>
         </section>
 
-        <section style={styles.deltaPanel}>
-          <div>
-            <p style={styles.sectionKicker}>Executive Delta Intelligence</p>
-            <h2 style={styles.cardTitle}>{executiveDelta.executiveChange}</h2>
-            <p style={styles.bodyText}>{executiveDelta.boardSentence}</p>
-          </div>
+        <ExecutiveDeltaPanel delta={executiveDelta} />
 
-          <div style={styles.deltaMetricGrid}>
-            <MemoryMetric
-              label="Previous Reading"
-              value={executiveDelta.previousReading}
-            />
-            <MemoryMetric
-              label="Current Reading"
-              value={executiveDelta.currentReading}
-            />
-            <MemoryMetric label="Direction" value={executiveDelta.direction} />
-            <MemoryMetric
-              label="Confidence"
-              value={executiveDelta.confidence}
-            />
-          </div>
+        <ExecutiveRecommendationPanel
+          recommendation={executiveRecommendation}
+        />
 
-          <div style={styles.deltaExplanationGrid}>
-            <PriorityItem
-              title="Why It Changed"
-              body={executiveDelta.whyItChanged}
-            />
-            <PriorityItem
-              title="What Improved"
-              body={executiveDelta.whatImproved}
-            />
-            <PriorityItem
-              title="What Worsened"
-              body={executiveDelta.whatWorsened}
-            />
-            <PriorityItem
-              title="What Could Break It Again"
-              body={executiveDelta.whatCouldBreakItAgain}
-            />
-          </div>
+        <ExecutiveActionPlanPanel actionPlan={executiveActionPlan} />
 
-          <div style={styles.threatStack}>
-            <p style={styles.metricLabel}>Institutional Threat Stack</p>
+        <ExecutiveRiskPanel risk={executiveRisk} />
 
-            <div style={styles.threatStackGrid}>
-              {executiveDelta.threatStack.map((threat, index) => (
-                <article key={`${threat}-${index}`} style={styles.threatCard}>
-                  <span style={styles.threatNumber}>
-                    {String(index + 1).padStart(2, '0')}
-                  </span>
-                  <span style={styles.threatText}>{threat}</span>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section style={styles.recommendationPanel}>
-          <div>
-            <p style={styles.sectionKicker}>Executive Recommendation</p>
-            <h2 style={styles.cardTitle}>
-              {executiveRecommendation.recommendation}
-            </h2>
-            <p style={styles.bodyText}>
-              {executiveRecommendation.boardSentence}
-            </p>
-          </div>
-
-          <div style={styles.recommendationMetricGrid}>
-            <MemoryMetric
-              label="Posture"
-              value={executiveRecommendation.posture}
-            />
-            <MemoryMetric
-              label="Urgency"
-              value={executiveRecommendation.urgency}
-            />
-            <MemoryMetric
-              label="Required Owner"
-              value={executiveRecommendation.requiredOwner}
-            />
-            <MemoryMetric
-              label="Next Move"
-              value={executiveRecommendation.nextExecutiveMove}
-            />
-          </div>
-
-          <div style={styles.recommendationGrid}>
-            <PriorityItem
-              title="Rationale"
-              body={executiveRecommendation.rationale}
-            />
-            <PriorityItem
-              title="Consequence Of Delay"
-              body={executiveRecommendation.consequenceOfDelay}
-            />
-            <PriorityItem
-              title="Required Evidence"
-              body={executiveRecommendation.requiredEvidence}
-            />
-          </div>
-        </section>
-
-        <section style={styles.actionPlanPanel}>
-          <div>
-            <p style={styles.sectionKicker}>Executive Action Plan</p>
-            <h2 style={styles.cardTitle}>
-              {executiveActionPlan.immediateAction}
-            </h2>
-            <p style={styles.bodyText}>{executiveActionPlan.boardSentence}</p>
-          </div>
-
-          <div style={styles.actionPlanMetricGrid}>
-            <MemoryMetric
-              label="Owner"
-              value={executiveActionPlan.executiveOwner}
-            />
-            <MemoryMetric
-              label="Review Window"
-              value={executiveActionPlan.reviewWindow}
-            />
-            <MemoryMetric
-              label="Escalation Rule"
-              value={executiveActionPlan.escalationRule}
-            />
-            <MemoryMetric
-              label="Required Evidence"
-              value={executiveActionPlan.requiredEvidence}
-            />
-          </div>
-
-          <div style={styles.actionSequencePanel}>
-            <p style={styles.metricLabel}>Action Sequence</p>
-
-            <div style={styles.actionSequenceGrid}>
-              {executiveActionPlan.actionSequence.map((item, index) => (
-                <article
-                  key={`${item}-${index}`}
-                  style={styles.actionSequenceCard}
-                >
-                  <span style={styles.threatNumber}>
-                    {String(index + 1).padStart(2, '0')}
-                  </span>
-                  <span style={styles.threatText}>{item}</span>
-                </article>
-              ))}
-            </div>
-          </div>
-
-          <div style={styles.recommendationGrid}>
-            <PriorityItem
-              title="Success Condition"
-              body={executiveActionPlan.successCondition}
-            />
-            <PriorityItem
-              title="Failure Condition"
-              body={executiveActionPlan.failureCondition}
-            />
-            <PriorityItem
-              title="Evidence Standard"
-              body={executiveActionPlan.requiredEvidence}
-            />
-          </div>
-        </section>
-
-        <section style={styles.riskPanel}>
-          <div>
-            <p style={styles.sectionKicker}>Executive Risk</p>
-            <h2 style={styles.cardTitle}>{executiveRisk.topRisk}</h2>
-            <p style={styles.bodyText}>{executiveRisk.boardSentence}</p>
-          </div>
-
-          <div style={styles.riskMetricGrid}>
-            <MemoryMetric label="Risk Level" value={executiveRisk.riskLevel} />
-            <MemoryMetric label="Trend" value={executiveRisk.riskTrend} />
-            <MemoryMetric
-              label="Probability"
-              value={executiveRisk.probability}
-            />
-            <MemoryMetric label="Impact" value={executiveRisk.impact} />
-          </div>
-
-          <div style={styles.riskGrid}>
-            <PriorityItem
-              title="Risk Rationale"
-              body={executiveRisk.riskRationale}
-            />
-            <PriorityItem
-              title="Protection Move"
-              body={executiveRisk.protectionMove}
-            />
-            <PriorityItem
-              title="Survivability Risk"
-              body={executiveRisk.survivabilityRisk}
-            />
-            <PriorityItem
-              title="Coordination Risk"
-              body={executiveRisk.coordinationRisk}
-            />
-            <PriorityItem
-              title="Recurrence Risk"
-              body={executiveRisk.recurrenceRisk}
-            />
-            <PriorityItem
-              title="Evidence Risk"
-              body={executiveRisk.evidenceRisk}
-            />
-          </div>
-        </section>
-
-        <section style={styles.confidencePanel}>
-          <div>
-            <p style={styles.sectionKicker}>Executive Confidence</p>
-            <h2 style={styles.cardTitle}>
-              {executiveConfidence.confidenceScore}% •{' '}
-              {executiveConfidence.confidenceLevel}
-            </h2>
-            <p style={styles.bodyText}>{executiveConfidence.boardSentence}</p>
-          </div>
-
-          <div style={styles.confidenceMetricGrid}>
-            <MemoryMetric
-              label="Data Sufficiency"
-              value={executiveConfidence.dataSufficiency}
-            />
-            <MemoryMetric
-              label="Evidence"
-              value={executiveConfidence.evidenceConfidence}
-            />
-            <MemoryMetric
-              label="Memory"
-              value={executiveConfidence.memoryCoverage}
-            />
-            <MemoryMetric
-              label="Conclusion"
-              value={executiveConfidence.conclusionConfidence}
-            />
-          </div>
-
-          <div style={styles.riskGrid}>
-            <PriorityItem
-              title="Confidence Rationale"
-              body={executiveConfidence.confidenceRationale}
-            />
-            <PriorityItem
-              title="Recovery Confidence"
-              body={executiveConfidence.recoveryConfidence}
-            />
-            <PriorityItem
-              title="Recommendation Confidence"
-              body={executiveConfidence.recommendationConfidence}
-            />
-          </div>
-
-          <div style={styles.threatStack}>
-            <p style={styles.metricLabel}>Confidence Gaps</p>
-
-            <div style={styles.threatStackGrid}>
-              {executiveConfidence.confidenceGaps.map((gap, index) => (
-                <article key={`${gap}-${index}`} style={styles.threatCard}>
-                  <span style={styles.threatNumber}>
-                    {String(index + 1).padStart(2, '0')}
-                  </span>
-                  <span style={styles.threatText}>{gap}</span>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
+        <ExecutiveConfidencePanel confidence={executiveConfidence} />
 
         <section style={styles.apexCard}>
           <div>
@@ -1135,55 +881,6 @@ const styles: Record<string, CSSProperties> = {
     margin: '10px 0 0',
     fontWeight: 900,
   },
-
-  deltaPanel: v.decisionPanel,
-  deltaMetricGrid: v.executiveMetricStrip,
-  deltaExplanationGrid: v.gridFour,
-  threatStack: v.darkPanel,
-  threatStackGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: 12,
-    marginTop: 14,
-  },
-  threatCard: v.quietCard,
-  threatNumber: {
-    display: 'block',
-    color: '#d6b25e',
-    fontSize: 12,
-    fontWeight: 950,
-    letterSpacing: '0.14em',
-    marginBottom: 8,
-  },
-  threatText: {
-    display: 'block',
-    color: '#fff8e7',
-    fontSize: 13,
-    fontWeight: 900,
-    lineHeight: 1.4,
-  },
-
-  recommendationPanel: v.decisionPanel,
-  recommendationMetricGrid: v.executiveMetricStrip,
-  recommendationGrid: v.gridThree,
-
-  actionPlanPanel: v.decisionPanel,
-  actionPlanMetricGrid: v.executiveMetricStrip,
-  actionSequencePanel: v.darkPanel,
-  actionSequenceGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: 12,
-    marginTop: 14,
-  },
-  actionSequenceCard: v.quietCard,
-
-  riskPanel: v.warningPanel,
-  riskMetricGrid: v.executiveMetricStrip,
-  riskGrid: v.gridThree,
-
-  confidencePanel: v.memoryPanel,
-  confidenceMetricGrid: v.executiveMetricStrip,
 
   apexCard: v.decisionPanel,
   apexStack: {
