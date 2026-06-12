@@ -6,6 +6,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { buildCGIExecutiveContinuityChain } from '@/lib/cgiExecutiveContinuityChainEngine'
+import { buildCGIExecutiveDeltaReading } from '@/lib/cgiExecutiveDeltaEngine'
 import {
   buildCopyReadyExecutiveBrief,
   buildEnterpriseContinuityReading,
@@ -157,6 +158,26 @@ function ExecutiveCenterContent() {
     [synthesis, continuityChain],
   )
 
+  const executiveDelta = useMemo(
+    () =>
+      buildCGIExecutiveDeltaReading({
+        current: {
+          activeInstability: synthesis.activeInstability,
+          recoveryRecords: synthesis.recoveryRecords,
+          commandPressure: synthesis.commandPressure,
+          historicalMemory: synthesis.historicalMemory,
+          coordinationPressure: synthesis.coordinationPressure,
+          crossSitePressure: synthesis.crossSitePressure,
+          auditPressure: synthesis.auditPressure,
+          safeguardingVisible: synthesis.safeguardingVisible,
+          recurrenceVisible: synthesis.recurrenceVisible,
+          fragileRecovery: synthesis.fragileRecovery,
+        },
+        previous: null,
+      }),
+    [synthesis],
+  )
+
   const copyReadyExecutiveBrief = useMemo(
     () =>
       buildCopyReadyExecutiveBrief(
@@ -180,8 +201,8 @@ function ExecutiveCenterContent() {
           <p style={styles.subtitle}>
             Apex leadership interpretation layer for converting recovery,
             command, coordination, cross-site exposure, situation posture,
-            evidence, audit meaning, and institutional memory into one executive
-            continuity thesis.
+            evidence, audit meaning, delta movement, and institutional memory
+            into one executive continuity thesis.
           </p>
         </section>
 
@@ -199,6 +220,64 @@ function ExecutiveCenterContent() {
           <div style={styles.questionBox}>
             <p style={styles.metricLabel}>CEO Sentence</p>
             <p style={styles.questionText}>{enterpriseReading.ceoSentence}</p>
+          </div>
+        </section>
+
+        <section style={styles.deltaPanel}>
+          <div>
+            <p style={styles.sectionKicker}>Executive Delta Intelligence</p>
+            <h2 style={styles.cardTitle}>{executiveDelta.executiveChange}</h2>
+            <p style={styles.bodyText}>{executiveDelta.boardSentence}</p>
+          </div>
+
+          <div style={styles.deltaMetricGrid}>
+            <MemoryMetric
+              label="Previous Reading"
+              value={executiveDelta.previousReading}
+            />
+            <MemoryMetric
+              label="Current Reading"
+              value={executiveDelta.currentReading}
+            />
+            <MemoryMetric label="Direction" value={executiveDelta.direction} />
+            <MemoryMetric
+              label="Confidence"
+              value={executiveDelta.confidence}
+            />
+          </div>
+
+          <div style={styles.deltaExplanationGrid}>
+            <PriorityItem
+              title="Why It Changed"
+              body={executiveDelta.whyItChanged}
+            />
+            <PriorityItem
+              title="What Improved"
+              body={executiveDelta.whatImproved}
+            />
+            <PriorityItem
+              title="What Worsened"
+              body={executiveDelta.whatWorsened}
+            />
+            <PriorityItem
+              title="What Could Break It Again"
+              body={executiveDelta.whatCouldBreakItAgain}
+            />
+          </div>
+
+          <div style={styles.threatStack}>
+            <p style={styles.metricLabel}>Institutional Threat Stack</p>
+
+            <div style={styles.threatStackGrid}>
+              {executiveDelta.threatStack.map((threat, index) => (
+                <article key={`${threat}-${index}`} style={styles.threatCard}>
+                  <span style={styles.threatNumber}>
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <span style={styles.threatText}>{threat}</span>
+                </article>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -425,8 +504,8 @@ function ExecutiveCenterContent() {
 
           <h2 style={styles.cardTitle}>
             One enterprise reading across pressure, recovery, evidence, command,
-            coordination, cross-site exposure, situation posture, audit, and
-            institutional memory.
+            coordination, cross-site exposure, situation posture, audit,
+            executive delta, and institutional memory.
           </h2>
 
           <pre style={styles.summaryBox}>{copyReadyExecutiveBrief}</pre>
@@ -729,6 +808,33 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.25,
     margin: '10px 0 0',
     fontWeight: 900,
+  },
+
+  deltaPanel: v.decisionPanel,
+  deltaMetricGrid: v.executiveMetricStrip,
+  deltaExplanationGrid: v.gridFour,
+  threatStack: v.darkPanel,
+  threatStackGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 14,
+  },
+  threatCard: v.quietCard,
+  threatNumber: {
+    display: 'block',
+    color: '#d6b25e',
+    fontSize: 12,
+    fontWeight: 950,
+    letterSpacing: '0.14em',
+    marginBottom: 8,
+  },
+  threatText: {
+    display: 'block',
+    color: '#fff8e7',
+    fontSize: 13,
+    fontWeight: 900,
+    lineHeight: 1.4,
   },
 
   apexCard: v.decisionPanel,
