@@ -5,9 +5,7 @@ import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
-import {
-  buildCGIExecutiveContinuityChain,
-} from '@/lib/cgiExecutiveContinuityChainEngine'
+import { buildCGIExecutiveContinuityChain } from '@/lib/cgiExecutiveContinuityChainEngine'
 import {
   buildCopyReadyExecutiveBrief,
   buildEnterpriseContinuityReading,
@@ -15,6 +13,10 @@ import {
   buildRecoveryMemoryRecords,
   deriveDominantConcern,
 } from '@/lib/cgiExecutiveMeaningDoctrineEngine'
+import {
+  cgiVisualStyles as v,
+  mergeCGIStyles,
+} from '@/lib/cgiVisualSystem'
 import { supabase } from '../../lib/supabase'
 
 type StabilityCase = {
@@ -171,7 +173,9 @@ function ExecutiveCenterContent() {
         <section style={styles.header}>
           <p style={styles.kicker}>TSINAXA CGI • EXECUTIVE CENTER</p>
 
-          <h1 style={styles.title}>Enterprise Continuity Intelligence Center</h1>
+          <h1 style={styles.title}>
+            Enterprise Continuity Intelligence Center
+          </h1>
 
           <p style={styles.subtitle}>
             Apex leadership interpretation layer for converting recovery,
@@ -217,7 +221,9 @@ function ExecutiveCenterContent() {
           <div>
             <p style={styles.sectionKicker}>Institutional Stability Thesis</p>
 
-            <h2 style={styles.cardTitle}>{enterpriseReading.stabilityThesis}</h2>
+            <h2 style={styles.cardTitle}>
+              {enterpriseReading.stabilityThesis}
+            </h2>
 
             <p style={styles.bodyText}>
               {enterpriseReading.finalInterpretation}
@@ -624,10 +630,10 @@ function ChainStep({
 }) {
   return (
     <article
-      style={{
-        ...styles.chainStep,
-        ...(active ? styles.chainStepActive : {}),
-      }}
+      style={mergeCGIStyles(
+        styles.chainStep,
+        active && styles.chainStepActive,
+      )}
     >
       <p style={styles.metricLabel}>{label}</p>
       <p style={styles.chainStepValue}>{value}</p>
@@ -686,13 +692,7 @@ function MetricCard({
   )
 }
 
-function MemoryMetric({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
+function MemoryMetric({ label, value }: { label: string; value: string }) {
   return (
     <article style={styles.memoryMetric}>
       <p style={styles.metricLabel}>{label}</p>
@@ -701,13 +701,7 @@ function MemoryMetric({
   )
 }
 
-function PriorityItem({
-  title,
-  body,
-}: {
-  title: string
-  body: string
-}) {
+function PriorityItem({ title, body }: { title: string; body: string }) {
   return (
     <article style={styles.priorityItem}>
       <p style={styles.panelKicker}>{title}</p>
@@ -716,13 +710,7 @@ function PriorityItem({
   )
 }
 
-function Panel({
-  title,
-  children,
-}: {
-  title: string
-  children: ReactNode
-}) {
+function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section style={styles.panel}>
       <p style={styles.panelKicker}>{title}</p>
@@ -731,423 +719,127 @@ function Panel({
   )
 }
 
-const gold = '#d6b25e'
-const mutedGold = '#9f8142'
-const deepBlack = '#030303'
-const panelBlack = '#090807'
-const cardBlack = '#11100d'
-const softLine = 'rgba(214,178,94,0.24)'
-
 const styles: Record<string, CSSProperties> = {
-  page: {
-    minHeight: '100vh',
-    color: '#f5f0e6',
-    overflowX: 'hidden',
-    background:
-      'radial-gradient(circle at top right, rgba(214,178,94,0.08), transparent 32%), #030303',
-  },
-  container: {
-    width: '100%',
-    maxWidth: '1120px',
-    margin: '0 auto',
-    padding: '16px 28px 72px',
-    boxSizing: 'border-box',
-  },
+  page: v.page,
+  container: v.container,
   header: {
-    marginBottom: '28px',
+    marginBottom: 28,
   },
-  kicker: {
-    color: gold,
-    fontSize: '11px',
-    fontWeight: 900,
-    letterSpacing: '2px',
-    margin: 0,
-  },
-  title: {
+  kicker: v.kicker,
+  title: v.pageTitle,
+  subtitle: v.subtitle,
+
+  doctrinePanel: v.darkPanel,
+  doctrineTitle: v.sectionKicker,
+  doctrineGrid: v.gridFour,
+  doctrineCard: mergeCGIStyles(v.goldCard, {
     color: '#fff8e7',
-    fontSize: 'clamp(34px, 4vw, 48px)',
-    lineHeight: 1,
-    margin: '10px 0',
-    letterSpacing: '-0.05em',
-  },
-  subtitle: {
-    color: '#cfc7b5',
-    maxWidth: '820px',
-    lineHeight: 1.65,
-    fontSize: '14px',
-    margin: 0,
-  },
-  doctrinePanel: {
-    background: panelBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '20px',
-    padding: '22px',
-    marginTop: '22px',
-  },
-  doctrineTitle: {
-    color: gold,
-    fontSize: '10px',
-    fontWeight: 900,
-    letterSpacing: '0.15em',
-    margin: '0 0 14px',
-  },
-  doctrineGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '14px',
-  },
-  doctrineCard: {
-    background: deepBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '14px',
-    padding: '14px',
-    color: '#fff8e7',
-    fontSize: '12px',
+    fontSize: 12,
     lineHeight: 1.45,
     fontWeight: 800,
-  },
-  message: {
-    background: 'rgba(16, 185, 129, 0.14)',
-    color: '#bbf7d0',
-    border: '1px solid rgba(16, 185, 129, 0.28)',
-    padding: '13px 16px',
-    borderRadius: '14px',
-    fontWeight: 800,
-    marginBottom: '24px',
-    fontSize: '13px',
-  },
-  heroCard: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.35fr) minmax(280px, 0.65fr)',
-    gap: '24px',
-    background: deepBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '22px',
-    padding: '24px',
-    marginBottom: '24px',
-  },
-  apexCard: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.05fr) minmax(300px, 0.95fr)',
-    gap: '24px',
-    background: panelBlack,
-    border: `1px solid ${gold}`,
-    borderRadius: '22px',
-    padding: '24px',
-    marginBottom: '24px',
-  },
+  }),
+
+  message: v.message,
+
+  heroCard: v.heroSplit,
+  apexCard: v.emphasisPanel,
   apexStack: {
     display: 'grid',
     gridTemplateColumns: '1fr',
-    gap: '14px',
+    gap: 14,
   },
-  trustPanel: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.15fr) minmax(300px, 0.85fr)',
-    gap: '24px',
-    background: panelBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '22px',
-    padding: '24px',
-    marginBottom: '24px',
-  },
-  chainHero: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.2fr) minmax(260px, 0.8fr)',
-    gap: '24px',
-    background: panelBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '22px',
-    padding: '24px',
-    marginBottom: '18px',
-  },
-  chainConfidenceBox: {
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '18px',
-    padding: '18px',
-  },
-  chainConfidence: {
-    color: gold,
-    fontSize: '26px',
-    lineHeight: 1.1,
-    fontWeight: 950,
-    margin: '10px 0 0',
-  },
-  chainPath: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-    gap: '12px',
-    marginBottom: '18px',
-  },
-  chainStep: {
-    background: cardBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '14px',
-    padding: '14px',
-    minHeight: '86px',
-  },
-  chainStepActive: {
-    background: '#201809',
-    border: `1px solid ${gold}`,
-  },
+  trustPanel: v.heroSplit,
+  chainHero: v.heroSplit,
+  chainConfidenceBox: v.goldCard,
+  chainConfidence: v.metricValueGold,
+
+  chainPath: v.gridFive,
+  chainStep: v.card,
+  chainStepActive: v.goldCard,
   chainStepValue: {
     color: '#fff8e7',
-    fontSize: '13px',
+    fontSize: 13,
     lineHeight: 1.3,
     fontWeight: 900,
     margin: '8px 0 0',
   },
-  chainGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '14px',
-    marginBottom: '24px',
-  },
-  chainPanelCard: {
-    background: cardBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '16px',
-    minHeight: '150px',
-  },
-  sectionKicker: {
-    color: mutedGold,
-    fontWeight: 900,
-    letterSpacing: '0.15em',
-    textTransform: 'uppercase',
-    margin: 0,
-    fontSize: '10px',
-  },
-  heroTitle: {
-    color: gold,
-    fontSize: 'clamp(32px, 4vw, 48px)',
-    lineHeight: 1,
-    margin: '10px 0',
-    letterSpacing: '-0.05em',
-  },
-  heroMeaning: {
-    color: '#cfc7b5',
-    lineHeight: 1.6,
-    margin: 0,
-    fontSize: '14px',
-  },
-  questionBox: {
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '18px',
-    padding: '20px',
-  },
+  chainGrid: v.gridFour,
+  chainPanelCard: v.card,
+
+  sectionKicker: v.sectionKicker,
+  heroTitle: v.pageTitle,
+  heroMeaning: v.bodyText,
+  questionBox: v.goldCard,
   questionText: {
     color: '#fff8e7',
-    fontSize: '22px',
+    fontSize: 22,
     lineHeight: 1.25,
     margin: '10px 0 0',
     fontWeight: 900,
   },
-  summaryGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '16px',
-    marginBottom: '24px',
-  },
-  metricCard: {
-    background: cardBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '16px',
-    minHeight: '144px',
-  },
-  metricLabel: {
-    color: mutedGold,
-    fontSize: '9px',
-    fontWeight: 900,
-    letterSpacing: '0.14em',
-    textTransform: 'uppercase',
-    margin: 0,
-  },
-  metricValue: {
-    color: gold,
-    fontSize: '32px',
-    fontWeight: 950,
-    lineHeight: 1,
-    margin: '10px 0',
-  },
-  memoryCard: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.15fr) minmax(300px, 0.85fr)',
-    gap: '24px',
-    background: panelBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '22px',
-    padding: '24px',
-    marginBottom: '24px',
-  },
+
+  summaryGrid: v.gridFour,
+  metricCard: v.card,
+  metricLabel: v.metricLabel,
+  metricValue: v.metricValueGold,
+
+  memoryCard: v.emphasisPanel,
   memoryGrid: {
     display: 'grid',
     gridTemplateColumns: '1fr',
-    gap: '14px',
+    gap: 14,
   },
-  memoryMetric: {
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '14px',
-    padding: '14px',
-  },
+  memoryMetric: v.goldCard,
   memoryMetricValue: {
     color: '#fff8e7',
-    fontSize: '14px',
+    fontSize: 14,
     lineHeight: 1.35,
     fontWeight: 900,
     margin: '8px 0 0',
   },
-  gridTwo: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '24px',
-    marginBottom: '24px',
-  },
-  signalStrip: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '16px',
-    marginBottom: '24px',
-  },
-  signalCard: {
-    background: cardBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '18px',
-    minHeight: '136px',
-  },
+
+  gridTwo: v.gridTwo,
+  signalStrip: v.gridThree,
+  signalCard: v.card,
   signalValue: {
-    color: gold,
-    fontSize: '20px',
+    color: '#d6b25e',
+    fontSize: 20,
     lineHeight: 1.15,
     margin: '10px 0',
     fontWeight: 900,
     textTransform: 'capitalize',
   },
-  card: {
-    background: deepBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '22px',
-    padding: '24px',
-    marginBottom: '24px',
-    overflow: 'hidden',
-  },
-  cardTitle: {
-    color: '#fff8e7',
-    fontSize: 'clamp(22px, 3vw, 30px)',
-    lineHeight: 1.15,
-    margin: '10px 0',
-    letterSpacing: '-0.04em',
-  },
-  bodyText: {
-    color: '#cfc7b5',
-    lineHeight: 1.6,
-    fontSize: '13px',
-    margin: 0,
-  },
-  priorityGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '14px',
-    marginTop: '18px',
-  },
-  priorityItem: {
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '14px',
-    padding: '14px',
-  },
+
+  card: v.darkPanel,
+  cardTitle: v.panelTitle,
+  bodyText: v.bodyText,
+  priorityGrid: v.gridThree,
+  priorityItem: v.goldCard,
   priorityBody: {
     color: '#fff8e7',
     lineHeight: 1.5,
-    fontSize: '12px',
+    fontSize: 12,
     margin: '8px 0 0',
     fontWeight: 700,
   },
-  panel: {
-    background: cardBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '18px',
-    padding: '20px',
-    minHeight: '150px',
-  },
-  panelKicker: {
-    color: mutedGold,
-    fontSize: '10px',
-    fontWeight: 900,
-    letterSpacing: '0.14em',
-    textTransform: 'uppercase',
-    margin: 0,
-  },
+
+  panel: v.card,
+  panelKicker: v.sectionKicker,
   panelBody: {
     color: '#cfc7b5',
-    fontSize: '13px',
+    fontSize: 13,
     lineHeight: 1.6,
-    marginTop: '10px',
+    marginTop: 10,
   },
-  emptyState: {
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '14px',
-    padding: '14px',
-    color: '#cfc7b5',
-    lineHeight: 1.55,
-    marginTop: '16px',
-    fontSize: '13px',
-  },
-  tableWrap: {
+
+  emptyState: v.emptyState,
+  tableWrap: v.tableWrap,
+  table: v.table,
+  th: v.th,
+  td: v.td,
+  summaryBox: v.summaryBox,
+  primaryButton: mergeCGIStyles(v.primaryButton, {
     width: '100%',
-    overflowX: 'auto',
-    marginTop: '16px',
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    minWidth: '920px',
-  },
-  th: {
-    textAlign: 'left',
-    color: mutedGold,
-    borderBottom: `1px solid ${softLine}`,
-    padding: '10px',
-    fontSize: '10px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-  },
-  td: {
-    borderBottom: '1px solid rgba(214,178,94,0.12)',
-    padding: '10px',
-    color: '#e8dec8',
-    verticalAlign: 'top',
-    lineHeight: 1.5,
-    fontSize: '12px',
-  },
-  summaryBox: {
-    whiteSpace: 'pre-wrap',
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '14px',
-    padding: '16px',
-    color: '#e8dec8',
-    lineHeight: 1.55,
-    minHeight: '180px',
-    fontSize: '12px',
-    overflowX: 'auto',
-  },
-  primaryButton: {
-    width: '100%',
-    padding: '14px',
-    borderRadius: '14px',
-    border: 'none',
-    background: gold,
-    color: '#11100d',
-    fontWeight: 950,
-    cursor: 'pointer',
-    fontSize: '14px',
-    marginTop: '18px',
-  },
+    borderRadius: 14,
+  }),
 }
