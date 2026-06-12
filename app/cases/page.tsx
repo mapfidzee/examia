@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
@@ -246,13 +246,13 @@ function CasesContent() {
     <main className="min-h-screen text-neutral-100">
       <section className="mx-auto max-w-7xl px-6 py-8">
         {message && (
-          <div className="mb-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm font-semibold text-emerald-100">
+          <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm font-semibold text-amber-100">
             {message}
           </div>
         )}
 
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-400">
-          TSINAXA CGI • CASE GOVERNANCE INTELLIGENCE
+        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-400">
+          TSINAXA CGI â€¢ CASE GOVERNANCE INTELLIGENCE
         </p>
 
         <div className="mt-4 rounded-3xl border border-neutral-800 bg-neutral-900/70 p-6 shadow-2xl">
@@ -269,7 +269,7 @@ function CasesContent() {
             work.
           </p>
 
-          <p className="mt-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-4 text-sm leading-6 text-cyan-100">
+          <p className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
             <span className="font-semibold">Boundary:</span> /cases governs
             accepted instability lifecycle visibility. It inherits eligibility
             meaning from /triage and protects continuity memory through timeline
@@ -362,7 +362,7 @@ function CasesContent() {
                 >
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.25em] text-cyan-400">
+                      <p className="text-xs font-semibold uppercase tracking-[0.25em] text-amber-400">
                         Accepted CGI Case
                       </p>
 
@@ -397,7 +397,7 @@ function CasesContent() {
                   </div>
 
                   <section className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-                    <p className="text-sm font-semibold text-cyan-400">
+                    <p className="text-sm font-semibold text-amber-400">
                       Inherited Lifecycle Memory
                     </p>
 
@@ -440,7 +440,7 @@ function CasesContent() {
                   </section>
 
                   <section className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-                    <p className="text-sm font-semibold text-cyan-400">
+                    <p className="text-sm font-semibold text-amber-400">
                       Continuity Memory Intelligence
                     </p>
 
@@ -474,7 +474,7 @@ function CasesContent() {
                   </div>
 
                   <section className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-                    <p className="text-sm font-semibold text-cyan-400">
+                    <p className="text-sm font-semibold text-amber-400">
                       Case Intelligence Panel
                     </p>
 
@@ -505,7 +505,7 @@ function CasesContent() {
                   </section>
 
                   <section className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-                    <p className="text-sm font-semibold text-cyan-400">
+                    <p className="text-sm font-semibold text-amber-400">
                       Linked Execution Visibility
                     </p>
 
@@ -537,11 +537,11 @@ function CasesContent() {
                     </div>
                   </section>
 
-                  <div className="mt-5 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-4">
-                    <p className="text-sm font-semibold text-cyan-100">
+                  <div className="mt-5 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
+                    <p className="text-sm font-semibold text-amber-100">
                       Governance Interpretation
                     </p>
-                    <p className="mt-2 text-sm leading-6 text-cyan-50">
+                    <p className="mt-2 text-sm leading-6 text-amber-50">
                       {buildGovernanceInterpretation(caseItem, inherited)}
                     </p>
                   </div>
@@ -625,7 +625,7 @@ function GovernanceMovementControls({
 
   return (
     <section className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-      <p className="text-sm font-semibold text-cyan-400">
+      <p className="text-sm font-semibold text-amber-400">
         Governance Movement Controls
       </p>
 
@@ -731,7 +731,7 @@ function MovementButton({
     <button
       type="button"
       onClick={onClick}
-      className="rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-xs font-semibold text-neutral-100 transition hover:border-cyan-400 hover:text-cyan-100"
+      className="rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-xs font-semibold text-neutral-100 transition hover:border-amber-400 hover:text-amber-100"
     >
       {label}
     </button>
@@ -1285,7 +1285,7 @@ function buildLifecycleNarrative(
     hasRecovery ? 'recovery durability observation active' : 'recovery not active',
   ]
 
-  return `${phases.join(' • ')}. Timeline memory entries visible: ${eventCount}.`
+  return `${phases.join(' â€¢ ')}. Timeline memory entries visible: ${eventCount}.`
 }
 
 function buildDriftSignal(
@@ -1385,7 +1385,7 @@ function buildCrossCaseConvergence(cases: InstabilityCase[]) {
   }
 
   return `Cross-case convergence is visible through ${patterns.join(
-    ' • ',
+    ' â€¢ ',
   )}. Executive review may benefit from comparing these cases as a structural pattern rather than isolated events.`
 }
 
@@ -1468,7 +1468,7 @@ function buildSimplifiedIdentity(
     return inheritedIdentity
   }
 
-  return `${caseItem.support_domain} instability • ${location}`
+  return `${caseItem.support_domain} instability â€¢ ${location}`
 }
 
 function buildCaseIntelligence(
@@ -1486,7 +1486,7 @@ function buildCaseIntelligence(
     `Recovery: ${
       caseItem.case_status === 'RECOVERY_MONITORING' ? 'active' : 'not active'
     }`,
-  ].join(' • ')
+  ].join(' â€¢ ')
 
   if (caseItem.case_status.includes('GOVERNANCE_REVIEW_REQUIRED_RECURRENCE')) {
     return {
@@ -1792,7 +1792,7 @@ function Info({ label, value }: { label: string; value: string }) {
 
 function SignalBadge({ children }: { children: ReactNode }) {
   return (
-    <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-100">
+    <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-100">
       {children}
     </span>
   )
@@ -1811,5 +1811,5 @@ function severityBadgeClass(level: string) {
     return 'rounded-full bg-amber-900 px-3 py-2 text-xs font-semibold text-amber-100'
   }
 
-  return 'rounded-full bg-emerald-900 px-3 py-2 text-xs font-semibold text-emerald-100'
+  return 'rounded-full bg-emerald-900 px-3 py-2 text-xs font-semibold text-amber-100'
 }

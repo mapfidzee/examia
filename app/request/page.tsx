@@ -349,16 +349,16 @@ export default function RequestPage() {
     <main className="min-h-screen text-neutral-100">
       <section className="mx-auto max-w-7xl px-6 py-8">
         {message && (
-          <div className="mb-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm font-semibold text-emerald-100">
+          <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm font-semibold text-amber-100">
             {message}
           </div>
         )}
 
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-400">
+        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-400">
           TSINAXA CGI • GOVERNED INTAKE INTELLIGENCE
         </p>
 
-        <div className="mt-4 rounded-3xl border border-neutral-800 bg-neutral-900/70 p-6 shadow-2xl">
+        <div className="mt-4 rounded-3xl border border-neutral-800 bg-neutral-950/80 p-6 shadow-2xl">
           <h2 className="text-2xl font-semibold text-white">
             Open Visible Instability
           </h2>
@@ -369,7 +369,7 @@ export default function RequestPage() {
             routing, action, outcome verification, or recovery durability begins.
           </p>
 
-          <p className="mt-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-4 text-sm leading-6 text-cyan-100">
+          <p className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
             <span className="font-semibold">Boundary:</span> /request opens
             visibility. It does not accept the case, route ownership, execute
             stabilization action, verify outcomes, declare recovery, or erase
@@ -396,7 +396,7 @@ export default function RequestPage() {
           />
         </div>
 
-        <div className="mt-6 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+        <div className="mt-6 rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
           <h3 className="text-lg font-semibold text-white">
             Intake Pressure Intelligence
           </h3>
@@ -406,12 +406,12 @@ export default function RequestPage() {
           </p>
         </div>
 
-        <div className="mt-6 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+        <div className="mt-6 rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
           <h3 className="text-lg font-semibold text-white">
             Generated Intake Identity
           </h3>
 
-          <p className="mt-3 text-xl font-semibold leading-7 text-cyan-100">
+          <p className="mt-3 text-xl font-semibold leading-7 text-amber-100">
             {generatedIntakeIdentity}
           </p>
 
@@ -431,7 +431,7 @@ export default function RequestPage() {
         </div>
 
         <section className="mt-8 grid gap-6 lg:grid-cols-[1fr_1.05fr]">
-          <section className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+          <section className="rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
             <h3 className="text-xl font-semibold text-white">
               Operational Intake Workspace
             </h3>
@@ -518,14 +518,14 @@ export default function RequestPage() {
                   onChange={(event) => setBriefNote(event.target.value)}
                   rows={5}
                   placeholder="Optional: add one short sentence if the dropdowns do not fully capture the context."
-                  className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
+                  className="mt-2 w-full rounded-xl border border-neutral-700 bg-black px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
                 />
               </label>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-300 disabled:opacity-60"
+                className="w-full rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-amber-300 disabled:opacity-60"
               >
                 {loading
                   ? 'Preserving Visible Instability...'
@@ -534,7 +534,7 @@ export default function RequestPage() {
             </form>
           </section>
 
-          <section className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+          <section className="rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
             <h3 className="text-xl font-semibold text-white">
               Intake Intelligence Panel
             </h3>
@@ -583,8 +583,8 @@ export default function RequestPage() {
               />
             </div>
 
-            <div className="mt-6 rounded-2xl border border-neutral-800 bg-neutral-950 p-5">
-              <h4 className="text-sm font-semibold uppercase tracking-wide text-cyan-400">
+            <div className="mt-6 rounded-2xl border border-neutral-800 bg-black p-5">
+              <h4 className="text-sm font-semibold uppercase tracking-wide text-amber-400">
                 Lifecycle Boundary
               </h4>
 
@@ -598,8 +598,8 @@ export default function RequestPage() {
         </section>
 
         {createdRequest && (
-          <section className="mt-8 rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-200">
+          <section className="mt-8 rounded-3xl border border-amber-500/30 bg-amber-500/10 p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-200">
               Governance Visibility Opened
             </p>
 
@@ -607,11 +607,11 @@ export default function RequestPage() {
               Request preserved for triage
             </h3>
 
-            <div className="mt-5 rounded-2xl border border-emerald-500/30 bg-neutral-950 p-4 text-sm font-semibold leading-6 text-emerald-100">
+            <div className="mt-5 rounded-2xl border border-amber-500/30 bg-black p-4 text-sm font-semibold leading-6 text-amber-100">
               {createdRequest.id}
             </div>
 
-            <p className="mt-4 max-w-4xl text-sm leading-6 text-emerald-50">
+            <p className="mt-4 max-w-4xl text-sm leading-6 text-amber-50">
               Intake visibility has been opened successfully. CGI triage now
               determines whether this instability should be clarified, escalated,
               closed, or accepted into active continuity governance.
@@ -643,17 +643,17 @@ export default function RequestPage() {
             <button
               type="button"
               onClick={openTriageQueue}
-              className="mt-5 w-full rounded-xl bg-emerald-300 px-4 py-3 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-200"
+              className="mt-5 w-full rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-amber-300"
             >
               Open Triage Queue
             </button>
 
-            <div className="mt-5 rounded-2xl border border-emerald-500/30 bg-neutral-950 p-5">
-              <p className="text-sm font-semibold text-emerald-100">
+            <div className="mt-5 rounded-2xl border border-amber-500/30 bg-black p-5">
+              <p className="text-sm font-semibold text-amber-100">
                 Next Governance Movement
               </p>
 
-              <p className="mt-2 text-sm leading-6 text-emerald-50">
+              <p className="mt-2 text-sm leading-6 text-amber-50">
                 This signal should now appear inside the CGI triage queue for
                 governance eligibility review and continuity classification.
               </p>
@@ -662,8 +662,8 @@ export default function RequestPage() {
         )}
 
         <section className="mt-8 grid gap-6 lg:grid-cols-2">
-          <article className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-400">
+          <article className="rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-400">
               Boundary Lock
             </p>
 
@@ -678,8 +678,8 @@ export default function RequestPage() {
             </p>
           </article>
 
-          <article className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-400">
+          <article className="rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-400">
               Typical Users
             </p>
 
@@ -695,8 +695,8 @@ export default function RequestPage() {
           </article>
         </section>
 
-        <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-400">
+        <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-400">
             From Visibility to Survivability
           </p>
 
@@ -714,9 +714,9 @@ export default function RequestPage() {
             {flowSteps.map((step, index) => (
               <article
                 key={step.title}
-                className="rounded-2xl border border-neutral-800 bg-neutral-950 p-5"
+                className="rounded-2xl border border-neutral-800 bg-black p-5"
               >
-                <p className="text-xs font-semibold uppercase tracking-wide text-cyan-400">
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-400">
                   0{index + 1}
                 </p>
 
@@ -732,8 +732,8 @@ export default function RequestPage() {
           </div>
         </section>
 
-        <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-400">
+        <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-400">
             Examples
           </p>
 
@@ -745,7 +745,7 @@ export default function RequestPage() {
             {exampleSignals.map((example) => (
               <article
                 key={example}
-                className="rounded-2xl border border-neutral-800 bg-neutral-950 p-5 text-sm font-semibold leading-6 text-neutral-300"
+                className="rounded-2xl border border-neutral-800 bg-black p-5 text-sm font-semibold leading-6 text-neutral-300"
               >
                 {example}
               </article>
@@ -753,8 +753,8 @@ export default function RequestPage() {
           </div>
         </section>
 
-        <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-400">
+        <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-400">
             Operational Pressure Types
           </p>
 
@@ -766,9 +766,9 @@ export default function RequestPage() {
             {instabilityClassOptions.map((item) => (
               <article
                 key={item.value}
-                className="rounded-2xl border border-neutral-800 bg-neutral-950 p-5"
+                className="rounded-2xl border border-neutral-800 bg-black p-5"
               >
-                <h4 className="text-sm font-semibold tracking-wide text-cyan-100">
+                <h4 className="text-sm font-semibold tracking-wide text-amber-100">
                   {item.label}
                 </h4>
 
@@ -780,7 +780,7 @@ export default function RequestPage() {
           </div>
         </section>
 
-        <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+        <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
           <h3 className="text-xl font-semibold text-white">
             Intake Governance Doctrine
           </h3>
@@ -1054,7 +1054,7 @@ function Select({
       <select
         value={value}
         onChange={(event) => setValue(event.target.value)}
-        className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
+        className="mt-2 w-full rounded-xl border border-neutral-700 bg-black px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
       >
         {options.map((option) => (
           <option key={option} value={option}>
@@ -1074,7 +1074,7 @@ function Select({
 
 function IntakePanel({ title, value }: { title: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
+    <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-5">
       <p className="text-sm font-semibold text-white">{title}</p>
       <p className="mt-3 text-sm leading-6 text-neutral-400">{value}</p>
     </div>
@@ -1094,11 +1094,11 @@ function Info({ label, value }: { label: string; value: string }) {
 
 function CreatedDetail({ label, value }: { label: string; value: string }) {
   return (
-    <article className="rounded-2xl border border-emerald-500/30 bg-neutral-950 p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">
+    <article className="rounded-2xl border border-amber-500/30 bg-black p-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-amber-300">
         {label}
       </p>
-      <p className="mt-2 text-sm font-semibold leading-6 text-emerald-50">
+      <p className="mt-2 text-sm font-semibold leading-6 text-amber-50">
         {value}
       </p>
     </article>
@@ -1107,7 +1107,7 @@ function CreatedDetail({ label, value }: { label: string; value: string }) {
 
 function SignalBadge({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-100">
+    <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-100">
       {children}
     </span>
   )

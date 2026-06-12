@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useMemo, useState } from 'react'
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
@@ -402,7 +402,7 @@ function OutcomesContent() {
         ? 'ACTION_EVIDENCE_READY_FOR_VERIFICATION'
         : caseItem.case_status
 
-    return `${inherited.intakeIdentity} • ${caseItem.support_domain} • ${activeStatus}`
+    return `${inherited.intakeIdentity} â€¢ ${caseItem.support_domain} â€¢ ${activeStatus}`
   }
 
   function verificationSynthesis() {
@@ -669,13 +669,13 @@ but durable recovery must be confirmed separately.
     <main className="min-h-screen text-neutral-100">
       <section className="mx-auto max-w-7xl px-6 py-8">
         {message && (
-          <div className="mb-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm font-semibold text-emerald-100">
+          <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm font-semibold text-amber-100">
             {message}
           </div>
         )}
 
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-400">
-          TSINAXA CGI • STABILIZATION VERIFICATION INTELLIGENCE
+        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-400">
+          TSINAXA CGI â€¢ STABILIZATION VERIFICATION INTELLIGENCE
         </p>
 
         <div className="mt-4 rounded-3xl border border-neutral-800 bg-neutral-900/70 p-6 shadow-2xl">
@@ -690,7 +690,7 @@ but durable recovery must be confirmed separately.
             durability governance.
           </p>
 
-          <p className="mt-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-4 text-sm leading-6 text-cyan-100">
+          <p className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
             <span className="font-semibold">Boundary:</span> /outcomes verifies
             stabilization credibility. It does not automatically declare durable
             recovery, erase structural continuity memory, or remove survivability
@@ -722,8 +722,8 @@ but durable recovery must be confirmed separately.
         </div>
 
         {activeOutcome && (
-          <section className="mt-6 rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-6">
-            <h3 className="text-lg font-semibold text-emerald-100">
+          <section className="mt-6 rounded-3xl border border-amber-500/30 bg-amber-500/10 p-6">
+            <h3 className="text-lg font-semibold text-amber-100">
               Latest Preserved Verification Evidence
             </h3>
 
@@ -768,8 +768,8 @@ but durable recovery must be confirmed separately.
               />
 
               {selectedCase && (
-                <section className="rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-5">
-                  <p className="text-sm font-semibold text-cyan-100">
+                <section className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5">
+                  <p className="text-sm font-semibold text-amber-100">
                     Inherited Action Evidence
                   </p>
 
@@ -807,14 +807,14 @@ but durable recovery must be confirmed separately.
                   }
                   rows={5}
                   placeholder="Use operational facts only. Preserve action evidence, continuity credibility, recurrence visibility, recovery eligibility, survivability relevance, and executive continuity interpretation."
-                  className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
+                  className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
                 />
               </label>
 
               <button
                 onClick={preserveVerificationIntelligence}
                 disabled={loading}
-                className="w-full rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-300 disabled:opacity-60"
+                className="w-full rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-amber-300 disabled:opacity-60"
               >
                 {loading
                   ? 'Preserving Verification Intelligence...'
@@ -853,7 +853,7 @@ but durable recovery must be confirmed separately.
             </div>
 
             <div className="mt-6 rounded-2xl border border-neutral-800 bg-neutral-950 p-5">
-              <h4 className="text-sm font-semibold uppercase tracking-wide text-cyan-400">
+              <h4 className="text-sm font-semibold uppercase tracking-wide text-amber-400">
                 Lifecycle Boundary
               </h4>
 
@@ -1443,7 +1443,7 @@ function Select({
       <select
         value={value}
         onChange={(event) => setValue(event.target.value)}
-        className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
+        className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
       >
         <option value="">{placeholder}</option>
 

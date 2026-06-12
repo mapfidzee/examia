@@ -275,16 +275,16 @@ export default function TriageContent() {
     <main className="min-h-screen text-neutral-100">
       <section className="mx-auto max-w-7xl px-6 py-8">
         {message && (
-          <div className="mb-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm font-semibold text-emerald-100">
+          <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm font-semibold text-amber-100">
             {message}
           </div>
         )}
 
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-400">
+        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-400">
           TSINAXA CGI • TRIAGE ELIGIBILITY INTELLIGENCE
         </p>
 
-        <div className="mt-4 rounded-3xl border border-neutral-800 bg-neutral-900/70 p-6 shadow-2xl">
+        <div className="mt-4 rounded-3xl border border-neutral-800 bg-neutral-950/80 p-6 shadow-2xl">
           <h2 className="text-2xl font-semibold text-white">
             Governance Eligibility Review
           </h2>
@@ -295,7 +295,7 @@ export default function TriageContent() {
             visibility, remain held for clarity, or close without active CGI action.
           </p>
 
-          <p className="mt-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-4 text-sm leading-6 text-cyan-100">
+          <p className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
             <span className="font-semibold">Boundary:</span> /triage governs
             eligibility. It inherits intake context from /request, but does not
             manage active case lifecycle movement, route ownership, execute
@@ -307,7 +307,7 @@ export default function TriageContent() {
           {climatePanels.map((panel) => (
             <div
               key={panel.title}
-              className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5"
+              className="rounded-2xl border border-neutral-800 bg-neutral-950 p-5"
             >
               <p className="text-sm font-semibold text-white">{panel.title}</p>
               <p className="mt-3 text-sm leading-6 text-neutral-400">
@@ -317,7 +317,7 @@ export default function TriageContent() {
           ))}
         </div>
 
-        <div className="mt-6 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+        <div className="mt-6 rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
           <h3 className="text-lg font-semibold text-white">
             Triage Pressure Intelligence
           </h3>
@@ -326,7 +326,7 @@ export default function TriageContent() {
           </p>
         </div>
 
-        <div className="mt-6 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+        <div className="mt-6 rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
           <h3 className="text-lg font-semibold text-white">
             Executive Triage Synthesis
           </h3>
@@ -355,7 +355,7 @@ export default function TriageContent() {
           preserveTriageDecision={preserveTriageDecision}
         />
 
-        <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+        <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
           <h3 className="text-xl font-semibold text-white">
             Triage Governance Doctrine
           </h3>
@@ -399,7 +399,7 @@ function TriageSection({
   preserveTriageDecision: (item: VisibleInstability) => void
 }) {
   return (
-    <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+    <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
       <h3 className="text-xl font-semibold text-white">{title}</h3>
 
       <p className="mt-3 text-sm leading-6 text-neutral-400">
@@ -418,7 +418,7 @@ function TriageSection({
         ))}
 
         {items.length === 0 && (
-          <div className="rounded-3xl border border-dashed border-neutral-700 bg-neutral-950 p-8 text-center text-sm leading-6 text-neutral-400">
+          <div className="rounded-3xl border border-dashed border-neutral-700 bg-black p-8 text-center text-sm leading-6 text-neutral-400">
             {emptyText}
           </div>
         )}
@@ -443,10 +443,10 @@ function TriageCard({
   const locked = isDecisionLocked(item)
 
   return (
-    <article className="rounded-3xl border border-neutral-800 bg-neutral-950 p-5">
+    <article className="rounded-3xl border border-neutral-800 bg-black p-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-cyan-400">
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-amber-400">
             {locked ? 'Decision Preserved' : 'Inherited Intake Signal'}
           </p>
 
@@ -482,8 +482,8 @@ function TriageCard({
         />
       </div>
 
-      <section className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-        <p className="text-sm font-semibold text-cyan-400">
+      <section className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-950 p-5">
+        <p className="text-sm font-semibold text-amber-400">
           Inherited Intake Context
         </p>
 
@@ -528,8 +528,8 @@ function TriageCard({
         {locked && <SignalBadge>DECISION_LOCKED</SignalBadge>}
       </div>
 
-      <section className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-        <p className="text-sm font-semibold text-cyan-400">
+      <section className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-950 p-5">
+        <p className="text-sm font-semibold text-amber-400">
           Triage Intelligence Panel
         </p>
 
@@ -562,23 +562,23 @@ function TriageCard({
         </div>
       </section>
 
-      <div className="mt-5 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-4">
-        <p className="text-sm font-semibold text-cyan-100">
+      <div className="mt-5 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
+        <p className="text-sm font-semibold text-amber-100">
           Triage Interpretation
         </p>
 
-        <p className="mt-2 text-sm leading-6 text-cyan-50">
+        <p className="mt-2 text-sm leading-6 text-amber-50">
           {buildTriageInterpretation(item)}
         </p>
       </div>
 
       {locked ? (
-        <div className="mt-5 rounded-2xl border border-violet-500/30 bg-violet-500/10 p-4">
-          <p className="text-sm font-semibold text-violet-100">
+        <div className="mt-5 rounded-2xl border border-slate-500/30 bg-slate-500/10 p-4">
+          <p className="text-sm font-semibold text-slate-100">
             Decision Preserved
           </p>
 
-          <p className="mt-2 text-sm leading-6 text-violet-50">
+          <p className="mt-2 text-sm leading-6 text-slate-200">
             This triage decision is locked for governance visibility. Continue
             lifecycle movement through {intelligence.downstreamSurface}.
           </p>
@@ -598,7 +598,7 @@ function TriageCard({
                   [item.id]: event.target.value as TriageDecision,
                 }))
               }
-              className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
+              className="mt-2 w-full rounded-xl border border-neutral-700 bg-black px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
             >
               <option value="">Select triage decision</option>
 
@@ -613,7 +613,7 @@ function TriageCard({
           <button
             type="button"
             onClick={() => preserveTriageDecision(item)}
-            className="mt-5 w-full rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-300"
+            className="mt-5 w-full rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-amber-300"
           >
             Preserve Triage Decision
           </button>
@@ -1231,7 +1231,7 @@ function resolveTriageSeverity(
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-4">
+    <div className="rounded-2xl border border-neutral-800 bg-black p-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
         {label}
       </p>
@@ -1242,7 +1242,7 @@ function Info({ label, value }: { label: string; value: string }) {
 
 function SignalBadge({ children }: { children: ReactNode }) {
   return (
-    <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-100">
+    <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-100">
       {children}
     </span>
   )
@@ -1261,5 +1261,5 @@ function severityBadgeClass(level: string) {
     return 'rounded-full bg-amber-900 px-3 py-2 text-xs font-semibold text-amber-100'
   }
 
-  return 'rounded-full bg-emerald-900 px-3 py-2 text-xs font-semibold text-emerald-100'
+  return 'rounded-full bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-100'
 }

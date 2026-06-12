@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'
@@ -528,13 +528,13 @@ export default function RecoveryPage() {
     <main className="min-h-screen bg-neutral-950 text-neutral-100">
       <section className="mx-auto max-w-7xl px-6 py-8">
         {message && (
-          <div className="mb-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm font-semibold text-emerald-100">
+          <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm font-semibold text-amber-100">
             {message}
           </div>
         )}
 
         <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-400">
-          TSINAXA CGI • RECOVERY DURABILITY INTELLIGENCE
+          TSINAXA CGI â€¢ RECOVERY DURABILITY INTELLIGENCE
         </p>
 
         <div className="mt-4 rounded-3xl border border-neutral-800 bg-neutral-900/70 p-6 shadow-2xl">
@@ -628,8 +628,8 @@ export default function RecoveryPage() {
         </div>
 
         {activeCase?.latestRecoveryReview && (
-          <section className="mt-6 rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-6">
-            <h3 className="text-lg font-semibold text-emerald-100">
+          <section className="mt-6 rounded-3xl border border-amber-500/30 bg-amber-500/10 p-6">
+            <h3 className="text-lg font-semibold text-amber-100">
               Latest Preserved Recovery Durability Evidence
             </h3>
             <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -723,8 +723,8 @@ export default function RecoveryPage() {
                 <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
                   <p className="font-semibold">Inherited outcome context</p>
                   <p className="mt-2">
-                    {selectedCase.inheritedVerification.verificationResult} •{' '}
-                    {selectedCase.inheritedVerification.recoveryReadiness} •{' '}
+                    {selectedCase.inheritedVerification.verificationResult} â€¢{' '}
+                    {selectedCase.inheritedVerification.recoveryReadiness} â€¢{' '}
                     {selectedCase.inheritedVerification.recurrenceSignal}
                   </p>
                 </div>
@@ -1386,17 +1386,17 @@ function deriveMemoryMeaning(impact: MemoryImpact) {
 function deriveRecoveryMovementDestination(disposition: RecoveryDisposition) {
   const destinations: Record<RecoveryDisposition, string> = {
     MOVE_TO_STABILITY_BOARD:
-      '/system Stability Board — absorb into institutional continuity posture.',
+      '/system Stability Board â€” absorb into institutional continuity posture.',
     MOVE_TO_COMMAND_WATCH:
-      '/command Command Watch — preserve executive visibility without full escalation.',
+      '/command Command Watch â€” preserve executive visibility without full escalation.',
     MOVE_TO_COMMAND_ESCALATION:
-      '/command Command Escalation — executive continuity review required.',
+      '/command Command Escalation â€” executive continuity review required.',
     RETURN_TO_OUTCOMES_REVIEW:
-      '/outcomes Outcomes Review — verification evidence requires strengthening.',
+      '/outcomes Outcomes Review â€” verification evidence requires strengthening.',
     RETURN_TO_INTERVENTION_REVIEW:
-      '/interventions Intervention Review — stabilization action requires renewed review.',
+      '/interventions Intervention Review â€” stabilization action requires renewed review.',
     CONTINUE_RECOVERY_MONITORING:
-      '/recovery Recovery Monitoring — continue durability observation.',
+      '/recovery Recovery Monitoring â€” continue durability observation.',
   }
 
   return destinations[disposition]
@@ -1462,7 +1462,7 @@ function getLatestRecoveryInterpretation(outcome?: OutcomeRecord) {
 }
 
 function buildRecoveryCaseLabel(item: RecoveryEligibleCase) {
-  return `${item.caseItem.beneficiary_name} • ${item.caseItem.case_status}`
+  return `${item.caseItem.beneficiary_name} â€¢ ${item.caseItem.case_status}`
 }
 
 function buildRecoverySummary(input: {
@@ -1600,3 +1600,4 @@ function Select({
     </label>
   )
 }
+
