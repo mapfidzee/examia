@@ -4,10 +4,9 @@ export type CGINavigationItem = {
   description: string
   systemArea:
     | 'LIFECYCLE'
-    | 'INTELLIGENCE'
-    | 'OPERATIONS'
-    | 'EXECUTIVE'
-    | 'TRUST_GOVERNANCE'
+    | 'OPERATIONAL_INTELLIGENCE'
+    | 'EXECUTIVE_OVERSIGHT'
+    | 'GOVERNANCE_MEMORY'
     | 'INFRASTRUCTURE'
     | 'ADMINISTRATION'
   status: 'ACTIVE' | 'LEGACY_ALIAS' | 'FUTURE_RLI'
@@ -21,8 +20,8 @@ export type CGINavigationGroup = {
 
 export const cgiNavigationGroups: CGINavigationGroup[] = [
   {
-    title: 'Lifecycle',
-    purpose: 'Follow visible instability from intake to recovery durability.',
+    title: 'Continuity Lifecycle',
+    purpose: 'Govern visible instability from intake through recovery durability.',
     items: [
       {
         label: 'Request',
@@ -76,183 +75,176 @@ export const cgiNavigationGroups: CGINavigationGroup[] = [
     ],
   },
   {
-    title: 'Intelligence',
+    title: 'Operational Intelligence',
     purpose:
-      'Read pressure, trajectory, prediction, reliability, and bottleneck exposure.',
+      'Read pressure, direction, prediction, reliability, operations, cross-site movement, coordination, and constraints.',
     items: [
       {
         label: 'Pressure',
         href: '/pressure',
         description: 'Track pressure load, spread, and containment.',
-        systemArea: 'INTELLIGENCE',
+        systemArea: 'OPERATIONAL_INTELLIGENCE',
         status: 'ACTIVE',
       },
       {
         label: 'Trajectory',
         href: '/trajectory',
         description: 'Review continuity direction and drift.',
-        systemArea: 'INTELLIGENCE',
+        systemArea: 'OPERATIONAL_INTELLIGENCE',
         status: 'ACTIVE',
       },
       {
         label: 'Predictive',
         href: '/predictive',
         description: 'Forecast near-term continuity instability.',
-        systemArea: 'INTELLIGENCE',
+        systemArea: 'OPERATIONAL_INTELLIGENCE',
         status: 'ACTIVE',
       },
       {
         label: 'Reliability',
         href: '/reliability',
         description: 'Assess whether continuity patterns are dependable.',
-        systemArea: 'INTELLIGENCE',
+        systemArea: 'OPERATIONAL_INTELLIGENCE',
         status: 'ACTIVE',
       },
-      {
-        label: 'Bottlenecks',
-        href: '/bottlenecks',
-        description: 'Identify repeated stabilization blockage.',
-        systemArea: 'INTELLIGENCE',
-        status: 'ACTIVE',
-      },
-    ],
-  },
-  {
-    title: 'Operations',
-    purpose:
-      'Coordinate live records, cross-site movement, and synchronization requirements.',
-    items: [
       {
         label: 'Operations',
         href: '/operations',
         description: 'Read live operational integration from continuity records.',
-        systemArea: 'OPERATIONS',
+        systemArea: 'OPERATIONAL_INTELLIGENCE',
         status: 'ACTIVE',
       },
       {
         label: 'Cross-Site',
         href: '/cross-site',
         description: 'Review site-level continuity posture and structural memory.',
-        systemArea: 'OPERATIONS',
+        systemArea: 'OPERATIONAL_INTELLIGENCE',
         status: 'ACTIVE',
       },
       {
         label: 'Coordination Center',
         href: '/coordination-center',
         description: 'Identify what must synchronize before continuity can move.',
-        systemArea: 'OPERATIONS',
+        systemArea: 'OPERATIONAL_INTELLIGENCE',
+        status: 'ACTIVE',
+      },
+      {
+        label: 'Bottlenecks',
+        href: '/bottlenecks',
+        description: 'Identify repeated stabilization blockage.',
+        systemArea: 'OPERATIONAL_INTELLIGENCE',
         status: 'ACTIVE',
       },
       {
         label: 'Coordination',
         href: '/coordination',
         description: 'Legacy coordination route retained for continuity reference.',
-        systemArea: 'OPERATIONS',
+        systemArea: 'OPERATIONAL_INTELLIGENCE',
         status: 'LEGACY_ALIAS',
       },
     ],
   },
   {
-    title: 'Executive',
+    title: 'Executive Oversight',
     purpose:
-      'Translate continuity movement into executive meaning, command, and reporting.',
+      'Translate continuity movement into executive condition, meaning, command, and reporting.',
     items: [
       {
         label: 'Situation Room',
         href: '/situation-room',
         description: 'Read the current operating condition under CGI.',
-        systemArea: 'EXECUTIVE',
+        systemArea: 'EXECUTIVE_OVERSIGHT',
         status: 'ACTIVE',
       },
       {
         label: 'Executive Center',
         href: '/executive-center',
         description: 'Interpret institutional meaning and survivability posture.',
-        systemArea: 'EXECUTIVE',
+        systemArea: 'EXECUTIVE_OVERSIGHT',
         status: 'ACTIVE',
       },
       {
         label: 'Command',
         href: '/command',
         description: 'Decide what leadership must do next.',
-        systemArea: 'EXECUTIVE',
+        systemArea: 'EXECUTIVE_OVERSIGHT',
         status: 'ACTIVE',
       },
       {
         label: 'Executive Report',
         href: '/executive-report',
         description: 'Generate what leadership must be told.',
-        systemArea: 'EXECUTIVE',
+        systemArea: 'EXECUTIVE_OVERSIGHT',
         status: 'ACTIVE',
       },
       {
         label: 'CGI Brief',
         href: '/cgi-brief',
         description: 'Legacy executive briefing surface retained for reference.',
-        systemArea: 'EXECUTIVE',
+        systemArea: 'EXECUTIVE_OVERSIGHT',
         status: 'LEGACY_ALIAS',
       },
       {
         label: 'CGI Demo',
         href: '/cgi-demo',
         description: 'Demonstration route retained for future executive proof flow.',
-        systemArea: 'EXECUTIVE',
+        systemArea: 'EXECUTIVE_OVERSIGHT',
         status: 'LEGACY_ALIAS',
       },
     ],
   },
   {
-    title: 'Trust & Governance',
+    title: 'Governance & Memory',
     purpose:
-      'Preserve auditability, governance integrity, institutional memory, and action meaning.',
+      'Preserve auditability, governance integrity, continuity history, institutional memory, and action meaning.',
     items: [
       {
         label: 'Audit',
         href: '/audit',
         description: 'Review evidence, audit trails, and governance integrity.',
-        systemArea: 'TRUST_GOVERNANCE',
+        systemArea: 'GOVERNANCE_MEMORY',
         status: 'ACTIVE',
       },
       {
         label: 'Governance',
         href: '/governance',
         description: 'Manage governance decisions and role boundaries.',
-        systemArea: 'TRUST_GOVERNANCE',
+        systemArea: 'GOVERNANCE_MEMORY',
         status: 'ACTIVE',
       },
       {
         label: 'Continuity History',
         href: '/continuity-history',
         description: 'Read continuity movement across time.',
-        systemArea: 'TRUST_GOVERNANCE',
+        systemArea: 'GOVERNANCE_MEMORY',
         status: 'ACTIVE',
       },
       {
         label: 'Memory Board',
         href: '/cgi-memory-board',
         description: 'Preserve what must never disappear from institutional memory.',
-        systemArea: 'TRUST_GOVERNANCE',
+        systemArea: 'GOVERNANCE_MEMORY',
         status: 'ACTIVE',
       },
       {
         label: 'Timeline',
         href: '/timeline',
         description: 'Legacy timeline route retained for continuity reference.',
-        systemArea: 'TRUST_GOVERNANCE',
+        systemArea: 'GOVERNANCE_MEMORY',
         status: 'LEGACY_ALIAS',
       },
       {
         label: 'Action Cues',
         href: '/action-cues',
         description: 'Review standardized action meanings.',
-        systemArea: 'TRUST_GOVERNANCE',
+        systemArea: 'GOVERNANCE_MEMORY',
         status: 'ACTIVE',
       },
     ],
   },
   {
     title: 'Infrastructure',
-    purpose: 'Review system structure, doctrine, domains, and stability posture.',
+    purpose: 'Review doctrine, deployment guardrails, system posture, and domains.',
     items: [
       {
         label: 'Infrastructure',
@@ -279,7 +271,7 @@ export const cgiNavigationGroups: CGINavigationGroup[] = [
   },
   {
     title: 'Administration',
-    purpose: 'Control setup, assignments, and owner accountability.',
+    purpose: 'Control setup, assignments, role boundaries, and owner accountability.',
     items: [
       {
         label: 'Admin',
