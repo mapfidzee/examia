@@ -17,6 +17,7 @@ function getStageLabel(pathname: string) {
 
 function getVisibilityClass(pathname: string) {
   if (pathname === '/command') return 'Executive'
+
   if (
     [
       '/request',
@@ -51,10 +52,10 @@ export default function CGITopbar() {
   const currentItem = getCGINavigationItemByHref(pathname)
 
   return (
-    <header className="border-b border-neutral-800 bg-neutral-950/95 px-6 py-4 text-neutral-100">
+    <header className="border-b border-[#2a2418] bg-[#070707]/95 px-6 py-4 text-neutral-100 backdrop-blur">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div className="min-w-0">
-          <p className="text-[11px] font-black uppercase tracking-[0.28em] text-cyan-400">
+          <p className="text-[11px] font-black uppercase tracking-[0.28em] text-amber-400">
             TSINAXA CGI
           </p>
 
@@ -69,7 +70,7 @@ export default function CGITopbar() {
         </div>
 
         <div className="grid gap-2 text-sm sm:grid-cols-3 xl:min-w-[520px]">
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 px-4 py-3">
+          <div className="rounded-xl border border-[#2a2418] bg-[#111827]/50 px-4 py-3">
             <p className="text-[10px] font-black uppercase tracking-[0.18em] text-neutral-500">
               Stage
             </p>
@@ -79,17 +80,17 @@ export default function CGITopbar() {
             </p>
           </div>
 
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 px-4 py-3">
+          <div className="rounded-xl border border-[#2a2418] bg-[#111827]/50 px-4 py-3">
             <p className="text-[10px] font-black uppercase tracking-[0.18em] text-neutral-500">
               Visibility
             </p>
 
-            <p className="mt-1 font-semibold text-neutral-100">
+            <p className="mt-1 font-semibold text-amber-200">
               {getVisibilityClass(pathname)}
             </p>
           </div>
 
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 px-4 py-3">
+          <div className="rounded-xl border border-[#2a2418] bg-[#111827]/50 px-4 py-3">
             <p className="text-[10px] font-black uppercase tracking-[0.18em] text-neutral-500">
               Next
             </p>
