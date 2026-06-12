@@ -7,10 +7,12 @@ export const cgiVisualTokens = {
     panelBlack: '#090807',
     cardBlack: '#11100d',
     slate: '#111827',
+    slateSoft: 'rgba(17,24,39,0.52)',
     gold: '#d6b25e',
     goldStrong: '#c9a227',
     goldMuted: '#9f8142',
     goldSoft: 'rgba(214,178,94,0.12)',
+    goldSofter: 'rgba(214,178,94,0.075)',
     goldLine: 'rgba(214,178,94,0.28)',
     goldLineStrong: 'rgba(214,178,94,0.42)',
     textPrimary: '#fff8e7',
@@ -22,6 +24,7 @@ export const cgiVisualTokens = {
   shadows: {
     executive: '0 25px 90px rgba(0,0,0,0.55)',
     card: '0 20px 60px rgba(0,0,0,0.35)',
+    quiet: '0 14px 45px rgba(0,0,0,0.28)',
   },
   gradients: {
     page:
@@ -30,6 +33,10 @@ export const cgiVisualTokens = {
       'linear-gradient(135deg, rgba(214,178,94,0.11), rgba(255,255,255,0.025))',
     emphasis:
       'linear-gradient(180deg, rgba(214,178,94,0.18), rgba(0,0,0,0.38))',
+    decision:
+      'linear-gradient(135deg, rgba(214,178,94,0.2), rgba(255,255,255,0.04))',
+    warning:
+      'linear-gradient(135deg, rgba(214,178,94,0.16), rgba(0,0,0,0.54))',
   },
 } as const
 
@@ -55,6 +62,14 @@ export const cgiVisualStyles: Record<string, CSSProperties> = {
     gap: 24,
   },
 
+  executivePageStack: {
+    width: '100%',
+    maxWidth: '1180px',
+    margin: '0 auto',
+    display: 'grid',
+    gap: 18,
+  },
+
   hero: {
     display: 'grid',
     gap: 24,
@@ -73,6 +88,29 @@ export const cgiVisualStyles: Record<string, CSSProperties> = {
     borderRadius: 28,
     background: cgiVisualTokens.gradients.panel,
     border: `1px solid ${cgiVisualTokens.colors.goldLine}`,
+    boxShadow: cgiVisualTokens.shadows.executive,
+  },
+
+  executiveHero: {
+    display: 'grid',
+    gap: 18,
+    padding: 34,
+    borderRadius: 30,
+    background:
+      'linear-gradient(135deg, rgba(214,178,94,0.18), rgba(255,255,255,0.035) 44%, rgba(0,0,0,0.35))',
+    border: `1px solid ${cgiVisualTokens.colors.goldLineStrong}`,
+    boxShadow: cgiVisualTokens.shadows.executive,
+  },
+
+  executiveHeroSplit: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.42fr) minmax(320px, 0.58fr)',
+    gap: 24,
+    padding: 34,
+    borderRadius: 30,
+    background:
+      'linear-gradient(135deg, rgba(214,178,94,0.18), rgba(255,255,255,0.035) 44%, rgba(0,0,0,0.35))',
+    border: `1px solid ${cgiVisualTokens.colors.goldLineStrong}`,
     boxShadow: cgiVisualTokens.shadows.executive,
   },
 
@@ -103,12 +141,29 @@ export const cgiVisualStyles: Record<string, CSSProperties> = {
     fontWeight: 950,
   },
 
+  executiveTitle: {
+    margin: '12px 0 0',
+    color: cgiVisualTokens.colors.textPrimary,
+    fontSize: 'clamp(42px, 5.4vw, 78px)',
+    lineHeight: 0.92,
+    letterSpacing: '-0.075em',
+    fontWeight: 950,
+  },
+
   subtitle: {
     margin: '16px 0 0',
     maxWidth: 880,
     color: cgiVisualTokens.colors.textSecondary,
     fontSize: 15,
     lineHeight: 1.75,
+  },
+
+  executiveSubtitle: {
+    margin: '18px 0 0',
+    maxWidth: 920,
+    color: cgiVisualTokens.colors.textSecondary,
+    fontSize: 16,
+    lineHeight: 1.78,
   },
 
   panel: {
@@ -132,6 +187,37 @@ export const cgiVisualStyles: Record<string, CSSProperties> = {
     border: `1px solid ${cgiVisualTokens.colors.goldLineStrong}`,
   },
 
+  decisionPanel: {
+    padding: 30,
+    borderRadius: 30,
+    background: cgiVisualTokens.gradients.decision,
+    border: `1px solid ${cgiVisualTokens.colors.goldLineStrong}`,
+    boxShadow: cgiVisualTokens.shadows.card,
+  },
+
+  warningPanel: {
+    padding: 28,
+    borderRadius: 28,
+    background: cgiVisualTokens.gradients.warning,
+    border: `1px solid ${cgiVisualTokens.colors.goldLine}`,
+  },
+
+  memoryPanel: {
+    padding: 28,
+    borderRadius: 28,
+    background:
+      'linear-gradient(135deg, rgba(214,178,94,0.15), rgba(17,24,39,0.44))',
+    border: `1px solid ${cgiVisualTokens.colors.goldLineStrong}`,
+  },
+
+  briefPanel: {
+    padding: 30,
+    borderRadius: 30,
+    background: '#030303',
+    border: `1px solid ${cgiVisualTokens.colors.goldLineStrong}`,
+    boxShadow: cgiVisualTokens.shadows.executive,
+  },
+
   whitePanel: {
     padding: 28,
     borderRadius: 28,
@@ -147,11 +233,34 @@ export const cgiVisualStyles: Record<string, CSSProperties> = {
     border: '1px solid rgba(255,255,255,0.09)',
   },
 
+  quietCard: {
+    padding: 20,
+    borderRadius: 20,
+    background: cgiVisualTokens.colors.slateSoft,
+    border: '1px solid rgba(255,255,255,0.08)',
+  },
+
   goldCard: {
     padding: 20,
     borderRadius: 20,
     background: cgiVisualTokens.colors.goldSoft,
     border: `1px solid ${cgiVisualTokens.colors.goldLine}`,
+  },
+
+  executiveMetricCard: {
+    padding: 20,
+    borderRadius: 22,
+    background:
+      'linear-gradient(180deg, rgba(214,178,94,0.1), rgba(255,255,255,0.035))',
+    border: `1px solid ${cgiVisualTokens.colors.goldLine}`,
+    minHeight: 136,
+  },
+
+  executiveQuestionCard: {
+    padding: 22,
+    borderRadius: 22,
+    background: 'rgba(214,178,94,0.12)',
+    border: `1px solid ${cgiVisualTokens.colors.goldLineStrong}`,
   },
 
   sectionKicker: {
@@ -172,11 +281,27 @@ export const cgiVisualStyles: Record<string, CSSProperties> = {
     fontWeight: 900,
   },
 
+  executivePanelTitle: {
+    margin: '12px 0 0',
+    color: cgiVisualTokens.colors.textPrimary,
+    fontSize: 'clamp(28px, 3.2vw, 42px)',
+    lineHeight: 1.05,
+    letterSpacing: '-0.055em',
+    fontWeight: 950,
+  },
+
   bodyText: {
     margin: '8px 0 0',
     color: cgiVisualTokens.colors.textSecondary,
     lineHeight: 1.7,
     fontSize: 14,
+  },
+
+  executiveBodyText: {
+    margin: '10px 0 0',
+    color: cgiVisualTokens.colors.textSecondary,
+    lineHeight: 1.75,
+    fontSize: 15,
   },
 
   mutedText: {
@@ -211,6 +336,15 @@ export const cgiVisualStyles: Record<string, CSSProperties> = {
     lineHeight: 1,
   },
 
+  executiveMetricValue: {
+    margin: '10px 0 0',
+    color: cgiVisualTokens.colors.gold,
+    fontSize: 'clamp(34px, 4vw, 54px)',
+    fontWeight: 950,
+    lineHeight: 0.95,
+    letterSpacing: '-0.05em',
+  },
+
   gridTwo: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
@@ -238,6 +372,24 @@ export const cgiVisualStyles: Record<string, CSSProperties> = {
   gridSix: {
     display: 'grid',
     gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+    gap: 14,
+  },
+
+  executiveMetricStrip: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 16,
+  },
+
+  executiveSignalStrip: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: 16,
+  },
+
+  executiveChainPath: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
     gap: 14,
   },
 
@@ -330,6 +482,26 @@ export const cgiVisualStyles: Record<string, CSSProperties> = {
     fontSize: 13,
     lineHeight: 1.7,
     overflowX: 'auto',
+  },
+
+  executiveSummaryBox: {
+    marginTop: 20,
+    padding: 24,
+    borderRadius: 22,
+    background: '#020202',
+    color: '#f8f6f1',
+    whiteSpace: 'pre-wrap',
+    fontSize: 13,
+    lineHeight: 1.75,
+    overflowX: 'auto',
+    border: `1px solid ${cgiVisualTokens.colors.goldLine}`,
+  },
+
+  doctrinePanel: {
+    padding: 24,
+    borderRadius: 24,
+    background: cgiVisualTokens.colors.deepBlack,
+    border: `1px solid ${cgiVisualTokens.colors.goldLine}`,
   },
 
   doctrineCard: {
