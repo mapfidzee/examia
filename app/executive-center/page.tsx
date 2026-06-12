@@ -5,6 +5,8 @@ import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
+import { buildCGIExecutiveActionPlan } from '@/lib/cgiExecutiveActionPlanEngine'
+import { buildCGIExecutiveConfidenceReading } from '@/lib/cgiExecutiveConfidenceEngine'
 import { buildCGIExecutiveContinuityChain } from '@/lib/cgiExecutiveContinuityChainEngine'
 import { buildCGIExecutiveDeltaReading } from '@/lib/cgiExecutiveDeltaEngine'
 import {
@@ -15,6 +17,7 @@ import {
   deriveDominantConcern,
 } from '@/lib/cgiExecutiveMeaningDoctrineEngine'
 import { buildCGIExecutiveRecommendation } from '@/lib/cgiExecutiveRecommendationEngine'
+import { buildCGIExecutiveRiskReading } from '@/lib/cgiExecutiveRiskEngine'
 import {
   cgiVisualStyles as v,
   mergeCGIStyles,
@@ -203,6 +206,89 @@ function ExecutiveCenterContent() {
     [synthesis, enterpriseReading, executiveDelta],
   )
 
+  const executiveActionPlan = useMemo(
+    () =>
+      buildCGIExecutiveActionPlan({
+        recommendationPosture: executiveRecommendation.posture,
+        recommendationUrgency: executiveRecommendation.urgency,
+        recommendation: executiveRecommendation.recommendation,
+        requiredOwner: executiveRecommendation.requiredOwner,
+        nextExecutiveMove: executiveRecommendation.nextExecutiveMove,
+        requiredEvidence: executiveRecommendation.requiredEvidence,
+        activeInstability: synthesis.activeInstability,
+        commandPressure: synthesis.commandPressure,
+        fragileRecovery: synthesis.fragileRecovery,
+        recurrenceVisible: synthesis.recurrenceVisible,
+        coordinationPressure: synthesis.coordinationPressure,
+        crossSitePressure: synthesis.crossSitePressure,
+        auditPressure: synthesis.auditPressure,
+        safeguardingVisible: synthesis.safeguardingVisible,
+        evidenceReturn: synthesis.evidenceReturn,
+        recoveryRecords: synthesis.recoveryRecords,
+        historicalMemory: synthesis.historicalMemory,
+        deltaDirection: executiveDelta.direction,
+        deltaConfidence: executiveDelta.confidence,
+        topThreat: executiveDelta.threatStack[0],
+      }),
+    [synthesis, executiveDelta, executiveRecommendation],
+  )
+
+  const executiveRisk = useMemo(
+    () =>
+      buildCGIExecutiveRiskReading({
+        activeInstability: synthesis.activeInstability,
+        commandPressure: synthesis.commandPressure,
+        recoveryRecords: synthesis.recoveryRecords,
+        fragileRecovery: synthesis.fragileRecovery,
+        recurrenceVisible: synthesis.recurrenceVisible,
+        coordinationPressure: synthesis.coordinationPressure,
+        crossSitePressure: synthesis.crossSitePressure,
+        auditPressure: synthesis.auditPressure,
+        safeguardingVisible: synthesis.safeguardingVisible,
+        evidenceReturn: synthesis.evidenceReturn,
+        historicalMemory: synthesis.historicalMemory,
+        deltaDirection: executiveDelta.direction,
+        deltaConfidence: executiveDelta.confidence,
+        recommendationPosture: executiveRecommendation.posture,
+        recommendationUrgency: executiveRecommendation.urgency,
+        actionEscalationRule: executiveActionPlan.escalationRule,
+        topThreat: executiveDelta.threatStack[0],
+      }),
+    [synthesis, executiveDelta, executiveRecommendation, executiveActionPlan],
+  )
+
+  const executiveConfidence = useMemo(
+    () =>
+      buildCGIExecutiveConfidenceReading({
+        activeInstability: synthesis.activeInstability,
+        commandPressure: synthesis.commandPressure,
+        recoveryRecords: synthesis.recoveryRecords,
+        fragileRecovery: synthesis.fragileRecovery,
+        recurrenceVisible: synthesis.recurrenceVisible,
+        coordinationPressure: synthesis.coordinationPressure,
+        crossSitePressure: synthesis.crossSitePressure,
+        auditPressure: synthesis.auditPressure,
+        safeguardingVisible: synthesis.safeguardingVisible,
+        evidenceReturn: synthesis.evidenceReturn,
+        historicalMemory: synthesis.historicalMemory,
+        chainConfidence: continuityChain.chainConfidence,
+        deltaConfidence: executiveDelta.confidence,
+        recommendationPosture: executiveRecommendation.posture,
+        recommendationUrgency: executiveRecommendation.urgency,
+        actionEscalationRule: executiveActionPlan.escalationRule,
+        riskLevel: executiveRisk.riskLevel,
+        riskTrend: executiveRisk.riskTrend,
+      }),
+    [
+      synthesis,
+      continuityChain,
+      executiveDelta,
+      executiveRecommendation,
+      executiveActionPlan,
+      executiveRisk,
+    ],
+  )
+
   const copyReadyExecutiveBrief = useMemo(
     () =>
       buildCopyReadyExecutiveBrief(
@@ -226,8 +312,9 @@ function ExecutiveCenterContent() {
           <p style={styles.subtitle}>
             Apex leadership interpretation layer for converting recovery,
             command, coordination, cross-site exposure, situation posture,
-            evidence, audit meaning, executive delta, recommendation, and
-            institutional memory into one continuity thesis.
+            evidence, audit meaning, executive delta, recommendation, action
+            plan, risk, confidence, and institutional memory into one continuity
+            thesis.
           </p>
         </section>
 
@@ -349,6 +436,173 @@ function ExecutiveCenterContent() {
               title="Required Evidence"
               body={executiveRecommendation.requiredEvidence}
             />
+          </div>
+        </section>
+
+        <section style={styles.actionPlanPanel}>
+          <div>
+            <p style={styles.sectionKicker}>Executive Action Plan</p>
+            <h2 style={styles.cardTitle}>
+              {executiveActionPlan.immediateAction}
+            </h2>
+            <p style={styles.bodyText}>{executiveActionPlan.boardSentence}</p>
+          </div>
+
+          <div style={styles.actionPlanMetricGrid}>
+            <MemoryMetric
+              label="Owner"
+              value={executiveActionPlan.executiveOwner}
+            />
+            <MemoryMetric
+              label="Review Window"
+              value={executiveActionPlan.reviewWindow}
+            />
+            <MemoryMetric
+              label="Escalation Rule"
+              value={executiveActionPlan.escalationRule}
+            />
+            <MemoryMetric
+              label="Required Evidence"
+              value={executiveActionPlan.requiredEvidence}
+            />
+          </div>
+
+          <div style={styles.actionSequencePanel}>
+            <p style={styles.metricLabel}>Action Sequence</p>
+
+            <div style={styles.actionSequenceGrid}>
+              {executiveActionPlan.actionSequence.map((item, index) => (
+                <article
+                  key={`${item}-${index}`}
+                  style={styles.actionSequenceCard}
+                >
+                  <span style={styles.threatNumber}>
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <span style={styles.threatText}>{item}</span>
+                </article>
+              ))}
+            </div>
+          </div>
+
+          <div style={styles.recommendationGrid}>
+            <PriorityItem
+              title="Success Condition"
+              body={executiveActionPlan.successCondition}
+            />
+            <PriorityItem
+              title="Failure Condition"
+              body={executiveActionPlan.failureCondition}
+            />
+            <PriorityItem
+              title="Evidence Standard"
+              body={executiveActionPlan.requiredEvidence}
+            />
+          </div>
+        </section>
+
+        <section style={styles.riskPanel}>
+          <div>
+            <p style={styles.sectionKicker}>Executive Risk</p>
+            <h2 style={styles.cardTitle}>{executiveRisk.topRisk}</h2>
+            <p style={styles.bodyText}>{executiveRisk.boardSentence}</p>
+          </div>
+
+          <div style={styles.riskMetricGrid}>
+            <MemoryMetric label="Risk Level" value={executiveRisk.riskLevel} />
+            <MemoryMetric label="Trend" value={executiveRisk.riskTrend} />
+            <MemoryMetric
+              label="Probability"
+              value={executiveRisk.probability}
+            />
+            <MemoryMetric label="Impact" value={executiveRisk.impact} />
+          </div>
+
+          <div style={styles.riskGrid}>
+            <PriorityItem
+              title="Risk Rationale"
+              body={executiveRisk.riskRationale}
+            />
+            <PriorityItem
+              title="Protection Move"
+              body={executiveRisk.protectionMove}
+            />
+            <PriorityItem
+              title="Survivability Risk"
+              body={executiveRisk.survivabilityRisk}
+            />
+            <PriorityItem
+              title="Coordination Risk"
+              body={executiveRisk.coordinationRisk}
+            />
+            <PriorityItem
+              title="Recurrence Risk"
+              body={executiveRisk.recurrenceRisk}
+            />
+            <PriorityItem
+              title="Evidence Risk"
+              body={executiveRisk.evidenceRisk}
+            />
+          </div>
+        </section>
+
+        <section style={styles.confidencePanel}>
+          <div>
+            <p style={styles.sectionKicker}>Executive Confidence</p>
+            <h2 style={styles.cardTitle}>
+              {executiveConfidence.confidenceScore}% •{' '}
+              {executiveConfidence.confidenceLevel}
+            </h2>
+            <p style={styles.bodyText}>{executiveConfidence.boardSentence}</p>
+          </div>
+
+          <div style={styles.confidenceMetricGrid}>
+            <MemoryMetric
+              label="Data Sufficiency"
+              value={executiveConfidence.dataSufficiency}
+            />
+            <MemoryMetric
+              label="Evidence"
+              value={executiveConfidence.evidenceConfidence}
+            />
+            <MemoryMetric
+              label="Memory"
+              value={executiveConfidence.memoryCoverage}
+            />
+            <MemoryMetric
+              label="Conclusion"
+              value={executiveConfidence.conclusionConfidence}
+            />
+          </div>
+
+          <div style={styles.riskGrid}>
+            <PriorityItem
+              title="Confidence Rationale"
+              body={executiveConfidence.confidenceRationale}
+            />
+            <PriorityItem
+              title="Recovery Confidence"
+              body={executiveConfidence.recoveryConfidence}
+            />
+            <PriorityItem
+              title="Recommendation Confidence"
+              body={executiveConfidence.recommendationConfidence}
+            />
+          </div>
+
+          <div style={styles.threatStack}>
+            <p style={styles.metricLabel}>Confidence Gaps</p>
+
+            <div style={styles.threatStackGrid}>
+              {executiveConfidence.confidenceGaps.map((gap, index) => (
+                <article key={`${gap}-${index}`} style={styles.threatCard}>
+                  <span style={styles.threatNumber}>
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <span style={styles.threatText}>{gap}</span>
+                </article>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -576,7 +830,8 @@ function ExecutiveCenterContent() {
           <h2 style={styles.cardTitle}>
             One enterprise reading across pressure, recovery, evidence, command,
             coordination, cross-site exposure, situation posture, audit,
-            executive delta, recommendation, and institutional memory.
+            executive delta, recommendation, action plan, risk, confidence, and
+            institutional memory.
           </h2>
 
           <pre style={styles.summaryBox}>{copyReadyExecutiveBrief}</pre>
@@ -911,6 +1166,24 @@ const styles: Record<string, CSSProperties> = {
   recommendationPanel: v.decisionPanel,
   recommendationMetricGrid: v.executiveMetricStrip,
   recommendationGrid: v.gridThree,
+
+  actionPlanPanel: v.decisionPanel,
+  actionPlanMetricGrid: v.executiveMetricStrip,
+  actionSequencePanel: v.darkPanel,
+  actionSequenceGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 14,
+  },
+  actionSequenceCard: v.quietCard,
+
+  riskPanel: v.warningPanel,
+  riskMetricGrid: v.executiveMetricStrip,
+  riskGrid: v.gridThree,
+
+  confidencePanel: v.memoryPanel,
+  confidenceMetricGrid: v.executiveMetricStrip,
 
   apexCard: v.decisionPanel,
   apexStack: {
