@@ -4,8 +4,10 @@ export type CGINavigationItem = {
   description: string
   systemArea:
     | 'LIFECYCLE'
-    | 'EXECUTIVE_INTELLIGENCE'
-    | 'GOVERNANCE'
+    | 'INTELLIGENCE'
+    | 'OPERATIONS'
+    | 'EXECUTIVE'
+    | 'TRUST_GOVERNANCE'
     | 'INFRASTRUCTURE'
     | 'ADMINISTRATION'
   status: 'ACTIVE' | 'LEGACY_ALIAS' | 'FUTURE_RLI'
@@ -19,7 +21,7 @@ export type CGINavigationGroup = {
 
 export const cgiNavigationGroups: CGINavigationGroup[] = [
   {
-    title: 'Continuity Lifecycle',
+    title: 'Lifecycle',
     purpose: 'Follow visible instability from intake to recovery durability.',
     items: [
       {
@@ -74,95 +76,195 @@ export const cgiNavigationGroups: CGINavigationGroup[] = [
     ],
   },
   {
-    title: 'Executive Intelligence',
-    purpose: 'Read pressure, reliability, trajectory, prediction, and command exposure.',
+    title: 'Intelligence',
+    purpose:
+      'Read pressure, trajectory, prediction, reliability, and bottleneck exposure.',
     items: [
-      {
-        label: 'Command',
-        href: '/command',
-        description: 'Executive command view for active continuity pressure.',
-        systemArea: 'EXECUTIVE_INTELLIGENCE',
-        status: 'ACTIVE',
-      },
       {
         label: 'Pressure',
         href: '/pressure',
         description: 'Track pressure load, spread, and containment.',
-        systemArea: 'EXECUTIVE_INTELLIGENCE',
+        systemArea: 'INTELLIGENCE',
         status: 'ACTIVE',
       },
       {
         label: 'Trajectory',
         href: '/trajectory',
         description: 'Review continuity direction and drift.',
-        systemArea: 'EXECUTIVE_INTELLIGENCE',
+        systemArea: 'INTELLIGENCE',
         status: 'ACTIVE',
       },
       {
         label: 'Predictive',
         href: '/predictive',
         description: 'Forecast near-term continuity instability.',
-        systemArea: 'EXECUTIVE_INTELLIGENCE',
+        systemArea: 'INTELLIGENCE',
         status: 'ACTIVE',
       },
       {
         label: 'Reliability',
         href: '/reliability',
         description: 'Assess whether continuity patterns are dependable.',
-        systemArea: 'EXECUTIVE_INTELLIGENCE',
+        systemArea: 'INTELLIGENCE',
+        status: 'ACTIVE',
+      },
+      {
+        label: 'Bottlenecks',
+        href: '/bottlenecks',
+        description: 'Identify repeated stabilization blockage.',
+        systemArea: 'INTELLIGENCE',
         status: 'ACTIVE',
       },
     ],
   },
   {
-    title: 'Governance',
-    purpose: 'Preserve governance integrity, auditability, and action meaning.',
+    title: 'Operations',
+    purpose:
+      'Coordinate live records, cross-site movement, and synchronization requirements.',
+    items: [
+      {
+        label: 'Operations',
+        href: '/operations',
+        description: 'Read live operational integration from continuity records.',
+        systemArea: 'OPERATIONS',
+        status: 'ACTIVE',
+      },
+      {
+        label: 'Cross-Site',
+        href: '/cross-site',
+        description: 'Review site-level continuity posture and structural memory.',
+        systemArea: 'OPERATIONS',
+        status: 'ACTIVE',
+      },
+      {
+        label: 'Coordination Center',
+        href: '/coordination-center',
+        description: 'Identify what must synchronize before continuity can move.',
+        systemArea: 'OPERATIONS',
+        status: 'ACTIVE',
+      },
+      {
+        label: 'Coordination',
+        href: '/coordination',
+        description: 'Legacy coordination route retained for continuity reference.',
+        systemArea: 'OPERATIONS',
+        status: 'LEGACY_ALIAS',
+      },
+    ],
+  },
+  {
+    title: 'Executive',
+    purpose:
+      'Translate continuity movement into executive meaning, command, and reporting.',
+    items: [
+      {
+        label: 'Situation Room',
+        href: '/situation-room',
+        description: 'Read the current operating condition under CGI.',
+        systemArea: 'EXECUTIVE',
+        status: 'ACTIVE',
+      },
+      {
+        label: 'Executive Center',
+        href: '/executive-center',
+        description: 'Interpret institutional meaning and survivability posture.',
+        systemArea: 'EXECUTIVE',
+        status: 'ACTIVE',
+      },
+      {
+        label: 'Command',
+        href: '/command',
+        description: 'Decide what leadership must do next.',
+        systemArea: 'EXECUTIVE',
+        status: 'ACTIVE',
+      },
+      {
+        label: 'Executive Report',
+        href: '/executive-report',
+        description: 'Generate what leadership must be told.',
+        systemArea: 'EXECUTIVE',
+        status: 'ACTIVE',
+      },
+      {
+        label: 'CGI Brief',
+        href: '/cgi-brief',
+        description: 'Legacy executive briefing surface retained for reference.',
+        systemArea: 'EXECUTIVE',
+        status: 'LEGACY_ALIAS',
+      },
+      {
+        label: 'CGI Demo',
+        href: '/cgi-demo',
+        description: 'Demonstration route retained for future executive proof flow.',
+        systemArea: 'EXECUTIVE',
+        status: 'LEGACY_ALIAS',
+      },
+    ],
+  },
+  {
+    title: 'Trust & Governance',
+    purpose:
+      'Preserve auditability, governance integrity, institutional memory, and action meaning.',
     items: [
       {
         label: 'Audit',
         href: '/audit',
         description: 'Review evidence, audit trails, and governance integrity.',
-        systemArea: 'GOVERNANCE',
+        systemArea: 'TRUST_GOVERNANCE',
         status: 'ACTIVE',
       },
       {
         label: 'Governance',
         href: '/governance',
         description: 'Manage governance decisions and role boundaries.',
-        systemArea: 'GOVERNANCE',
+        systemArea: 'TRUST_GOVERNANCE',
+        status: 'ACTIVE',
+      },
+      {
+        label: 'Continuity History',
+        href: '/continuity-history',
+        description: 'Read continuity movement across time.',
+        systemArea: 'TRUST_GOVERNANCE',
+        status: 'ACTIVE',
+      },
+      {
+        label: 'Memory Board',
+        href: '/cgi-memory-board',
+        description: 'Preserve what must never disappear from institutional memory.',
+        systemArea: 'TRUST_GOVERNANCE',
         status: 'ACTIVE',
       },
       {
         label: 'Timeline',
         href: '/timeline',
-        description: 'View continuity memory across lifecycle movement.',
-        systemArea: 'GOVERNANCE',
-        status: 'ACTIVE',
+        description: 'Legacy timeline route retained for continuity reference.',
+        systemArea: 'TRUST_GOVERNANCE',
+        status: 'LEGACY_ALIAS',
       },
       {
         label: 'Action Cues',
         href: '/action-cues',
         description: 'Review standardized action meanings.',
-        systemArea: 'GOVERNANCE',
+        systemArea: 'TRUST_GOVERNANCE',
         status: 'ACTIVE',
       },
     ],
   },
   {
     title: 'Infrastructure',
-    purpose: 'Review system structure, doctrine, domains, and bottlenecks.',
+    purpose: 'Review system structure, doctrine, domains, and stability posture.',
     items: [
-      {
-        label: 'System',
-        href: '/system',
-        description: 'Executive stability board and system posture.',
-        systemArea: 'INFRASTRUCTURE',
-        status: 'ACTIVE',
-      },
       {
         label: 'Infrastructure',
         href: '/infrastructure',
         description: 'CGI identity, doctrine, and deployment guardrails.',
+        systemArea: 'INFRASTRUCTURE',
+        status: 'ACTIVE',
+      },
+      {
+        label: 'System',
+        href: '/system',
+        description: 'Executive stability board and system posture.',
         systemArea: 'INFRASTRUCTURE',
         status: 'ACTIVE',
       },
@@ -172,13 +274,6 @@ export const cgiNavigationGroups: CGINavigationGroup[] = [
         description: 'Review continuity domains and operating boundaries.',
         systemArea: 'INFRASTRUCTURE',
         status: 'ACTIVE',
-      },
-      {
-        label: 'Bottlenecks',
-        href: '/bottlenecks',
-        description: 'Identify repeated stabilization blockage.',
-        systemArea: 'INFRASTRUCTURE',
-        status: 'FUTURE_RLI',
       },
     ],
   },
@@ -197,6 +292,13 @@ export const cgiNavigationGroups: CGINavigationGroup[] = [
         label: 'Assignment',
         href: '/admin/assign',
         description: 'Assign continuity ownership.',
+        systemArea: 'ADMINISTRATION',
+        status: 'ACTIVE',
+      },
+      {
+        label: 'Roles',
+        href: '/admin/roles',
+        description: 'Govern role authorization boundaries.',
         systemArea: 'ADMINISTRATION',
         status: 'ACTIVE',
       },
