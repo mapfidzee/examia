@@ -14,6 +14,7 @@ import {
   buildRecoveryMemoryRecords,
   deriveDominantConcern,
 } from '@/lib/cgiExecutiveMeaningDoctrineEngine'
+import { buildCGIExecutiveRecommendation } from '@/lib/cgiExecutiveRecommendationEngine'
 import {
   cgiVisualStyles as v,
   mergeCGIStyles,
@@ -178,6 +179,30 @@ function ExecutiveCenterContent() {
     [synthesis],
   )
 
+  const executiveRecommendation = useMemo(
+    () =>
+      buildCGIExecutiveRecommendation({
+        activeInstability: synthesis.activeInstability,
+        commandPressure: synthesis.commandPressure,
+        recoveryRecords: synthesis.recoveryRecords,
+        fragileRecovery: synthesis.fragileRecovery,
+        recurrenceVisible: synthesis.recurrenceVisible,
+        coordinationPressure: synthesis.coordinationPressure,
+        crossSitePressure: synthesis.crossSitePressure,
+        auditPressure: synthesis.auditPressure,
+        safeguardingVisible: synthesis.safeguardingVisible,
+        evidenceReturn: synthesis.evidenceReturn,
+        historicalMemory: synthesis.historicalMemory,
+        trustLevel: enterpriseReading.trustLevel,
+        executiveDecision: enterpriseReading.executiveDecision,
+        currentReading: executiveDelta.currentReading,
+        deltaDirection: executiveDelta.direction,
+        deltaConfidence: executiveDelta.confidence,
+        topThreat: executiveDelta.threatStack[0],
+      }),
+    [synthesis, enterpriseReading, executiveDelta],
+  )
+
   const copyReadyExecutiveBrief = useMemo(
     () =>
       buildCopyReadyExecutiveBrief(
@@ -201,8 +226,8 @@ function ExecutiveCenterContent() {
           <p style={styles.subtitle}>
             Apex leadership interpretation layer for converting recovery,
             command, coordination, cross-site exposure, situation posture,
-            evidence, audit meaning, delta movement, and institutional memory
-            into one executive continuity thesis.
+            evidence, audit meaning, executive delta, recommendation, and
+            institutional memory into one continuity thesis.
           </p>
         </section>
 
@@ -278,6 +303,52 @@ function ExecutiveCenterContent() {
                 </article>
               ))}
             </div>
+          </div>
+        </section>
+
+        <section style={styles.recommendationPanel}>
+          <div>
+            <p style={styles.sectionKicker}>Executive Recommendation</p>
+            <h2 style={styles.cardTitle}>
+              {executiveRecommendation.recommendation}
+            </h2>
+            <p style={styles.bodyText}>
+              {executiveRecommendation.boardSentence}
+            </p>
+          </div>
+
+          <div style={styles.recommendationMetricGrid}>
+            <MemoryMetric
+              label="Posture"
+              value={executiveRecommendation.posture}
+            />
+            <MemoryMetric
+              label="Urgency"
+              value={executiveRecommendation.urgency}
+            />
+            <MemoryMetric
+              label="Required Owner"
+              value={executiveRecommendation.requiredOwner}
+            />
+            <MemoryMetric
+              label="Next Move"
+              value={executiveRecommendation.nextExecutiveMove}
+            />
+          </div>
+
+          <div style={styles.recommendationGrid}>
+            <PriorityItem
+              title="Rationale"
+              body={executiveRecommendation.rationale}
+            />
+            <PriorityItem
+              title="Consequence Of Delay"
+              body={executiveRecommendation.consequenceOfDelay}
+            />
+            <PriorityItem
+              title="Required Evidence"
+              body={executiveRecommendation.requiredEvidence}
+            />
           </div>
         </section>
 
@@ -505,7 +576,7 @@ function ExecutiveCenterContent() {
           <h2 style={styles.cardTitle}>
             One enterprise reading across pressure, recovery, evidence, command,
             coordination, cross-site exposure, situation posture, audit,
-            executive delta, and institutional memory.
+            executive delta, recommendation, and institutional memory.
           </h2>
 
           <pre style={styles.summaryBox}>{copyReadyExecutiveBrief}</pre>
@@ -836,6 +907,10 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 900,
     lineHeight: 1.4,
   },
+
+  recommendationPanel: v.decisionPanel,
+  recommendationMetricGrid: v.executiveMetricStrip,
+  recommendationGrid: v.gridThree,
 
   apexCard: v.decisionPanel,
   apexStack: {
