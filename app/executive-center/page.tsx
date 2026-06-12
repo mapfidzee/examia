@@ -5,15 +5,7 @@ import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
-import ExecutiveActionPlanPanel from '@/components/executive/ExecutiveActionPlanPanel'
-import ExecutiveConfidencePanel from '@/components/executive/ExecutiveConfidencePanel'
-import ExecutiveDeltaPanel from '@/components/executive/ExecutiveDeltaPanel'
-import ExecutiveRecommendationPanel from '@/components/executive/ExecutiveRecommendationPanel'
-import ExecutiveRiskPanel from '@/components/executive/ExecutiveRiskPanel'
-import { buildCGIExecutiveActionPlan } from '@/lib/cgiExecutiveActionPlanEngine'
-import { buildCGIExecutiveConfidenceReading } from '@/lib/cgiExecutiveConfidenceEngine'
 import { buildCGIExecutiveContinuityChain } from '@/lib/cgiExecutiveContinuityChainEngine'
-import { buildCGIExecutiveDeltaReading } from '@/lib/cgiExecutiveDeltaEngine'
 import {
   buildCopyReadyExecutiveBrief,
   buildEnterpriseContinuityReading,
@@ -21,8 +13,6 @@ import {
   buildRecoveryMemoryRecords,
   deriveDominantConcern,
 } from '@/lib/cgiExecutiveMeaningDoctrineEngine'
-import { buildCGIExecutiveRecommendation } from '@/lib/cgiExecutiveRecommendationEngine'
-import { buildCGIExecutiveRiskReading } from '@/lib/cgiExecutiveRiskEngine'
 import {
   cgiVisualStyles as v,
   mergeCGIStyles,
@@ -96,7 +86,7 @@ function ExecutiveCenterContent() {
   }, [])
 
   async function loadExecutiveCenter() {
-    setMessage('Loading executive continuity synthesis...')
+    setMessage('Loading executive continuity interpretation...')
 
     const [casesResult, outcomesResult, metricsResult] = await Promise.all([
       supabase
@@ -130,7 +120,7 @@ function ExecutiveCenterContent() {
     setCases(casesResult.data || [])
     setOutcomes(outcomesResult.data || [])
     setMetrics(metricsResult.data || [])
-    setMessage('Executive continuity synthesis loaded.')
+    setMessage('Executive continuity interpretation loaded.')
   }
 
   const recoveryMemory = useMemo(
@@ -167,133 +157,6 @@ function ExecutiveCenterContent() {
     [synthesis, continuityChain],
   )
 
-  const executiveDelta = useMemo(
-    () =>
-      buildCGIExecutiveDeltaReading({
-        current: {
-          activeInstability: synthesis.activeInstability,
-          recoveryRecords: synthesis.recoveryRecords,
-          commandPressure: synthesis.commandPressure,
-          historicalMemory: synthesis.historicalMemory,
-          coordinationPressure: synthesis.coordinationPressure,
-          crossSitePressure: synthesis.crossSitePressure,
-          auditPressure: synthesis.auditPressure,
-          safeguardingVisible: synthesis.safeguardingVisible,
-          recurrenceVisible: synthesis.recurrenceVisible,
-          fragileRecovery: synthesis.fragileRecovery,
-        },
-        previous: null,
-      }),
-    [synthesis],
-  )
-
-  const executiveRecommendation = useMemo(
-    () =>
-      buildCGIExecutiveRecommendation({
-        activeInstability: synthesis.activeInstability,
-        commandPressure: synthesis.commandPressure,
-        recoveryRecords: synthesis.recoveryRecords,
-        fragileRecovery: synthesis.fragileRecovery,
-        recurrenceVisible: synthesis.recurrenceVisible,
-        coordinationPressure: synthesis.coordinationPressure,
-        crossSitePressure: synthesis.crossSitePressure,
-        auditPressure: synthesis.auditPressure,
-        safeguardingVisible: synthesis.safeguardingVisible,
-        evidenceReturn: synthesis.evidenceReturn,
-        historicalMemory: synthesis.historicalMemory,
-        trustLevel: enterpriseReading.trustLevel,
-        executiveDecision: enterpriseReading.executiveDecision,
-        currentReading: executiveDelta.currentReading,
-        deltaDirection: executiveDelta.direction,
-        deltaConfidence: executiveDelta.confidence,
-        topThreat: executiveDelta.threatStack[0],
-      }),
-    [synthesis, enterpriseReading, executiveDelta],
-  )
-
-  const executiveActionPlan = useMemo(
-    () =>
-      buildCGIExecutiveActionPlan({
-        recommendationPosture: executiveRecommendation.posture,
-        recommendationUrgency: executiveRecommendation.urgency,
-        recommendation: executiveRecommendation.recommendation,
-        requiredOwner: executiveRecommendation.requiredOwner,
-        nextExecutiveMove: executiveRecommendation.nextExecutiveMove,
-        requiredEvidence: executiveRecommendation.requiredEvidence,
-        activeInstability: synthesis.activeInstability,
-        commandPressure: synthesis.commandPressure,
-        fragileRecovery: synthesis.fragileRecovery,
-        recurrenceVisible: synthesis.recurrenceVisible,
-        coordinationPressure: synthesis.coordinationPressure,
-        crossSitePressure: synthesis.crossSitePressure,
-        auditPressure: synthesis.auditPressure,
-        safeguardingVisible: synthesis.safeguardingVisible,
-        evidenceReturn: synthesis.evidenceReturn,
-        recoveryRecords: synthesis.recoveryRecords,
-        historicalMemory: synthesis.historicalMemory,
-        deltaDirection: executiveDelta.direction,
-        deltaConfidence: executiveDelta.confidence,
-        topThreat: executiveDelta.threatStack[0],
-      }),
-    [synthesis, executiveDelta, executiveRecommendation],
-  )
-
-  const executiveRisk = useMemo(
-    () =>
-      buildCGIExecutiveRiskReading({
-        activeInstability: synthesis.activeInstability,
-        commandPressure: synthesis.commandPressure,
-        recoveryRecords: synthesis.recoveryRecords,
-        fragileRecovery: synthesis.fragileRecovery,
-        recurrenceVisible: synthesis.recurrenceVisible,
-        coordinationPressure: synthesis.coordinationPressure,
-        crossSitePressure: synthesis.crossSitePressure,
-        auditPressure: synthesis.auditPressure,
-        safeguardingVisible: synthesis.safeguardingVisible,
-        evidenceReturn: synthesis.evidenceReturn,
-        historicalMemory: synthesis.historicalMemory,
-        deltaDirection: executiveDelta.direction,
-        deltaConfidence: executiveDelta.confidence,
-        recommendationPosture: executiveRecommendation.posture,
-        recommendationUrgency: executiveRecommendation.urgency,
-        actionEscalationRule: executiveActionPlan.escalationRule,
-        topThreat: executiveDelta.threatStack[0],
-      }),
-    [synthesis, executiveDelta, executiveRecommendation, executiveActionPlan],
-  )
-
-  const executiveConfidence = useMemo(
-    () =>
-      buildCGIExecutiveConfidenceReading({
-        activeInstability: synthesis.activeInstability,
-        commandPressure: synthesis.commandPressure,
-        recoveryRecords: synthesis.recoveryRecords,
-        fragileRecovery: synthesis.fragileRecovery,
-        recurrenceVisible: synthesis.recurrenceVisible,
-        coordinationPressure: synthesis.coordinationPressure,
-        crossSitePressure: synthesis.crossSitePressure,
-        auditPressure: synthesis.auditPressure,
-        safeguardingVisible: synthesis.safeguardingVisible,
-        evidenceReturn: synthesis.evidenceReturn,
-        historicalMemory: synthesis.historicalMemory,
-        chainConfidence: continuityChain.chainConfidence,
-        deltaConfidence: executiveDelta.confidence,
-        recommendationPosture: executiveRecommendation.posture,
-        recommendationUrgency: executiveRecommendation.urgency,
-        actionEscalationRule: executiveActionPlan.escalationRule,
-        riskLevel: executiveRisk.riskLevel,
-        riskTrend: executiveRisk.riskTrend,
-      }),
-    [
-      synthesis,
-      continuityChain,
-      executiveDelta,
-      executiveRecommendation,
-      executiveActionPlan,
-      executiveRisk,
-    ],
-  )
-
   const copyReadyExecutiveBrief = useMemo(
     () =>
       buildCopyReadyExecutiveBrief(
@@ -315,11 +178,10 @@ function ExecutiveCenterContent() {
           </h1>
 
           <p style={styles.subtitle}>
-            Apex leadership interpretation layer for converting recovery,
-            command, coordination, cross-site exposure, situation posture,
-            evidence, audit meaning, executive delta, recommendation, action
-            plan, risk, confidence, and institutional memory into one continuity
-            thesis.
+            Institutional interpretation layer for converting recovery,
+            command, coordination, cross-site exposure, evidence, audit meaning,
+            survivability posture, and institutional memory into one executive
+            continuity thesis.
           </p>
         </section>
 
@@ -339,18 +201,6 @@ function ExecutiveCenterContent() {
             <p style={styles.questionText}>{enterpriseReading.ceoSentence}</p>
           </div>
         </section>
-
-        <ExecutiveDeltaPanel delta={executiveDelta} />
-
-        <ExecutiveRecommendationPanel
-          recommendation={executiveRecommendation}
-        />
-
-        <ExecutiveActionPlanPanel actionPlan={executiveActionPlan} />
-
-        <ExecutiveRiskPanel risk={executiveRisk} />
-
-        <ExecutiveConfidencePanel confidence={executiveConfidence} />
 
         <section style={styles.apexCard}>
           <div>
@@ -425,7 +275,8 @@ function ExecutiveCenterContent() {
           <p style={styles.sectionKicker}>Required Movement</p>
 
           <h2 style={styles.cardTitle}>
-            Executive Center derives meaning through the CGI doctrine layer.
+            Executive Center derives institutional meaning through the CGI
+            doctrine layer.
           </h2>
 
           <div style={styles.priorityGrid}>
@@ -511,7 +362,7 @@ function ExecutiveCenterContent() {
           <MetricCard
             label="Recovery Records"
             value={synthesis.recoveryRecords}
-            body="Durability reviews available for executive synthesis."
+            body="Durability reviews available for executive interpretation."
           />
           <MetricCard
             label="Command Pressure"
@@ -574,10 +425,9 @@ function ExecutiveCenterContent() {
           <p style={styles.sectionKicker}>Copy-Ready CEO Brief</p>
 
           <h2 style={styles.cardTitle}>
-            One enterprise reading across pressure, recovery, evidence, command,
-            coordination, cross-site exposure, situation posture, audit,
-            executive delta, recommendation, action plan, risk, confidence, and
-            institutional memory.
+            One institutional interpretation across pressure, recovery,
+            evidence, command, coordination, cross-site exposure, audit, memory,
+            and survivability meaning.
           </h2>
 
           <pre style={styles.summaryBox}>{copyReadyExecutiveBrief}</pre>
@@ -590,7 +440,7 @@ function ExecutiveCenterContent() {
 
         <section style={styles.gridTwo}>
           <Panel title="Lifecycle Movement">{synthesis.nextMovement}</Panel>
-          <Panel title="Leadership Action">
+          <Panel title="Leadership Understanding">
             {enterpriseReading.executiveDecision}
           </Panel>
         </section>
@@ -615,7 +465,7 @@ function ExecutiveCenterContent() {
             }
             body={
               synthesis.recoveryRecords > 0
-                ? 'Recovery evidence is available for executive synthesis.'
+                ? 'Recovery evidence is available for executive interpretation.'
                 : 'No recovery durability records currently require executive interpretation.'
             }
           />
