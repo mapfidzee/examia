@@ -227,55 +227,72 @@ function CasesContent() {
   )
 
   const climatePanels = [
-    { title: 'Case Stability Climate', value: caseClimate.stabilityClimate },
+    { title: 'Custody Climate', value: caseClimate.stabilityClimate },
     {
-      title: 'Lifecycle Governance Posture',
+      title: 'Lifecycle Posture',
       value: caseClimate.lifecyclePosture,
     },
     {
-      title: 'Evidence Continuity Visibility',
+      title: 'Evidence Visibility',
       value: caseClimate.evidenceVisibility,
     },
     {
-      title: 'Routing Readiness Landscape',
+      title: 'Routing Readiness',
       value: caseClimate.routingLandscape,
     },
   ]
 
   return (
-    <main className="min-h-screen text-neutral-100">
+    <main className="min-h-screen bg-neutral-950 text-neutral-100">
       <section className="mx-auto max-w-7xl px-6 py-8">
+        <header className="mb-8 flex flex-col gap-5 border-b border-amber-500/10 pb-6 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-amber-400">
+              TSINAXA CGI
+            </p>
+
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">
+              Cases
+            </h1>
+
+            <p className="mt-2 text-sm text-neutral-400">
+              Preserve accepted instability under case governance.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[520px]">
+            <StageChip label="Operating Layer" value="Continuity Lifecycle" />
+            <StageChip label="Executive Meaning" value="Instability Custody" />
+            <StageChip label="Movement" value="Routing" />
+          </div>
+        </header>
+
         {message && (
           <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm font-semibold text-amber-100">
             {message}
           </div>
         )}
 
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-400">
-          TSINAXA CGI â€¢ CASE GOVERNANCE INTELLIGENCE
-        </p>
-
-        <div className="mt-4 rounded-3xl border border-neutral-800 bg-neutral-900/70 p-6 shadow-2xl">
+        <div className="rounded-3xl border border-neutral-800 bg-black p-6 shadow-2xl">
           <h2 className="text-2xl font-semibold text-white">
             Accepted Instability Governance
           </h2>
 
           <p className="mt-3 max-w-5xl text-sm leading-6 text-neutral-300">
             Govern accepted instability after triage. Preserve inherited intake
-            meaning, inherited eligibility posture, lifecycle phase, required next
-            movement, evidence posture, stagnation risk, continuity drift,
-            convergence visibility, survivability awareness, and executive command
-            meaning without executing routing, intervention, outcome, or recovery
-            work.
+            meaning, inherited eligibility posture, lifecycle phase, required
+            next movement, evidence posture, stagnation risk, continuity drift,
+            convergence visibility, survivability awareness, and executive
+            command meaning without executing routing, intervention, outcome, or
+            recovery work.
           </p>
 
           <p className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
             <span className="font-semibold">Boundary:</span> /cases governs
-            accepted instability lifecycle visibility. It inherits eligibility
-            meaning from /triage and protects continuity memory through timeline
-            records. It does not route ownership, execute stabilization action,
-            verify outcomes, declare recovery, or erase structural continuity
-            memory.
+            accepted instability custody. It inherits eligibility meaning from
+            /triage and protects continuity memory through timeline records. It
+            does not route ownership, execute stabilization action, verify
+            outcomes, declare recovery, or erase structural continuity memory.
           </p>
         </div>
 
@@ -283,7 +300,7 @@ function CasesContent() {
           {climatePanels.map((panel) => (
             <div
               key={panel.title}
-              className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5"
+              className="rounded-2xl border border-neutral-800 bg-black p-5"
             >
               <p className="text-sm font-semibold text-white">{panel.title}</p>
               <p className="mt-3 text-sm leading-6 text-neutral-400">
@@ -293,7 +310,46 @@ function CasesContent() {
           ))}
         </div>
 
-        <div className="mt-6 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+        <section className="mt-6 rounded-3xl border border-neutral-800 bg-black p-6">
+          <h3 className="text-lg font-semibold text-white">
+            Case Governance Workspace
+          </h3>
+
+          <p className="mt-3 text-sm leading-6 text-neutral-400">
+            Case governance has one purpose: preserve accepted instability in
+            lawful custody until the next governed movement is credible.
+          </p>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            <MovementCard
+              title="Route"
+              movement="Routing"
+              description="Move accepted instability toward stabilization ownership."
+            />
+            <MovementCard
+              title="Review"
+              movement="Governance Review"
+              description="Hold custody when governance interpretation remains unresolved."
+            />
+            <MovementCard
+              title="Evidence"
+              movement="Evidence Gate"
+              description="Prevent movement when routing evidence is not yet credible."
+            />
+            <MovementCard
+              title="Ownership"
+              movement="Clarity Hold"
+              description="Pause lifecycle movement until responsible ownership is visible."
+            />
+            <MovementCard
+              title="Escalate"
+              movement="Command"
+              description="Preserve executive visibility when ordinary custody is no longer enough."
+            />
+          </div>
+        </section>
+
+        <div className="mt-6 rounded-3xl border border-neutral-800 bg-black p-6">
           <h3 className="text-lg font-semibold text-white">
             Case Pressure Intelligence
           </h3>
@@ -302,7 +358,7 @@ function CasesContent() {
           </p>
         </div>
 
-        <div className="mt-6 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+        <div className="mt-6 rounded-3xl border border-neutral-800 bg-black p-6">
           <h3 className="text-lg font-semibold text-white">
             Executive Case Synthesis
           </h3>
@@ -311,27 +367,7 @@ function CasesContent() {
           </p>
         </div>
 
-        <div className="mt-6 grid gap-4 lg:grid-cols-2">
-          <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
-            <h3 className="text-lg font-semibold text-white">
-              Continuity Drift Intelligence
-            </h3>
-            <p className="mt-3 text-sm leading-6 text-neutral-300">
-              {caseClimate.driftIntelligence}
-            </p>
-          </div>
-
-          <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
-            <h3 className="text-lg font-semibold text-white">
-              Cross-Case Convergence Intelligence
-            </h3>
-            <p className="mt-3 text-sm leading-6 text-neutral-300">
-              {caseClimate.convergenceIntelligence}
-            </p>
-          </div>
-        </div>
-
-        <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+        <section className="mt-8 rounded-3xl border border-neutral-800 bg-black p-6">
           <h3 className="text-xl font-semibold text-white">
             Governed Instability Cases
           </h3>
@@ -339,9 +375,10 @@ function CasesContent() {
           <p className="mt-3 text-sm leading-6 text-neutral-400">
             Triage decides whether visible instability enters governance. Case
             governance inherits the intake and triage record, then preserves
-            continuity status, lifecycle maturity, evidence posture, drift
-            visibility, convergence patterns, and next movement until the case is
-            routed, acted on, verified, recovered, escalated, or archived.
+            custody, lifecycle maturity, evidence posture, movement readiness,
+            drift visibility, convergence patterns, and next movement until the
+            case is routed, acted on, verified, recovered, escalated, or
+            archived.
           </p>
 
           <div className="mt-6 grid gap-5">
@@ -351,7 +388,10 @@ function CasesContent() {
                 timelineMemory[caseItem.id] || [],
               )
               const intelligence = buildCaseIntelligence(caseItem, inherited)
-              const simplifiedIdentity = buildSimplifiedIdentity(caseItem, inherited)
+              const simplifiedIdentity = buildSimplifiedIdentity(
+                caseItem,
+                inherited,
+              )
               const actionEvidenceVisible = hasActionEvidence(caseItem)
               const outcomeEvidenceVisible = hasOutcomeEvidence(caseItem)
 
@@ -381,117 +421,61 @@ function CasesContent() {
                   </div>
 
                   <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                    <Info label="Governance State" value={caseItem.case_status} />
+                    <Info label="Custody State" value={caseItem.case_status} />
                     <Info
-                      label="Inherited Pressure"
+                      label="Pressure"
                       value={inherited.inheritedPressureType}
                     />
                     <Info
-                      label="Inherited Signal"
+                      label="Signal"
                       value={inherited.inheritedVisibleSignal}
                     />
                     <Info
-                      label="Eligibility Confidence"
+                      label="Eligibility"
                       value={inherited.eligibilityConfidence}
                     />
                   </div>
 
-                  <section className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
+                  <section className="mt-5 rounded-2xl border border-neutral-800 bg-black p-5">
                     <p className="text-sm font-semibold text-amber-400">
-                      Inherited Lifecycle Memory
+                      Custody Context
                     </p>
 
-                    <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                      <Info label="Memory Source" value={inherited.memorySource} />
+                    <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                       <Info
-                        label="Inherited Intake Identity"
-                        value={inherited.inheritedIntakeIdentity}
+                        label="Memory Source"
+                        value={inherited.memorySource}
                       />
                       <Info
-                        label="Inherited Ownership"
+                        label="Ownership"
                         value={inherited.inheritedOwnershipPosture}
                       />
                       <Info
-                        label="Inherited Evidence"
+                        label="Evidence"
                         value={inherited.inheritedEvidencePosture}
                       />
-                      <Info label="Triage Result" value={inherited.triageResult} />
                       <Info
-                        label="Triage Gate Status"
-                        value={inherited.triageGateStatus}
-                      />
-                      <Info
-                        label="Triage Maturity"
-                        value={inherited.triageMaturity}
-                      />
-                      <Info
-                        label="Recommended Posture"
-                        value={inherited.recommendedPosture}
-                      />
-                      <Info
-                        label="Triage Next Movement"
-                        value={inherited.nextLifecycleState}
-                      />
-                      <Info
-                        label="Inherited Command Meaning"
-                        value={inherited.inheritedCommandMeaning}
+                        label="Triage Result"
+                        value={inherited.triageResult}
                       />
                     </div>
                   </section>
 
-                  <section className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
+                  <section className="mt-5 rounded-2xl border border-neutral-800 bg-black p-5">
                     <p className="text-sm font-semibold text-amber-400">
-                      Continuity Memory Intelligence
+                      Case Intelligence
                     </p>
 
                     <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                      <Info label="Phase" value={intelligence.phase} />
+                      <Info label="Maturity" value={intelligence.maturity} />
                       <Info
-                        label="Lifecycle Narrative"
-                        value={inherited.lifecycleNarrative}
-                      />
-                      <Info label="Drift Signal" value={inherited.driftSignal} />
-                      <Info
-                        label="Convergence Signal"
-                        value={inherited.convergenceSignal}
-                      />
-                    </div>
-                  </section>
-
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    <SignalBadge>{caseItem.support_domain}</SignalBadge>
-                    <SignalBadge>{caseItem.severity_level}</SignalBadge>
-                    <SignalBadge>{inherited.triageResult}</SignalBadge>
-
-                    {(caseItem.instability_signals || []).map((signal, index) => (
-                      <SignalBadge key={`${signal}-${index}`}>
-                        {signal}
-                      </SignalBadge>
-                    ))}
-
-                    {caseItem.safeguarding_flag && (
-                      <SignalBadge>EXECUTIVE_VISIBILITY</SignalBadge>
-                    )}
-                  </div>
-
-                  <section className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-                    <p className="text-sm font-semibold text-amber-400">
-                      Case Intelligence Panel
-                    </p>
-
-                    <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                      <Info label="Lifecycle Phase" value={intelligence.phase} />
-                      <Info label="Case Maturity" value={intelligence.maturity} />
-                      <Info
-                        label="Governance Confidence"
+                        label="Confidence"
                         value={intelligence.confidence}
                       />
                       <Info
-                        label="Required Next Movement"
+                        label="Next Movement"
                         value={intelligence.nextMovement}
-                      />
-                      <Info
-                        label="Evidence Posture"
-                        value={intelligence.evidencePosture}
                       />
                       <Info
                         label="Stagnation Risk"
@@ -504,38 +488,23 @@ function CasesContent() {
                     </div>
                   </section>
 
-                  <section className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-                    <p className="text-sm font-semibold text-amber-400">
-                      Linked Execution Visibility
-                    </p>
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    <SignalBadge>{caseItem.support_domain}</SignalBadge>
+                    <SignalBadge>{caseItem.severity_level}</SignalBadge>
+                    <SignalBadge>{inherited.triageResult}</SignalBadge>
 
-                    <div className="mt-4 grid gap-3 md:grid-cols-3">
-                      <Info
-                        label="Action Evidence"
-                        value={
-                          actionEvidenceVisible
-                            ? 'Present in /interventions'
-                            : 'Action evidence pending'
-                        }
-                      />
-                      <Info
-                        label="Outcome Evidence"
-                        value={
-                          outcomeEvidenceVisible
-                            ? 'Present in /outcomes'
-                            : 'Outcome verification pending'
-                        }
-                      />
-                      <Info
-                        label="Recovery Observation"
-                        value={
-                          caseItem.case_status === 'RECOVERY_MONITORING'
-                            ? 'Recovery durability watch active'
-                            : 'Recovery durability not yet active'
-                        }
-                      />
-                    </div>
-                  </section>
+                    {(caseItem.instability_signals || []).map(
+                      (signal, index) => (
+                        <SignalBadge key={`${signal}-${index}`}>
+                          {signal}
+                        </SignalBadge>
+                      ),
+                    )}
+
+                    {caseItem.safeguarding_flag && (
+                      <SignalBadge>EXECUTIVE_VISIBILITY</SignalBadge>
+                    )}
+                  </div>
 
                   <div className="mt-5 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
                     <p className="text-sm font-semibold text-amber-100">
@@ -552,7 +521,7 @@ function CasesContent() {
                   />
 
                   {actionEvidenceVisible && caseItem.intervention_summary && (
-                    <div className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-sm leading-6 text-neutral-300">
+                    <div className="mt-5 rounded-2xl border border-neutral-800 bg-black p-4 text-sm leading-6 text-neutral-300">
                       <span className="font-semibold text-white">
                         Latest linked action evidence:{' '}
                       </span>
@@ -561,7 +530,7 @@ function CasesContent() {
                   )}
 
                   {outcomeEvidenceVisible && caseItem.outcome_summary && (
-                    <div className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-sm leading-6 text-neutral-300">
+                    <div className="mt-5 rounded-2xl border border-neutral-800 bg-black p-4 text-sm leading-6 text-neutral-300">
                       <span className="font-semibold text-white">
                         Latest downstream evidence:{' '}
                       </span>
@@ -574,39 +543,70 @@ function CasesContent() {
 
             {cases.length === 0 && (
               <div className="rounded-3xl border border-dashed border-neutral-700 bg-neutral-950 p-8 text-center text-sm leading-6 text-neutral-400">
-                No accepted instability is currently under active CGI governance.
-                Case governance intelligence will activate when triage accepts
-                visible instability into the continuity lifecycle.
+                No accepted instability is currently under active CGI
+                governance. Case governance intelligence will activate when
+                triage accepts visible instability into the continuity lifecycle.
               </div>
             )}
           </div>
         </section>
 
-        <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+        <section className="mt-8 rounded-3xl border border-neutral-800 bg-black p-6">
           <h3 className="text-xl font-semibold text-white">
             Case Governance Doctrine
           </h3>
 
           <p className="mt-4 text-sm leading-7 text-neutral-300">
-            Case governance is lifecycle custody, not task execution. CGI preserves
-            accepted instability visibility, inherited intake meaning, inherited
-            triage eligibility, movement readiness, evidence posture, stagnation
-            risk, command meaning, continuity drift, convergence visibility, and
-            structural memory before routing, action, outcome verification, or
-            recovery durability occurs.
+            Case governance is lifecycle custody, not task execution. CGI
+            preserves accepted instability visibility, inherited intake meaning,
+            inherited triage eligibility, movement readiness, evidence posture,
+            stagnation risk, command meaning, continuity drift, convergence
+            visibility, and structural memory before routing, action, outcome
+            verification, or recovery durability occurs.
           </p>
 
           <p className="mt-4 text-sm leading-7 text-neutral-300">
             Mature case governance must preserve proportional continuity
-            interpretation. When accepted instability is moving through the lifecycle
-            without stall, recurrence, evidence loss, or structural deterioration,
-            the system should support measured confidence while preserving inherited
-            traceability, executive synthesis readiness, lifecycle discipline, and
-            institutional continuity memory.
+            interpretation. When accepted instability is moving through the
+            lifecycle without stall, recurrence, evidence loss, or structural
+            deterioration, the system should support measured confidence while
+            preserving inherited traceability, executive synthesis readiness,
+            lifecycle discipline, and institutional continuity memory.
           </p>
         </section>
       </section>
     </main>
+  )
+}
+
+function StageChip({ label, value }: { label: string; value: string }) {
+  return (
+    <article className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-amber-400">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-semibold text-amber-50">{value}</p>
+    </article>
+  )
+}
+
+function MovementCard({
+  title,
+  movement,
+  description,
+}: {
+  title: string
+  movement: string
+  description: string
+}) {
+  return (
+    <article className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
+      <p className="text-sm font-semibold text-amber-100">{title}</p>
+      <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-amber-400">
+        {movement}
+      </p>
+      <p className="mt-3 text-xs leading-5 text-neutral-400">{description}</p>
+    </article>
   )
 }
 
@@ -624,7 +624,7 @@ function GovernanceMovementControls({
   const forwardMovements = getForwardMovements(caseItem)
 
   return (
-    <section className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
+    <section className="mt-5 rounded-2xl border border-neutral-800 bg-black p-5">
       <p className="text-sm font-semibold text-amber-400">
         Governance Movement Controls
       </p>
@@ -792,8 +792,6 @@ function buildCaseClimate(
     buildDriftSignal(item, timelineMemory[item.id] || []).includes('visible'),
   ).length
 
-  const convergence = buildCrossCaseConvergence(cases)
-
   const allVisibleCasesHaveEvidence = incompleteEvidence === 0
   const allVisibleCasesInRecovery =
     cases.length > 0 && recoveryMonitoring === cases.length
@@ -843,7 +841,7 @@ function buildCaseClimate(
       driftCases === 0
         ? 'No concentrated continuity drift pattern is currently visible across active governed cases.'
         : `${driftCases} governed case pathway(s) show continuity drift visibility through stalled movement, recurrence, reopening, escalation, missing evidence, or repeated follow-up pressure.`,
-    convergenceIntelligence: convergence,
+    convergenceIntelligence: buildCrossCaseConvergence(cases),
   }
 }
 
@@ -1099,7 +1097,9 @@ function inferRecommendedPosture(caseItem: InstabilityCase) {
 
 function inferCaseReadiness(caseItem: InstabilityCase) {
   if (caseItem.case_status === 'ACCEPTED_FOR_GOVERNANCE') return '/cases'
-  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) return '/routing'
+  if (caseItem.case_status.includes('STABILIZATION_OWNER_ROUTED')) {
+    return '/routing'
+  }
 
   if (
     caseItem.case_status === 'ACTION_ACTIVE' ||
@@ -1285,7 +1285,7 @@ function buildLifecycleNarrative(
     hasRecovery ? 'recovery durability observation active' : 'recovery not active',
   ]
 
-  return `${phases.join(' â€¢ ')}. Timeline memory entries visible: ${eventCount}.`
+  return `${phases.join(' • ')}. Timeline memory entries visible: ${eventCount}.`
 }
 
 function buildDriftSignal(
@@ -1385,7 +1385,7 @@ function buildCrossCaseConvergence(cases: InstabilityCase[]) {
   }
 
   return `Cross-case convergence is visible through ${patterns.join(
-    ' â€¢ ',
+    ' • ',
   )}. Executive review may benefit from comparing these cases as a structural pattern rather than isolated events.`
 }
 
@@ -1468,7 +1468,7 @@ function buildSimplifiedIdentity(
     return inheritedIdentity
   }
 
-  return `${caseItem.support_domain} instability â€¢ ${location}`
+  return `${caseItem.support_domain} instability • ${location}`
 }
 
 function buildCaseIntelligence(
@@ -1486,7 +1486,7 @@ function buildCaseIntelligence(
     `Recovery: ${
       caseItem.case_status === 'RECOVERY_MONITORING' ? 'active' : 'not active'
     }`,
-  ].join(' â€¢ ')
+  ].join(' • ')
 
   if (caseItem.case_status.includes('GOVERNANCE_REVIEW_REQUIRED_RECURRENCE')) {
     return {
@@ -1811,5 +1811,5 @@ function severityBadgeClass(level: string) {
     return 'rounded-full bg-amber-900 px-3 py-2 text-xs font-semibold text-amber-100'
   }
 
-  return 'rounded-full bg-emerald-900 px-3 py-2 text-xs font-semibold text-amber-100'
+  return 'rounded-full bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-100'
 }
