@@ -81,10 +81,7 @@ const CGI_PRESSURE_TYPES = [
   'RELIABILITY',
 ]
 
-const ACTIVE_TRIAGE_STATUSES = [
-  'PENDING_TRIAGE',
-  'UNDER_REVIEW',
-]
+const ACTIVE_TRIAGE_STATUSES = ['PENDING_TRIAGE', 'UNDER_REVIEW']
 
 const PRESERVED_TRIAGE_STATUSES = [
   'ACCEPTED_FOR_GOVERNANCE',
@@ -225,7 +222,7 @@ export default function TriageContent() {
 
     setMessage(
       decision.status === 'ACCEPTED_FOR_GOVERNANCE'
-        ? 'Triage accepted inherited intake instability into active CGI case governance. Intake context, eligibility meaning, evidence threshold, and lifecycle traceability are preserved.'
+        ? 'Triage accepted inherited intake instability into active CGI case governance. Eligibility meaning, evidence threshold, and lifecycle traceability are preserved.'
         : 'Triage decision preserved as continuity governance evidence with inherited intake context.',
     )
 
@@ -254,52 +251,72 @@ export default function TriageContent() {
 
   const climatePanels = [
     {
-      title: 'Triage Stability Climate',
+      title: 'Eligibility Climate',
       value: triageClimate.stabilityClimate,
     },
     {
-      title: 'Eligibility Gate Posture',
+      title: 'Gate Posture',
       value: triageClimate.gatePosture,
     },
     {
-      title: 'Evidence Threshold Visibility',
+      title: 'Evidence Threshold',
       value: triageClimate.evidenceVisibility,
     },
     {
-      title: 'Case Governance Readiness',
+      title: 'Case Readiness',
       value: triageClimate.caseReadiness,
     },
   ]
 
   return (
-    <main className="min-h-screen text-neutral-100">
+    <main className="min-h-screen bg-neutral-950 text-neutral-100">
       <section className="mx-auto max-w-7xl px-6 py-8">
+        <header className="mb-8 flex flex-col gap-5 border-b border-amber-500/10 pb-6 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-amber-400">
+              TSINAXA CGI
+            </p>
+
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">
+              Triage
+            </h1>
+
+            <p className="mt-2 text-sm text-neutral-400">
+              Judge eligibility before case governance begins.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[520px]">
+            <StageChip label="Operating Layer" value="Continuity Lifecycle" />
+            <StageChip label="Executive Meaning" value="Eligibility Judgment" />
+            <StageChip label="Movement" value="Cases or Command" />
+          </div>
+        </header>
+
         {message && (
           <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm font-semibold text-amber-100">
             {message}
           </div>
         )}
 
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-400">
-          TSINAXA CGI • TRIAGE ELIGIBILITY INTELLIGENCE
-        </p>
-
-        <div className="mt-4 rounded-3xl border border-neutral-800 bg-neutral-950/80 p-6 shadow-2xl">
+        <div className="rounded-3xl border border-neutral-800 bg-black p-6 shadow-2xl">
           <h2 className="text-2xl font-semibold text-white">
             Governance Eligibility Review
           </h2>
 
           <p className="mt-3 max-w-5xl text-sm leading-6 text-neutral-300">
-            Decide whether inherited visible instability from intake should become
-            an accepted CGI case, require stronger evidence, receive command
-            visibility, remain held for clarity, or close without active CGI action.
+            Decide whether inherited visible instability should become an
+            accepted CGI case, require stronger evidence, receive command
+            visibility, remain held for clarity, or close without active CGI
+            action.
           </p>
 
           <p className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
             <span className="font-semibold">Boundary:</span> /triage governs
             eligibility. It inherits intake context from /request, but does not
             manage active case lifecycle movement, route ownership, execute
-            stabilization action, verify outcomes, or declare recovery durability.
+            stabilization action, verify outcomes, or declare recovery
+            durability.
           </p>
         </div>
 
@@ -307,7 +324,7 @@ export default function TriageContent() {
           {climatePanels.map((panel) => (
             <div
               key={panel.title}
-              className="rounded-2xl border border-neutral-800 bg-neutral-950 p-5"
+              className="rounded-2xl border border-neutral-800 bg-black p-5"
             >
               <p className="text-sm font-semibold text-white">{panel.title}</p>
               <p className="mt-3 text-sm leading-6 text-neutral-400">
@@ -317,27 +334,29 @@ export default function TriageContent() {
           ))}
         </div>
 
-        <div className="mt-6 rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
+        <div className="mt-6 rounded-3xl border border-neutral-800 bg-black p-6">
           <h3 className="text-lg font-semibold text-white">
             Triage Pressure Intelligence
           </h3>
+
           <p className="mt-3 text-sm leading-6 text-neutral-300">
             {triageClimate.pressureMeaning}
           </p>
         </div>
 
-        <div className="mt-6 rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
+        <div className="mt-6 rounded-3xl border border-neutral-800 bg-black p-6">
           <h3 className="text-lg font-semibold text-white">
             Executive Triage Synthesis
           </h3>
+
           <p className="mt-3 text-sm leading-6 text-neutral-300">
             {triageClimate.commandSynthesis}
           </p>
         </div>
 
         <TriageSection
-          title="Awaiting Triage Review"
-          description="Request opens visibility. Triage inherits intake context and determines whether visible instability crosses the governance eligibility threshold before it becomes an accepted CGI case."
+          title="Awaiting Eligibility Judgment"
+          description="Request opens visibility. Triage determines whether visible instability crosses the governance eligibility threshold before it becomes an accepted CGI case."
           emptyText="No visible CGI instability is currently awaiting triage review. Eligibility intelligence will activate when visible instability enters triage from governed intake."
           items={activeReviewItems}
           selectedDecisions={selectedDecisions}
@@ -346,8 +365,8 @@ export default function TriageContent() {
         />
 
         <TriageSection
-          title="Preserved Triage Decisions"
-          description="These signals have already been triaged. Their inherited intake context and eligibility decisions remain visible for governance traceability, not repeated review."
+          title="Preserved Eligibility Decisions"
+          description="These signals have already been triaged. Their eligibility decisions remain visible for governance traceability, not repeated review."
           emptyText="No preserved triage decisions are currently visible."
           items={preservedReviewItems}
           selectedDecisions={selectedDecisions}
@@ -355,7 +374,7 @@ export default function TriageContent() {
           preserveTriageDecision={preserveTriageDecision}
         />
 
-        <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
+        <section className="mt-8 rounded-3xl border border-neutral-800 bg-black p-6">
           <h3 className="text-xl font-semibold text-white">
             Triage Governance Doctrine
           </h3>
@@ -369,11 +388,12 @@ export default function TriageContent() {
           </p>
 
           <p className="mt-4 text-sm leading-7 text-neutral-300">
-            Mature triage intelligence must preserve proportional interpretation.
-            When visible instability meets the governance threshold, the system
-            should allow case acceptance without over-escalation. When inherited
-            evidence is weak or ownership is unclear, the system should pause
-            movement without pretending stabilization has begun.
+            Mature triage intelligence must preserve proportional
+            interpretation. When visible instability meets the governance
+            threshold, the system should allow case acceptance without
+            over-escalation. When inherited evidence is weak or ownership is
+            unclear, the system should pause movement without pretending
+            stabilization has begun.
           </p>
         </section>
       </section>
@@ -399,12 +419,10 @@ function TriageSection({
   preserveTriageDecision: (item: VisibleInstability) => void
 }) {
   return (
-    <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
+    <section className="mt-8 rounded-3xl border border-neutral-800 bg-black p-6">
       <h3 className="text-xl font-semibold text-white">{title}</h3>
 
-      <p className="mt-3 text-sm leading-6 text-neutral-400">
-        {description}
-      </p>
+      <p className="mt-3 text-sm leading-6 text-neutral-400">{description}</p>
 
       <div className="mt-6 grid gap-5">
         {items.map((item) => (
@@ -418,7 +436,7 @@ function TriageSection({
         ))}
 
         {items.length === 0 && (
-          <div className="rounded-3xl border border-dashed border-neutral-700 bg-black p-8 text-center text-sm leading-6 text-neutral-400">
+          <div className="rounded-3xl border border-dashed border-neutral-700 bg-neutral-950 p-8 text-center text-sm leading-6 text-neutral-400">
             {emptyText}
           </div>
         )}
@@ -443,11 +461,11 @@ function TriageCard({
   const locked = isDecisionLocked(item)
 
   return (
-    <article className="rounded-3xl border border-neutral-800 bg-black p-5">
+    <article className="rounded-3xl border border-neutral-800 bg-neutral-950 p-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-amber-400">
-            {locked ? 'Decision Preserved' : 'Inherited Intake Signal'}
+            {locked ? 'Decision Preserved' : 'Eligibility Pending'}
           </p>
 
           <h4 className="mt-2 text-xl font-semibold text-white">
@@ -464,51 +482,26 @@ function TriageCard({
         </span>
       </div>
 
-      <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <Info label="Triage State" value={item.case_status} />
-        <Info label="Inherited Pressure" value={inheritedContext.pressureType} />
-        <Info label="Inherited Signal" value={inheritedContext.visibleSignal} />
-        <Info
-          label="Inherited Ownership"
-          value={inheritedContext.ownershipPosture}
-        />
-        <Info
-          label="Inherited Evidence"
-          value={inheritedContext.evidencePosture}
-        />
-        <Info
-          label="Inherited Command Meaning"
-          value={inheritedContext.commandMeaning}
-        />
+        <Info label="Signal" value={inheritedContext.visibleSignal} />
+        <Info label="Evidence" value={inheritedContext.evidenceLevel} />
+        <Info label="Ownership" value={inheritedContext.ownershipState} />
       </div>
 
-      <section className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-950 p-5">
+      <section className="mt-5 rounded-2xl border border-neutral-800 bg-black p-5">
         <p className="text-sm font-semibold text-amber-400">
-          Inherited Intake Context
+          Eligibility Context
         </p>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          <Info label="Entry Route" value={inheritedContext.entryRoute} />
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <Info label="Pressure" value={inheritedContext.pressureType} />
+          <Info label="Location" value={inheritedContext.location} />
           <Info
-            label="Visibility Classification"
-            value={inheritedContext.visibilityClassification}
-          />
-          <Info label="Intake Maturity" value={inheritedContext.intakeMaturity} />
-          <Info
-            label="Intake Confidence"
-            value={inheritedContext.intakeConfidence}
-          />
-          <Info
-            label="Governance Readiness"
-            value={inheritedContext.governanceReadiness}
-          />
-          <Info
-            label="Governance Visibility"
+            label="Visibility"
             value={inheritedContext.governanceVisibility}
           />
           <Info label="Review Urgency" value={inheritedContext.reviewUrgency} />
-          <Info label="Affected Area" value={inheritedContext.affectedArea} />
-          <Info label="Brief Note" value={inheritedContext.briefNote} />
         </div>
       </section>
 
@@ -528,36 +521,20 @@ function TriageCard({
         {locked && <SignalBadge>DECISION_LOCKED</SignalBadge>}
       </div>
 
-      <section className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-950 p-5">
+      <section className="mt-5 rounded-2xl border border-neutral-800 bg-black p-5">
         <p className="text-sm font-semibold text-amber-400">
-          Triage Intelligence Panel
+          Eligibility Intelligence
         </p>
 
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           <Info label="Gate Status" value={intelligence.gateStatus} />
           <Info
-            label="Eligibility Determination"
+            label="Eligibility"
             value={intelligence.eligibilityDetermination}
           />
-          <Info label="Triage Maturity" value={intelligence.maturity} />
-          <Info
-            label="Eligibility Confidence"
-            value={intelligence.confidence}
-          />
-          <Info
-            label="Recommended Posture"
-            value={intelligence.recommendedPosture}
-          />
-          <Info label="Evidence Meaning" value={intelligence.evidenceMeaning} />
-          <Info
-            label="Ownership Meaning"
-            value={intelligence.ownershipMeaning}
-          />
-          <Info label="Risk Meaning" value={intelligence.riskMeaning} />
-          <Info
-            label="Required Next Movement"
-            value={intelligence.nextMovement}
-          />
+          <Info label="Confidence" value={intelligence.confidence} />
+          <Info label="Posture" value={intelligence.recommendedPosture} />
+          <Info label="Next Movement" value={intelligence.nextMovement} />
           <Info label="Command Meaning" value={intelligence.commandMeaning} />
         </div>
       </section>
@@ -1227,6 +1204,17 @@ function resolveTriageSeverity(
   if (item.severity_level === 'MODERATE') return 'MODERATE'
 
   return 'LOW'
+}
+
+function StageChip({ label, value }: { label: string; value: string }) {
+  return (
+    <article className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-amber-400">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-semibold text-amber-50">{value}</p>
+    </article>
+  )
 }
 
 function Info({ label, value }: { label: string; value: string }) {
