@@ -303,7 +303,7 @@ export default function RequestPage() {
   }
 
   return (
-    <main className="min-h-screen text-neutral-100">
+    <main className="min-h-screen bg-neutral-950 text-neutral-100">
       <section className="mx-auto max-w-7xl px-6 py-8">
         {message && (
           <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm font-semibold text-amber-100">
@@ -353,7 +353,7 @@ export default function RequestPage() {
           />
         </div>
 
-        <div className="mt-6 rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
+        <div className="mt-6 rounded-3xl border border-neutral-800 bg-black p-6">
           <h3 className="text-lg font-semibold text-white">
             Intake Pressure Intelligence
           </h3>
@@ -363,7 +363,7 @@ export default function RequestPage() {
           </p>
         </div>
 
-        <div className="mt-6 rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
+        <div className="mt-6 rounded-3xl border border-neutral-800 bg-black p-6">
           <h3 className="text-lg font-semibold text-white">
             Generated Intake Identity
           </h3>
@@ -388,7 +388,7 @@ export default function RequestPage() {
         </div>
 
         <section className="mt-8 grid gap-6 lg:grid-cols-[1fr_1.05fr]">
-          <section className="rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
+          <section className="rounded-3xl border border-neutral-800 bg-black p-6">
             <h3 className="text-xl font-semibold text-white">
               Operational Intake Workspace
             </h3>
@@ -475,7 +475,7 @@ export default function RequestPage() {
                   onChange={(event) => setBriefNote(event.target.value)}
                   rows={5}
                   placeholder="Optional: add one short sentence if the dropdowns do not fully capture the context."
-                  className="mt-2 w-full rounded-xl border border-neutral-700 bg-black px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
+                  className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
                 />
               </label>
 
@@ -491,7 +491,7 @@ export default function RequestPage() {
             </form>
           </section>
 
-          <section className="rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
+          <section className="rounded-3xl border border-neutral-800 bg-black p-6">
             <h3 className="text-xl font-semibold text-white">
               Intake Intelligence Panel
             </h3>
@@ -540,7 +540,7 @@ export default function RequestPage() {
               />
             </div>
 
-            <div className="mt-6 rounded-2xl border border-neutral-800 bg-black p-5">
+            <div className="mt-6 rounded-2xl border border-neutral-800 bg-neutral-950 p-5">
               <h4 className="text-sm font-semibold uppercase tracking-wide text-amber-400">
                 Lifecycle Boundary
               </h4>
@@ -618,7 +618,7 @@ export default function RequestPage() {
           </section>
         )}
 
-        <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
+        <section className="mt-8 rounded-3xl border border-neutral-800 bg-black p-6">
           <h3 className="text-xl font-semibold text-white">
             Intake Governance Doctrine
           </h3>
@@ -892,7 +892,7 @@ function Select({
       <select
         value={value}
         onChange={(event) => setValue(event.target.value)}
-        className="mt-2 w-full rounded-xl border border-neutral-700 bg-black px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
+        className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
       >
         {options.map((option) => (
           <option key={option} value={option}>
@@ -912,7 +912,7 @@ function Select({
 
 function IntakePanel({ title, value }: { title: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-5">
+    <div className="rounded-2xl border border-neutral-800 bg-black p-5">
       <p className="text-sm font-semibold text-white">{title}</p>
       <p className="mt-3 text-sm leading-6 text-neutral-400">{value}</p>
     </div>
