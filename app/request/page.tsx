@@ -2,6 +2,9 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+
+import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
+import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { supabase } from '../../lib/supabase'
 
 type CreatedRequest = {
@@ -145,6 +148,24 @@ const reviewUrgencyOptions = [
 ]
 
 export default function RequestPage() {
+  return (
+    <GovernanceRouteGuard
+      allowedRoles={[
+        'SUPER_ADMIN',
+        'COMMAND_ADMIN',
+        'GOVERNANCE_OFFICER',
+        'INSTITUTION_COORDINATOR',
+        'RESPONDER',
+      ]}
+    >
+      <CGIGovernanceShell>
+        <RequestContent />
+      </CGIGovernanceShell>
+    </GovernanceRouteGuard>
+  )
+}
+
+function RequestContent() {
   const router = useRouter()
 
   const [entryRoute, setEntryRoute] = useState('HUMAN_SUBMITTED')
@@ -305,24 +326,42 @@ export default function RequestPage() {
   return (
     <main className="min-h-screen bg-neutral-950 text-neutral-100">
       <section className="mx-auto max-w-7xl px-6 py-8">
+        <header className="mb-8 flex flex-col gap-5 border-b border-amber-500/10 pb-6 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-amber-400">
+              TSINAXA CGI
+            </p>
+
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">
+              Request
+            </h1>
+
+            <p className="mt-2 text-sm text-neutral-400">
+              Open governed visibility before eligibility judgment begins.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[520px]">
+            <StageChip label="Operating Layer" value="Continuity Lifecycle" />
+            <StageChip label="Executive Meaning" value="Visibility Opening" />
+            <StageChip label="Movement" value="Triage" />
+          </div>
+        </header>
+
         {message && (
           <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm font-semibold text-amber-100">
             {message}
           </div>
         )}
 
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-400">
-          TSINAXA CGI • GOVERNED INTAKE INTELLIGENCE
-        </p>
-
-        <div className="mt-4 rounded-3xl border border-neutral-800 bg-neutral-950/80 p-6 shadow-2xl">
+        <div className="rounded-3xl border border-neutral-800 bg-black p-6 shadow-2xl">
           <h2 className="text-2xl font-semibold text-white">
-            Open Visible Instability
+            Governed Visibility Opening
           </h2>
 
           <p className="mt-3 max-w-5xl text-sm leading-6 text-neutral-300">
             Preserve visible instability using governed operational selections.
-            Intake opens continuity visibility before triage, case governance,
+            Request opens continuity visibility before triage, case governance,
             routing, action, outcome verification, or recovery durability begins.
           </p>
 
@@ -336,26 +375,26 @@ export default function RequestPage() {
 
         <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <IntakePanel
-            title="Intake Visibility Climate"
+            title="Visibility Climate"
             value={intakeIntelligence.visibilityClassification}
           />
           <IntakePanel
-            title="Triage Readiness Posture"
+            title="Triage Readiness"
             value={intakeIntelligence.governanceReadiness}
           />
           <IntakePanel
-            title="Evidence Threshold Visibility"
+            title="Evidence Threshold"
             value={intakeIntelligence.evidencePosture}
           />
           <IntakePanel
-            title="Command Visibility Meaning"
+            title="Command Meaning"
             value={intakeIntelligence.commandMeaning}
           />
         </div>
 
         <div className="mt-6 rounded-3xl border border-neutral-800 bg-black p-6">
           <h3 className="text-lg font-semibold text-white">
-            Intake Pressure Intelligence
+            Request Pressure Intelligence
           </h3>
 
           <p className="mt-3 text-sm leading-6 text-neutral-300">
@@ -390,25 +429,25 @@ export default function RequestPage() {
         <section className="mt-8 grid gap-6 lg:grid-cols-[1fr_1.05fr]">
           <section className="rounded-3xl border border-neutral-800 bg-black p-6">
             <h3 className="text-xl font-semibold text-white">
-              Operational Intake Workspace
+              Preserve Visible Instability
             </h3>
 
             <p className="mt-3 text-sm leading-6 text-neutral-400">
-              Preserve visible instability using standardized operational
-              choices. Triage will decide whether the signal should be accepted,
-              clarified, escalated, closed, or held for stronger evidence.
+              Request captures the signal only. Triage decides whether the
+              signal should be accepted, clarified, escalated, closed, or held
+              for stronger evidence.
             </p>
 
             <form onSubmit={submitRequest} className="mt-6 space-y-5">
               <Select
-                label="How did this enter CGI?"
+                label="Entry route"
                 value={entryRoute}
                 setValue={setEntryRoute}
                 options={entryRoutes}
               />
 
               <Select
-                label="What kind of operational pressure is visible?"
+                label="Operational pressure"
                 value={instabilityClass}
                 setValue={setInstabilityClass}
                 options={instabilityClassOptions.map((item) => item.value)}
@@ -416,7 +455,7 @@ export default function RequestPage() {
               />
 
               <Select
-                label="How difficult is this becoming to manage?"
+                label="Severity"
                 value={severity}
                 setValue={setSeverity}
                 options={severityLevels}
@@ -424,35 +463,35 @@ export default function RequestPage() {
               />
 
               <Select
-                label="Where is this happening?"
+                label="Location"
                 value={location}
                 setValue={setLocation}
                 options={locationOptions}
               />
 
               <Select
-                label="What area is affected?"
+                label="Affected area"
                 value={affectedArea}
                 setValue={setAffectedArea}
                 options={affectedAreaOptions}
               />
 
               <Select
-                label="What visible signal is present?"
+                label="Visible signal"
                 value={visibleSignal}
                 setValue={setVisibleSignal}
                 options={visibleSignalOptions}
               />
 
               <Select
-                label="What is the ownership state?"
+                label="Ownership state"
                 value={ownershipState}
                 setValue={setOwnershipState}
                 options={ownershipStates}
               />
 
               <Select
-                label="What evidence is already available?"
+                label="Evidence level"
                 value={evidenceLevel}
                 setValue={setEvidenceLevel}
                 options={evidenceLevels}
@@ -467,7 +506,7 @@ export default function RequestPage() {
 
               <label className="block">
                 <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
-                  Brief operational note
+                  Operational note
                 </span>
 
                 <textarea
@@ -493,11 +532,11 @@ export default function RequestPage() {
 
           <section className="rounded-3xl border border-neutral-800 bg-black p-6">
             <h3 className="text-xl font-semibold text-white">
-              Intake Intelligence Panel
+              Executive Request Synthesis
             </h3>
 
             <p className="mt-3 text-sm leading-6 text-neutral-400">
-              This synthesis explains the intake meaning before triage accepts,
+              This synthesis preserves intake meaning before triage accepts,
               pauses, escalates, or closes the signal.
             </p>
 
@@ -620,17 +659,17 @@ export default function RequestPage() {
 
         <section className="mt-8 rounded-3xl border border-neutral-800 bg-black p-6">
           <h3 className="text-xl font-semibold text-white">
-            Intake Governance Doctrine
+            Request Governance Doctrine
           </h3>
 
           <p className="mt-4 text-sm leading-7 text-neutral-300">
-            Governed intake opens continuity visibility. It does not prove that a
-            case exists, that stabilization has begun, that ownership is assigned,
-            or that recovery is underway.
+            Request governance opens continuity visibility. It does not prove
+            that a case exists, that stabilization has begun, that ownership is
+            assigned, or that recovery is underway.
           </p>
 
           <p className="mt-4 text-sm leading-7 text-neutral-300">
-            Mature intake intelligence must preserve proportional visibility.
+            Mature request intelligence must preserve proportional visibility.
             When a signal is clear and evidence is sufficient, it should move
             calmly into triage. When evidence is weak, ownership is unclear, or
             command visibility is needed, the system should preserve the signal
@@ -868,6 +907,17 @@ function resolveSeverityMeaning(severity: string) {
   }
 
   return 'Localized operational visibility; monitor for recurrence or spread.'
+}
+
+function StageChip({ label, value }: { label: string; value: string }) {
+  return (
+    <article className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-amber-400">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-semibold text-amber-50">{value}</p>
+    </article>
+  )
 }
 
 function Select({
