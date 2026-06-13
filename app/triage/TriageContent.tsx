@@ -101,41 +101,47 @@ const TRIAGE_DECISIONS: {
   label: string
   status: string
   reason: string
+  movement: string
 }[] = [
   {
     value: 'ACCEPT_FOR_GOVERNANCE',
-    label: 'Accept into case governance',
+    label: 'Accept',
     status: 'ACCEPTED_FOR_GOVERNANCE',
     reason:
       'Visible instability requires governed continuity oversight and should become an active CGI case.',
+    movement: 'Cases',
   },
   {
     value: 'REQUEST_MORE_EVIDENCE',
-    label: 'Request more evidence',
+    label: 'Evidence',
     status: 'TRIAGE_EVIDENCE_REQUIRED',
     reason:
       'Visible instability cannot yet be accepted because evidence is insufficient.',
+    movement: 'Triage hold',
   },
   {
     value: 'ESCALATE_TO_COMMAND',
-    label: 'Escalate to command visibility',
+    label: 'Command',
     status: 'TRIAGE_COMMAND_ESCALATION',
     reason:
       'Visible instability requires executive visibility before normal case movement.',
+    movement: 'Command',
   },
   {
     value: 'HOLD_FOR_CLARITY',
-    label: 'Hold for ownership or scope clarity',
+    label: 'Clarify',
     status: 'TRIAGE_CLARITY_REQUIRED',
     reason:
       'Visible instability requires clearer ownership, scope, or institutional context before acceptance.',
+    movement: 'Triage hold',
   },
   {
     value: 'CLOSE_NO_CGI_ACTION',
-    label: 'Close: no CGI action required',
+    label: 'Close',
     status: 'TRIAGE_CLOSED_NO_CGI_ACTION',
     reason:
       'Visible instability does not currently require CGI governance.',
+    movement: 'No CGI case',
   },
 ]
 
@@ -190,6 +196,7 @@ export default function TriageContent() {
       item,
       decision.status,
     )
+
     const triageSummary = buildTriageDecisionSummary({
       item,
       decision,
@@ -222,8 +229,8 @@ export default function TriageContent() {
 
     setMessage(
       decision.status === 'ACCEPTED_FOR_GOVERNANCE'
-        ? 'Triage accepted inherited intake instability into active CGI case governance. Eligibility meaning, evidence threshold, and lifecycle traceability are preserved.'
-        : 'Triage decision preserved as continuity governance evidence with inherited intake context.',
+        ? 'Triage accepted inherited instability into active CGI case governance.'
+        : 'Triage decision preserved as continuity governance evidence.',
     )
 
     await loadData()
@@ -333,6 +340,36 @@ export default function TriageContent() {
             </div>
           ))}
         </div>
+
+        <section className="mt-6 rounded-3xl border border-neutral-800 bg-black p-6">
+          <h3 className="text-lg font-semibold text-white">
+            Eligibility Decision Workspace
+          </h3>
+
+          <p className="mt-3 text-sm leading-6 text-neutral-400">
+            Triage has only five lawful movements. Every inherited signal must be
+            accepted, held for evidence, escalated, held for clarity, or closed.
+          </p>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            {TRIAGE_DECISIONS.map((decision) => (
+              <article
+                key={decision.value}
+                className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4"
+              >
+                <p className="text-sm font-semibold text-amber-100">
+                  {decision.label}
+                </p>
+                <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-amber-400">
+                  {decision.movement}
+                </p>
+                <p className="mt-3 text-xs leading-5 text-neutral-400">
+                  {decision.reason}
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
 
         <div className="mt-6 rounded-3xl border border-neutral-800 bg-black p-6">
           <h3 className="text-lg font-semibold text-white">
@@ -581,7 +618,7 @@ function TriageCard({
 
               {TRIAGE_DECISIONS.map((decision) => (
                 <option key={decision.value} value={decision.value}>
-                  {decision.label}
+                  {decision.label}: {decision.movement}
                 </option>
               ))}
             </select>
@@ -665,7 +702,9 @@ async function preserveTriageEvidence(input: {
   if (error) console.error(error)
 }
 
-function buildInheritedIntakeContext(item: VisibleInstability): InheritedIntakeContext {
+function buildInheritedIntakeContext(
+  item: VisibleInstability,
+): InheritedIntakeContext {
   const source = item.intervention_summary || item.outcome_summary || ''
 
   return {
@@ -722,7 +761,9 @@ function buildInheritedIntakeContext(item: VisibleInstability): InheritedIntakeC
     governanceVisibility:
       extractIntakeField(source, 'GOVERNANCE VISIBILITY') ||
       extractIntakeField(source, 'Governance visibility') ||
-      (item.safeguarding_flag ? 'EXECUTIVE_VISIBILITY' : 'GOVERNANCE_VISIBILITY'),
+      (item.safeguarding_flag
+        ? 'EXECUTIVE_VISIBILITY'
+        : 'GOVERNANCE_VISIBILITY'),
     visibilityClassification:
       extractIntakeField(source, 'VISIBILITY CLASSIFICATION') ||
       extractIntakeField(source, 'Visibility classification') ||
@@ -809,7 +850,7 @@ function buildTriageClimate(input: {
   if (input.allItems.length === 0) {
     return {
       stabilityClimate:
-        'Awaiting inherited intake instability before triage climate interpretation activates.',
+        'Awaiting inherited intake instability before eligibility climate activates.',
       gatePosture:
         'Eligibility gate posture will activate when visible instability enters triage from /request.',
       evidenceVisibility:
