@@ -383,13 +383,6 @@ function OutcomesContent() {
     inheritedContext,
   })
 
-  const verificationPressureMeaning = buildVerificationPressureMeaning({
-    recoveryReadiness: displayRecoveryReadiness,
-    verificationTrajectory: displayVerificationTrajectory,
-    recurrenceSignal: displayRecurrenceSignal,
-    hasSelectedCase: Boolean(activeCase),
-  })
-
   const verificationMovements = [
     {
       title: 'Verify',
@@ -501,9 +494,6 @@ ${survivabilitySignal}
 
 EXECUTIVE MEANING
 ${executiveMeaning}
-
-VERIFICATION PRESSURE
-${verificationPressureMeaning}
 
 NEXT LIFECYCLE STATE
 ${selectedCase ? lifecycleDecision.nextStatus : 'Continuity lifecycle advancement pending stabilization verification.'}
@@ -709,11 +699,6 @@ but durable recovery must be confirmed separately.
         </section>
 
         <SimplePanel
-          title="Verification Pressure Intelligence"
-          value={verificationPressureMeaning}
-        />
-
-        <SimplePanel
           title="Executive Verification Synthesis"
           value={executiveMeaning}
         />
@@ -826,15 +811,14 @@ but durable recovery must be confirmed separately.
 
           <p className="mt-4 text-sm leading-7 text-neutral-300">
             Stabilization verification is a credibility process, not a completion
-            label. CGI does not assume continuity durability simply because
-            action movement appears positive.
+            label. CGI does not assume continuity durability simply because action
+            movement appears positive.
           </p>
 
           <p className="mt-4 text-sm leading-7 text-neutral-300">
-            Mature verification intelligence must preserve recurrence visibility,
-            continuity outlook, survivability relevance, recovery eligibility,
-            executive traceability, and structural memory before lifecycle
-            movement advances.
+            Verification preserves credibility, recurrence visibility, recovery
+            eligibility, survivability relevance, and continuity memory before
+            lifecycle movement advances.
           </p>
         </section>
       </section>
@@ -1364,42 +1348,6 @@ function buildExecutiveVerificationMeaning(input: {
   }
 
   return input.inheritedContext.inheritedCommandMeaning
-}
-
-function buildVerificationPressureMeaning(input: {
-  recoveryReadiness: string
-  verificationTrajectory: string
-  recurrenceSignal: string
-  hasSelectedCase: boolean
-}) {
-  if (!input.hasSelectedCase) {
-    return 'Verification continuity interpretation will activate after stabilization evidence becomes operationally visible.'
-  }
-
-  if (
-    input.recurrenceSignal === 'NO_RECURRENCE_VISIBLE' &&
-    (input.recoveryReadiness === 'RECOVERY_MONITORING_RECOMMENDED' ||
-      input.recoveryReadiness === 'RECOVERY_TRANSITION_READY')
-  ) {
-    return 'Verification supports recovery monitoring while durability remains unconfirmed.'
-  }
-
-  if (
-    input.verificationTrajectory === 'STABILITY_BUILDING' ||
-    input.verificationTrajectory === 'IMPROVING'
-  ) {
-    return 'Verification continuity conditions remain proportionally stable while continuity confidence continues to mature.'
-  }
-
-  if (
-    input.recoveryReadiness === 'RECOVERY_WATCH_ELIGIBLE' ||
-    input.recoveryReadiness === 'RECOVERY_TRANSITION_READY' ||
-    input.recoveryReadiness === 'RECOVERY_MONITORING_RECOMMENDED'
-  ) {
-    return 'Some stabilization pathways are becoming eligible for recovery durability governance observation.'
-  }
-
-  return 'Verification continuity observation remains proportionally active under current operational conditions.'
 }
 
 function Info({ label, value }: { label: string; value: string }) {
