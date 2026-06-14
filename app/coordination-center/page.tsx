@@ -4,17 +4,14 @@ import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
-import InfrastructureNav from '@/components/InfrastructureNav'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
-import {
-  buildCGICoordinationCenterDoctrine,
-} from '@/lib/cgiCoordinationCenterDoctrineEngine'
+import { buildCGICoordinationCenterDoctrine } from '@/lib/cgiCoordinationCenterDoctrineEngine'
 import {
   loadCGICoordinationReviews,
   saveCGICoordinationReview,
 } from '@/lib/cgiPersistenceEngine'
 
-type PersistedCoordinationReview = Record<string, any>
+type PersistedCoordinationReview = Record<string, unknown>
 
 export default function CoordinationCenterPage() {
   return (
@@ -35,10 +32,12 @@ function CoordinationCenterContent() {
   const [loadingReviews, setLoadingReviews] = useState(false)
   const [reviewMessage, setReviewMessage] = useState('')
 
-  const coordination = useMemo(
-    () => buildCGICoordinationCenterDoctrine(),
-    [],
-  )
+  const coordination = useMemo(() => buildCGICoordinationCenterDoctrine(), [])
+  const latestReviews = reviews.slice(0, 3)
+
+  useEffect(() => {
+    loadCoordinationReviews()
+  }, [])
 
   async function loadCoordinationReviews() {
     try {
@@ -56,10 +55,6 @@ function CoordinationCenterContent() {
       setLoadingReviews(false)
     }
   }
-
-  useEffect(() => {
-    loadCoordinationReviews()
-  }, [])
 
   async function handleSaveCoordinationReview() {
     try {
@@ -106,301 +101,219 @@ function CoordinationCenterContent() {
   return (
     <main style={styles.page}>
       <div style={styles.container}>
-        <InfrastructureNav />
-
-        <section style={styles.header}>
-          <p style={styles.kicker}>
-            TSINAXA CGI • COORDINATION CENTER
-          </p>
-
-          <h1 style={styles.title}>
-            Executive Continuity Coordination Center
-          </h1>
-
-          <p style={styles.subtitle}>
-            Enterprise coordination visibility for sites requiring executive
-            synchronization, survivability protection, stabilization ownership,
-            and cross-site continuity governance.
-          </p>
-        </section>
-
-        <section style={styles.heroCard}>
+        <section style={styles.hero}>
           <div>
-            <p style={styles.sectionKicker}>
-              Enterprise Coordination Reading
-            </p>
-
-            <h2 style={styles.heroTitle}>
-              {coordination.executivePosture.label}
-            </h2>
-
-            <p style={styles.heroMeaning}>
-              {coordination.coordinationThesis}
+            <p style={styles.kicker}>TSINAXA CGI • COORDINATION CENTER</p>
+            <h1 style={styles.title}>
+              Executive Continuity Coordination Center
+            </h1>
+            <p style={styles.subtitle}>
+              Coordination Center identifies what must synchronize before
+              continuity can safely move.
             </p>
           </div>
 
           <div style={styles.statusBox}>
-            <p style={styles.statusLabel}>Coordination Priority</p>
-
-            <p style={styles.statusValue}>
-              {coordination.dominantSite.name}
+            <p style={styles.statusLabel}>COORDINATION PRIORITY</p>
+            <p style={styles.statusValue}>{coordination.dominantSite.name}</p>
+            <p style={styles.statusMeaning}>
+              {coordination.executivePosture.label}
             </p>
           </div>
         </section>
 
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Executive Coordination Question</p>
+        {(saveMessage || reviewMessage) && (
+          <div style={styles.message}>{saveMessage || reviewMessage}</div>
+        )}
 
-          <h2 style={styles.cardTitle}>
-            {coordination.coordinationQuestion}
-          </h2>
+        <section style={styles.gridTwo}>
+          <Panel title="Executive Coordination Question">
+            <h2 style={styles.bigText}>{coordination.coordinationQuestion}</h2>
+            <p style={styles.bodyText}>
+              {coordination.dominantBriefing.executiveSummary}
+            </p>
+          </Panel>
 
-          <p style={styles.bodyText}>
-            {coordination.dominantBriefing.executiveSummary}
-          </p>
-        </section>
-
-        <section style={styles.actionPanel}>
-          <div>
-            <p style={styles.sectionKicker}>Persistence Action</p>
-
-            <h2 style={styles.actionTitle}>
-              Preserve this coordination review as continuity memory.
+          <Panel title="Coordination Conclusion">
+            <h2 style={styles.bigText}>
+              {coordination.executivePosture.headline}
             </h2>
-
-            <p style={styles.actionText}>
-              Saving the coordination review creates a durable record of
-              synchronization need, executive coordination pressure, evidence
-              requirements, and cross-site continuity exposure.
+            <p style={styles.bodyText}>
+              {coordination.executivePosture.actionLanguage}
             </p>
-
-            {saveMessage && <p style={styles.saveMessage}>{saveMessage}</p>}
-          </div>
-
-          <button
-            type="button"
-            onClick={handleSaveCoordinationReview}
-            disabled={saving}
-            style={{
-              ...styles.primaryButton,
-              ...(saving ? styles.disabledButton : {}),
-            }}
-          >
-            {saving ? 'Saving...' : 'Save Coordination Review'}
-          </button>
+          </Panel>
         </section>
 
-        <section style={styles.actionPanel}>
+        <section style={styles.metricGrid}>
+          <Metric
+            label="Executive Coordination"
+            value={coordination.executiveCoordinationCount}
+          />
+          <Metric
+            label="Active Coordination"
+            value={coordination.activeCoordinationCount}
+          />
+          <Metric
+            label="Structural Memory"
+            value={coordination.structuralMemoryCount}
+          />
+        </section>
+
+        <section style={styles.gridTwo}>
+          <Panel title="Required Movement">
+            <Info
+              label="Required Action"
+              value={coordination.executivePosture.actionLanguage}
+            />
+            <Info label="Required Evidence" value={coordination.evidenceLanguage} />
+            <Info
+              label="Dominant Site"
+              value={coordination.dominantSite.name}
+            />
+          </Panel>
+
+          <Panel title="Continuity Standard">
+            <Info label="Evidence" value={coordination.evidenceLanguage} />
+            <Info
+              label="Survivability"
+              value={coordination.survivabilityLanguage}
+            />
+            <Info
+              label="Governance Meaning"
+              value={coordination.governanceLanguage}
+            />
+          </Panel>
+        </section>
+
+        <Panel title="Coordination Implications">
+          <div style={styles.infoGrid}>
+            <Info
+              label="Scope"
+              value={coordination.coordinationScope}
+            />
+            <Info
+              label="Posture"
+              value={coordination.dominantBriefing.synthesis.synthesisPosture}
+            />
+            <Info
+              label="Doctrine"
+              value={coordination.coordinationDoctrine}
+            />
+            <Info
+              label="Stabilization Logic"
+              value={coordination.stabilizationLogic}
+            />
+          </div>
+        </Panel>
+
+        <section style={styles.memoryPanel}>
           <div>
-            <p style={styles.sectionKicker}>Coordination Memory Retrieval</p>
-
-            <h2 style={styles.actionTitle}>
-              Retrieve persisted coordination reviews.
+            <p style={styles.kicker}>Coordination Memory</p>
+            <h2 style={styles.panelTitle}>
+              Preserve and retrieve coordination reviews.
             </h2>
-
-            <p style={styles.actionText}>
-              CGI can now reconstruct cross-site synchronization posture,
-              executive coordination need, required evidence, and coordination
-              exposure across time.
+            <p style={styles.bodyText}>
+              Coordination memory keeps executive synchronization need,
+              required evidence, and continuity exposure reconstructable.
             </p>
-
-            {reviewMessage && (
-              <p style={styles.saveMessage}>{reviewMessage}</p>
-            )}
           </div>
 
-          <button
-            type="button"
-            onClick={loadCoordinationReviews}
-            disabled={loadingReviews}
-            style={{
-              ...styles.secondaryButton,
-              ...(loadingReviews ? styles.disabledButton : {}),
-            }}
-          >
-            {loadingReviews ? 'Refreshing...' : 'Refresh Reviews'}
-          </button>
+          <div style={styles.memoryActions}>
+            <button
+              type="button"
+              onClick={handleSaveCoordinationReview}
+              disabled={saving}
+              style={{
+                ...styles.button,
+                ...(saving ? styles.disabledButton : {}),
+              }}
+            >
+              {saving ? 'Saving...' : 'Save Review'}
+            </button>
+
+            <button
+              type="button"
+              onClick={loadCoordinationReviews}
+              disabled={loadingReviews}
+              style={{
+                ...styles.secondaryButton,
+                ...(loadingReviews ? styles.disabledButton : {}),
+              }}
+            >
+              {loadingReviews ? 'Refreshing...' : 'Refresh Reviews'}
+            </button>
+          </div>
         </section>
 
         <section style={styles.gridThree}>
-          <SignalCard
-            title="Executive Coordination"
-            value={String(coordination.executiveCoordinationCount)}
-            body="Sites requiring direct executive synchronization before continuity can be trusted."
-          />
+          {coordination.siteBriefings.map(({ site, briefing }) => (
+            <article key={site.name} style={styles.siteCard}>
+              <p style={styles.kicker}>{site.region}</p>
+              <h3 style={styles.cardValue}>{site.name}</h3>
 
-          <SignalCard
-            title="Active Coordination"
-            value={String(coordination.activeCoordinationCount)}
-            body="Sites requiring active coordination oversight, evidence follow-up, or stabilization review."
-          />
+              <div style={styles.siteMeta}>
+                <MiniStat label="Need" value={site.coordinationNeed} />
+                <MiniStat
+                  label="Posture"
+                  value={briefing.synthesis.synthesisPosture}
+                />
+              </div>
 
-          <SignalCard
-            title="Structural Memory"
-            value={String(coordination.structuralMemoryCount)}
-            body="Sites where prior instability remains relevant to current continuity governance."
-          />
+              <p style={styles.bodyText}>{briefing.executiveSummary}</p>
+            </article>
+          ))}
         </section>
 
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Coordination Action Posture</p>
-
-          <h2 style={styles.cardTitle}>
-            {coordination.executivePosture.headline}
-          </h2>
-
-          <p style={styles.bodyText}>
-            {coordination.executivePosture.actionLanguage}
-          </p>
-
-          <div style={styles.priorityGrid}>
-            <PriorityItem
-              title="Evidence"
-              body={coordination.evidenceLanguage}
-            />
-
-            <PriorityItem
-              title="Survivability"
-              body={coordination.survivabilityLanguage}
-            />
-
-            <PriorityItem
-              title="Governance Meaning"
-              body={coordination.governanceLanguage}
-            />
-          </div>
-        </section>
-
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Persisted Coordination Archive</p>
-
-          <h2 style={styles.cardTitle}>
-            Coordination reviews retrieved from Supabase.
-          </h2>
-
+        <Panel title="Recent Coordination Memory">
           <p style={styles.bodyText}>Review Count: {reviews.length}</p>
 
-          <div style={styles.archiveList}>
-            {reviews.length === 0 ? (
-              <p style={styles.emptyText}>
+          <div style={styles.profileGrid}>
+            {latestReviews.length === 0 ? (
+              <p style={styles.bodyText}>
                 No persisted coordination reviews are currently available.
               </p>
             ) : (
-              reviews.map((item, index) => (
+              latestReviews.map((item, index) => (
                 <article
-                  key={item.id ?? `${getReviewValue(item, 'createdAt')}-${index}`}
-                  style={styles.archiveItem}
+                  key={item.id ? String(item.id) : `${getReviewValue(item, 'createdAt')}-${index}`}
+                  style={styles.profileCard}
                 >
-                  <div style={styles.archiveHeader}>
-                    <div>
-                      <p style={styles.panelKicker}>
-                        {getReviewValue(item, 'coordinationPosture') ??
-                          'COORDINATION_REVIEW'}
-                      </p>
+                  <p style={styles.metricLabel}>
+                    {getReviewValue(item, 'coordinationPosture') ??
+                      'COORDINATION_REVIEW'}
+                  </p>
 
-                      <h3 style={styles.archiveTitle}>
-                        {getReviewValue(item, 'reviewTitle') ??
-                          'Executive Continuity Coordination Center'}
-                      </h3>
-                    </div>
+                  <h3 style={styles.profileTitle}>
+                    {getReviewValue(item, 'reviewTitle') ??
+                      'Executive Coordination Review'}
+                  </h3>
 
-                    <p style={styles.archiveDate}>
-                      {formatDate(getReviewValue(item, 'createdAt'))}
-                    </p>
-                  </div>
-
-                  <div style={styles.archiveGrid}>
-                    <PriorityItem
-                      title="Scope"
-                      body={
-                        getReviewValue(item, 'coordinationScope') ??
-                        'Not recorded'
-                      }
-                    />
-
-                    <PriorityItem
-                      title="Executive Coordination"
-                      body={
-                        getReviewValue(
-                          item,
-                          'executiveCoordinationCount',
-                        ) ?? '0'
-                      }
-                    />
-
-                    <PriorityItem
-                      title="Structural Memory"
-                      body={
-                        getReviewValue(item, 'structuralMemoryCount') ?? '0'
-                      }
-                    />
-                  </div>
-
-                  <p style={styles.archiveSummary}>
-                    {getReviewValue(item, 'coordinationReading') ??
-                      'No coordination reading was recorded for this review.'}
+                  <p style={styles.profileDate}>
+                    {formatDate(getReviewValue(item, 'createdAt'))}
                   </p>
                 </article>
               ))
             )}
           </div>
-        </section>
+        </Panel>
 
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Coordination Board</p>
-
-          <h2 style={styles.cardTitle}>
-            Enterprise coordination must follow continuity exposure.
-          </h2>
-
-          <div style={styles.siteList}>
-            {coordination.siteBriefings.map(({ site, briefing }) => (
-              <article key={site.name} style={styles.siteCard}>
-                <div>
-                  <p style={styles.siteRegion}>{site.region}</p>
-
-                  <h3 style={styles.siteTitle}>{site.name}</h3>
-
-                  <p style={styles.siteMeaning}>
-                    {briefing.executiveSummary}
-                  </p>
-                </div>
-
-                <div style={styles.siteStatus}>
-                  <p style={styles.statusLabel}>Need</p>
-
-                  <p style={styles.sitePosture}>{site.coordinationNeed}</p>
-
-                  <p style={styles.siteMeta}>
-                    {briefing.synthesis.synthesisPosture}
-                  </p>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section style={styles.gridTwo}>
-          <Panel title="Coordination Doctrine">
-            {coordination.coordinationDoctrine}
-          </Panel>
-
-          <Panel title="Enterprise Stabilization Logic">
-            {coordination.stabilizationLogic}
-          </Panel>
-        </section>
-
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Copy-Ready Coordination Brief</p>
-
-          <h2 style={styles.cardTitle}>
+        <section style={styles.reportPanel}>
+          <p style={styles.kicker}>COPY-READY COORDINATION BRIEF</p>
+          <h2 style={styles.bigText}>
             Coordination must remain executive-readable, evidence-bound, and
             reconstructable.
           </h2>
+          <pre style={styles.pre}>{coordination.copyReadyCoordinationBrief}</pre>
+        </section>
 
-          <pre style={styles.summaryBox}>
-            {coordination.copyReadyCoordinationBrief}
-          </pre>
+        <section style={styles.doctrineCard}>
+          <strong>COORDINATION CENTER DOCTRINE</strong>
+          <span>
+            CGI coordination does not route blame. It identifies where
+            continuity exposure requires synchronized leadership attention,
+            stabilization ownership, evidence verification, structural memory,
+            and cross-site visibility before confidence improves.
+          </span>
         </section>
       </div>
     </main>
@@ -413,430 +326,373 @@ function getReviewValue(
 ): string | null {
   const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
 
+  const rawPayload = getNestedRecord(review, 'rawPayload')
+  const rawPayloadSnake = getNestedRecord(review, 'raw_payload')
+
   const value =
     review[key] ??
     review[snakeKey] ??
-    review.rawPayload?.[key] ??
-    review.raw_payload?.[key] ??
+    rawPayload?.[key] ??
+    rawPayloadSnake?.[key] ??
     null
 
-  if (value === null || value === undefined) {
-    return null
-  }
-
+  if (value === null || value === undefined) return null
   return String(value)
 }
 
-function formatDate(value: string | null) {
-  if (!value) {
-    return 'Date not recorded'
+function getNestedRecord(
+  value: PersistedCoordinationReview,
+  key: string,
+): Record<string, unknown> | null {
+  const nested = value[key]
+
+  if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
+    return nested as Record<string, unknown>
   }
+
+  return null
+}
+
+function formatDate(value: string | null) {
+  if (!value) return 'Date not recorded'
 
   const date = new Date(value)
 
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
+  if (Number.isNaN(date.getTime())) return value
 
   return date.toLocaleString()
 }
 
-function SignalCard({
-  title,
-  value,
-  body,
-}: {
-  title: string
-  value: string
-  body: string
-}) {
+function Metric({ label, value }: { label: string; value: number }) {
   return (
-    <article style={styles.signalCard}>
-      <p style={styles.panelKicker}>{title}</p>
-
-      <h3 style={styles.signalValue}>{value}</h3>
-
-      <p style={styles.panelBody}>{body}</p>
+    <article style={styles.metricCard}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.metricValue}>{String(value)}</p>
     </article>
   )
 }
 
-function PriorityItem({
-  title,
-  body,
-}: {
-  title: string
-  body: string
-}) {
+function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <article style={styles.priorityItem}>
-      <p style={styles.panelKicker}>{title}</p>
-
-      <p style={styles.priorityBody}>{body}</p>
+    <article style={styles.miniStat}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.miniValue}>{value}</p>
     </article>
   )
 }
 
-function Panel({
-  title,
-  children,
-}: {
-  title: string
-  children: ReactNode
-}) {
+function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section style={styles.panel}>
-      <p style={styles.panelKicker}>{title}</p>
-
-      <div style={styles.panelBody}>{children}</div>
+      <p style={styles.kicker}>{title}</p>
+      {children}
     </section>
+  )
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={styles.infoRow}>
+      <span style={styles.infoLabel}>{label}</span>
+      <strong style={styles.infoValue}>{value}</strong>
+    </div>
   )
 }
 
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    color: 'white',
-    overflowX: 'hidden',
+    background:
+      'radial-gradient(circle at top left, rgba(201,162,39,0.14), transparent 34%), linear-gradient(135deg, #050505 0%, #0b0b0b 45%, #111111 100%)',
+    color: '#fff',
+    padding: '40px 24px 72px',
   },
   container: {
-    width: '100%',
-    maxWidth: '1120px',
+    width: 'min(1440px, 100%)',
     margin: '0 auto',
-    padding: '0 20px 48px',
-    boxSizing: 'border-box',
+    display: 'grid',
+    gap: 24,
   },
-  header: {
-    marginBottom: '20px',
-    paddingTop: '4px',
+  hero: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.45fr) minmax(320px, 0.75fr)',
+    gap: 24,
+    padding: 32,
+    border: '1px solid rgba(201,162,39,0.34)',
+    borderRadius: 28,
+    background:
+      'linear-gradient(135deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018))',
+    boxShadow: '0 28px 80px rgba(0,0,0,0.38)',
   },
   kicker: {
-    color: '#67e8f9',
-    fontSize: '12px',
-    fontWeight: 900,
-    letterSpacing: '2px',
     margin: 0,
+    color: '#c9a227',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.18em',
+    textTransform: 'uppercase',
   },
   title: {
-    fontSize: 'clamp(34px, 5vw, 52px)',
-    lineHeight: 1.05,
-    margin: '10px 0',
+    margin: '14px 0 0',
+    fontSize: 'clamp(2.3rem, 5vw, 5rem)',
+    lineHeight: 0.95,
+    letterSpacing: '-0.07em',
+    fontWeight: 950,
   },
   subtitle: {
-    color: '#cbd5e1',
-    maxWidth: '820px',
-    lineHeight: 1.65,
-    fontSize: '16px',
+    maxWidth: 880,
+    margin: '18px 0 0',
+    color: '#c8cdd4',
+    fontSize: 17,
+    lineHeight: 1.8,
+  },
+  statusBox: {
+    border: '1px solid rgba(201,162,39,0.5)',
+    borderRadius: 24,
+    padding: 24,
+    background:
+      'linear-gradient(180deg, rgba(201,162,39,0.18), rgba(0,0,0,0.38))',
+  },
+  statusLabel: {
     margin: 0,
+    color: '#d7b84c',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.2em',
   },
-  heroCard: {
+  statusValue: {
+    margin: '16px 0 0',
+    fontSize: 30,
+    fontWeight: 950,
+    letterSpacing: '-0.04em',
+    lineHeight: 1.05,
+    overflowWrap: 'anywhere',
+  },
+  statusMeaning: {
+    margin: '12px 0 0',
+    color: '#ece7d7',
+    fontSize: 14,
+    lineHeight: 1.7,
+  },
+  message: {
+    padding: '14px 18px',
+    borderRadius: 16,
+    color: '#d7b84c',
+    background: 'rgba(201,162,39,0.1)',
+    border: '1px solid rgba(201,162,39,0.22)',
+    fontWeight: 800,
+  },
+  gridTwo: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.35fr) minmax(240px, 0.65fr)',
-    gap: '16px',
-    background: '#020617',
-    border: '1px solid #67e8f9',
-    borderRadius: '26px',
-    padding: '24px',
-    marginBottom: '16px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 16,
   },
-  actionPanel: {
+  gridThree: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: 16,
+  },
+  metricGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: 14,
+  },
+  metricCard: {
+    padding: 18,
+    borderRadius: 20,
+    background: 'rgba(255,255,255,0.055)',
+    border: '1px solid rgba(255,255,255,0.1)',
+  },
+  metricLabel: {
+    margin: 0,
+    color: '#858d98',
+    fontSize: 10,
+    fontWeight: 950,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+  },
+  metricValue: {
+    margin: '10px 0 0',
+    color: '#fff',
+    fontSize: 28,
+    fontWeight: 950,
+    lineHeight: 1.15,
+  },
+  panel: {
+    padding: 28,
+    borderRadius: 28,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.1)',
+  },
+  bigText: {
+    margin: '14px 0',
+    fontSize: 'clamp(1.55rem, 3vw, 2.7rem)',
+    lineHeight: 1.05,
+    letterSpacing: '-0.05em',
+    fontWeight: 950,
+  },
+  panelTitle: {
+    margin: '12px 0 0',
+    fontSize: 26,
+    lineHeight: 1.15,
+    letterSpacing: '-0.045em',
+  },
+  bodyText: {
+    margin: '10px 0 0',
+    color: '#aeb6c2',
+    lineHeight: 1.7,
+    fontSize: 14,
+  },
+  infoGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 18,
+  },
+  infoRow: {
+    display: 'grid',
+    gridTemplateColumns: '170px minmax(0, 1fr)',
+    gap: 12,
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(0,0,0,0.22)',
+    border: '1px solid rgba(255,255,255,0.08)',
+  },
+  infoLabel: {
+    color: '#858d98',
+    fontWeight: 900,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+  },
+  infoValue: {
+    color: '#fff',
+    lineHeight: 1.5,
+    overflowWrap: 'anywhere',
+  },
+  memoryPanel: {
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1fr) auto',
-    gap: '16px',
+    gap: 16,
     alignItems: 'center',
-    background: '#082f49',
-    border: '1px solid #0ea5e9',
-    borderRadius: '22px',
-    padding: '18px',
-    marginBottom: '16px',
-    boxSizing: 'border-box',
+    padding: 28,
+    borderRadius: 28,
+    background:
+      'linear-gradient(135deg, rgba(201,162,39,0.13), rgba(255,255,255,0.035))',
+    border: '1px solid rgba(201,162,39,0.32)',
   },
-  actionTitle: {
-    color: '#f8fafc',
-    fontSize: '22px',
-    lineHeight: 1.2,
-    margin: '8px 0',
+  memoryActions: {
+    display: 'flex',
+    gap: 10,
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
   },
-  actionText: {
-    color: '#cbd5e1',
-    lineHeight: 1.55,
-    margin: 0,
-    maxWidth: '760px',
-  },
-  saveMessage: {
-    color: '#cffafe',
-    fontWeight: 900,
-    margin: '12px 0 0',
-  },
-  primaryButton: {
+  button: {
     border: 'none',
-    borderRadius: '14px',
-    background: '#67e8f9',
-    color: '#082f49',
+    borderRadius: 999,
+    padding: '14px 22px',
+    background: '#c9a227',
+    color: '#090909',
+    fontWeight: 950,
     cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: 900,
-    minHeight: '48px',
-    padding: '0 18px',
     whiteSpace: 'nowrap',
   },
   secondaryButton: {
-    border: '1px solid #67e8f9',
-    borderRadius: '14px',
-    background: '#0f172a',
-    color: '#cffafe',
+    border: '1px solid rgba(201,162,39,0.34)',
+    borderRadius: 999,
+    padding: '14px 22px',
+    background: 'rgba(201,162,39,0.1)',
+    color: '#f8f6f1',
+    fontWeight: 950,
     cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: 900,
-    minHeight: '48px',
-    padding: '0 18px',
     whiteSpace: 'nowrap',
   },
   disabledButton: {
     cursor: 'not-allowed',
     opacity: 0.65,
   },
-  sectionKicker: {
-    color: '#94a3b8',
-    fontWeight: 900,
-    letterSpacing: '0.14em',
-    textTransform: 'uppercase',
-    margin: 0,
-    fontSize: '12px',
-  },
-  heroTitle: {
-    color: '#a5f3fc',
-    fontSize: 'clamp(34px, 5vw, 54px)',
-    lineHeight: 1,
-    margin: '10px 0 14px',
-    letterSpacing: '-0.04em',
-  },
-  heroMeaning: {
-    color: '#e0f2fe',
-    lineHeight: 1.65,
-    margin: 0,
-    maxWidth: '760px',
-    fontSize: '16px',
-  },
-  statusBox: {
-    background: '#083344',
-    border: '1px solid #22d3ee',
-    borderRadius: '20px',
-    padding: '18px',
-    alignSelf: 'stretch',
-  },
-  statusLabel: {
-    color: '#67e8f9',
-    fontWeight: 900,
-    margin: '0 0 10px',
-    fontSize: '12px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.12em',
-  },
-  statusValue: {
-    color: '#cffafe',
-    fontSize: '30px',
-    lineHeight: 1.1,
-    margin: 0,
-    fontWeight: 900,
-  },
-  gridThree: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '14px',
-    marginBottom: '16px',
-  },
-  gridTwo: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '16px',
-    marginBottom: '16px',
-  },
-  signalCard: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '16px',
-    minHeight: '150px',
-    boxSizing: 'border-box',
-  },
-  signalValue: {
-    color: '#f8fafc',
-    fontSize: '30px',
-    lineHeight: 1.15,
-    margin: '10px 0',
-  },
-  card: {
-    background: '#020617',
-    border: '1px solid #1e293b',
-    borderRadius: '22px',
-    padding: '20px',
-    marginBottom: '16px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.24)',
-    boxSizing: 'border-box',
-    overflow: 'hidden',
-  },
-  cardTitle: {
-    color: '#f8fafc',
-    fontSize: '26px',
-    lineHeight: 1.15,
-    margin: '10px 0 10px',
-  },
-  bodyText: {
-    color: '#cbd5e1',
-    lineHeight: 1.7,
-    margin: 0,
-    maxWidth: '880px',
-  },
-  priorityGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '12px',
-    marginTop: '16px',
-  },
-  priorityItem: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '16px',
-    padding: '14px',
-  },
-  priorityBody: {
-    color: '#e2e8f0',
-    lineHeight: 1.55,
-    margin: '10px 0 0',
-    fontWeight: 700,
-  },
-  siteList: {
-    display: 'grid',
-    gap: '12px',
-    marginTop: '16px',
-  },
   siteCard: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1fr) minmax(170px, 0.25fr)',
-    gap: '16px',
-    alignItems: 'start',
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '16px',
-  },
-  siteRegion: {
-    color: '#94a3b8',
-    fontSize: '12px',
-    fontWeight: 800,
-    margin: 0,
-  },
-  siteTitle: {
-    color: '#f8fafc',
-    fontSize: '24px',
-    margin: '8px 0',
-  },
-  siteMeaning: {
-    color: '#cbd5e1',
-    lineHeight: 1.6,
-    margin: 0,
-  },
-  siteStatus: {
-    background: '#083344',
-    border: '1px solid #164e63',
-    borderRadius: '16px',
-    padding: '14px',
-  },
-  sitePosture: {
-    color: '#cffafe',
-    fontSize: '20px',
-    lineHeight: 1.1,
-    margin: 0,
-    fontWeight: 900,
+    padding: 24,
+    borderRadius: 24,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.1)',
   },
   siteMeta: {
-    color: '#a5f3fc',
-    fontSize: '13px',
-    fontWeight: 900,
-    margin: '10px 0 0',
-  },
-  panel: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '16px',
-    minHeight: '150px',
-    boxSizing: 'border-box',
-  },
-  panelKicker: {
-    color: '#94a3b8',
-    fontSize: '12px',
-    fontWeight: 900,
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
-    margin: 0,
-  },
-  panelBody: {
-    color: '#cbd5e1',
-    fontSize: '14px',
-    lineHeight: 1.6,
-    marginTop: '10px',
-  },
-  archiveList: {
     display: 'grid',
-    gap: '14px',
-    marginTop: '16px',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 10,
+    margin: '16px 0',
   },
-  archiveItem: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '16px',
+  miniStat: {
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(0,0,0,0.22)',
+    border: '1px solid rgba(255,255,255,0.08)',
   },
-  archiveHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    gap: '14px',
-    alignItems: 'flex-start',
-    marginBottom: '14px',
-  },
-  archiveTitle: {
-    color: '#f8fafc',
-    fontSize: '20px',
-    lineHeight: 1.2,
+  miniValue: {
     margin: '8px 0 0',
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: 850,
+    lineHeight: 1.45,
+    overflowWrap: 'anywhere',
   },
-  archiveDate: {
-    color: '#a5f3fc',
-    fontWeight: 800,
-    fontSize: '13px',
-    lineHeight: 1.4,
-    margin: 0,
-    textAlign: 'right',
-    minWidth: '180px',
+  cardValue: {
+    margin: '12px 0 0',
+    color: '#fff',
+    fontSize: 19,
+    lineHeight: 1.25,
+    overflowWrap: 'anywhere',
   },
-  archiveGrid: {
+  profileGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '12px',
+    gap: 14,
+    marginTop: 18,
   },
-  archiveSummary: {
-    color: '#cbd5e1',
-    lineHeight: 1.65,
-    margin: '14px 0 0',
+  profileCard: {
+    padding: 18,
+    borderRadius: 20,
+    background: 'rgba(0,0,0,0.22)',
+    border: '1px solid rgba(255,255,255,0.08)',
   },
-  emptyText: {
-    color: '#cbd5e1',
-    lineHeight: 1.6,
-    margin: 0,
+  profileTitle: {
+    margin: '10px 0 0',
+    color: '#fff',
+    fontSize: 18,
+    lineHeight: 1.25,
   },
-  summaryBox: {
-    marginTop: '16px',
-    padding: '18px',
-    borderRadius: '18px',
-    background: '#0f172a',
-    border: '1px solid #334155',
-    color: '#e2e8f0',
+  profileDate: {
+    margin: '8px 0 0',
+    color: '#d7b84c',
+    fontSize: 12,
+    fontWeight: 850,
+  },
+  reportPanel: {
+    padding: 28,
+    borderRadius: 28,
+    background: '#fff',
+    color: '#0b0b0b',
+  },
+  pre: {
+    marginTop: 20,
+    padding: 22,
+    borderRadius: 20,
+    background: '#0a0a0a',
+    color: '#f8f6f1',
     whiteSpace: 'pre-wrap',
-    fontSize: '13px',
-    lineHeight: 1.65,
+    fontSize: 13,
+    lineHeight: 1.7,
     overflowX: 'auto',
+  },
+  doctrineCard: {
+    display: 'grid',
+    gap: 10,
+    padding: 24,
+    borderRadius: 24,
+    background: '#050505',
+    border: '1px solid rgba(201,162,39,0.42)',
+    color: '#fff',
+    lineHeight: 1.7,
   },
 }
