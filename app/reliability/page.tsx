@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
+import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import {
   buildCGIReliabilityDoctrine,
@@ -14,9 +15,13 @@ const SAMPLE_LIMIT = 100
 
 export default function ReliabilityPage() {
   return (
-    <CGIGovernanceShell>
-      <ReliabilityContent />
-    </CGIGovernanceShell>
+    <GovernanceRouteGuard
+      allowedRoles={['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']}
+    >
+      <CGIGovernanceShell>
+        <ReliabilityContent />
+      </CGIGovernanceShell>
+    </GovernanceRouteGuard>
   )
 }
 
@@ -150,7 +155,7 @@ function ReliabilityContent() {
         </section>
 
         <section style={styles.gridTwo}>
-          <Panel title="Enterprise Reliability Requirements">
+          <Panel title="Required Movement">
             <Info
               label="Evidence Requirement"
               value={reliability.evidenceRequirement}
@@ -158,10 +163,6 @@ function ReliabilityContent() {
             <Info
               label="Executive Action"
               value={reliability.trustAssessment.executiveDecision}
-            />
-            <Info
-              label="Board Warning"
-              value={reliability.trustAssessment.boardLevelWarning}
             />
             <Info
               label="Stability Thesis"
@@ -199,28 +200,20 @@ function ReliabilityContent() {
           </Panel>
         </section>
 
-        <section style={styles.gridFour}>
-          <Card
-            title="Command"
-            value={reliability.commandImplication}
-            body="How command should interpret reliability."
-          />
-          <Card
-            title="Executive Report"
-            value={reliability.executiveReportImplication}
-            body="How reliability should appear in executive reporting."
-          />
-          <Card
-            title="Memory Board"
-            value={reliability.memoryBoardImplication}
-            body="What institutional memory must preserve."
-          />
-          <Card
-            title="Audit"
-            value={reliability.auditImplication}
-            body="What audit must reconstruct."
-          />
-        </section>
+        <Panel title="Reliability Implications">
+          <div style={styles.infoGrid}>
+            <Info label="Command" value={reliability.commandImplication} />
+            <Info
+              label="Executive Report"
+              value={reliability.executiveReportImplication}
+            />
+            <Info
+              label="Memory Board"
+              value={reliability.memoryBoardImplication}
+            />
+            <Info label="Audit" value={reliability.auditImplication} />
+          </div>
+        </Panel>
 
         <Panel title="Recent Enterprise Reliability Memory">
           <div style={styles.cardHeader}>
@@ -434,66 +427,6 @@ const styles: Record<string, CSSProperties> = {
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
     gap: 16,
   },
-  gridFour: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: 16,
-  },
-  commandDeck: {
-    display: 'grid',
-    gridTemplateColumns: '1.4fr 0.8fr',
-    gap: 24,
-  },
-  primaryCard: {
-    padding: 30,
-    borderRadius: 28,
-    background: '#fff',
-    color: '#0b0b0b',
-  },
-  consequenceCard: {
-    padding: 30,
-    borderRadius: 28,
-    background: 'rgba(0,0,0,0.38)',
-    border: '1px solid rgba(201,162,39,0.28)',
-  },
-  bigText: {
-    margin: '14px 0',
-    fontSize: 'clamp(1.55rem, 3vw, 2.7rem)',
-    lineHeight: 1.05,
-    letterSpacing: '-0.05em',
-    fontWeight: 950,
-  },
-  commandTitle: {
-    margin: '14px 0',
-    fontSize: 'clamp(1.8rem, 3vw, 3.2rem)',
-    lineHeight: 1.05,
-    letterSpacing: '-0.05em',
-    fontWeight: 950,
-  },
-  primaryText: {
-    margin: 0,
-    color: '#4a4a4a',
-    lineHeight: 1.7,
-    fontSize: 14,
-  },
-  consequenceTitle: {
-    margin: '14px 0',
-    fontSize: 28,
-    lineHeight: 1.1,
-    letterSpacing: '-0.04em',
-  },
-  bodyText: {
-    margin: '10px 0 0',
-    color: '#aeb6c2',
-    lineHeight: 1.7,
-    fontSize: 14,
-  },
-  commandMetaGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: 12,
-    marginTop: 24,
-  },
   metricGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
@@ -540,15 +473,23 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.25,
     overflowWrap: 'anywhere',
   },
+  bigText: {
+    margin: '14px 0',
+    fontSize: 'clamp(1.55rem, 3vw, 2.7rem)',
+    lineHeight: 1.05,
+    letterSpacing: '-0.05em',
+    fontWeight: 950,
+  },
+  bodyText: {
+    margin: '10px 0 0',
+    color: '#aeb6c2',
+    lineHeight: 1.7,
+    fontSize: 14,
+  },
   infoGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
     gap: 12,
-    marginTop: 18,
-  },
-  infoList: {
-    display: 'grid',
-    gap: 10,
     marginTop: 18,
   },
   infoRow: {
