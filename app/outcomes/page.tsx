@@ -162,7 +162,6 @@ function OutcomesContent() {
   const [outcomes, setOutcomes] = useState<OutcomeRecord[]>([])
   const [selectedCaseId, setSelectedCaseId] = useState('')
   const [lastPreservedCaseId, setLastPreservedCaseId] = useState('')
-
   const [verificationResult, setVerificationResult] = useState('')
   const [actionImpact, setActionImpact] = useState('')
   const [verificationCredibility, setVerificationCredibility] = useState('')
@@ -171,7 +170,6 @@ function OutcomesContent() {
   const [continuityOutlook, setContinuityOutlook] = useState('')
   const [verificationTrajectory, setVerificationTrajectory] = useState('')
   const [verificationInterpretation, setVerificationInterpretation] = useState('')
-
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -392,6 +390,34 @@ function OutcomesContent() {
     hasSelectedCase: Boolean(activeCase),
   })
 
+  const verificationMovements = [
+    {
+      title: 'Verify',
+      movement: 'Credibility',
+      description: 'Confirm whether action evidence supports stabilization.',
+    },
+    {
+      title: 'Observe',
+      movement: 'Transition',
+      description: 'Hold visibility when stability is emerging but not settled.',
+    },
+    {
+      title: 'Monitor',
+      movement: 'Recovery Watch',
+      description: 'Move toward recovery monitoring without declaring durability.',
+    },
+    {
+      title: 'Recur',
+      movement: 'Recurrence',
+      description: 'Preserve recurrence when instability returns after action.',
+    },
+    {
+      title: 'Escalate',
+      movement: 'Command',
+      description: 'Raise visibility when verification exposes continuity risk.',
+    },
+  ]
+
   function buildCaseLabel(caseItem: StabilityCase) {
     const latestIntervention = findLatestIntervention(caseItem.id, interventions)
     const latestOutcome = findLatestOutcome(caseItem.id, outcomes)
@@ -402,7 +428,7 @@ function OutcomesContent() {
         ? 'ACTION_EVIDENCE_READY_FOR_VERIFICATION'
         : caseItem.case_status
 
-    return `${inherited.intakeIdentity} â€¢ ${caseItem.support_domain} â€¢ ${activeStatus}`
+    return `${inherited.intakeIdentity} • ${caseItem.support_domain} • ${activeStatus}`
   }
 
   function verificationSynthesis() {
@@ -585,84 +611,21 @@ but durable recovery must be confirmed separately.
 
   const continuityPanels = [
     {
-      title: 'Verification Stability Climate',
+      title: 'Verification Climate',
       value: continuityClimate.stabilityClimate,
     },
     {
-      title: 'Continuity Verification Posture',
+      title: 'Verification Posture',
       value: continuityClimate.posture,
     },
     {
-      title: 'Recurrence Pressure Distribution',
+      title: 'Recurrence Visibility',
       value: continuityClimate.recurrence,
     },
     {
-      title: 'Recovery Eligibility Landscape',
+      title: 'Recovery Eligibility',
       value: continuityClimate.recoveryLandscape,
     },
-  ]
-
-  const synthesisRows = [
-    ['INHERITED INTAKE IDENTITY', inheritedContext.intakeIdentity],
-    ['INHERITED ROUTING POSTURE', inheritedContext.routingPosture],
-    ['INHERITED INTERVENTION READINESS', inheritedContext.interventionReadiness],
-    ['INHERITED ACTION MOVEMENT', inheritedContext.actionMovement],
-    ['INHERITED ACTION TRAJECTORY', inheritedContext.actionTrajectory],
-    ['INHERITED ACTION EVIDENCE POSTURE', inheritedContext.actionEvidencePosture],
-    ['INHERITED OWNER VISIBILITY', inheritedContext.ownerVisibility],
-    ['INHERITED ACTION CONFIDENCE', inheritedContext.actionConfidence],
-    ['INHERITED DRIFT SIGNAL', inheritedContext.inheritedDriftSignal],
-    ['INHERITED CONVERGENCE SIGNAL', inheritedContext.inheritedConvergenceSignal],
-    ['INHERITED COMMAND MEANING', inheritedContext.inheritedCommandMeaning],
-    ['INHERITED SURVIVABILITY', inheritedContext.inheritedSurvivability],
-    ['VERIFICATION RESULT', displayVerificationResult || 'Verification evidence pending'],
-    ['ACTION IMPACT', displayActionImpact || 'Operational impact pending'],
-    [
-      'VERIFICATION CREDIBILITY',
-      displayVerificationCredibility || 'Verification credibility pending',
-    ],
-    [
-      'VERIFICATION TRAJECTORY',
-      displayVerificationTrajectory || 'Verification trajectory pending',
-    ],
-    ['RECURRENCE SIGNAL', displayRecurrenceSignal || 'Recurrence signal pending'],
-    [
-      'RECOVERY READINESS',
-      displayRecoveryReadiness || 'Recovery readiness pending',
-    ],
-    ['CONTINUITY OUTLOOK', displayContinuityOutlook || 'Continuity outlook pending'],
-    ['COMMAND POSTURE', commandPosture],
-    ['STABILIZATION CONFIDENCE', stabilizationConfidence],
-    ['SURVIVABILITY SIGNAL', survivabilitySignal],
-    ['EXECUTIVE MEANING', executiveMeaning],
-    ['VERIFICATION PRESSURE', verificationPressureMeaning],
-    [
-      'NEXT LIFECYCLE STATE',
-      activeCase
-        ? lifecycleDecision.nextStatus
-        : 'Continuity lifecycle advancement pending stabilization verification.',
-    ],
-    ['LIFECYCLE MEANING', lifecycleDecision.lifecycleMeaning],
-    [
-      'CASE SIGNAL',
-      activeCase?.beneficiary_name ||
-        'Executive continuity interpretation will activate after stabilization verification evidence is preserved.',
-    ],
-    [
-      'STABILITY DOMAIN',
-      activeCase?.support_domain ||
-        'Continuity domain visibility pending verification assignment.',
-    ],
-    [
-      'CURRENT CONTINUITY STATUS',
-      activeCase?.case_status || 'Continuity posture pending verification review.',
-    ],
-    [
-      'GOVERNANCE INTERPRETATION',
-      verificationInterpretation.trim() ||
-        hydratedOutcome.governanceInterpretation ||
-        'No additional operational continuity interpretation entered.',
-    ],
   ]
 
   return (
@@ -674,11 +637,29 @@ but durable recovery must be confirmed separately.
           </div>
         )}
 
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-400">
-          TSINAXA CGI â€¢ STABILIZATION VERIFICATION INTELLIGENCE
-        </p>
+        <header className="mb-8 flex flex-col gap-5 border-b border-amber-500/10 pb-6 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-amber-400">
+              TSINAXA CGI
+            </p>
 
-        <div className="mt-4 rounded-3xl border border-neutral-800 bg-neutral-900/70 p-6 shadow-2xl">
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">
+              Outcomes
+            </h1>
+
+            <p className="mt-2 text-sm text-neutral-400">
+              Verify stabilization credibility before recovery.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[520px]">
+            <StageChip label="Operating Layer" value="Continuity Lifecycle" />
+            <StageChip label="Executive Meaning" value="Stabilization Verification" />
+            <StageChip label="Movement" value="Recovery" />
+          </div>
+        </header>
+
+        <section className="rounded-3xl border border-neutral-800 bg-black p-6 shadow-2xl">
           <h2 className="text-2xl font-semibold text-white">
             Stabilization Verification Intelligence
           </h2>
@@ -692,205 +673,221 @@ but durable recovery must be confirmed separately.
 
           <p className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
             <span className="font-semibold">Boundary:</span> /outcomes verifies
-            stabilization credibility. It does not automatically declare durable
-            recovery, erase structural continuity memory, or remove survivability
+            stabilization credibility. It does not declare durable recovery,
+            erase structural continuity memory, or remove survivability
             visibility.
           </p>
-        </div>
+        </section>
 
         <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {continuityPanels.map((panel) => (
-            <div
-              key={panel.title}
-              className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5"
-            >
-              <p className="text-sm font-semibold text-white">{panel.title}</p>
-              <p className="mt-3 text-sm leading-6 text-neutral-400">
-                {panel.value}
-              </p>
-            </div>
+            <ClimateCard key={panel.title} title={panel.title} value={panel.value} />
           ))}
         </div>
 
-        <div className="mt-6 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+        <section className="mt-6 rounded-3xl border border-neutral-800 bg-black p-6">
           <h3 className="text-lg font-semibold text-white">
-            Verification Pressure Intelligence
+            Verification Workspace
           </h3>
-          <p className="mt-3 text-sm leading-6 text-neutral-300">
-            {verificationPressureMeaning}
+
+          <p className="mt-3 text-sm leading-6 text-neutral-400">
+            Outcomes has one lawful responsibility: determine whether action
+            evidence is credible enough for recovery monitoring, recurrence
+            visibility, follow-up, or escalation.
           </p>
-        </div>
 
-        {activeOutcome && (
-          <section className="mt-6 rounded-3xl border border-amber-500/30 bg-amber-500/10 p-6">
-            <h3 className="text-lg font-semibold text-amber-100">
-              Latest Preserved Verification Evidence
-            </h3>
-
-            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              <Info label="Verification Result" value={hydratedOutcome.verificationResult || 'Not recorded'} />
-              <Info label="Action Impact" value={hydratedOutcome.actionImpact || 'Not recorded'} />
-              <Info label="Verification Credibility" value={hydratedOutcome.verificationCredibility || 'Not recorded'} />
-              <Info label="Recurrence Signal" value={hydratedOutcome.recurrenceSignal || 'Not recorded'} />
-              <Info label="Recovery Readiness" value={hydratedOutcome.recoveryReadiness || 'Not recorded'} />
-              <Info label="Continuity Outlook" value={hydratedOutcome.continuityOutlook || 'Not recorded'} />
-            </div>
-          </section>
-        )}
-
-        <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_1.1fr]">
-          <section className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
-            <h3 className="text-xl font-semibold text-white">
-              Preserve Verification Evidence
-            </h3>
-
-            <p className="mt-3 text-sm leading-6 text-neutral-400">
-              Use this after stabilization action has occurred. Preserve inherited
-              action evidence, continuity credibility, recurrence visibility,
-              recovery eligibility, survivability relevance, and executive
-              continuity interpretation.
-            </p>
-
-            <div className="mt-6 space-y-5">
-              <Select
-                label="Stability Case"
-                placeholder={
-                  cases.length === 0
-                    ? 'No outcome-ready cases found'
-                    : 'Select stability case'
-                }
-                value={selectedCaseId}
-                setValue={setSelectedCaseId}
-                options={cases.map((item) => ({
-                  label: buildCaseLabel(item),
-                  value: item.id,
-                }))}
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            {verificationMovements.map((item) => (
+              <MovementCard
+                key={item.title}
+                title={item.title}
+                movement={item.movement}
+                description={item.description}
               />
+            ))}
+          </div>
+        </section>
 
-              {selectedCase && (
-                <section className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5">
-                  <p className="text-sm font-semibold text-amber-100">
-                    Inherited Action Evidence
-                  </p>
+        <SimplePanel
+          title="Verification Pressure Intelligence"
+          value={verificationPressureMeaning}
+        />
 
-                  <div className="mt-4 grid gap-3">
-                    <Info label="Memory Source" value={inheritedContext.memorySource} />
-                    <Info label="Inherited Intake Identity" value={inheritedContext.intakeIdentity} />
-                    <Info label="Inherited Routing Posture" value={inheritedContext.routingPosture} />
-                    <Info label="Action Movement" value={inheritedContext.actionMovement} />
-                    <Info label="Action Trajectory" value={inheritedContext.actionTrajectory} />
-                    <Info label="Action Evidence Posture" value={inheritedContext.actionEvidencePosture} />
-                    <Info label="Owner Visibility" value={inheritedContext.ownerVisibility} />
-                    <Info label="Action Confidence" value={inheritedContext.actionConfidence} />
-                    <Info label="Inherited Survivability" value={inheritedContext.inheritedSurvivability} />
-                  </div>
-                </section>
-              )}
+        <SimplePanel
+          title="Executive Verification Synthesis"
+          value={executiveMeaning}
+        />
 
-              <Select label="Verification Result" placeholder="Select verification result" value={verificationResult} setValue={setVerificationResult} options={VERIFICATION_RESULTS.map((item) => ({ label: item, value: item }))} />
-              <Select label="Action Impact" placeholder="Select action impact" value={actionImpact} setValue={setActionImpact} options={ACTION_IMPACTS.map((item) => ({ label: item, value: item }))} />
-              <Select label="Verification Credibility" placeholder="Select verification credibility" value={verificationCredibility} setValue={setVerificationCredibility} options={VERIFICATION_CREDIBILITIES.map((item) => ({ label: item, value: item }))} />
-              <Select label="Verification Trajectory" placeholder="Select verification trajectory" value={verificationTrajectory} setValue={setVerificationTrajectory} options={VERIFICATION_TRAJECTORIES.map((item) => ({ label: item, value: item }))} />
-              <Select label="Recurrence Signal" placeholder="Select recurrence signal" value={recurrenceSignal} setValue={setRecurrenceSignal} options={RECURRENCE_SIGNALS.map((item) => ({ label: item, value: item }))} />
-              <Select label="Recovery Readiness" placeholder="Select recovery readiness" value={recoveryReadiness} setValue={setRecoveryReadiness} options={RECOVERY_READINESS.map((item) => ({ label: item, value: item }))} />
-              <Select label="Continuity Outlook" placeholder="Select continuity outlook" value={continuityOutlook} setValue={setContinuityOutlook} options={CONTINUITY_OUTLOOKS.map((item) => ({ label: item, value: item }))} />
+        <section className="mt-8 rounded-3xl border border-neutral-800 bg-black p-6">
+          <h3 className="text-xl font-semibold text-white">
+            Preserve Stabilization Verification
+          </h3>
 
-              <label className="block">
-                <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
-                  Verification Interpretation
-                </span>
+          <p className="mt-3 text-sm leading-6 text-neutral-400">
+            Preserve verification evidence only after action evidence exists.
+            Verification may support recovery monitoring, but recovery durability
+            must still be confirmed separately.
+          </p>
 
-                <textarea
-                  value={verificationInterpretation}
-                  onChange={(event) =>
-                    setVerificationInterpretation(event.target.value)
+          <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.05fr]">
+            <section className="rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
+              <div className="space-y-5">
+                <Select
+                  label="Stability Case"
+                  placeholder={
+                    cases.length === 0
+                      ? 'No outcome-ready cases found'
+                      : 'Select stability case'
                   }
-                  rows={5}
-                  placeholder="Use operational facts only. Preserve action evidence, continuity credibility, recurrence visibility, recovery eligibility, survivability relevance, and executive continuity interpretation."
-                  className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
+                  value={selectedCaseId}
+                  setValue={setSelectedCaseId}
+                  options={cases.map((item) => ({
+                    label: buildCaseLabel(item),
+                    value: item.id,
+                  }))}
                 />
-              </label>
 
-              <button
-                onClick={preserveVerificationIntelligence}
-                disabled={loading}
-                className="w-full rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-amber-300 disabled:opacity-60"
-              >
-                {loading
-                  ? 'Preserving Verification Intelligence...'
-                  : 'Preserve Stabilization Verification'}
-              </button>
-            </div>
-          </section>
+                <Select label="Verification Result" placeholder="Select verification result" value={verificationResult} setValue={setVerificationResult} options={VERIFICATION_RESULTS.map((item) => ({ label: item, value: item }))} />
+                <Select label="Action Impact" placeholder="Select action impact" value={actionImpact} setValue={setActionImpact} options={ACTION_IMPACTS.map((item) => ({ label: item, value: item }))} />
+                <Select label="Verification Credibility" placeholder="Select verification credibility" value={verificationCredibility} setValue={setVerificationCredibility} options={VERIFICATION_CREDIBILITIES.map((item) => ({ label: item, value: item }))} />
+                <Select label="Verification Trajectory" placeholder="Select verification trajectory" value={verificationTrajectory} setValue={setVerificationTrajectory} options={VERIFICATION_TRAJECTORIES.map((item) => ({ label: item, value: item }))} />
+                <Select label="Recurrence Signal" placeholder="Select recurrence signal" value={recurrenceSignal} setValue={setRecurrenceSignal} options={RECURRENCE_SIGNALS.map((item) => ({ label: item, value: item }))} />
+                <Select label="Recovery Readiness" placeholder="Select recovery readiness" value={recoveryReadiness} setValue={setRecoveryReadiness} options={RECOVERY_READINESS.map((item) => ({ label: item, value: item }))} />
+                <Select label="Continuity Outlook" placeholder="Select continuity outlook" value={continuityOutlook} setValue={setContinuityOutlook} options={CONTINUITY_OUTLOOKS.map((item) => ({ label: item, value: item }))} />
 
-          <section className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
-            <h3 className="text-xl font-semibold text-white">
-              Executive Verification Synthesis
-            </h3>
+                <label className="block">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                    Verification Interpretation
+                  </span>
 
-            <p className="mt-3 text-sm leading-6 text-neutral-400">
-              This synthesis evaluates whether stabilization credibility is
-              strengthening, transitioning toward continuity stability, weakening,
-              recurring, escalating, or becoming eligible for recovery durability
-              governance.
-            </p>
+                  <textarea
+                    value={verificationInterpretation}
+                    onChange={(event) =>
+                      setVerificationInterpretation(event.target.value)
+                    }
+                    rows={4}
+                    placeholder="Use operational facts only. Preserve action evidence, credibility, recurrence visibility, recovery eligibility, and survivability relevance."
+                    className="mt-2 w-full rounded-xl border border-neutral-700 bg-black px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
+                  />
+                </label>
 
-            <div className="mt-6 divide-y divide-neutral-800 rounded-2xl border border-neutral-800">
-              {synthesisRows.map(([label, value]) => (
-                <div
-                  key={label}
-                  className="grid gap-2 p-4 md:grid-cols-[0.42fr_1fr]"
+                <button
+                  onClick={preserveVerificationIntelligence}
+                  disabled={loading}
+                  className="w-full rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-amber-300 disabled:opacity-60"
                 >
-                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                    {label}
-                  </p>
+                  {loading
+                    ? 'Preserving Verification Evidence...'
+                    : 'Preserve Stabilization Verification'}
+                </button>
+              </div>
+            </section>
 
-                  <p className="break-words text-sm leading-6 text-neutral-100">
-                    {value}
-                  </p>
-                </div>
-              ))}
-            </div>
+            <section className="rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
+              <h3 className="text-xl font-semibold text-white">
+                Verification Evidence Reading
+              </h3>
 
-            <div className="mt-6 rounded-2xl border border-neutral-800 bg-neutral-950 p-5">
-              <h4 className="text-sm font-semibold uppercase tracking-wide text-amber-400">
-                Lifecycle Boundary
-              </h4>
-
-              <p className="mt-3 text-sm leading-6 text-neutral-300">
-                Action is not outcome. Outcome is not recovery. Verification may
-                support recovery monitoring, but durable recovery must still be
-                confirmed separately.
+              <p className="mt-3 text-sm leading-6 text-neutral-400">
+                This panel shows whether action evidence is converting into
+                stabilization credibility.
               </p>
-            </div>
-          </section>
-        </div>
 
-        <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+              <div className="mt-6 grid gap-3">
+                <Info label="Verification Result" value={displayVerificationResult || 'Verification evidence pending'} />
+                <Info label="Action Impact" value={displayActionImpact || 'Operational impact pending'} />
+                <Info label="Credibility" value={displayVerificationCredibility || 'Verification credibility pending'} />
+                <Info label="Trajectory" value={displayVerificationTrajectory || 'Verification trajectory pending'} />
+                <Info label="Recurrence" value={displayRecurrenceSignal || 'Recurrence signal pending'} />
+                <Info label="Recovery Readiness" value={displayRecoveryReadiness || 'Recovery readiness pending'} />
+                <Info label="Continuity Outlook" value={displayContinuityOutlook || 'Continuity outlook pending'} />
+                <Info label="Next Lifecycle State" value={activeCase ? lifecycleDecision.nextStatus : 'Continuity lifecycle advancement pending stabilization verification.'} />
+              </div>
+
+              <div className="mt-6 rounded-2xl border border-neutral-800 bg-black p-5">
+                <h4 className="text-sm font-semibold uppercase tracking-wide text-amber-400">
+                  Lifecycle Boundary
+                </h4>
+
+                <p className="mt-3 text-sm leading-6 text-neutral-300">
+                  Action is not outcome. Outcome is not recovery. Verification
+                  may support recovery monitoring, but durable recovery must
+                  still be confirmed separately.
+                </p>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section className="mt-8 rounded-3xl border border-neutral-800 bg-black p-6">
           <h3 className="text-xl font-semibold text-white">
             Verification Doctrine
           </h3>
 
           <p className="mt-4 text-sm leading-7 text-neutral-300">
             Stabilization verification is a credibility process, not a completion
-            label. CGI does not assume continuity durability simply because action
-            movement appears positive. Verification credibility, recurrence
-            visibility, continuity outlook, survivability relevance, and recovery
-            eligibility must remain operationally visible before lifecycle movement
-            advances.
+            label. CGI does not assume continuity durability simply because
+            action movement appears positive.
           </p>
 
           <p className="mt-4 text-sm leading-7 text-neutral-300">
-            Mature verification intelligence must preserve proportional continuity
-            interpretation. When stabilization evidence strengthens without
-            recurrence, escalation concentration, weakening trajectory, or
-            structural deterioration, the system should support measured continuity
-            confidence while preserving structural memory, executive traceability,
-            and recovery durability governance visibility.
+            Mature verification intelligence must preserve recurrence visibility,
+            continuity outlook, survivability relevance, recovery eligibility,
+            executive traceability, and structural memory before lifecycle
+            movement advances.
           </p>
         </section>
       </section>
     </main>
+  )
+}
+
+function StageChip({ label, value }: { label: string; value: string }) {
+  return (
+    <article className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-amber-400">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-semibold text-amber-50">{value}</p>
+    </article>
+  )
+}
+
+function ClimateCard({ title, value }: { title: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-neutral-800 bg-black p-5">
+      <p className="text-sm font-semibold text-white">{title}</p>
+      <p className="mt-3 text-sm leading-6 text-neutral-400">{value}</p>
+    </div>
+  )
+}
+
+function MovementCard({
+  title,
+  movement,
+  description,
+}: {
+  title: string
+  movement: string
+  description: string
+}) {
+  return (
+    <article className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
+      <p className="text-sm font-semibold text-amber-100">{title}</p>
+      <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-amber-400">
+        {movement}
+      </p>
+      <p className="mt-3 text-xs leading-5 text-neutral-400">{description}</p>
+    </article>
+  )
+}
+
+function SimplePanel({ title, value }: { title: string; value: string }) {
+  return (
+    <section className="mt-6 rounded-3xl border border-neutral-800 bg-black p-6">
+      <h3 className="text-lg font-semibold text-white">{title}</h3>
+      <p className="mt-3 text-sm leading-6 text-neutral-300">{value}</p>
+    </section>
   )
 }
 
@@ -1407,7 +1404,7 @@ function buildVerificationPressureMeaning(input: {
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-2xl border border-neutral-800 bg-neutral-950 p-4">
+    <div className="min-w-0 rounded-2xl border border-neutral-800 bg-black p-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
         {label}
       </p>
@@ -1443,7 +1440,7 @@ function Select({
       <select
         value={value}
         onChange={(event) => setValue(event.target.value)}
-        className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
+        className="mt-2 w-full rounded-xl border border-neutral-700 bg-black px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
       >
         <option value="">{placeholder}</option>
 
