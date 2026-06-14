@@ -23,12 +23,7 @@ type ReburnSignal =
   | 'REBURN_DETECTED'
   | 'RECURRENT_REBURN_PATTERN'
 
-type RecoveryConfidence =
-  | 'CREDIBLE'
-  | 'BUILDING'
-  | 'VARIABLE'
-  | 'LOW'
-  | 'COLLAPSED'
+type RecoveryConfidence = 'CREDIBLE' | 'BUILDING' | 'VARIABLE' | 'LOW' | 'COLLAPSED'
 
 type MemoryImpact =
   | 'NO_MEMORY_ESCALATION_REQUIRED'
@@ -355,17 +350,9 @@ export default function RecoveryPage() {
     ? recoveryConfidence
     : 'Recovery confidence pending recovery-eligible case selection'
 
-  const displayedMemoryImpact = hasActiveRecoveryContext
-    ? memoryImpact
-    : 'Memory impact pending recovery-eligible case selection'
-
   const displayedRecoveryMaturity = hasActiveRecoveryContext
     ? recoveryMaturity
     : 'RECOVERY_MATURITY_PENDING'
-
-  const displayedCommandPosture = hasActiveRecoveryContext
-    ? commandPosture
-    : 'PENDING_RECOVERY_SELECTION'
 
   const displayedRecoveryDisposition = hasActiveRecoveryContext
     ? recoveryDisposition
@@ -391,64 +378,49 @@ export default function RecoveryPage() {
     ? recoveryPressure
     : 'Recovery pressure interpretation will activate after inherited outcome evidence is selected for durability review.'
 
-  const displayedMemoryMeaning = hasActiveRecoveryContext
-    ? memoryMeaning
-    : 'Structural memory interpretation will activate after recovery durability review begins.'
-
   const continuityProfiles = buildRecoveryContinuityProfiles({
     eligibleCases,
     outcomes,
   })
 
-  const synthesisRows = [
-    ['INHERITED VERIFICATION RESULT', inheritedSummary.verificationResult],
-    ['INHERITED VERIFICATION CREDIBILITY', inheritedSummary.verificationCredibility],
-    ['INHERITED VERIFICATION TRAJECTORY', inheritedSummary.verificationTrajectory],
-    ['INHERITED RECURRENCE SIGNAL', inheritedSummary.recurrenceSignal],
-    ['INHERITED RECOVERY READINESS', inheritedSummary.recoveryReadiness],
-    ['INHERITED CONTINUITY OUTLOOK', inheritedSummary.continuityOutlook],
-    ['INHERITED STABILIZATION CONFIDENCE', inheritedSummary.stabilizationConfidence],
-    ['DURABILITY RESULT', displayedDurabilityResult],
-    ['RECOVERY TRAJECTORY', displayedRecoveryTrajectory],
-    ['REBURN SIGNAL', displayedReburnSignal],
-    ['RECOVERY CONFIDENCE', displayedRecoveryConfidence],
-    [
-      'DURABILITY WINDOW',
-      hasActiveRecoveryContext
-        ? durabilityWindow
-        : 'Durability window pending recovery-eligible case selection',
-    ],
-    ['MEMORY IMPACT', displayedMemoryImpact],
-    ['RECOVERY MATURITY', displayedRecoveryMaturity],
-    ['COMMAND POSTURE', displayedCommandPosture],
-    ['RECOVERY DISPOSITION', displayedRecoveryDisposition],
-    ['RECOMMENDED NEXT MOVEMENT', displayedMovementDestination],
-    ['MOVEMENT REASON', displayedMovementReason],
-    ['RECOVERY SURVIVABILITY SIGNAL', displayedSurvivabilitySignal],
-    ['EXECUTIVE MEANING', displayedExecutiveMeaning],
-    ['RECOVERY PRESSURE', displayedRecoveryPressure],
-    ['MEMORY MEANING', displayedMemoryMeaning],
-    [
-      'CASE SIGNAL',
-      activeCase?.caseItem.beneficiary_name ??
-        'Executive synthesis will activate after recovery-eligible case selection.',
-    ],
-    [
-      'STABILITY DOMAIN',
-      activeCase?.caseItem.support_domain ??
-        'Continuity domain visibility pending recovery-eligible case assignment.',
-    ],
-    [
-      'CURRENT CONTINUITY STATUS',
-      activeCase?.caseItem.case_status ??
-        'Recovery continuity posture pending inherited outcome selection.',
-    ],
-    [
-      'RECOVERY INTERPRETATION',
-      interpretation.trim() ||
-        getLatestRecoveryInterpretation(activeCase?.latestRecoveryReview) ||
-        'No additional operational recovery interpretation entered.',
-    ],
+  const decisionRows = [
+    ['Inherited Verification', inheritedSummary.verificationResult],
+    ['Durability Result', displayedDurabilityResult],
+    ['Recovery Trajectory', displayedRecoveryTrajectory],
+    ['Reburn Signal', displayedReburnSignal],
+    ['Recovery Confidence', displayedRecoveryConfidence],
+    ['Recovery Maturity', displayedRecoveryMaturity],
+    ['Recovery Disposition', displayedRecoveryDisposition],
+    ['Next Movement', displayedMovementDestination],
+    ['Survivability Signal', displayedSurvivabilitySignal],
+  ]
+
+  const recoveryMovements = [
+    {
+      title: 'Stabilize',
+      movement: 'Stability Board',
+      description: 'Move only when durability is credible and memory survives.',
+    },
+    {
+      title: 'Watch',
+      movement: 'Command Watch',
+      description: 'Keep visibility when recovery is holding but still fragile.',
+    },
+    {
+      title: 'Escalate',
+      movement: 'Command',
+      description: 'Raise visibility when reburn or collapse threatens continuity.',
+    },
+    {
+      title: 'Return',
+      movement: 'Outcomes',
+      description: 'Send back when verification credibility is not strong enough.',
+    },
+    {
+      title: 'Review',
+      movement: 'Interventions',
+      description: 'Return when stabilization action may need renewed evidence.',
+    },
   ]
 
   async function preserveRecoveryReview() {
@@ -533,52 +505,88 @@ export default function RecoveryPage() {
           </div>
         )}
 
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-400">
-          TSINAXA CGI â€¢ RECOVERY DURABILITY INTELLIGENCE
-        </p>
+        <header className="mb-8 flex flex-col gap-5 border-b border-amber-500/10 pb-6 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-amber-400">
+              TSINAXA CGI
+            </p>
 
-        <div className="mt-4 rounded-3xl border border-neutral-800 bg-neutral-900/70 p-6 shadow-2xl">
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">
+              Recovery
+            </h1>
+
+            <p className="mt-2 text-sm text-neutral-400">
+              Test whether stabilization survived.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[520px]">
+            <StageChip label="Operating Layer" value="Continuity Lifecycle" />
+            <StageChip label="Executive Meaning" value="Durability Governance" />
+            <StageChip label="Movement" value="Stability or Return" />
+          </div>
+        </header>
+
+        <section className="rounded-3xl border border-neutral-800 bg-black p-6 shadow-2xl">
           <h2 className="text-2xl font-semibold text-white">
             Recovery Durability Intelligence
           </h2>
 
           <p className="mt-3 max-w-5xl text-sm leading-6 text-neutral-300">
-            Confirm whether inherited outcome verification is converting into
-            durable recovery. Preserve recurrence visibility, durability confidence,
-            structural memory, survivability posture, and executive continuity
-            meaning before trust is restored.
+            Confirm whether verified stabilization is holding over time. Preserve
+            recurrence visibility, durability confidence, structural memory,
+            survivability posture, and the next governed movement before trust is
+            restored.
           </p>
 
           <p className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
-            <span className="font-semibold">Boundary:</span> /recovery is now a
-            governed decision gate. It inherits verification evidence from
-            /outcomes, tests durability, and directs the next movement toward
-            Stability Board, Command Watch, Command Escalation, Outcomes Review,
-            Intervention Review, or continued recovery monitoring.
+            <span className="font-semibold">Boundary:</span> /recovery tests
+            durability. It does not erase outcome evidence, close structural
+            memory, or restore trust before stability survives observation.
           </p>
-        </div>
+        </section>
 
         <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {continuityProfiles.map((profile) => (
-            <div
+            <ClimateCard
               key={profile.title}
-              className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5"
-            >
-              <p className="text-sm font-semibold text-white">{profile.title}</p>
-              <p className="mt-3 text-sm leading-6 text-neutral-400">
-                {profile.value}
-              </p>
-            </div>
+              title={profile.title}
+              value={profile.value}
+            />
           ))}
         </div>
 
-        <section className="mt-6 rounded-3xl border border-amber-500/30 bg-gradient-to-br from-neutral-900 to-neutral-950 p-6 shadow-2xl">
+        <section className="mt-6 rounded-3xl border border-neutral-800 bg-black p-6">
+          <h3 className="text-lg font-semibold text-white">
+            Recovery Decision Workspace
+          </h3>
+
+          <p className="mt-3 text-sm leading-6 text-neutral-400">
+            Recovery has one lawful responsibility: decide whether verified
+            stabilization is durable enough for institutional absorption, fragile
+            enough for command watch, weak enough to return, or dangerous enough
+            to escalate.
+          </p>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            {recoveryMovements.map((item) => (
+              <MovementCard
+                key={item.title}
+                title={item.title}
+                movement={item.movement}
+                description={item.description}
+              />
+            ))}
+          </div>
+        </section>
+
+        <section className="mt-6 rounded-3xl border border-amber-500/30 bg-amber-500/10 p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-amber-400">
             Recommended Next Movement
           </p>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-[0.7fr_1.3fr]">
-            <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-5">
+            <div className="rounded-2xl border border-neutral-800 bg-black p-5">
               <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 Recovery Disposition
               </p>
@@ -587,7 +595,7 @@ export default function RecoveryPage() {
               </p>
             </div>
 
-            <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-5">
+            <div className="rounded-2xl border border-neutral-800 bg-black p-5">
               <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 Move To
               </p>
@@ -600,288 +608,189 @@ export default function RecoveryPage() {
             </div>
           </div>
 
-          <p className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-sm leading-6 text-neutral-300">
+          <p className="mt-5 rounded-2xl border border-neutral-800 bg-black p-4 text-sm leading-6 text-neutral-300">
             {hasActiveRecoveryContext
               ? movementMeaning
               : 'Recovery movement activates only after a recovery-eligible case is selected and durability evidence is reviewed.'}
           </p>
         </section>
 
-        <div className="mt-6 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
-          <h3 className="text-lg font-semibold text-white">
-            Recovery Pressure Intelligence
-          </h3>
-          <p className="mt-3 text-sm leading-6 text-neutral-300">
-            {displayedRecoveryPressure}
-          </p>
-        </div>
+        <SimplePanel title="Executive Recovery Synthesis" value={displayedExecutiveMeaning} />
 
-        <div className="mt-6 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
-          <h3 className="text-lg font-semibold text-white">
-            Outcome Inheritance Intelligence
-          </h3>
-          <p className="mt-3 text-sm leading-6 text-neutral-300">
-            {activeCase
-              ? 'This recovery review is inheriting verification credibility, recurrence posture, recovery readiness, and continuity outlook from the latest preserved outcome verification evidence.'
-              : 'Select a recovery-eligible case to activate inherited verification context from /outcomes.'}
-          </p>
-        </div>
-
-        {activeCase?.latestRecoveryReview && (
-          <section className="mt-6 rounded-3xl border border-amber-500/30 bg-amber-500/10 p-6">
-            <h3 className="text-lg font-semibold text-amber-100">
-              Latest Preserved Recovery Durability Evidence
-            </h3>
-            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              <Info
-                label="Durability Result"
-                value={
-                  extractField(
-                    activeCase.latestRecoveryReview.outcome_summary || '',
-                    'DURABILITY RESULT',
-                  ) || 'Not recorded'
-                }
-              />
-              <Info
-                label="Recovery Trajectory"
-                value={
-                  extractField(
-                    activeCase.latestRecoveryReview.outcome_summary || '',
-                    'RECOVERY TRAJECTORY',
-                  ) || 'Not recorded'
-                }
-              />
-              <Info
-                label="Reburn Signal"
-                value={
-                  extractField(
-                    activeCase.latestRecoveryReview.outcome_summary || '',
-                    'REBURN SIGNAL',
-                  ) || 'Not recorded'
-                }
-              />
-              <Info
-                label="Recovery Confidence"
-                value={
-                  extractField(
-                    activeCase.latestRecoveryReview.outcome_summary || '',
-                    'RECOVERY CONFIDENCE',
-                  ) || 'Not recorded'
-                }
-              />
-              <Info
-                label="Recovery Disposition"
-                value={
-                  extractField(
-                    activeCase.latestRecoveryReview.outcome_summary || '',
-                    'RECOVERY DISPOSITION',
-                  ) || 'Not recorded'
-                }
-              />
-              <Info
-                label="Recommended Movement"
-                value={
-                  extractField(
-                    activeCase.latestRecoveryReview.outcome_summary || '',
-                    'RECOMMENDED NEXT MOVEMENT',
-                  ) || 'Not recorded'
-                }
-              />
-            </div>
-          </section>
-        )}
-
-        <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_1.1fr]">
-          <section className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
-            <h3 className="text-xl font-semibold text-white">
-              Preserve Recovery Durability Review
-            </h3>
-
-            <p className="mt-3 text-sm leading-6 text-neutral-400">
-              Use this after /outcomes confirms recovery readiness or verified
-              stabilization. Recovery now inherits outcome verification before
-              durability is confirmed and assigns the next governed movement.
-            </p>
-
-            <div className="mt-6 space-y-5">
-              <Select
-                label="Recovery-Eligible Case"
-                value={selectedCaseId}
-                setValue={setSelectedCaseId}
-                placeholder={
-                  eligibleCases.length === 0
-                    ? 'No recovery-eligible cases found'
-                    : 'Select recovery-eligible case'
-                }
-                options={eligibleCases.map((item) => ({
-                  label: buildRecoveryCaseLabel(item),
-                  value: item.caseItem.id,
-                }))}
-              />
-
-              {selectedCase && (
-                <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
-                  <p className="font-semibold">Inherited outcome context</p>
-                  <p className="mt-2">
-                    {selectedCase.inheritedVerification.verificationResult} â€¢{' '}
-                    {selectedCase.inheritedVerification.recoveryReadiness} â€¢{' '}
-                    {selectedCase.inheritedVerification.recurrenceSignal}
-                  </p>
-                </div>
-              )}
-
-              <Select
-                label="Durability Result"
-                value={durabilityResult}
-                setValue={(value) => setDurabilityResult(value as DurabilityResult)}
-                options={durabilityResults.map((item) => ({
-                  label: item,
-                  value: item,
-                }))}
-              />
-
-              <Select
-                label="Recovery Trajectory"
-                value={recoveryTrajectory}
-                setValue={(value) =>
-                  setRecoveryTrajectory(value as RecoveryTrajectory)
-                }
-                options={recoveryTrajectories.map((item) => ({
-                  label: item,
-                  value: item,
-                }))}
-              />
-
-              <Select
-                label="Reburn Signal"
-                value={reburnSignal}
-                setValue={(value) => setReburnSignal(value as ReburnSignal)}
-                options={reburnSignals.map((item) => ({
-                  label: item,
-                  value: item,
-                }))}
-              />
-
-              <Select
-                label="Recovery Confidence"
-                value={recoveryConfidence}
-                setValue={(value) =>
-                  setRecoveryConfidence(value as RecoveryConfidence)
-                }
-                options={recoveryConfidences.map((item) => ({
-                  label: item,
-                  value: item,
-                }))}
-              />
-
-              <label className="block">
-                <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
-                  Durability Window
-                </span>
-                <input
-                  value={durabilityWindow}
-                  onChange={(event) => setDurabilityWindow(event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
-                />
-              </label>
-
-              <Select
-                label="Memory Impact"
-                value={memoryImpact}
-                setValue={(value) => setMemoryImpact(value as MemoryImpact)}
-                options={memoryImpacts.map((item) => ({
-                  label: item,
-                  value: item,
-                }))}
-              />
-
-              <label className="block">
-                <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
-                  Recovery Interpretation
-                </span>
-                <textarea
-                  value={interpretation}
-                  onChange={(event) => setInterpretation(event.target.value)}
-                  rows={5}
-                  placeholder="Use operational facts only. Preserve durability evidence, inherited outcome meaning, recurrence visibility, structural memory, survivability relevance, executive continuity interpretation, and next governed movement."
-                  className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
-                />
-              </label>
-
-              <button
-                type="button"
-                onClick={preserveRecoveryReview}
-                disabled={loading}
-                className="w-full rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-amber-300 disabled:opacity-60"
-              >
-                {loading
-                  ? 'Preserving Recovery Review...'
-                  : 'Preserve Recovery Durability Review'}
-              </button>
-            </div>
-          </section>
-
-          <section className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
-            <h3 className="text-xl font-semibold text-white">
-              Executive Recovery Synthesis
-            </h3>
-
-            <p className="mt-3 text-sm leading-6 text-neutral-400">
-              This synthesis confirms whether inherited stabilization evidence is
-              holding, strengthening, varying, reburning, weakening, collapsing, or
-              becoming durable enough for institutional absorption.
-            </p>
-
-            <div className="mt-6 divide-y divide-neutral-800 rounded-2xl border border-neutral-800">
-              {synthesisRows.map(([label, value]) => (
-                <div
-                  key={label}
-                  className="grid gap-2 p-4 md:grid-cols-[0.42fr_1fr]"
-                >
-                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                    {label}
-                  </p>
-                  <p className="break-words text-sm leading-6 text-neutral-100">
-                    {value}
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-6 rounded-2xl border border-neutral-800 bg-neutral-950 p-5">
-              <h4 className="text-sm font-semibold uppercase tracking-wide text-amber-400">
-                Lifecycle Boundary
-              </h4>
-              <p className="mt-3 text-sm leading-6 text-neutral-300">
-                Action is not outcome. Outcome is not recovery. Recovery is not
-                closure. Recovery decides whether continuity can move to Stability
-                Board, remain under Command Watch, escalate to Command, return to
-                Outcomes, return to Intervention, or continue durability monitoring.
-              </p>
-            </div>
-          </section>
-        </div>
-
-        <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+        <section className="mt-8 rounded-3xl border border-neutral-800 bg-black p-6">
           <h3 className="text-xl font-semibold text-white">
-            Recovery Doctrine
+            Recovery Durability Review
           </h3>
 
+          <p className="mt-3 text-sm leading-6 text-neutral-400">
+            Preserve durability evidence after /outcomes confirms recovery
+            readiness or verified stabilization. Recovery does not close the case;
+            it determines the next governed movement.
+          </p>
+
+          <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.05fr]">
+            <section className="rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
+              <div className="space-y-5">
+                <Select
+                  label="Recovery-Eligible Case"
+                  value={selectedCaseId}
+                  setValue={setSelectedCaseId}
+                  placeholder={
+                    eligibleCases.length === 0
+                      ? 'No recovery-eligible cases found'
+                      : 'Select recovery-eligible case'
+                  }
+                  options={eligibleCases.map((item) => ({
+                    label: buildRecoveryCaseLabel(item),
+                    value: item.caseItem.id,
+                  }))}
+                />
+
+                {selectedCase && (
+                  <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
+                    <p className="font-semibold">Inherited outcome context</p>
+                    <p className="mt-2">
+                      {selectedCase.inheritedVerification.verificationResult} •{' '}
+                      {selectedCase.inheritedVerification.recoveryReadiness} •{' '}
+                      {selectedCase.inheritedVerification.recurrenceSignal}
+                    </p>
+                  </div>
+                )}
+
+                <Select
+                  label="Durability Result"
+                  value={durabilityResult}
+                  setValue={(value) => setDurabilityResult(value as DurabilityResult)}
+                  options={durabilityResults.map((item) => ({
+                    label: item,
+                    value: item,
+                  }))}
+                />
+
+                <Select
+                  label="Recovery Trajectory"
+                  value={recoveryTrajectory}
+                  setValue={(value) =>
+                    setRecoveryTrajectory(value as RecoveryTrajectory)
+                  }
+                  options={recoveryTrajectories.map((item) => ({
+                    label: item,
+                    value: item,
+                  }))}
+                />
+
+                <Select
+                  label="Reburn Signal"
+                  value={reburnSignal}
+                  setValue={(value) => setReburnSignal(value as ReburnSignal)}
+                  options={reburnSignals.map((item) => ({
+                    label: item,
+                    value: item,
+                  }))}
+                />
+
+                <Select
+                  label="Recovery Confidence"
+                  value={recoveryConfidence}
+                  setValue={(value) =>
+                    setRecoveryConfidence(value as RecoveryConfidence)
+                  }
+                  options={recoveryConfidences.map((item) => ({
+                    label: item,
+                    value: item,
+                  }))}
+                />
+
+                <label className="block">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                    Durability Window
+                  </span>
+                  <input
+                    value={durabilityWindow}
+                    onChange={(event) => setDurabilityWindow(event.target.value)}
+                    className="mt-2 w-full rounded-xl border border-neutral-700 bg-black px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
+                  />
+                </label>
+
+                <Select
+                  label="Memory Impact"
+                  value={memoryImpact}
+                  setValue={(value) => setMemoryImpact(value as MemoryImpact)}
+                  options={memoryImpacts.map((item) => ({
+                    label: item,
+                    value: item,
+                  }))}
+                />
+
+                <label className="block">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                    Recovery Interpretation
+                  </span>
+                  <textarea
+                    value={interpretation}
+                    onChange={(event) => setInterpretation(event.target.value)}
+                    rows={4}
+                    placeholder="Use operational facts only. Preserve durability evidence, recurrence visibility, structural memory, survivability relevance, and next governed movement."
+                    className="mt-2 w-full rounded-xl border border-neutral-700 bg-black px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  onClick={preserveRecoveryReview}
+                  disabled={loading}
+                  className="w-full rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-amber-300 disabled:opacity-60"
+                >
+                  {loading
+                    ? 'Preserving Recovery Review...'
+                    : 'Preserve Recovery Durability Review'}
+                </button>
+              </div>
+            </section>
+
+            <section className="rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
+              <h3 className="text-xl font-semibold text-white">
+                Recovery Decision Reading
+              </h3>
+
+              <p className="mt-3 text-sm leading-6 text-neutral-400">
+                This panel shows whether verified stabilization is surviving,
+                reburning, weakening, or becoming durable enough for institutional
+                absorption.
+              </p>
+
+              <div className="mt-6 grid gap-3">
+                {decisionRows.map(([label, value]) => (
+                  <Info key={label} label={label} value={value} />
+                ))}
+              </div>
+
+              <div className="mt-6 rounded-2xl border border-neutral-800 bg-black p-5">
+                <h4 className="text-sm font-semibold uppercase tracking-wide text-amber-400">
+                  Lifecycle Boundary
+                </h4>
+                <p className="mt-3 text-sm leading-6 text-neutral-300">
+                  Action is not outcome. Outcome is not recovery. Recovery is not
+                  closure. Durability must survive before trust is restored.
+                </p>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section className="mt-8 rounded-3xl border border-neutral-800 bg-black p-6">
+          <h3 className="text-xl font-semibold text-white">Recovery Doctrine</h3>
+
           <p className="mt-4 text-sm leading-7 text-neutral-300">
-            Recovery is a credibility test and a decision gate, not a status label.
-            CGI does not restore trust simply because outcome verification appears
-            positive. Recovery durability must hold across time without reburn,
-            unresolved continuity pressure, recurring instability, structural
-            deterioration, or continuity collapse before institutional confidence
-            matures.
+            Recovery is a durability test, not a closure label. CGI does not
+            restore trust simply because outcome verification appears positive.
           </p>
 
           <p className="mt-4 text-sm leading-7 text-neutral-300">
-            Mature recovery intelligence must recognize earned stability while
-            preserving inherited outcome meaning. Durable recovery may move toward
-            Stability Board. Fragile recovery moves to Command Watch. Reburn or
-            collapse moves to Command Escalation. Weak evidence returns to Outcomes
-            or Intervention Review. Memory survives every movement.
+            Mature recovery governance preserves recurrence visibility,
+            durability confidence, survivability relevance, structural memory,
+            and the next governed movement before institutional confidence
+            matures.
           </p>
         </section>
       </section>
@@ -889,9 +798,58 @@ export default function RecoveryPage() {
   )
 }
 
+function StageChip({ label, value }: { label: string; value: string }) {
+  return (
+    <article className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-amber-400">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-semibold text-amber-50">{value}</p>
+    </article>
+  )
+}
+
+function ClimateCard({ title, value }: { title: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-neutral-800 bg-black p-5">
+      <p className="text-sm font-semibold text-white">{title}</p>
+      <p className="mt-3 text-sm leading-6 text-neutral-400">{value}</p>
+    </div>
+  )
+}
+
+function MovementCard({
+  title,
+  movement,
+  description,
+}: {
+  title: string
+  movement: string
+  description: string
+}) {
+  return (
+    <article className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
+      <p className="text-sm font-semibold text-amber-100">{title}</p>
+      <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-amber-400">
+        {movement}
+      </p>
+      <p className="mt-3 text-xs leading-5 text-neutral-400">{description}</p>
+    </article>
+  )
+}
+
+function SimplePanel({ title, value }: { title: string; value: string }) {
+  return (
+    <section className="mt-6 rounded-3xl border border-neutral-800 bg-black p-6">
+      <h3 className="text-lg font-semibold text-white">{title}</h3>
+      <p className="mt-3 text-sm leading-6 text-neutral-300">{value}</p>
+    </section>
+  )
+}
+
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-2xl border border-neutral-800 bg-neutral-950 p-4">
+    <div className="min-w-0 rounded-2xl border border-neutral-800 bg-black p-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
         {label}
       </p>
@@ -1070,12 +1028,12 @@ function buildRecoveryContinuityProfiles(input: {
   if (input.eligibleCases.length === 0) {
     return [
       {
-        title: 'Recovery Stability Distribution',
+        title: 'Recovery Stability',
         value:
-          'Awaiting recovery-eligible outcome evidence before durability distribution activates.',
+          'Awaiting recovery-eligible outcome evidence before durability interpretation activates.',
       },
       {
-        title: 'Durability Observation Load',
+        title: 'Durability Load',
         value:
           'Recovery observation load will activate when outcomes become eligible for durability review.',
       },
@@ -1085,7 +1043,7 @@ function buildRecoveryContinuityProfiles(input: {
           'Reburn visibility pending inherited recurrence signals from /outcomes.',
       },
       {
-        title: 'Continuity Memory Visibility',
+        title: 'Continuity Memory',
         value:
           'Structural continuity memory remains available for future recovery learning.',
       },
@@ -1104,14 +1062,14 @@ function buildRecoveryContinuityProfiles(input: {
 
   return [
     {
-      title: 'Recovery Stability Distribution',
+      title: 'Recovery Stability',
       value:
         recurrenceVisible === 0
           ? 'No concentrated fragile recovery pattern currently visible across recovery-eligible outcomes.'
           : 'Some recovery-eligible outcomes carry inherited recurrence visibility.',
     },
     {
-      title: 'Durability Observation Load',
+      title: 'Durability Load',
       value:
         input.eligibleCases.length <= 3
           ? 'Recovery observation activity remains within manageable continuity thresholds.'
@@ -1122,10 +1080,10 @@ function buildRecoveryContinuityProfiles(input: {
       value:
         recurrenceVisible === 0
           ? 'No active reburn concentration currently requiring escalation.'
-          : 'Inherited recurrence posture remains visible and should be watched during durability review.',
+          : 'Inherited recurrence posture remains visible during durability review.',
     },
     {
-      title: 'Continuity Memory Visibility',
+      title: 'Continuity Memory',
       value:
         recoveryReady > 0
           ? 'Structural continuity memory remains preserved while recovery-ready outcomes mature.'
@@ -1386,17 +1344,17 @@ function deriveMemoryMeaning(impact: MemoryImpact) {
 function deriveRecoveryMovementDestination(disposition: RecoveryDisposition) {
   const destinations: Record<RecoveryDisposition, string> = {
     MOVE_TO_STABILITY_BOARD:
-      '/system Stability Board â€” absorb into institutional continuity posture.',
+      '/system Stability Board — absorb into institutional continuity posture.',
     MOVE_TO_COMMAND_WATCH:
-      '/command Command Watch â€” preserve executive visibility without full escalation.',
+      '/command Command Watch — preserve executive visibility without full escalation.',
     MOVE_TO_COMMAND_ESCALATION:
-      '/command Command Escalation â€” executive continuity review required.',
+      '/command Command Escalation — executive continuity review required.',
     RETURN_TO_OUTCOMES_REVIEW:
-      '/outcomes Outcomes Review â€” verification evidence requires strengthening.',
+      '/outcomes Outcomes Review — verification evidence requires strengthening.',
     RETURN_TO_INTERVENTION_REVIEW:
-      '/interventions Intervention Review â€” stabilization action requires renewed review.',
+      '/interventions Intervention Review — stabilization action requires renewed review.',
     CONTINUE_RECOVERY_MONITORING:
-      '/recovery Recovery Monitoring â€” continue durability observation.',
+      '/recovery Recovery Monitoring — continue durability observation.',
   }
 
   return destinations[disposition]
@@ -1447,7 +1405,6 @@ function deriveCaseStatusAfterRecovery(disposition: RecoveryDisposition) {
     case 'MOVE_TO_COMMAND_ESCALATION':
       return 'REOPENED'
     case 'RETURN_TO_OUTCOMES_REVIEW':
-      return 'FOLLOW_UP_REQUIRED'
     case 'RETURN_TO_INTERVENTION_REVIEW':
       return 'FOLLOW_UP_REQUIRED'
     case 'MOVE_TO_COMMAND_WATCH':
@@ -1457,12 +1414,8 @@ function deriveCaseStatusAfterRecovery(disposition: RecoveryDisposition) {
   }
 }
 
-function getLatestRecoveryInterpretation(outcome?: OutcomeRecord) {
-  return extractField(outcome?.outcome_summary || '', 'RECOVERY INTERPRETATION')
-}
-
 function buildRecoveryCaseLabel(item: RecoveryEligibleCase) {
-  return `${item.caseItem.beneficiary_name} â€¢ ${item.caseItem.case_status}`
+  return `${item.caseItem.beneficiary_name} • ${item.caseItem.case_status}`
 }
 
 function buildRecoverySummary(input: {
@@ -1588,7 +1541,7 @@ function Select({
       <select
         value={value}
         onChange={(event) => setValue(event.target.value)}
-        className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
+        className="mt-2 w-full rounded-xl border border-neutral-700 bg-black px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
       >
         {placeholder && <option value="">{placeholder}</option>}
         {options.map((item) => (
@@ -1600,4 +1553,3 @@ function Select({
     </label>
   )
 }
-
