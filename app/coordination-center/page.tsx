@@ -248,13 +248,13 @@ function CoordinationCenterContent() {
 
         <Panel title="Recent Coordination Memory">
           <div style={styles.memorySummaryGrid}>
-            <MiniStat label="Reviews Available" value={String(reviews.length)} />
+            <MiniStat label="Reviews" value={String(reviews.length)} />
             <MiniStat
-              label="Executive Reviews"
+              label="Executive"
               value={String(coordination.executiveCoordinationCount)}
             />
             <MiniStat
-              label="Structural Memory Sites"
+              label="Structural"
               value={String(coordination.structuralMemoryCount)}
             />
           </div>
@@ -337,7 +337,7 @@ const styles: Record<string, CSSProperties> = {
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1.45fr) minmax(320px, 0.75fr)',
     gap: 24,
-    padding: 32,
+    padding: 24,
     border: '1px solid rgba(201,162,39,0.34)',
     borderRadius: 28,
     background:
@@ -353,23 +353,23 @@ const styles: Record<string, CSSProperties> = {
     textTransform: 'uppercase',
   },
   title: {
-    margin: '14px 0 0',
-    fontSize: 'clamp(2.3rem, 5vw, 5rem)',
+    margin: '12px 0 0',
+    fontSize: 'clamp(2.2rem, 4.7vw, 4.6rem)',
     lineHeight: 0.95,
     letterSpacing: '-0.07em',
     fontWeight: 950,
   },
   subtitle: {
-    maxWidth: 880,
-    margin: '18px 0 0',
+    maxWidth: 820,
+    margin: '14px 0 0',
     color: '#c8cdd4',
-    fontSize: 17,
-    lineHeight: 1.8,
+    fontSize: 16,
+    lineHeight: 1.6,
   },
   statusBox: {
     border: '1px solid rgba(201,162,39,0.5)',
     borderRadius: 24,
-    padding: 24,
+    padding: 20,
     background:
       'linear-gradient(180deg, rgba(201,162,39,0.18), rgba(0,0,0,0.38))',
   },
@@ -381,18 +381,18 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: '0.2em',
   },
   statusValue: {
-    margin: '16px 0 0',
-    fontSize: 30,
+    margin: '14px 0 0',
+    fontSize: 28,
     fontWeight: 950,
     letterSpacing: '-0.04em',
     lineHeight: 1.05,
     overflowWrap: 'anywhere',
   },
   statusMeaning: {
-    margin: '12px 0 0',
+    margin: '10px 0 0',
     color: '#ece7d7',
-    fontSize: 14,
-    lineHeight: 1.7,
+    fontSize: 13,
+    lineHeight: 1.55,
   },
   message: {
     padding: '14px 18px',
@@ -452,8 +452,8 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 950,
   },
   panelTitle: {
-    margin: '12px 0 0',
-    fontSize: 26,
+    margin: '10px 0 0',
+    fontSize: 24,
     lineHeight: 1.15,
     letterSpacing: '-0.045em',
   },
