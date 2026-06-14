@@ -115,6 +115,7 @@ function CrossSiteContent() {
   )
 
   const governanceLanguage = formatCGIGovernanceSafeLanguage()
+  const latestProfiles = profiles.slice(0, 3)
 
   useEffect(() => {
     loadSiteProfiles()
@@ -197,8 +198,8 @@ function CrossSiteContent() {
             <h1 style={styles.title}>Enterprise Cross-Site Intelligence</h1>
             <p style={styles.subtitle}>
               Cross-Site determines whether visible instability is isolated,
-              repeated, shared, structural, or enterprise-wide. It protects CGI
-              from treating distributed continuity risk as a local site problem.
+              repeated, shared, structural, or enterprise-wide before local
+              recovery is trusted.
             </p>
           </div>
 
@@ -213,35 +214,24 @@ function CrossSiteContent() {
           <div style={styles.message}>{saveMessage || profileMessage}</div>
         )}
 
-        <section style={styles.commandDeck}>
-          <div style={styles.primaryCard}>
-            <p style={styles.sectionKicker}>Executive Cross-Site Question</p>
-            <h2 style={styles.commandTitle}>{pattern.executiveQuestion}</h2>
-            <p style={styles.primaryText}>
-              Cross-Site compares site posture, shared dependency, evidence
-              maturity, recovery durability, recurrence visibility, command
-              meaning, coordination need, and structural memory before the chain
-              moves to Situation Room, Executive Center, or Audit.
+        <section style={styles.gridTwo}>
+          <Panel title="Executive Cross-Site Question">
+            <h2 style={styles.bigText}>{pattern.executiveQuestion}</h2>
+            <p style={styles.bodyText}>
+              Cross-Site protects CGI from treating distributed continuity risk
+              as a local site problem.
             </p>
+          </Panel>
 
-            <div style={styles.commandMetaGrid}>
-              <MiniStat label="Pattern" value={pattern.patternName} />
-              <MiniStat label="Dominant Site" value={pattern.dominantSite} />
-              <MiniStat label="Affected Sites" value={String(doctrine.affectedSites)} />
-              <MiniStat label="Next" value={decision.nextGovernedDestination} />
-            </div>
-          </div>
-
-          <div style={styles.consequenceCard}>
-            <p style={styles.sectionKicker}>Board Warning</p>
-            <h2 style={styles.consequenceTitle}>
+          <Panel title="Board Warning">
+            <h2 style={styles.bigText}>
               Local recovery can hide enterprise fragility.
             </h2>
             <p style={styles.bodyText}>{pattern.boardWarning}</p>
-          </div>
+          </Panel>
         </section>
 
-        <section style={styles.metricsGrid}>
+        <section style={styles.metricGrid}>
           <Metric label="Critical Sites" value={doctrine.criticalSites} />
           <Metric label="Elevated Sites" value={doctrine.elevatedSites} />
           <Metric label="Affected Sites" value={doctrine.affectedSites} />
@@ -250,141 +240,103 @@ function CrossSiteContent() {
           <Metric label="Profiles Saved" value={profiles.length} />
         </section>
 
-        <section style={styles.gridFour}>
-          <ExecutiveCard
+        <section style={styles.gridThree}>
+          <Card
             title="Instability Scope"
             value={pattern.maturity}
-            body="Whether visible instability remains local or is becoming structural."
+            body="Whether instability is isolated or becoming structural."
           />
-          <ExecutiveCard
+          <Card
             title="Shared Dependency"
             value={pattern.sharedDependency}
-            body="The dependency that may be linking multiple operational sites."
+            body="The dependency linking multiple operational sites."
           />
-          <ExecutiveCard
+          <Card
             title="Recovery Pattern"
             value={pattern.recoveryPattern}
-            body="Whether recovery is becoming durable across sites or remaining uneven."
+            body="Whether recovery is durable or uneven across sites."
           />
-          <ExecutiveCard
-            title="Executive Meaning"
-            value={pattern.executiveMeaning}
-            body="What leadership should understand before trusting continuity."
-          />
-        </section>
-
-        <section style={styles.gridFour}>
-          <GateCard
-            title="Coordination"
-            active={decision.coordinationRequired}
-            body="Whether coordination must repair ownership, alternatives, or evidence."
-          />
-          <GateCard
-            title="Situation Room"
-            active={decision.situationRoomRequired}
-            body="Whether the pattern must enter the enterprise operating picture."
-          />
-          <GateCard
-            title="Executive Review"
-            active={decision.executiveReviewRequired}
-            body="Whether leadership synthesis is required before continuity trust returns."
-          />
-          <GateCard
-            title="Audit"
-            active={decision.auditRequired}
-            body="Whether cross-site meaning must remain reconstructable."
-          />
-        </section>
-
-        <section style={styles.memoryPanel}>
-          <p style={styles.sectionKicker}>Cross-Site Memory</p>
-          <h2 style={styles.panelTitle}>
-            The institution must remember whether instability was isolated,
-            repeated, shared, structural, or enterprise-wide.
-          </h2>
-
-          <div style={styles.memoryGrid}>
-            <MiniStat label="Dominant Site" value={pattern.dominantSite} />
-            <MiniStat label="Dependency" value={pattern.sharedDependency} />
-            <MiniStat label="Required Action" value={pattern.requiredAction} />
-            <MiniStat label="Evidence" value={pattern.evidenceStandard} />
-          </div>
         </section>
 
         <section style={styles.gridTwo}>
-          <Panel title="Enterprise Movement Requirements">
+          <Panel title="Required Movement">
             <Info label="Required Action" value={pattern.requiredAction} />
             <Info label="Chain Position" value={decision.chainPosition} />
             <Info label="Cross-Site Reason" value={decision.crossSiteReason} />
             <Info label="Next Destination" value={decision.nextGovernedDestination} />
           </Panel>
 
-          <Panel title="Evidence + Governance Standard">
+          <Panel title="Evidence Standard">
             <Info label="Evidence" value={evidenceLanguage} />
-            <Info label="Survivability" value={survivabilityLanguage} />
-            <Info label="Governance" value={governanceLanguage} />
+            <Info label="Governance Rule" value={governanceLanguage} />
             <Info label="Reconstruction" value={decision.evidenceStandard} />
           </Panel>
         </section>
 
-        <section style={styles.actionPanel}>
+        <Panel title="Cross-Site Implications">
+          <div style={styles.infoGrid}>
+            <Info
+              label="Coordination"
+              value={decision.coordinationRequired ? 'REQUIRED' : 'WATCH'}
+            />
+            <Info
+              label="Situation Room"
+              value={decision.situationRoomRequired ? 'REQUIRED' : 'WATCH'}
+            />
+            <Info
+              label="Executive Review"
+              value={decision.executiveReviewRequired ? 'REQUIRED' : 'WATCH'}
+            />
+            <Info label="Audit" value={decision.auditRequired ? 'REQUIRED' : 'WATCH'} />
+            <Info label="Survivability" value={survivabilityLanguage} />
+            <Info label="Executive Meaning" value={pattern.executiveMeaning} />
+          </div>
+        </Panel>
+
+        <section style={styles.memoryPanel}>
           <div>
-            <p style={styles.sectionKicker}>Cross-Site Memory Save</p>
-            <h2 style={styles.actionTitle}>
-              Preserve enterprise cross-site memory.
+            <p style={styles.kicker}>Cross-Site Memory</p>
+            <h2 style={styles.panelTitle}>
+              Preserve and retrieve enterprise continuity memory.
             </h2>
-            <p style={styles.actionText}>
-              Save the current cross-site interpretation, dependency pattern,
-              dominant site, recovery meaning, executive meaning, and
-              survivability posture so the institution can reconstruct how
-              enterprise continuity exposure emerged.
+            <p style={styles.bodyText}>
+              Cross-Site memory preserves whether instability was isolated,
+              repeated, shared, structural, or enterprise-wide.
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={handleSaveSiteProfiles}
-            disabled={saving}
-            style={{
-              ...styles.primaryButton,
-              ...(saving ? styles.disabledButton : {}),
-            }}
-          >
-            {saving ? 'Saving...' : 'Save Cross-Site Memory'}
-          </button>
-        </section>
+          <div style={styles.memoryActions}>
+            <button
+              type="button"
+              onClick={handleSaveSiteProfiles}
+              disabled={saving}
+              style={{
+                ...styles.button,
+                ...(saving ? styles.disabledButton : {}),
+              }}
+            >
+              {saving ? 'Saving...' : 'Save Memory'}
+            </button>
 
-        <section style={styles.actionPanel}>
-          <div>
-            <p style={styles.sectionKicker}>Cross-Site Memory Retrieval</p>
-            <h2 style={styles.actionTitle}>
-              Retrieve persisted cross-site memory.
-            </h2>
-            <p style={styles.actionText}>
-              Retrieve site continuity profiles to reconstruct which sites
-              repeatedly stabilize, deteriorate, escalate, or carry structural
-              memory across time.
-            </p>
+            <button
+              type="button"
+              onClick={loadSiteProfiles}
+              disabled={loadingProfiles}
+              style={{
+                ...styles.secondaryButton,
+                ...(loadingProfiles ? styles.disabledButton : {}),
+              }}
+            >
+              {loadingProfiles ? 'Refreshing...' : 'Refresh Profiles'}
+            </button>
           </div>
-
-          <button
-            type="button"
-            onClick={loadSiteProfiles}
-            disabled={loadingProfiles}
-            style={{
-              ...styles.secondaryButton,
-              ...(loadingProfiles ? styles.disabledButton : {}),
-            }}
-          >
-            {loadingProfiles ? 'Refreshing...' : 'Refresh Profiles'}
-          </button>
         </section>
 
         <section style={styles.gridThree}>
           {siteBriefings.map(({ site, briefing }) => (
             <article key={site.siteName} style={styles.siteCard}>
-              <p style={styles.sectionKicker}>{site.region}</p>
-              <h3 style={styles.siteTitle}>{site.siteName}</h3>
+              <p style={styles.kicker}>{site.region}</p>
+              <h3 style={styles.cardValue}>{site.siteName}</h3>
 
               <div style={styles.siteMeta}>
                 <MiniStat
@@ -397,84 +349,46 @@ function CrossSiteContent() {
                 />
               </div>
 
-              <p style={styles.siteBody}>{site.continuityFinding}</p>
-              <p style={styles.siteRecovery}>
-                <strong>Recovery Meaning:</strong> {site.recoveryMeaning}
-              </p>
+              <p style={styles.bodyText}>{site.continuityFinding}</p>
             </article>
           ))}
         </section>
 
-        <section style={styles.panel}>
-          <p style={styles.sectionKicker}>Persisted Cross-Site Memory</p>
-          <h2 style={styles.panelTitle}>
-            Site continuity profiles retrieved from Supabase.
-          </h2>
+        <Panel title="Recent Enterprise Memory">
           <p style={styles.bodyText}>Profile Count: {profiles.length}</p>
 
-          <div style={styles.archiveList}>
-            {profiles.length === 0 ? (
-              <p style={styles.emptyText}>
+          <div style={styles.profileGrid}>
+            {latestProfiles.length === 0 ? (
+              <p style={styles.bodyText}>
                 No persisted site continuity profiles are currently available.
               </p>
             ) : (
-              profiles.map((item, index) => (
+              latestProfiles.map((item, index) => (
                 <article
                   key={`${getProfileValue(item, 'createdAt') ?? 'profile'}-${index}`}
-                  style={styles.archiveItem}
+                  style={styles.profileCard}
                 >
-                  <div style={styles.archiveHeader}>
-                    <div>
-                      <p style={styles.metricLabel}>
-                        {getProfileValue(item, 'continuityPosture') ??
-                          'SITE_PROFILE'}
-                      </p>
-                      <h3 style={styles.archiveTitle}>
-                        {getProfileValue(item, 'siteName') ?? 'Unnamed Site'}
-                      </h3>
-                    </div>
-                    <p style={styles.archiveDate}>
-                      {formatDate(getProfileValue(item, 'createdAt'))}
-                    </p>
-                  </div>
-
-                  <div style={styles.archiveGrid}>
-                    <Info
-                      label="Region"
-                      value={getProfileValue(item, 'region') ?? 'Not recorded'}
-                    />
-                    <Info
-                      label="Coordination"
-                      value={
-                        getProfileValue(item, 'coordinationNeed') ??
-                        'Not recorded'
-                      }
-                    />
-                    <Info
-                      label="Evidence"
-                      value={
-                        getProfileValue(item, 'evidenceVerified') ??
-                        'Not recorded'
-                      }
-                    />
-                  </div>
-
-                  <p style={styles.archiveSummary}>
-                    {getProfileValue(item, 'executiveSummary') ??
-                      'No executive summary was recorded for this site profile.'}
+                  <p style={styles.metricLabel}>
+                    {getProfileValue(item, 'continuityPosture') ?? 'SITE_PROFILE'}
+                  </p>
+                  <h3 style={styles.profileTitle}>
+                    {getProfileValue(item, 'siteName') ?? 'Unnamed Site'}
+                  </h3>
+                  <p style={styles.profileDate}>
+                    {formatDate(getProfileValue(item, 'createdAt'))}
                   </p>
                 </article>
               ))
             )}
           </div>
-        </section>
+        </Panel>
 
-        <section style={styles.orderPanel}>
-          <p style={styles.sectionKicker}>Copy-Ready Cross-Site Brief</p>
-          <h2 style={styles.panelTitle}>
+        <section style={styles.reportPanel}>
+          <p style={styles.kicker}>COPY-READY CROSS-SITE BRIEF</p>
+          <h2 style={styles.bigText}>
             Is instability isolated or becoming enterprise-wide?
           </h2>
-          <pre style={styles.summaryBox}>{doctrine.copyReadyBrief}</pre>
+          <pre style={styles.pre}>{doctrine.copyReadyBrief}</pre>
         </section>
 
         <section style={styles.doctrineCard}>
@@ -482,10 +396,7 @@ function CrossSiteContent() {
           <span>
             Coordination synchronizes dependency. Cross-Site determines whether
             instability is isolated, repeated, shared, structural, or
-            enterprise-wide. Situation Room interprets operating condition.
-            Executive Center governs institutional meaning. Memory preserves
-            continuity truth. Audit reconstructs the chain. Local recovery must
-            never hide enterprise fragility.
+            enterprise-wide. Local recovery must never hide enterprise fragility.
           </span>
         </section>
       </div>
@@ -551,7 +462,7 @@ function MiniStat({ label, value }: { label: string; value: string }) {
   )
 }
 
-function ExecutiveCard({
+function Card({
   title,
   value,
   body,
@@ -561,33 +472,10 @@ function ExecutiveCard({
   body: string
 }) {
   return (
-    <article style={styles.panelCard}>
-      <p style={styles.sectionKicker}>{title}</p>
+    <article style={styles.card}>
+      <p style={styles.kicker}>{title}</p>
       <h3 style={styles.cardValue}>{value}</h3>
-      <p style={styles.panelBody}>{body}</p>
-    </article>
-  )
-}
-
-function GateCard({
-  title,
-  active,
-  body,
-}: {
-  title: string
-  active: boolean
-  body: string
-}) {
-  return (
-    <article
-      style={{
-        ...styles.panelCard,
-        ...(active ? styles.activePanelCard : {}),
-      }}
-    >
-      <p style={styles.sectionKicker}>{title}</p>
-      <h3 style={styles.cardValue}>{active ? 'REQUIRED' : 'WATCH'}</h3>
-      <p style={styles.panelBody}>{body}</p>
+      <p style={styles.bodyText}>{body}</p>
     </article>
   )
 }
@@ -595,8 +483,8 @@ function GateCard({
 function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section style={styles.panel}>
-      <p style={styles.sectionKicker}>{title}</p>
-      <div style={styles.infoList}>{children}</div>
+      <p style={styles.kicker}>{title}</p>
+      {children}
     </section>
   )
 }
@@ -638,9 +526,9 @@ const styles: Record<string, CSSProperties> = {
   kicker: {
     margin: 0,
     color: '#c9a227',
-    fontSize: 12,
-    fontWeight: 900,
-    letterSpacing: '0.22em',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.18em',
     textTransform: 'uppercase',
   },
   title: {
@@ -693,64 +581,17 @@ const styles: Record<string, CSSProperties> = {
     border: '1px solid rgba(201,162,39,0.22)',
     fontWeight: 800,
   },
-  commandDeck: {
+  gridTwo: {
     display: 'grid',
-    gridTemplateColumns: '1.4fr 0.8fr',
-    gap: 24,
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 16,
   },
-  primaryCard: {
-    padding: 30,
-    borderRadius: 28,
-    background: '#fff',
-    color: '#0b0b0b',
-    border: '1px solid rgba(255,255,255,0.12)',
-  },
-  consequenceCard: {
-    padding: 30,
-    borderRadius: 28,
-    background: 'rgba(0,0,0,0.38)',
-    border: '1px solid rgba(201,162,39,0.28)',
-  },
-  sectionKicker: {
-    margin: 0,
-    color: '#c9a227',
-    fontSize: 11,
-    fontWeight: 950,
-    letterSpacing: '0.18em',
-    textTransform: 'uppercase',
-  },
-  commandTitle: {
-    margin: '14px 0',
-    fontSize: 'clamp(1.8rem, 3vw, 3.2rem)',
-    lineHeight: 1.05,
-    letterSpacing: '-0.05em',
-    fontWeight: 950,
-  },
-  primaryText: {
-    margin: 0,
-    color: '#4a4a4a',
-    lineHeight: 1.7,
-    fontSize: 14,
-  },
-  consequenceTitle: {
-    margin: '14px 0',
-    fontSize: 28,
-    lineHeight: 1.1,
-    letterSpacing: '-0.04em',
-  },
-  bodyText: {
-    margin: '8px 0 0',
-    color: '#aeb6c2',
-    lineHeight: 1.7,
-    fontSize: 14,
-  },
-  commandMetaGrid: {
+  gridThree: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: 12,
-    marginTop: 24,
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: 16,
   },
-  metricsGrid: {
+  metricGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
     gap: 14,
@@ -776,58 +617,18 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 950,
     lineHeight: 1.15,
   },
-  miniStat: {
-    padding: 14,
-    borderRadius: 16,
-    background: 'rgba(255,255,255,0.055)',
-    border: '1px solid rgba(255,255,255,0.09)',
-  },
-  miniValue: {
-    margin: '8px 0 0',
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: 850,
-    lineHeight: 1.45,
-    overflowWrap: 'anywhere',
-  },
-  gridFour: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: 16,
-  },
-  gridThree: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: 16,
-  },
-  gridTwo: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: 16,
-  },
   panel: {
     padding: 28,
     borderRadius: 28,
     background: 'rgba(255,255,255,0.045)',
     border: '1px solid rgba(255,255,255,0.1)',
   },
-  panelCard: {
+  card: {
     padding: 22,
     borderRadius: 22,
     background: 'rgba(255,255,255,0.045)',
     border: '1px solid rgba(255,255,255,0.09)',
     minHeight: 150,
-  },
-  activePanelCard: {
-    background:
-      'linear-gradient(135deg, rgba(201,162,39,0.14), rgba(255,255,255,0.035))',
-    border: '1px solid rgba(201,162,39,0.38)',
-  },
-  panelTitle: {
-    margin: '12px 0 0',
-    fontSize: 26,
-    lineHeight: 1.15,
-    letterSpacing: '-0.045em',
   },
   cardValue: {
     margin: '12px 0 0',
@@ -836,28 +637,29 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.25,
     overflowWrap: 'anywhere',
   },
-  panelBody: {
-    marginTop: 10,
+  bigText: {
+    margin: '14px 0',
+    fontSize: 'clamp(1.55rem, 3vw, 2.7rem)',
+    lineHeight: 1.05,
+    letterSpacing: '-0.05em',
+    fontWeight: 950,
+  },
+  panelTitle: {
+    margin: '12px 0 0',
+    fontSize: 26,
+    lineHeight: 1.15,
+    letterSpacing: '-0.045em',
+  },
+  bodyText: {
+    margin: '10px 0 0',
     color: '#aeb6c2',
+    lineHeight: 1.7,
     fontSize: 14,
-    lineHeight: 1.65,
   },
-  memoryPanel: {
-    padding: 28,
-    borderRadius: 28,
-    background:
-      'linear-gradient(135deg, rgba(201,162,39,0.13), rgba(255,255,255,0.035))',
-    border: '1px solid rgba(201,162,39,0.32)',
-  },
-  memoryGrid: {
+  infoGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
     gap: 12,
-    marginTop: 20,
-  },
-  infoList: {
-    display: 'grid',
-    gap: 10,
     marginTop: 18,
   },
   infoRow: {
@@ -881,30 +683,24 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.5,
     overflowWrap: 'anywhere',
   },
-  actionPanel: {
+  memoryPanel: {
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1fr) auto',
     gap: 16,
     alignItems: 'center',
     padding: 28,
     borderRadius: 28,
-    background: 'rgba(255,255,255,0.045)',
-    border: '1px solid rgba(201,162,39,0.24)',
+    background:
+      'linear-gradient(135deg, rgba(201,162,39,0.13), rgba(255,255,255,0.035))',
+    border: '1px solid rgba(201,162,39,0.32)',
   },
-  actionTitle: {
-    margin: '12px 0 0',
-    color: '#fff',
-    fontSize: 26,
-    lineHeight: 1.15,
-    letterSpacing: '-0.04em',
+  memoryActions: {
+    display: 'flex',
+    gap: 10,
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
   },
-  actionText: {
-    margin: '12px 0 0',
-    color: '#aeb6c2',
-    lineHeight: 1.7,
-    maxWidth: 820,
-  },
-  primaryButton: {
+  button: {
     border: 'none',
     borderRadius: 999,
     padding: '14px 22px',
@@ -934,85 +730,57 @@ const styles: Record<string, CSSProperties> = {
     background: 'rgba(255,255,255,0.045)',
     border: '1px solid rgba(255,255,255,0.1)',
   },
-  siteTitle: {
-    margin: '12px 0',
-    color: '#fff',
-    fontSize: 24,
-    lineHeight: 1.15,
-  },
   siteMeta: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
     gap: 10,
-    marginBottom: 16,
+    margin: '16px 0',
   },
-  siteBody: {
-    margin: 0,
-    color: '#aeb6c2',
-    lineHeight: 1.65,
+  miniStat: {
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(0,0,0,0.22)',
+    border: '1px solid rgba(255,255,255,0.08)',
   },
-  siteRecovery: {
-    margin: '14px 0 0',
-    paddingTop: 14,
-    borderTop: '1px solid rgba(255,255,255,0.08)',
-    color: '#ece7d7',
-    lineHeight: 1.65,
-  },
-  archiveList: {
-    display: 'grid',
-    gap: 14,
-    marginTop: 20,
-  },
-  archiveItem: {
-    padding: 20,
-    borderRadius: 22,
-    background: 'rgba(0,0,0,0.24)',
-    border: '1px solid rgba(255,255,255,0.09)',
-  },
-  archiveHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    gap: 14,
-    alignItems: 'flex-start',
-    marginBottom: 14,
-  },
-  archiveTitle: {
-    color: '#fff',
-    fontSize: 20,
-    lineHeight: 1.2,
+  miniValue: {
     margin: '8px 0 0',
-  },
-  archiveDate: {
-    color: '#d7b84c',
-    fontWeight: 850,
+    color: '#fff',
     fontSize: 13,
-    lineHeight: 1.4,
-    margin: 0,
-    textAlign: 'right',
-    minWidth: 180,
+    fontWeight: 850,
+    lineHeight: 1.45,
+    overflowWrap: 'anywhere',
   },
-  archiveGrid: {
+  profileGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: 12,
+    gap: 14,
+    marginTop: 18,
   },
-  archiveSummary: {
-    color: '#aeb6c2',
-    lineHeight: 1.65,
-    margin: '14px 0 0',
+  profileCard: {
+    padding: 18,
+    borderRadius: 20,
+    background: 'rgba(0,0,0,0.22)',
+    border: '1px solid rgba(255,255,255,0.08)',
   },
-  emptyText: {
-    color: '#aeb6c2',
-    lineHeight: 1.6,
-    margin: 0,
+  profileTitle: {
+    margin: '10px 0 0',
+    color: '#fff',
+    fontSize: 18,
+    lineHeight: 1.25,
   },
-  orderPanel: {
+  profileDate: {
+    margin: '8px 0 0',
+    color: '#d7b84c',
+    fontSize: 12,
+    fontWeight: 850,
+  },
+  reportPanel: {
     padding: 28,
     borderRadius: 28,
     background: '#fff',
     color: '#0b0b0b',
   },
-  summaryBox: {
+  pre: {
     marginTop: 20,
     padding: 22,
     borderRadius: 20,
