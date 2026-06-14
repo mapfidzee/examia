@@ -104,9 +104,7 @@ function CoordinationCenterContent() {
         <section style={styles.hero}>
           <div>
             <p style={styles.kicker}>TSINAXA CGI • COORDINATION CENTER</p>
-            <h1 style={styles.title}>
-              Executive Continuity Coordination Center
-            </h1>
+            <h1 style={styles.title}>Enterprise Coordination Intelligence</h1>
             <p style={styles.subtitle}>
               Coordination Center identifies what must synchronize before
               continuity can safely move.
@@ -166,10 +164,7 @@ function CoordinationCenterContent() {
               value={coordination.executivePosture.actionLanguage}
             />
             <Info label="Required Evidence" value={coordination.evidenceLanguage} />
-            <Info
-              label="Dominant Site"
-              value={coordination.dominantSite.name}
-            />
+            <Info label="Dominant Site" value={coordination.dominantSite.name} />
           </Panel>
 
           <Panel title="Continuity Standard">
@@ -187,18 +182,12 @@ function CoordinationCenterContent() {
 
         <Panel title="Coordination Implications">
           <div style={styles.infoGrid}>
-            <Info
-              label="Scope"
-              value={coordination.coordinationScope}
-            />
+            <Info label="Scope" value={coordination.coordinationScope} />
             <Info
               label="Posture"
               value={coordination.dominantBriefing.synthesis.synthesisPosture}
             />
-            <Info
-              label="Doctrine"
-              value={coordination.coordinationDoctrine}
-            />
+            <Info label="Doctrine" value={coordination.coordinationDoctrine} />
             <Info
               label="Stabilization Logic"
               value={coordination.stabilizationLogic}
@@ -213,8 +202,8 @@ function CoordinationCenterContent() {
               Preserve and retrieve coordination reviews.
             </h2>
             <p style={styles.bodyText}>
-              Coordination memory keeps executive synchronization need,
-              required evidence, and continuity exposure reconstructable.
+              Coordination memory keeps synchronization need, required evidence,
+              and continuity exposure reconstructable.
             </p>
           </div>
 
@@ -265,7 +254,17 @@ function CoordinationCenterContent() {
         </section>
 
         <Panel title="Recent Coordination Memory">
-          <p style={styles.bodyText}>Review Count: {reviews.length}</p>
+          <div style={styles.memorySummaryGrid}>
+            <MiniStat label="Reviews Available" value={String(reviews.length)} />
+            <MiniStat
+              label="Executive"
+              value={String(coordination.executiveCoordinationCount)}
+            />
+            <MiniStat
+              label="Structural"
+              value={String(coordination.structuralMemoryCount)}
+            />
+          </div>
 
           <div style={styles.profileGrid}>
             {latestReviews.length === 0 ? (
@@ -275,7 +274,11 @@ function CoordinationCenterContent() {
             ) : (
               latestReviews.map((item, index) => (
                 <article
-                  key={item.id ? String(item.id) : `${getReviewValue(item, 'createdAt')}-${index}`}
+                  key={
+                    item.id
+                      ? String(item.id)
+                      : `${getReviewValue(item, 'createdAt')}-${index}`
+                  }
                   style={styles.profileCard}
                 >
                   <p style={styles.metricLabel}>
@@ -284,13 +287,8 @@ function CoordinationCenterContent() {
                   </p>
 
                   <h3 style={styles.profileTitle}>
-                    {getReviewValue(item, 'reviewTitle') ??
-                      'Executive Coordination Review'}
-                  </h3>
-
-                  <p style={styles.profileDate}>
                     {formatDate(getReviewValue(item, 'createdAt'))}
-                  </p>
+                  </h3>
                 </article>
               ))
             )}
@@ -644,6 +642,12 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.25,
     overflowWrap: 'anywhere',
   },
+  memorySummaryGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 18,
+  },
   profileGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
@@ -659,14 +663,8 @@ const styles: Record<string, CSSProperties> = {
   profileTitle: {
     margin: '10px 0 0',
     color: '#fff',
-    fontSize: 18,
+    fontSize: 16,
     lineHeight: 1.25,
-  },
-  profileDate: {
-    margin: '8px 0 0',
-    color: '#d7b84c',
-    fontSize: 12,
-    fontWeight: 850,
   },
   reportPanel: {
     padding: 28,
