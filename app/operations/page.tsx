@@ -20,14 +20,19 @@ function formatLabel(value: string): string {
   return value.replaceAll('_', ' ')
 }
 
+function logOperationsLoadError(label: string, error: unknown) {
+  if (!error) return
+
+  console.warn(`Operations load warning: ${label}`, {
+    message: error instanceof Error ? error.message : String(error),
+    raw: error,
+  })
+}
+
 export default function OperationsPage() {
   return (
     <GovernanceRouteGuard
-      allowedRoles={[
-        'SUPER_ADMIN',
-        'COMMAND_ADMIN',
-        'GOVERNANCE_OFFICER',
-      ]}
+      allowedRoles={['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']}
     >
       <CGIGovernanceShell>
         <OperationsContent />
@@ -38,16 +43,10 @@ export default function OperationsPage() {
 
 function OperationsContent() {
   const [cases, setCases] = useState<OperationsCase[]>([])
-  const [routingActions, setRoutingActions] = useState<
-    OperationsRoutingAction[]
-  >([])
-  const [interventions, setInterventions] = useState<
-    OperationsIntervention[]
-  >([])
+  const [routingActions, setRoutingActions] = useState<OperationsRoutingAction[]>([])
+  const [interventions, setInterventions] = useState<OperationsIntervention[]>([])
   const [outcomes, setOutcomes] = useState<OperationsOutcome[]>([])
-  const [timelineEvents, setTimelineEvents] = useState<
-    OperationsTimelineEvent[]
-  >([])
+  const [timelineEvents, setTimelineEvents] = useState<OperationsTimelineEvent[]>([])
   const [message, setMessage] = useState('')
 
   useEffect(() => {
@@ -74,7 +73,7 @@ function OperationsContent() {
         .order('created_at', { ascending: false }),
       supabase
         .from('case_interventions')
-        .select('id, case_id, intervention_status, evidence_summary, created_at')
+        .select('*')
         .order('created_at', { ascending: false }),
       supabase
         .from('case_outcomes')
@@ -86,11 +85,11 @@ function OperationsContent() {
         .order('created_at', { ascending: false }),
     ])
 
-    if (casesResult.error) console.error(casesResult.error)
-    if (routingResult.error) console.error(routingResult.error)
-    if (interventionsResult.error) console.error(interventionsResult.error)
-    if (outcomesResult.error) console.error(outcomesResult.error)
-    if (timelineResult.error) console.error(timelineResult.error)
+    logOperationsLoadError('beneficiary_cases', casesResult.error)
+    logOperationsLoadError('case_routing_actions', routingResult.error)
+    logOperationsLoadError('case_interventions', interventionsResult.error)
+    logOperationsLoadError('case_outcomes', outcomesResult.error)
+    logOperationsLoadError('case_timeline', timelineResult.error)
 
     if (
       casesResult.error ||
@@ -132,442 +131,437 @@ function OperationsContent() {
   return (
     <main style={styles.page}>
       <div style={styles.container}>
-        <section style={styles.header}>
-          <p style={styles.kicker}>TSINAXA CGI • OPERATIONS</p>
+        <section style={styles.hero}>
+          <div>
+            <p style={styles.kicker}>TSINAXA CGI • OPERATIONS</p>
+            <h1 style={styles.title}>Operational Continuity Intelligence</h1>
+            <p style={styles.subtitle}>
+              Operations interprets active strain, coordination weakness,
+              recovery credibility, structural memory, and stabilization capacity.
+            </p>
+          </div>
 
-          <h1 style={styles.title}>Operational Continuity Intelligence</h1>
-
-          <p style={styles.subtitle}>
-            Operations view for interpreting active strain, coordination
-            weakness, recovery credibility, structural memory, and
-            stabilization capacity.
-          </p>
+          <div style={styles.statusBox}>
+            <p style={styles.statusLabel}>OPERATING POSTURE</p>
+            <p style={styles.statusValue}>
+              {operationsIntelligence.shell.severityTone}
+            </p>
+            <p style={styles.statusMeaning}>
+              {operationsIntelligence.routePurpose}
+            </p>
+          </div>
         </section>
 
         {message && <div style={styles.message}>{message}</div>}
 
-        <section style={styles.heroCard}>
-          <div>
-            <p style={styles.sectionKicker}>Executive Focus</p>
+        <section style={styles.gridTwo}>
+          <Panel title="Executive Operations Question">
+            <h2 style={styles.bigText}>{operationsIntelligence.executiveFocus}</h2>
+            <p style={styles.bodyText}>
+              {operationsIntelligence.operationalNarrative}
+            </p>
+          </Panel>
 
-            <h2 style={styles.heroTitle}>
-              {operationsIntelligence.executiveFocus}
+          <Panel title="Operational Conclusion">
+            <h2 style={styles.bigText}>
+              Operations must protect stabilization capacity.
             </h2>
-
-            <p style={styles.heroMeaning}>
-              {operationsIntelligence.routePurpose}
+            <p style={styles.bodyText}>
+              CGI operations intelligence does not show workload alone. It
+              interprets whether active movement is strengthening or weakening
+              continuity credibility.
             </p>
-          </div>
-
-          <div style={styles.toneBox}>
-            <p style={styles.toneLabel}>Shell Tone</p>
-            <p style={styles.toneValue}>
-              {operationsIntelligence.shell.severityTone}
-            </p>
-          </div>
-        </section>
-
-        <section style={styles.gridThree}>
-          <Panel title="Open Cases" value={String(liveOperationalInput.openCases)}>
-            Active operational records currently visible to CGI.
-          </Panel>
-
-          <Panel
-            title="Escalated Cases"
-            value={String(liveOperationalInput.escalatedCases)}
-          >
-            Cases already carrying escalation or governance review posture.
-          </Panel>
-
-          <Panel
-            title="Coordination Issues"
-            value={String(liveOperationalInput.coordinationIssues)}
-          >
-            Routing or ownership issues that may block movement.
           </Panel>
         </section>
 
+        <section style={styles.metricGrid}>
+          <Metric label="Open Cases" value={liveOperationalInput.openCases} />
+          <Metric label="Escalated" value={liveOperationalInput.escalatedCases} />
+          <Metric label="Coordination" value={liveOperationalInput.coordinationIssues} />
+        </section>
+
         <section style={styles.gridThree}>
-          <Panel
+          <Card
             title="Continuity Condition"
             value={formatLabel(
               operationsIntelligence.derivation.continuityCondition,
             )}
-          >
-            {operationsIntelligence.shell.continuityPanel.interpretation}
-          </Panel>
+            body={operationsIntelligence.shell.continuityPanel.interpretation}
+          />
 
-          <Panel
+          <Card
             title="Continuity Confidence"
             value={formatLabel(
               operationsIntelligence.derivation.continuityConfidence,
             )}
-          >
-            {operationsIntelligence.shell.confidencePanel.interpretation}
-          </Panel>
+            body={operationsIntelligence.shell.confidencePanel.interpretation}
+          />
 
-          <Panel
+          <Card
             title="Operational Posture"
             value={formatLabel(
               operationsIntelligence.derivation.executivePosture,
             )}
-          >
-            {operationsIntelligence.shell.commandPanel.interpretation}
-          </Panel>
+            body={operationsIntelligence.shell.commandPanel.interpretation}
+          />
         </section>
 
         <section style={styles.gridTwo}>
-          <Panel title="Dominant Operational Truth">
-            {operationsIntelligence.command.dominantTruth}
+          <Panel title="Operational Truth">
+            <Info
+              label="Dominant Truth"
+              value={operationsIntelligence.command.dominantTruth}
+            />
+            <Info
+              label="Primary Driver"
+              value={operationsIntelligence.command.primaryDriver}
+            />
           </Panel>
 
-          <Panel title="Primary Driver">
-            {operationsIntelligence.command.primaryDriver}
+          <Panel title="Required Movement">
+            <Info
+              label="Required Action"
+              value={operationsIntelligence.command.requiredAction}
+            />
+            <Info
+              label="Required Evidence"
+              value={operationsIntelligence.command.requiredEvidence}
+            />
           </Panel>
         </section>
 
         <section style={styles.gridThree}>
-          <Panel
+          <Card
             title="Recovery Credibility"
             value={formatLabel(
               operationsIntelligence.derivation.recoveryCredibility,
             )}
-          >
-            {operationsIntelligence.shell.recoveryPanel.interpretation}
-          </Panel>
+            body={operationsIntelligence.shell.recoveryPanel.interpretation}
+          />
 
-          <Panel
+          <Card
             title="Structural Memory"
             value={formatLabel(
               operationsIntelligence.memory.primaryMemorySignal,
             )}
-          >
-            {operationsIntelligence.memory.executiveMemoryWarning}
-          </Panel>
+            body={operationsIntelligence.memory.executiveMemoryWarning}
+          />
 
-          <Panel
+          <Card
             title="Accountability"
             value={formatLabel(
               operationsIntelligence.accountability.accountabilityStatus,
             )}
-          >
-            {operationsIntelligence.accountability.escalationRule}
-          </Panel>
-        </section>
-
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Operational Interpretation</p>
-
-          <h2 style={styles.cardTitle}>
-            Operations must protect stabilization capacity.
-          </h2>
-
-          <p style={styles.bodyText}>
-            {operationsIntelligence.operationalNarrative}
-          </p>
-        </section>
-
-        <section style={styles.gridTwo}>
-          <Panel title="Required Action">
-            {operationsIntelligence.command.requiredAction}
-          </Panel>
-
-          <Panel title="Required Evidence">
-            {operationsIntelligence.command.requiredEvidence}
-          </Panel>
-        </section>
-
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Operations Doctrine</p>
-
-          <h2 style={styles.cardTitle}>
-            Operations is where instability either stabilizes or spreads.
-          </h2>
-
-          <p style={styles.bodyText}>
-            CGI operations intelligence does not simply show workload. It
-            interprets whether coordination, recovery, recurrence, and
-            accountability are strengthening or weakening continuity
-            credibility.
-          </p>
-        </section>
-
-        <section style={styles.gridTwo}>
-          <OperationsPrinciple
-            title="Coordination"
-            body="Operational strain becomes dangerous when coordination weakens and unresolved pathways accumulate."
-          />
-
-          <OperationsPrinciple
-            title="Recovery"
-            body="Operational recovery must be verified before leadership can trust that stabilization is durable."
-          />
-
-          <OperationsPrinciple
-            title="Memory"
-            body="Repeated instability in operations should be treated as a structural signal, not isolated noise."
-          />
-
-          <OperationsPrinciple
-            title="Action"
-            body="Every serious operational strain must move toward owner, action, evidence, and verification."
+            body={operationsIntelligence.accountability.escalationRule}
           />
         </section>
 
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Live Data Upgrade</p>
+        <Panel title="Operations Implications">
+          <div style={styles.infoGrid}>
+            <Info
+              label="Coordination"
+              value="Operational strain becomes dangerous when coordination weakens and unresolved pathways accumulate."
+            />
+            <Info
+              label="Recovery"
+              value="Operational recovery must be verified before leadership can trust that stabilization is durable."
+            />
+            <Info
+              label="Memory"
+              value="Repeated instability in operations should be treated as a structural signal, not isolated noise."
+            />
+            <Info
+              label="Action"
+              value="Every serious operational strain must move toward owner, action, evidence, and verification."
+            />
+          </div>
+        </Panel>
 
-          <h2 style={styles.cardTitle}>
-            Operations is now derived from live Supabase continuity records.
-          </h2>
+        <section style={styles.actionPanel}>
+          <div>
+            <p style={styles.kicker}>Live Operations Refresh</p>
+            <h2 style={styles.panelTitle}>
+              Refresh live operational continuity intelligence.
+            </h2>
+            <p style={styles.bodyText}>
+              Reloads cases, routing actions, interventions, outcomes, and
+              timeline memory before recalculating operational doctrine.
+            </p>
+          </div>
 
-          <p style={styles.bodyText}>
-            Static operational scenario inputs have been replaced by live
-            derivation from cases, routing actions, interventions, outcomes, and
-            timeline memory.
-          </p>
-
-          <button onClick={loadOperationsData} style={styles.primaryButton}>
-            Refresh Live Operations
+          <button onClick={loadOperationsData} style={styles.button}>
+            Refresh Operations
           </button>
+        </section>
+
+        <section style={styles.doctrineCard}>
+          <strong>OPERATIONS DOCTRINE</strong>
+          <span>
+            Operations is where instability either stabilizes or spreads. CGI
+            operations intelligence protects owner, action, evidence, recovery,
+            accountability, and continuity credibility.
+          </span>
         </section>
       </div>
     </main>
   )
 }
 
-function Panel({
+function Metric({ label, value }: { label: string; value: number }) {
+  return (
+    <article style={styles.metricCard}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.metricValue}>{value}</p>
+    </article>
+  )
+}
+
+function Card({
   title,
   value,
-  children,
+  body,
 }: {
   title: string
-  value?: string
-  children?: ReactNode
+  value: string
+  body: string
 }) {
   return (
+    <article style={styles.card}>
+      <p style={styles.kicker}>{title}</p>
+      <h3 style={styles.cardValue}>{value}</h3>
+      <p style={styles.bodyText}>{body}</p>
+    </article>
+  )
+}
+
+function Panel({ title, children }: { title: string; children: ReactNode }) {
+  return (
     <section style={styles.panel}>
-      <p style={styles.panelKicker}>{title}</p>
-
-      {value ? <h3 style={styles.panelValue}>{value}</h3> : null}
-
-      {children ? <div style={styles.panelBody}>{children}</div> : null}
+      <p style={styles.kicker}>{title}</p>
+      {children}
     </section>
   )
 }
 
-function OperationsPrinciple({
-  title,
-  body,
-}: {
-  title: string
-  body: ReactNode
-}) {
+function Info({ label, value }: { label: string; value: string }) {
   return (
-    <article style={styles.principleCard}>
-      <p style={styles.principleKicker}>CGI Operations Principle</p>
-      <h3 style={styles.principleTitle}>{title}</h3>
-      <p style={styles.principleBody}>{body}</p>
-    </article>
+    <div style={styles.infoRow}>
+      <span style={styles.infoLabel}>{label}</span>
+      <strong style={styles.infoValue}>{value}</strong>
+    </div>
   )
 }
 
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    color: 'white',
-    overflowX: 'hidden',
+    background:
+      'radial-gradient(circle at top left, rgba(201,162,39,0.14), transparent 34%), linear-gradient(135deg, #050505 0%, #0b0b0b 45%, #111111 100%)',
+    color: '#fff',
+    padding: '40px 24px 72px',
   },
   container: {
-    width: '100%',
-    maxWidth: '1120px',
+    width: 'min(1440px, 100%)',
     margin: '0 auto',
-    padding: '0 20px 48px',
-    boxSizing: 'border-box',
+    display: 'grid',
+    gap: 24,
   },
-  header: {
-    marginBottom: '20px',
-    paddingTop: '4px',
+  hero: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.45fr) minmax(320px, 0.75fr)',
+    gap: 24,
+    padding: 32,
+    border: '1px solid rgba(201,162,39,0.34)',
+    borderRadius: 28,
+    background: 'rgba(255,255,255,0.045)',
   },
   kicker: {
-    color: '#67e8f9',
-    fontSize: '12px',
-    fontWeight: 900,
-    letterSpacing: '2px',
     margin: 0,
+    color: '#c9a227',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.18em',
+    textTransform: 'uppercase',
   },
   title: {
-    fontSize: 'clamp(32px, 5vw, 48px)',
-    lineHeight: 1.05,
-    margin: '10px 0',
+    margin: '14px 0 0',
+    fontSize: 'clamp(2.3rem, 5vw, 5rem)',
+    lineHeight: 0.95,
+    letterSpacing: '-0.07em',
+    fontWeight: 950,
   },
   subtitle: {
-    color: '#cbd5e1',
-    maxWidth: '780px',
-    lineHeight: 1.65,
-    fontSize: '16px',
+    maxWidth: 880,
+    margin: '18px 0 0',
+    color: '#c8cdd4',
+    fontSize: 17,
+    lineHeight: 1.8,
+  },
+  statusBox: {
+    border: '1px solid rgba(201,162,39,0.5)',
+    borderRadius: 24,
+    padding: 24,
+    background:
+      'linear-gradient(180deg, rgba(201,162,39,0.18), rgba(0,0,0,0.38))',
+  },
+  statusLabel: {
     margin: 0,
+    color: '#d7b84c',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.2em',
+  },
+  statusValue: {
+    margin: '16px 0 0',
+    fontSize: 30,
+    fontWeight: 950,
+    letterSpacing: '-0.04em',
+    lineHeight: 1.05,
+  },
+  statusMeaning: {
+    margin: '12px 0 0',
+    color: '#ece7d7',
+    fontSize: 14,
+    lineHeight: 1.7,
   },
   message: {
-    background: '#082f49',
-    border: '1px solid #0ea5e9',
-    borderRadius: '16px',
-    color: '#cffafe',
-    fontWeight: 900,
-    marginBottom: '16px',
-    padding: '12px 14px',
-  },
-  heroCard: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.4fr) minmax(220px, 0.6fr)',
-    gap: '16px',
-    background: '#020617',
-    border: '1px solid #22d3ee',
-    borderRadius: '24px',
-    padding: '22px',
-    marginBottom: '16px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
-  },
-  sectionKicker: {
-    color: '#94a3b8',
-    fontWeight: 900,
-    letterSpacing: '0.14em',
-    textTransform: 'uppercase',
-    margin: 0,
-    fontSize: '12px',
-  },
-  heroTitle: {
-    color: '#f8fafc',
-    fontSize: 'clamp(28px, 4vw, 42px)',
-    lineHeight: 1.1,
-    margin: '10px 0',
-  },
-  heroMeaning: {
-    color: '#cbd5e1',
-    lineHeight: 1.65,
-    margin: 0,
-    maxWidth: '760px',
-  },
-  toneBox: {
-    background: '#083344',
-    border: '1px solid #22d3ee',
-    borderRadius: '18px',
-    padding: '16px',
-    alignSelf: 'stretch',
-  },
-  toneLabel: {
-    color: '#67e8f9',
-    fontWeight: 900,
-    margin: '0 0 8px',
-    fontSize: '12px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.12em',
-  },
-  toneValue: {
-    color: '#cffafe',
-    fontSize: '28px',
-    lineHeight: 1.1,
-    margin: 0,
-    fontWeight: 900,
-  },
-  gridThree: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '14px',
-    marginBottom: '16px',
+    padding: '14px 18px',
+    borderRadius: 16,
+    color: '#d7b84c',
+    background: 'rgba(201,162,39,0.1)',
+    border: '1px solid rgba(201,162,39,0.22)',
+    fontWeight: 800,
   },
   gridTwo: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '16px',
-    marginBottom: '16px',
+    gap: 16,
+  },
+  gridThree: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: 16,
+  },
+  metricGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: 14,
+  },
+  metricCard: {
+    padding: 18,
+    borderRadius: 20,
+    background: 'rgba(255,255,255,0.055)',
+    border: '1px solid rgba(255,255,255,0.1)',
+  },
+  metricLabel: {
+    margin: 0,
+    color: '#858d98',
+    fontSize: 10,
+    fontWeight: 950,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+  },
+  metricValue: {
+    margin: '10px 0 0',
+    color: '#fff',
+    fontSize: 26,
+    fontWeight: 950,
+    lineHeight: 1.15,
   },
   panel: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '16px',
-    minHeight: '150px',
-    boxSizing: 'border-box',
-  },
-  panelKicker: {
-    color: '#94a3b8',
-    fontSize: '12px',
-    fontWeight: 900,
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
-    margin: 0,
-  },
-  panelValue: {
-    color: '#f8fafc',
-    fontSize: '20px',
-    lineHeight: 1.15,
-    margin: '10px 0 0',
-  },
-  panelBody: {
-    color: '#cbd5e1',
-    fontSize: '14px',
-    lineHeight: 1.6,
-    marginTop: '10px',
+    padding: 28,
+    borderRadius: 28,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.1)',
   },
   card: {
-    background: '#020617',
-    border: '1px solid #1e293b',
-    borderRadius: '22px',
-    padding: '20px',
-    marginBottom: '16px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.24)',
-    boxSizing: 'border-box',
-    overflow: 'hidden',
+    padding: 22,
+    borderRadius: 22,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.09)',
+    minHeight: 150,
   },
-  cardTitle: {
-    color: '#f8fafc',
-    fontSize: '26px',
+  cardValue: {
+    margin: '12px 0 0',
+    color: '#fff',
+    fontSize: 19,
+    lineHeight: 1.25,
+    overflowWrap: 'anywhere',
+  },
+  bigText: {
+    margin: '14px 0',
+    fontSize: 'clamp(1.55rem, 3vw, 2.7rem)',
+    lineHeight: 1.05,
+    letterSpacing: '-0.05em',
+    fontWeight: 950,
+  },
+  panelTitle: {
+    margin: '12px 0 0',
+    fontSize: 26,
     lineHeight: 1.15,
-    margin: '10px 0 10px',
+    letterSpacing: '-0.045em',
   },
   bodyText: {
-    color: '#cbd5e1',
+    margin: '10px 0 0',
+    color: '#aeb6c2',
     lineHeight: 1.7,
-    margin: 0,
-    maxWidth: '880px',
+    fontSize: 14,
   },
-  principleCard: {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: '18px',
-    padding: '18px',
-    minHeight: '160px',
+  infoGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 18,
   },
-  principleKicker: {
-    color: '#94a3b8',
-    fontSize: '12px',
+  infoRow: {
+    display: 'grid',
+    gridTemplateColumns: '170px minmax(0, 1fr)',
+    gap: 12,
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(0,0,0,0.22)',
+    border: '1px solid rgba(255,255,255,0.08)',
+  },
+  infoLabel: {
+    color: '#858d98',
     fontWeight: 900,
-    letterSpacing: '0.12em',
+    fontSize: 12,
     textTransform: 'uppercase',
-    margin: 0,
+    letterSpacing: '0.1em',
   },
-  principleTitle: {
-    color: '#f8fafc',
-    fontSize: '22px',
-    lineHeight: 1.15,
-    margin: '10px 0',
+  infoValue: {
+    color: '#fff',
+    lineHeight: 1.5,
+    overflowWrap: 'anywhere',
   },
-  principleBody: {
-    color: '#cbd5e1',
-    lineHeight: 1.6,
-    margin: 0,
+  actionPanel: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1fr) auto',
+    gap: 16,
+    alignItems: 'center',
+    padding: 28,
+    borderRadius: 28,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(201,162,39,0.24)',
   },
-  primaryButton: {
+  button: {
     border: 'none',
-    borderRadius: '14px',
-    background: '#67e8f9',
-    color: '#082f49',
+    borderRadius: 999,
+    padding: '14px 22px',
+    background: '#c9a227',
+    color: '#090909',
+    fontWeight: 950,
     cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: 900,
-    marginTop: '16px',
-    minHeight: '46px',
-    padding: '0 18px',
+    whiteSpace: 'nowrap',
+  },
+  doctrineCard: {
+    display: 'grid',
+    gap: 10,
+    padding: 24,
+    borderRadius: 24,
+    background: '#050505',
+    border: '1px solid rgba(201,162,39,0.42)',
+    color: '#fff',
+    lineHeight: 1.7,
   },
 }
