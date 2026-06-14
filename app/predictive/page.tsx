@@ -155,7 +155,7 @@ function PredictiveContent() {
         </section>
 
         <section style={styles.gridTwo}>
-          <Panel title="Enterprise Predictive Requirements">
+          <Panel title="Required Movement">
             <Info
               label="Evidence Requirement"
               value={predictive.evidenceRequirement}
@@ -163,10 +163,6 @@ function PredictiveContent() {
             <Info
               label="Executive Action"
               value={predictive.trustAssessment.executiveDecision}
-            />
-            <Info
-              label="Board Warning"
-              value={predictive.trustAssessment.boardLevelWarning}
             />
             <Info
               label="Dominant Signal"
@@ -204,28 +200,17 @@ function PredictiveContent() {
           </Panel>
         </section>
 
-        <section style={styles.gridFour}>
-          <Card
-            title="Command"
-            value={predictive.commandImplication}
-            body="How command should interpret predictive warning."
-          />
-          <Card
-            title="Executive Report"
-            value={predictive.executiveReportImplication}
-            body="How predictive risk should appear in executive reporting."
-          />
-          <Card
-            title="Memory Board"
-            value={predictive.memoryBoardImplication}
-            body="What institutional memory must preserve."
-          />
-          <Card
-            title="Audit"
-            value={predictive.auditImplication}
-            body="What audit must reconstruct."
-          />
-        </section>
+        <Panel title="Predictive Implications">
+          <div style={styles.infoGrid}>
+            <Info label="Command" value={predictive.commandImplication} />
+            <Info
+              label="Executive Report"
+              value={predictive.executiveReportImplication}
+            />
+            <Info label="Memory Board" value={predictive.memoryBoardImplication} />
+            <Info label="Audit" value={predictive.auditImplication} />
+          </div>
+        </Panel>
 
         <Panel title="Recent Predictive Memory Trail">
           <div style={styles.cardHeader}>
@@ -435,11 +420,6 @@ const styles: Record<string, CSSProperties> = {
   gridThree: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: 16,
-  },
-  gridFour: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
     gap: 16,
   },
   metricGrid: {
