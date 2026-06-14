@@ -155,7 +155,7 @@ function TrajectoryContent() {
         </section>
 
         <section style={styles.gridTwo}>
-          <Panel title="Enterprise Trajectory Requirements">
+          <Panel title="Required Movement">
             <Info
               label="Evidence Requirement"
               value={trajectory.evidenceRequirement}
@@ -163,10 +163,6 @@ function TrajectoryContent() {
             <Info
               label="Executive Action"
               value={trajectory.trustAssessment.executiveDecision}
-            />
-            <Info
-              label="Board Warning"
-              value={trajectory.trustAssessment.boardLevelWarning}
             />
             <Info
               label="Dominant Signal"
@@ -204,28 +200,17 @@ function TrajectoryContent() {
           </Panel>
         </section>
 
-        <section style={styles.gridFour}>
-          <Card
-            title="Command"
-            value={trajectory.commandImplication}
-            body="How command should interpret trajectory movement."
-          />
-          <Card
-            title="Executive Report"
-            value={trajectory.executiveReportImplication}
-            body="How trajectory should appear in executive reporting."
-          />
-          <Card
-            title="Memory Board"
-            value={trajectory.memoryBoardImplication}
-            body="What institutional memory must preserve."
-          />
-          <Card
-            title="Audit"
-            value={trajectory.auditImplication}
-            body="What audit must reconstruct."
-          />
-        </section>
+        <Panel title="Trajectory Implications">
+          <div style={styles.infoGrid}>
+            <Info label="Command" value={trajectory.commandImplication} />
+            <Info
+              label="Executive Report"
+              value={trajectory.executiveReportImplication}
+            />
+            <Info label="Memory Board" value={trajectory.memoryBoardImplication} />
+            <Info label="Audit" value={trajectory.auditImplication} />
+          </div>
+        </Panel>
 
         <Panel title="Recent Trajectory Memory Trail">
           <div style={styles.cardHeader}>
@@ -438,11 +423,6 @@ const styles: Record<string, CSSProperties> = {
   gridThree: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: 16,
-  },
-  gridFour: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
     gap: 16,
   },
   metricGrid: {
