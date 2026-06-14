@@ -19,9 +19,6 @@ type StabilityCase = {
   region: string | null
   institution_name: string | null
   safeguarding_flag: boolean
-  assigned_responder_id?: string | null
-  updated_at?: string | null
-  created_at?: string | null
   intake_identity?: string | null
   triage_posture?: string | null
   evidence_posture?: string | null
@@ -241,13 +238,13 @@ function InterventionCompletionContent() {
     if (directCasesResult.error) console.error(directCasesResult.error)
     if (routedCasesResult.error) console.error(routedCasesResult.error)
 
-    const mergedCases = mergeCases([
-      ...(directCasesResult.data || []),
-      ...(routedCasesResult.data || []),
-    ])
-
     setRoutingActions(routingData || [])
-    setCases(mergedCases)
+    setCases(
+      mergeCases([
+        ...(directCasesResult.data || []),
+        ...(routedCasesResult.data || []),
+      ]),
+    )
   }
 
   async function loadInterventions() {
@@ -410,16 +407,43 @@ function InterventionCompletionContent() {
     inheritedContext,
   })
 
+  const actionMovementCards = [
+    {
+      title: 'Execute',
+      movement: 'Action Evidence',
+      description: 'Preserve stabilization movement after routing direction.',
+    },
+    {
+      title: 'Continue',
+      movement: 'Follow-Up',
+      description: 'Keep action visible when movement is incomplete.',
+    },
+    {
+      title: 'Strengthen',
+      movement: 'Evidence',
+      description: 'Increase credibility before outcome verification.',
+    },
+    {
+      title: 'Pause',
+      movement: 'Barrier',
+      description: 'Hold movement when action is blocked or unstable.',
+    },
+    {
+      title: 'Escalate',
+      movement: 'Command',
+      description: 'Raise visibility when action pressure threatens continuity.',
+    },
+  ]
+
   function buildCaseLabel(caseItem: StabilityCase) {
     const latestRouting = findLatestRoutingAction(caseItem.id, routingActions)
     const inherited = buildInheritedInterventionContext(caseItem, latestRouting)
     const latestIntervention = findLatestIntervention(caseItem.id, interventions)
-    const activeStatus =
-      latestIntervention
-        ? 'ACTION_EVIDENCE_PRESERVED'
-        : latestRouting?.routing_status || caseItem.case_status
+    const activeStatus = latestIntervention
+      ? 'ACTION_EVIDENCE_PRESERVED'
+      : latestRouting?.routing_status || caseItem.case_status
 
-    return `${inherited.intakeIdentity} â€¢ ${caseItem.support_domain} â€¢ ${activeStatus}`
+    return `${inherited.intakeIdentity} • ${caseItem.support_domain} • ${activeStatus}`
   }
 
   function actionSynthesis() {
@@ -597,69 +621,6 @@ Outcome is not recovery.
     await loadInterventions()
   }
 
-  const climatePanels = [
-    { title: 'Action Stability Climate', value: actionClimate.stabilityClimate },
-    { title: 'Continuity Action Posture', value: actionClimate.actionPosture },
-    { title: 'Dependency Visibility', value: actionClimate.dependencyVisibility },
-    { title: 'Outcome Readiness Landscape', value: actionClimate.outcomeLandscape },
-  ]
-
-  const synthesisRows = [
-    ['INHERITED INTAKE IDENTITY', inheritedContext.intakeIdentity],
-    ['INHERITED ROUTING POSTURE', inheritedContext.routingPosture],
-    ['INTERVENTION READINESS', inheritedContext.interventionReadiness],
-    ['INHERITED EVIDENCE POSTURE', inheritedContext.inheritedEvidencePosture],
-    ['INHERITED DRIFT SIGNAL', inheritedContext.inheritedDriftSignal],
-    ['INHERITED CONVERGENCE SIGNAL', inheritedContext.inheritedConvergenceSignal],
-    ['INHERITED COMMAND MEANING', inheritedContext.inheritedCommandMeaning],
-    ['INHERITED SURVIVABILITY', inheritedContext.inheritedSurvivability],
-    ['ACTION MOVEMENT', displayActionStatus || 'Awaiting action movement selection'],
-    ['ACTION TRAJECTORY', displayActionTrajectory || 'Action trajectory pending'],
-    ['ACTION EVIDENCE POSTURE', displayEvidencePosture || 'Awaiting evidence posture selection'],
-    ['OWNER VISIBILITY', displayOwnerVisibility || 'Awaiting owner visibility selection'],
-    ['CONTINUITY OUTLOOK', displayContinuityOutlook || 'Continuity outlook pending'],
-    ['CONTINUITY RISK', displayContinuityRisk || 'Continuity risk pending'],
-    ['REVIEW TIMING', displayReviewTiming || 'Awaiting review timing selection'],
-    ['COMMAND POSTURE', commandPosture],
-    ['ACTION CONFIDENCE', actionConfidence],
-    ['SURVIVABILITY SIGNAL', survivabilitySignal],
-    ['EXECUTIVE MEANING', executiveMeaning],
-    ['ACTION PRESSURE', pressureMeaning],
-    [
-      'NEXT LIFECYCLE STATE',
-      selectedCase || lastPreservedCase
-        ? lifecycleDecision.nextStatus
-        : 'Continuity lifecycle advancement pending stabilization action governance.',
-    ],
-    [
-      'CASE SIGNAL',
-      selectedCase?.beneficiary_name ||
-        lastPreservedCase?.beneficiary_name ||
-        'Executive continuity interpretation will activate after stabilization action evidence is preserved.',
-    ],
-    [
-      'STABILITY DOMAIN',
-      selectedCase?.support_domain ||
-        lastPreservedCase?.support_domain ||
-        'Continuity domain visibility pending action assignment.',
-    ],
-    [
-      'CURRENT CONTINUITY STATUS',
-      selectedRoutingAction?.routing_status ||
-        selectedCase?.case_status ||
-        lastPreservedCase?.case_status ||
-        'Continuity posture pending action governance.',
-    ],
-    ['ACTION TYPE', actionType || hydratedEvidence.actionType || 'Awaiting action type selection'],
-    ['ACTION CHANNEL', actionChannel || hydratedEvidence.actionChannel || 'Awaiting action channel selection'],
-    [
-      'GOVERNANCE INTERPRETATION',
-      governanceInterpretation.trim() ||
-        hydratedEvidence.governanceInterpretation ||
-        'No additional operational continuity interpretation entered.',
-    ],
-  ]
-
   return (
     <main className="min-h-screen text-neutral-100">
       <section className="mx-auto max-w-7xl px-6 py-8">
@@ -669,20 +630,38 @@ Outcome is not recovery.
           </div>
         )}
 
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-400">
-          TSINAXA CGI â€¢ STABILIZATION ACTION GOVERNANCE
-        </p>
+        <header className="mb-8 flex flex-col gap-5 border-b border-amber-500/10 pb-6 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-amber-400">
+              TSINAXA CGI
+            </p>
 
-        <div className="mt-4 rounded-3xl border border-neutral-800 bg-neutral-900/70 p-6 shadow-2xl">
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">
+              Interventions
+            </h1>
+
+            <p className="mt-2 text-sm text-neutral-400">
+              Preserve stabilization action evidence.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[520px]">
+            <StageChip label="Operating Layer" value="Continuity Lifecycle" />
+            <StageChip label="Executive Meaning" value="Action Evidence" />
+            <StageChip label="Movement" value="Outcomes" />
+          </div>
+        </header>
+
+        <section className="rounded-3xl border border-neutral-800 bg-black p-6 shadow-2xl">
           <h2 className="text-2xl font-semibold text-white">
             Stabilization Action Governance
           </h2>
 
           <p className="mt-3 max-w-5xl text-sm leading-6 text-neutral-300">
             Convert routed instability into governed action evidence while
-            preserving inherited intake identity, routing posture, convergence
-            visibility, survivability meaning, command interpretation, and
-            structural continuity memory before outcome verification begins.
+            preserving routing memory, action trajectory, owner visibility,
+            residual pressure, survivability relevance, and operational
+            traceability before verification governance begins.
           </p>
 
           <p className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
@@ -691,36 +670,51 @@ Outcome is not recovery.
             declare recovery durability, or erase routing memory inherited from
             upstream continuity governance.
           </p>
-        </div>
+        </section>
 
         <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {climatePanels.map((panel) => (
-            <div
-              key={panel.title}
-              className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5"
-            >
-              <p className="text-sm font-semibold text-white">{panel.title}</p>
-              <p className="mt-3 text-sm leading-6 text-neutral-400">
-                {panel.value}
-              </p>
-            </div>
-          ))}
+          <ClimateCard title="Action Climate" value={actionClimate.stabilityClimate} />
+          <ClimateCard title="Action Posture" value={actionClimate.actionPosture} />
+          <ClimateCard title="Dependency Visibility" value={actionClimate.dependencyVisibility} />
+          <ClimateCard title="Outcome Readiness" value={actionClimate.outcomeLandscape} />
         </div>
 
-        <div className="mt-6 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+        <section className="mt-6 rounded-3xl border border-neutral-800 bg-black p-6">
           <h3 className="text-lg font-semibold text-white">
-            Continuity Action Intelligence
+            Action Governance Workspace
           </h3>
-          <p className="mt-3 text-sm leading-6 text-neutral-300">
-            {pressureMeaning}
+
+          <p className="mt-3 text-sm leading-6 text-neutral-400">
+            Interventions has one lawful responsibility: preserve what action
+            was done, whether it is moving, and whether it is credible enough to
+            proceed toward outcome verification.
           </p>
-        </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            {actionMovementCards.map((item) => (
+              <MovementCard
+                key={item.title}
+                title={item.title}
+                movement={item.movement}
+                description={item.description}
+              />
+            ))}
+          </div>
+        </section>
+
+        <SimplePanel title="Continuity Action Intelligence" value={pressureMeaning} />
+
+        <SimplePanel
+          title="Executive Action Synthesis"
+          value={executiveMeaning}
+        />
 
         {lastPreservedIntervention && (
           <section className="mt-6 rounded-3xl border border-amber-500/30 bg-amber-500/10 p-6">
             <h3 className="text-lg font-semibold text-amber-100">
               Latest Preserved Action Evidence
             </h3>
+
             <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               <Info label="Action Movement" value={hydratedEvidence.actionMovement || 'Not recorded'} />
               <Info label="Action Trajectory" value={hydratedEvidence.actionTrajectory || 'Not recorded'} />
@@ -732,131 +726,120 @@ Outcome is not recovery.
           </section>
         )}
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_1.1fr]">
-          <section className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
-            <h3 className="text-xl font-semibold text-white">
-              Preserve Action Evidence
-            </h3>
+        <section className="mt-8 rounded-3xl border border-neutral-800 bg-black p-6">
+          <h3 className="text-xl font-semibold text-white">
+            Preserve Stabilization Action
+          </h3>
 
-            <p className="mt-3 text-sm leading-6 text-neutral-400">
-              Use this after routed instability receives governed stabilization
-              action. Preserve routing memory, action trajectory, survivability
-              visibility, owner posture, and executive continuity interpretation.
-            </p>
+          <p className="mt-3 text-sm leading-6 text-neutral-400">
+            Select a routed case and preserve action evidence. The form remains
+            operational, but the page responsibility stays narrow: action is not
+            outcome, and outcome is not recovery.
+          </p>
 
-            <div className="mt-6 space-y-5">
-              <Select
-                label="Stability Case"
-                placeholder={
-                  cases.length === 0
-                    ? 'No stabilization-stage cases found'
-                    : 'Select stability case'
-                }
-                value={selectedCaseId}
-                setValue={setSelectedCaseId}
-                options={cases.map((item) => ({
-                  label: buildCaseLabel(item),
-                  value: item.id,
-                }))}
-              />
-
-              {selectedCase && (
-                <section className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5">
-                  <p className="text-sm font-semibold text-amber-100">
-                    Inherited Routing Memory
-                  </p>
-
-                  <div className="mt-4 grid gap-3">
-                    <Info label="Memory Source" value={inheritedContext.memorySource} />
-                    <Info label="Inherited Intake Identity" value={inheritedContext.intakeIdentity} />
-                    <Info label="Inherited Routing Posture" value={inheritedContext.routingPosture} />
-                    <Info label="Intervention Readiness" value={inheritedContext.interventionReadiness} />
-                    <Info label="Inherited Evidence Posture" value={inheritedContext.inheritedEvidencePosture} />
-                    <Info label="Inherited Drift Signal" value={inheritedContext.inheritedDriftSignal} />
-                    <Info label="Inherited Convergence Signal" value={inheritedContext.inheritedConvergenceSignal} />
-                    <Info label="Inherited Command Meaning" value={inheritedContext.inheritedCommandMeaning} />
-                    <Info label="Inherited Survivability" value={inheritedContext.inheritedSurvivability} />
-                  </div>
-                </section>
-              )}
-
-              <Select label="Action Type" placeholder="Select action type" value={actionType} setValue={setActionType} options={ACTION_TYPES.map((item) => ({ label: item, value: item }))} />
-              <Select label="Action Channel" placeholder="Select action channel" value={actionChannel} setValue={setActionChannel} options={ACTION_CHANNELS.map((item) => ({ label: item, value: item }))} />
-              <Select label="Action Movement" placeholder="Select action movement" value={actionStatus} setValue={setActionStatus} options={ACTION_STATUSES.map((item) => ({ label: item, value: item }))} />
-              <Select label="Action Trajectory" placeholder="Select action trajectory" value={actionTrajectory} setValue={setActionTrajectory} options={ACTION_TRAJECTORIES.map((item) => ({ label: item, value: item }))} />
-              <Select label="Evidence Posture" placeholder="Select evidence posture" value={evidencePosture} setValue={setEvidencePosture} options={EVIDENCE_POSTURES.map((item) => ({ label: item, value: item }))} />
-              <Select label="Owner Visibility" placeholder="Select owner visibility" value={ownerVisibility} setValue={setOwnerVisibility} options={OWNER_VISIBILITIES.map((item) => ({ label: item, value: item }))} />
-              <Select label="Continuity Outlook" placeholder="Select continuity outlook" value={continuityOutlook} setValue={setContinuityOutlook} options={CONTINUITY_OUTLOOKS.map((item) => ({ label: item, value: item }))} />
-              <Select label="Review Timing" placeholder="Select review timing" value={reviewTiming} setValue={setReviewTiming} options={REVIEW_TIMINGS.map((item) => ({ label: item, value: item }))} />
-              <Select label="Continuity Risk" placeholder="Select continuity risk" value={continuityRisk} setValue={(value) => setContinuityRisk(value as ContinuityRisk)} options={CONTINUITY_RISKS.map((item) => ({ label: item, value: item }))} />
-
-              <label className="block">
-                <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
-                  Governance Interpretation
-                </span>
-
-                <textarea
-                  value={governanceInterpretation}
-                  onChange={(event) => setGovernanceInterpretation(event.target.value)}
-                  rows={5}
-                  placeholder="Use operational facts only. Preserve routing memory, continuity movement, survivability visibility, structural traceability, and executive continuity interpretation."
-                  className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
+          <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.05fr]">
+            <section className="rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
+              <div className="space-y-5">
+                <Select
+                  label="Stability Case"
+                  placeholder={
+                    cases.length === 0
+                      ? 'No stabilization-stage cases found'
+                      : 'Select stability case'
+                  }
+                  value={selectedCaseId}
+                  setValue={setSelectedCaseId}
+                  options={cases.map((item) => ({
+                    label: buildCaseLabel(item),
+                    value: item.id,
+                  }))}
                 />
-              </label>
 
-              <button
-                onClick={preserveStabilizationActionEvidence}
-                disabled={loading}
-                className="w-full rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-amber-300 disabled:opacity-60"
-              >
-                {loading
-                  ? 'Preserving Governance Evidence...'
-                  : 'Preserve Stabilization Action Evidence'}
-              </button>
-            </div>
-          </section>
+                {selectedCase && (
+                  <section className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5">
+                    <p className="text-sm font-semibold text-amber-100">
+                      Inherited Routing Memory
+                    </p>
 
-          <section className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
-            <h3 className="text-xl font-semibold text-white">
-              Executive Action Synthesis
-            </h3>
+                    <div className="mt-4 grid gap-3">
+                      <Info label="Memory Source" value={inheritedContext.memorySource} />
+                      <Info label="Inherited Intake Identity" value={inheritedContext.intakeIdentity} />
+                      <Info label="Inherited Routing Posture" value={inheritedContext.routingPosture} />
+                      <Info label="Intervention Readiness" value={inheritedContext.interventionReadiness} />
+                    </div>
+                  </section>
+                )}
 
-            <p className="mt-3 text-sm leading-6 text-neutral-400">
-              This synthesis evaluates whether inherited routing direction is
-              converting into credible stabilization action, remaining variable,
-              stalling, recurring, escalating, or becoming eligible for outcome
-              verification governance.
-            </p>
+                <Select label="Action Type" placeholder="Select action type" value={actionType} setValue={setActionType} options={ACTION_TYPES.map((item) => ({ label: item, value: item }))} />
+                <Select label="Action Channel" placeholder="Select action channel" value={actionChannel} setValue={setActionChannel} options={ACTION_CHANNELS.map((item) => ({ label: item, value: item }))} />
+                <Select label="Action Movement" placeholder="Select action movement" value={actionStatus} setValue={setActionStatus} options={ACTION_STATUSES.map((item) => ({ label: item, value: item }))} />
+                <Select label="Action Trajectory" placeholder="Select action trajectory" value={actionTrajectory} setValue={setActionTrajectory} options={ACTION_TRAJECTORIES.map((item) => ({ label: item, value: item }))} />
+                <Select label="Evidence Posture" placeholder="Select evidence posture" value={evidencePosture} setValue={setEvidencePosture} options={EVIDENCE_POSTURES.map((item) => ({ label: item, value: item }))} />
+                <Select label="Owner Visibility" placeholder="Select owner visibility" value={ownerVisibility} setValue={setOwnerVisibility} options={OWNER_VISIBILITIES.map((item) => ({ label: item, value: item }))} />
+                <Select label="Continuity Outlook" placeholder="Select continuity outlook" value={continuityOutlook} setValue={setContinuityOutlook} options={CONTINUITY_OUTLOOKS.map((item) => ({ label: item, value: item }))} />
+                <Select label="Review Timing" placeholder="Select review timing" value={reviewTiming} setValue={setReviewTiming} options={REVIEW_TIMINGS.map((item) => ({ label: item, value: item }))} />
+                <Select label="Continuity Risk" placeholder="Select continuity risk" value={continuityRisk} setValue={(value) => setContinuityRisk(value as ContinuityRisk)} options={CONTINUITY_RISKS.map((item) => ({ label: item, value: item }))} />
 
-            <div className="mt-6 divide-y divide-neutral-800 rounded-2xl border border-neutral-800">
-              {synthesisRows.map(([label, value]) => (
-                <div
-                  key={label}
-                  className="grid gap-2 p-4 md:grid-cols-[0.42fr_1fr]"
+                <label className="block">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                    Governance Interpretation
+                  </span>
+
+                  <textarea
+                    value={governanceInterpretation}
+                    onChange={(event) => setGovernanceInterpretation(event.target.value)}
+                    rows={4}
+                    placeholder="Use operational facts only. Preserve action movement, owner visibility, survivability relevance, and traceability."
+                    className="mt-2 w-full rounded-xl border border-neutral-700 bg-black px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
+                  />
+                </label>
+
+                <button
+                  onClick={preserveStabilizationActionEvidence}
+                  disabled={loading}
+                  className="w-full rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-amber-300 disabled:opacity-60"
                 >
-                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                    {label}
-                  </p>
-                  <p className="break-words text-sm leading-6 text-neutral-100">
-                    {value}
-                  </p>
-                </div>
-              ))}
-            </div>
+                  {loading
+                    ? 'Preserving Action Evidence...'
+                    : 'Preserve Stabilization Action Evidence'}
+                </button>
+              </div>
+            </section>
 
-            <div className="mt-6 rounded-2xl border border-neutral-800 bg-neutral-950 p-5">
-              <h4 className="text-sm font-semibold uppercase tracking-wide text-amber-400">
-                Lifecycle Boundary
-              </h4>
-              <p className="mt-3 text-sm leading-6 text-neutral-300">
-                Routing is not action. Action is not outcome. Outcome is not
-                recovery.
+            <section className="rounded-3xl border border-neutral-800 bg-neutral-950 p-6">
+              <h3 className="text-xl font-semibold text-white">
+                Action Evidence Reading
+              </h3>
+
+              <p className="mt-3 text-sm leading-6 text-neutral-400">
+                This panel shows whether routing direction is converting into
+                credible action movement.
               </p>
-            </div>
-          </section>
-        </div>
 
-        <section className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
+              <div className="mt-6 grid gap-3">
+                <Info label="Action Movement" value={displayActionStatus || 'Awaiting action movement'} />
+                <Info label="Action Trajectory" value={displayActionTrajectory || 'Action trajectory pending'} />
+                <Info label="Evidence Posture" value={displayEvidencePosture || 'Evidence posture pending'} />
+                <Info label="Owner Visibility" value={displayOwnerVisibility || 'Owner visibility pending'} />
+                <Info label="Continuity Outlook" value={displayContinuityOutlook || 'Continuity outlook pending'} />
+                <Info label="Continuity Risk" value={displayContinuityRisk || 'Continuity risk pending'} />
+                <Info label="Next Lifecycle State" value={selectedCase || lastPreservedCase ? lifecycleDecision.nextStatus : 'Continuity lifecycle advancement pending stabilization action governance.'} />
+              </div>
+
+              <div className="mt-6 rounded-2xl border border-neutral-800 bg-black p-5">
+                <h4 className="text-sm font-semibold uppercase tracking-wide text-amber-400">
+                  Lifecycle Boundary
+                </h4>
+                <p className="mt-3 text-sm leading-6 text-neutral-300">
+                  Routing is not action. Action is not outcome. Outcome is not
+                  recovery.
+                </p>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section className="mt-8 rounded-3xl border border-neutral-800 bg-black p-6">
           <h3 className="text-xl font-semibold text-white">
             Action Governance Doctrine
           </h3>
@@ -870,15 +853,61 @@ Outcome is not recovery.
 
           <p className="mt-4 text-sm leading-7 text-neutral-300">
             Mature action governance must preserve proportional continuity
-            interpretation. When stabilization movement strengthens without
-            escalation concentration, stalled barriers, recurrence visibility, or
-            structural deterioration, the system should support measured continuity
-            confidence while preserving structural memory, executive visibility,
-            and lifecycle traceability.
+            interpretation. Action evidence may support outcome verification, but
+            it does not prove recovery.
           </p>
         </section>
       </section>
     </main>
+  )
+}
+
+function StageChip({ label, value }: { label: string; value: string }) {
+  return (
+    <article className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-amber-400">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-semibold text-amber-50">{value}</p>
+    </article>
+  )
+}
+
+function ClimateCard({ title, value }: { title: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-neutral-800 bg-black p-5">
+      <p className="text-sm font-semibold text-white">{title}</p>
+      <p className="mt-3 text-sm leading-6 text-neutral-400">{value}</p>
+    </div>
+  )
+}
+
+function MovementCard({
+  title,
+  movement,
+  description,
+}: {
+  title: string
+  movement: string
+  description: string
+}) {
+  return (
+    <article className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
+      <p className="text-sm font-semibold text-amber-100">{title}</p>
+      <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-amber-400">
+        {movement}
+      </p>
+      <p className="mt-3 text-xs leading-5 text-neutral-400">{description}</p>
+    </article>
+  )
+}
+
+function SimplePanel({ title, value }: { title: string; value: string }) {
+  return (
+    <section className="mt-6 rounded-3xl border border-neutral-800 bg-black p-6">
+      <h3 className="text-lg font-semibold text-white">{title}</h3>
+      <p className="mt-3 text-sm leading-6 text-neutral-300">{value}</p>
+    </section>
   )
 }
 
@@ -1035,9 +1064,9 @@ function resolveIntakeIdentity(caseItem: StabilityCase, source: string) {
     extractBlockField(source, 'INHERITED INTAKE IDENTITY') ||
     extractBlockField(source, 'INTAKE IDENTITY') ||
     caseItem.beneficiary_name ||
-    `${caseItem.support_domain} â€¢ ${
+    `${caseItem.support_domain} • ${
       caseItem.beneficiary_level || 'continuity zone unspecified'
-    } â€¢ ${caseItem.institution_name || GOVERNANCE_INSTITUTION} â€¢ ${
+    } • ${caseItem.institution_name || GOVERNANCE_INSTITUTION} • ${
       caseItem.region || 'region not provided'
     }`
   )
@@ -1182,10 +1211,6 @@ function resolveFallbackDriftSignal(activeStatus: string) {
 
   if (activeStatus.includes('INTERVENTION_ACTIVE')) {
     return 'ACTION_DRIFT_MONITORING_ACTIVE'
-  }
-
-  if (activeStatus.includes('STABILIZING')) {
-    return 'NO_ACTIVE_ACTION_DRIFT_VISIBLE'
   }
 
   return 'NO_ACTIVE_ACTION_DRIFT_VISIBLE'
@@ -1499,7 +1524,7 @@ function buildPressureMeaning(input: {
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-2xl border border-neutral-800 bg-neutral-950 p-4">
+    <div className="min-w-0 rounded-2xl border border-neutral-800 bg-black p-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
         {label}
       </p>
@@ -1530,7 +1555,7 @@ function Select({
       <select
         value={value}
         onChange={(event) => setValue(event.target.value)}
-        className="mt-2 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
+        className="mt-2 w-full rounded-xl border border-neutral-700 bg-black px-4 py-3 text-sm text-white outline-none focus:border-amber-400"
       >
         <option value="">{placeholder}</option>
 
