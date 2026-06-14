@@ -33,7 +33,6 @@ function CoordinationCenterContent() {
   const [reviewMessage, setReviewMessage] = useState('')
 
   const coordination = useMemo(() => buildCGICoordinationCenterDoctrine(), [])
-  const latestReviews = reviews.slice(0, 3)
 
   useEffect(() => {
     loadCoordinationReviews()
@@ -198,13 +197,7 @@ function CoordinationCenterContent() {
         <section style={styles.memoryPanel}>
           <div>
             <p style={styles.kicker}>Coordination Memory</p>
-            <h2 style={styles.panelTitle}>
-              Preserve and retrieve coordination reviews.
-            </h2>
-            <p style={styles.bodyText}>
-              Coordination memory keeps synchronization need, required evidence,
-              and continuity exposure reconstructable.
-            </p>
+            <h2 style={styles.panelTitle}>Review Count: {reviews.length}</h2>
           </div>
 
           <div style={styles.memoryActions}>
@@ -257,41 +250,13 @@ function CoordinationCenterContent() {
           <div style={styles.memorySummaryGrid}>
             <MiniStat label="Reviews Available" value={String(reviews.length)} />
             <MiniStat
-              label="Executive"
+              label="Executive Reviews"
               value={String(coordination.executiveCoordinationCount)}
             />
             <MiniStat
-              label="Structural"
+              label="Structural Memory Sites"
               value={String(coordination.structuralMemoryCount)}
             />
-          </div>
-
-          <div style={styles.profileGrid}>
-            {latestReviews.length === 0 ? (
-              <p style={styles.bodyText}>
-                No persisted coordination reviews are currently available.
-              </p>
-            ) : (
-              latestReviews.map((item, index) => (
-                <article
-                  key={
-                    item.id
-                      ? String(item.id)
-                      : `${getReviewValue(item, 'createdAt')}-${index}`
-                  }
-                  style={styles.profileCard}
-                >
-                  <p style={styles.metricLabel}>
-                    {getReviewValue(item, 'coordinationPosture') ??
-                      'COORDINATION_REVIEW'}
-                  </p>
-
-                  <h3 style={styles.profileTitle}>
-                    {formatDate(getReviewValue(item, 'createdAt'))}
-                  </h3>
-                </article>
-              ))
-            )}
           </div>
         </Panel>
 
@@ -316,49 +281,6 @@ function CoordinationCenterContent() {
       </div>
     </main>
   )
-}
-
-function getReviewValue(
-  review: PersistedCoordinationReview,
-  key: string,
-): string | null {
-  const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
-
-  const rawPayload = getNestedRecord(review, 'rawPayload')
-  const rawPayloadSnake = getNestedRecord(review, 'raw_payload')
-
-  const value =
-    review[key] ??
-    review[snakeKey] ??
-    rawPayload?.[key] ??
-    rawPayloadSnake?.[key] ??
-    null
-
-  if (value === null || value === undefined) return null
-  return String(value)
-}
-
-function getNestedRecord(
-  value: PersistedCoordinationReview,
-  key: string,
-): Record<string, unknown> | null {
-  const nested = value[key]
-
-  if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
-    return nested as Record<string, unknown>
-  }
-
-  return null
-}
-
-function formatDate(value: string | null) {
-  if (!value) return 'Date not recorded'
-
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) return value
-
-  return date.toLocaleString()
 }
 
 function Metric({ label, value }: { label: string; value: number }) {
@@ -573,7 +495,7 @@ const styles: Record<string, CSSProperties> = {
     gridTemplateColumns: 'minmax(0, 1fr) auto',
     gap: 16,
     alignItems: 'center',
-    padding: 28,
+    padding: 22,
     borderRadius: 28,
     background:
       'linear-gradient(135deg, rgba(201,162,39,0.13), rgba(255,255,255,0.035))',
@@ -648,24 +570,6 @@ const styles: Record<string, CSSProperties> = {
     gap: 12,
     marginTop: 18,
   },
-  profileGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: 14,
-    marginTop: 18,
-  },
-  profileCard: {
-    padding: 18,
-    borderRadius: 20,
-    background: 'rgba(0,0,0,0.22)',
-    border: '1px solid rgba(255,255,255,0.08)',
-  },
-  profileTitle: {
-    margin: '10px 0 0',
-    color: '#fff',
-    fontSize: 16,
-    lineHeight: 1.25,
-  },
   reportPanel: {
     padding: 28,
     borderRadius: 28,
@@ -674,6 +578,7 @@ const styles: Record<string, CSSProperties> = {
   },
   pre: {
     marginTop: 20,
+    maxHeight: 420,
     padding: 22,
     borderRadius: 20,
     background: '#0a0a0a',
@@ -681,6 +586,7 @@ const styles: Record<string, CSSProperties> = {
     whiteSpace: 'pre-wrap',
     fontSize: 13,
     lineHeight: 1.7,
+    overflowY: 'auto',
     overflowX: 'auto',
   },
   doctrineCard: {
