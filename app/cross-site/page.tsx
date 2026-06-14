@@ -269,7 +269,10 @@ function CrossSiteContent() {
           <Panel title="Evidence Standard">
             <Info label="Evidence" value={evidenceLanguage} />
             <Info label="Governance Rule" value={governanceLanguage} />
-            <Info label="Reconstruction" value={decision.evidenceStandard} />
+            <Info
+              label="Reconstruction"
+              value="Preserve dependency memory and recovery evidence."
+            />
           </Panel>
         </section>
 
