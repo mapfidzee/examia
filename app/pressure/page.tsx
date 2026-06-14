@@ -52,10 +52,7 @@ function PressureContent() {
     setMessage('Pressure intelligence loaded.')
   }
 
-  const pressure = useMemo(
-    () => buildCGIPressureDoctrine(metrics),
-    [metrics],
-  )
+  const pressure = useMemo(() => buildCGIPressureDoctrine(metrics), [metrics])
 
   return (
     <main style={styles.page}>
@@ -155,7 +152,7 @@ function PressureContent() {
         </section>
 
         <section style={styles.gridTwo}>
-          <Panel title="Enterprise Pressure Requirements">
+          <Panel title="Required Movement">
             <Info
               label="Evidence Requirement"
               value={pressure.evidenceRequirement}
@@ -163,10 +160,6 @@ function PressureContent() {
             <Info
               label="Executive Action"
               value={pressure.trustAssessment.executiveDecision}
-            />
-            <Info
-              label="Board Warning"
-              value={pressure.trustAssessment.boardLevelWarning}
             />
             <Info
               label="Dominant Driver"
@@ -204,28 +197,17 @@ function PressureContent() {
           </Panel>
         </section>
 
-        <section style={styles.gridFour}>
-          <Card
-            title="Command"
-            value={pressure.commandImplication}
-            body="How command should interpret pressure."
-          />
-          <Card
-            title="Executive Report"
-            value={pressure.executiveReportImplication}
-            body="How pressure should appear in executive reporting."
-          />
-          <Card
-            title="Memory Board"
-            value={pressure.memoryBoardImplication}
-            body="What institutional memory must preserve."
-          />
-          <Card
-            title="Audit"
-            value={pressure.auditImplication}
-            body="What audit must reconstruct."
-          />
-        </section>
+        <Panel title="Pressure Implications">
+          <div style={styles.infoGrid}>
+            <Info label="Command" value={pressure.commandImplication} />
+            <Info
+              label="Executive Report"
+              value={pressure.executiveReportImplication}
+            />
+            <Info label="Memory Board" value={pressure.memoryBoardImplication} />
+            <Info label="Audit" value={pressure.auditImplication} />
+          </div>
+        </Panel>
 
         <Panel title="Recent Pressure Memory Trail">
           <div style={styles.cardHeader}>
@@ -435,11 +417,6 @@ const styles: Record<string, CSSProperties> = {
   gridThree: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: 16,
-  },
-  gridFour: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
     gap: 16,
   },
   metricGrid: {

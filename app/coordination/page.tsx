@@ -92,6 +92,25 @@ function CoordinationContent() {
 
   const { reading, pattern } = coordination
 
+  const memoryGroups = [
+    {
+      title: 'Regions',
+      rows: coordination.regionRows,
+    },
+    {
+      title: 'Institutions',
+      rows: coordination.institutionRows,
+    },
+    {
+      title: 'Responders',
+      rows: coordination.responderRows,
+    },
+    {
+      title: 'Lifecycle',
+      rows: coordination.lifecycleRows,
+    },
+  ]
+
   return (
     <main style={styles.page}>
       <div style={styles.container}>
@@ -101,9 +120,7 @@ function CoordinationContent() {
             <h1 style={styles.title}>Enterprise Coordination Intelligence</h1>
             <p style={styles.subtitle}>
               Coordination governs the dependencies that must synchronize before
-              continuity can safely move. It protects ownership, routing,
-              responder capacity, institutional load, evidence maturity,
-              recovery readiness, and shared dependency visibility.
+              continuity can safely move.
             </p>
           </div>
 
@@ -116,197 +133,96 @@ function CoordinationContent() {
 
         {message && <div style={styles.message}>{message}</div>}
 
-        <section style={styles.commandDeck}>
-          <div style={styles.primaryCard}>
-            <p style={styles.sectionKicker}>Executive Coordination Question</p>
-            <h2 style={styles.commandTitle}>{reading.executiveQuestion}</h2>
-            <p style={styles.primaryText}>{reading.chainPosition}</p>
+        <section style={styles.gridTwo}>
+          <Panel title="Executive Coordination Question">
+            <h2 style={styles.bigText}>{reading.executiveQuestion}</h2>
+            <p style={styles.bodyText}>{reading.chainPosition}</p>
+          </Panel>
 
-            <div style={styles.commandMetaGrid}>
-              <MiniStat label="Pattern" value={pattern.patternName} />
-              <MiniStat label="Next" value={reading.nextDestination} />
-              <MiniStat
-                label="Cross-Site"
-                value={reading.crossSiteRequired ? 'REQUIRED' : 'CONDITIONAL'}
-              />
-              <MiniStat
-                label="Audit"
-                value={reading.auditRequired ? 'REQUIRED' : 'CONDITIONAL'}
-              />
-            </div>
-          </div>
-
-          <div style={styles.consequenceCard}>
-            <p style={styles.sectionKicker}>Board Warning</p>
-            <h2 style={styles.consequenceTitle}>
+          <Panel title="Board Warning">
+            <h2 style={styles.bigText}>
               Unsynchronized dependencies create false continuity confidence.
             </h2>
             <p style={styles.bodyText}>{reading.boardWarning}</p>
-          </div>
+          </Panel>
         </section>
 
-        <section style={styles.metricsGrid}>
-          <Metric label="Coordination Status" textValue={reading.status} />
-          <Metric label="Active Cases" value={coordination.activeCases.length} />
-          <Metric label="Coordination Sites" value={institutions.length} />
-          <Metric
-            label="Active Responders"
-            value={coordination.activeResponders.length}
-          />
-          <Metric label="Routing Actions" value={routingActions.length} />
-          <Metric
-            label="Safeguarding Flags"
-            value={coordination.safeguardingCases.length}
-          />
-          <Metric
-            label="Intervention Coverage"
-            value={coordination.interventionCoverage}
-            suffix="%"
-          />
-          <Metric
-            label="Outcome Coverage"
-            value={coordination.outcomeCoverage}
-            suffix="%"
-          />
+        <section style={styles.metricGrid}>
+          <Metric label="Coordination Cases" value={coordination.activeCases.length} />
+          <Metric label="Stalled" value={coordination.stalledCases.length} />
+          <Metric label="Recurrence" value={coordination.recurrenceCases.length} />
+          <Metric label="Intervention" value={coordination.interventionCoverage} suffix="%" />
+          <Metric label="Outcome" value={coordination.outcomeCoverage} suffix="%" />
         </section>
 
         <section style={styles.gridFour}>
-          <ExecutiveCard
-            title="Synchronization Pattern"
-            value={pattern.patternName}
-            body={pattern.patternMeaning}
-          />
-          <ExecutiveCard
+          <Card title="Pattern" value={pattern.patternName} body={pattern.patternMeaning} />
+          <Card
             title="Enterprise Exposure"
             value={pattern.enterpriseExposure}
-            body="Whether coordination pressure is still local or becoming enterprise-visible."
+            body="Whether coordination remains local or is becoming enterprise-visible."
           />
-          <ExecutiveCard
+          <Card
             title="Executive Meaning"
             value={pattern.executiveMeaning}
-            body="What leadership should understand before the chain moves forward."
+            body="What leadership should understand before movement."
           />
-          <ExecutiveCard
+          <Card
             title="Cross-Site Question"
             value={pattern.crossSiteQuestion}
-            body="The question Coordination hands to Cross-Site when dependency visibility expands."
+            body="What Coordination hands to Cross-Site."
           />
-        </section>
-
-        <section style={styles.gridFour}>
-          <RequirementCard
-            label="Shared Ownership"
-            active={pattern.sharedOwnershipVisible}
-            body="Whether multiple records are converging around the same ownership structure."
-          />
-          <RequirementCard
-            label="Shared Institution"
-            active={pattern.sharedInstitutionVisible}
-            body="Whether institutional load may be creating distributed coordination pressure."
-          />
-          <RequirementCard
-            label="Shared Responder"
-            active={pattern.sharedResponderVisible}
-            body="Whether responder concentration may weaken continuity confidence."
-          />
-          <RequirementCard
-            label="Shared Region"
-            active={pattern.sharedRegionVisible}
-            body="Whether visible pressure may be regional rather than isolated."
-          />
-        </section>
-
-        <section style={styles.memoryPanel}>
-          <p style={styles.sectionKicker}>Synchronization Memory</p>
-          <h2 style={styles.panelTitle}>
-            The institution must remember which dependencies repeatedly require
-            synchronization.
-          </h2>
-
-          <div style={styles.memoryGrid}>
-            <MiniStat
-              label="Regions"
-              value={String(coordination.regionRows.length)}
-            />
-            <MiniStat label="Institutions" value={String(institutions.length)} />
-            <MiniStat label="Responders" value={String(responders.length)} />
-            <MiniStat
-              label="Lifecycle States"
-              value={String(coordination.lifecycleRows.length)}
-            />
-          </div>
         </section>
 
         <section style={styles.gridTwo}>
           <Panel title="Coordination Movement Requirements">
             <Info label="Required Action" value={reading.requiredAction} />
+            <Info label="Next Destination" value={reading.nextDestination} />
             <Info label="Handoff Reason" value={reading.handoffReason} />
             <Info label="Continuity Risk" value={reading.continuityRisk} />
-            <Info
-              label="Synchronization Evidence"
-              value={pattern.requiredSynchronizationEvidence}
-            />
+            <Info label="Evidence Standard" value={reading.evidenceStandard} />
           </Panel>
 
           <Panel title="Enterprise Movement Gates">
-            <Info
-              label="Coordination"
-              value={reading.coordinationRequired ? 'REQUIRED' : 'WATCH'}
-            />
-            <Info
-              label="Cross-Site"
-              value={reading.crossSiteRequired ? 'REQUIRED' : 'CONDITIONAL'}
-            />
-            <Info
-              label="Executive"
-              value={reading.executiveReviewRequired ? 'REQUIRED' : 'CONDITIONAL'}
-            />
-            <Info
-              label="Audit"
-              value={reading.auditRequired ? 'REQUIRED' : 'CONDITIONAL'}
-            />
+            <Info label="Coordination" value={reading.coordinationRequired ? 'REQUIRED' : 'WATCH'} />
+            <Info label="Cross-Site" value={reading.crossSiteRequired ? 'REQUIRED' : 'CONDITIONAL'} />
+            <Info label="Executive" value={reading.executiveReviewRequired ? 'REQUIRED' : 'CONDITIONAL'} />
+            <Info label="Audit" value={reading.auditRequired ? 'REQUIRED' : 'CONDITIONAL'} />
+            <Info label="History" value={reading.continuityHistoryRequired ? 'REQUIRED' : 'CONDITIONAL'} />
           </Panel>
         </section>
 
         <section style={styles.actionPanel}>
           <div>
-            <p style={styles.sectionKicker}>Coordination Refresh</p>
-            <h2 style={styles.actionTitle}>
+            <p style={styles.kicker}>Coordination Refresh</p>
+            <h2 style={styles.panelTitle}>
               Refresh enterprise synchronization intelligence.
             </h2>
-            <p style={styles.actionText}>
-              Refreshing reloads cases, institutions, responders, routing
-              actions, interventions, and outcomes before recalculating
-              dependency posture.
+            <p style={styles.bodyText}>
+              Reloads cases, institutions, responders, routing actions,
+              interventions, and outcomes before recalculating doctrine.
             </p>
           </div>
 
-          <button onClick={loadCoordinationData} style={styles.primaryButton}>
+          <button onClick={loadCoordinationData} style={styles.button}>
             Refresh Coordination
           </button>
         </section>
 
-        <section style={styles.gridTwo}>
-          <Panel title="Regional Synchronization Memory">
-            <RowList rows={coordination.regionRows} />
-          </Panel>
-          <Panel title="Institution Synchronization Memory">
-            <RowList rows={coordination.institutionRows} />
-          </Panel>
-          <Panel title="Responder Synchronization Memory">
-            <RowList rows={coordination.responderRows} />
-          </Panel>
-          <Panel title="Lifecycle Synchronization Memory">
-            <RowList rows={coordination.lifecycleRows} />
-          </Panel>
-        </section>
+        <Panel title="Synchronization Memory">
+          <div style={styles.memoryGrid}>
+            {memoryGroups.map((group) => (
+              <MemoryGroup key={group.title} title={group.title} rows={group.rows} />
+            ))}
+          </div>
+        </Panel>
 
-        <section style={styles.orderPanel}>
-          <p style={styles.sectionKicker}>Copy-Ready Coordination Brief</p>
+        <section style={styles.reportPanel}>
+          <p style={styles.kicker}>COPY-READY COORDINATION BRIEF</p>
           <h2 style={styles.panelTitle}>
             What dependencies must synchronize before continuity can move?
           </h2>
-          <pre style={styles.summaryBox}>{coordination.copyReadyBrief}</pre>
+          <pre style={styles.pre}>{coordination.copyReadyBrief}</pre>
         </section>
 
         <section style={styles.doctrineCard}>
@@ -315,9 +231,7 @@ function CoordinationContent() {
             Command decides movement. Coordination synchronizes dependency.
             Cross-Site compares pattern. Situation Room interprets operating
             condition. Executive Center governs meaning. Audit preserves
-            reconstructability. Continuity must not move forward on hidden
-            ownership, routing, responder, institutional, evidence, recovery, or
-            shared dependency weakness.
+            reconstructability.
           </span>
         </section>
       </div>
@@ -329,69 +243,28 @@ function Metric({
   label,
   value,
   suffix = '',
-  textValue,
 }: {
   label: string
-  value?: number
+  value: number
   suffix?: string
-  textValue?: string
 }) {
   return (
     <article style={styles.metricCard}>
       <p style={styles.metricLabel}>{label}</p>
-      <p style={textValue ? styles.metricTextValue : styles.metricValue}>
-        {textValue || `${value ?? 0}${suffix}`}
+      <p style={styles.metricValue}>
+        {value}
+        {suffix}
       </p>
     </article>
   )
 }
 
-function MiniStat({ label, value }: { label: string; value: string }) {
+function Card({ title, value, body }: { title: string; value: string; body: string }) {
   return (
-    <article style={styles.miniStat}>
-      <p style={styles.metricLabel}>{label}</p>
-      <p style={styles.miniValue}>{value}</p>
-    </article>
-  )
-}
-
-function ExecutiveCard({
-  title,
-  value,
-  body,
-}: {
-  title: string
-  value: string
-  body: string
-}) {
-  return (
-    <article style={styles.panelCard}>
-      <p style={styles.sectionKicker}>{title}</p>
+    <article style={styles.card}>
+      <p style={styles.kicker}>{title}</p>
       <h3 style={styles.cardValue}>{value}</h3>
-      <p style={styles.panelBody}>{body}</p>
-    </article>
-  )
-}
-
-function RequirementCard({
-  label,
-  active,
-  body,
-}: {
-  label: string
-  active: boolean
-  body: string
-}) {
-  return (
-    <article
-      style={{
-        ...styles.panelCard,
-        ...(active ? styles.activePanelCard : {}),
-      }}
-    >
-      <p style={styles.sectionKicker}>{label}</p>
-      <h3 style={styles.cardValue}>{active ? 'REQUIRED' : 'WATCH'}</h3>
-      <p style={styles.panelBody}>{body}</p>
+      <p style={styles.bodyText}>{body}</p>
     </article>
   )
 }
@@ -399,7 +272,7 @@ function RequirementCard({
 function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section style={styles.panel}>
-      <p style={styles.sectionKicker}>{title}</p>
+      <p style={styles.kicker}>{title}</p>
       <div style={styles.infoList}>{children}</div>
     </section>
   )
@@ -414,11 +287,26 @@ function Info({ label, value }: { label: string; value: string }) {
   )
 }
 
-function RowList({ rows }: { rows: CGICoordinationRow[] }) {
+function MemoryGroup({ title, rows }: { title: string; rows: CGICoordinationRow[] }) {
   return (
-    <div style={styles.rowList}>
+    <article style={styles.memoryGroup}>
+      <p style={styles.memoryTitle}>{title}</p>
+      <RowList rows={rows} compact />
+    </article>
+  )
+}
+
+function RowList({
+  rows,
+  compact = false,
+}: {
+  rows: CGICoordinationRow[]
+  compact?: boolean
+}) {
+  return (
+    <div style={compact ? styles.compactRowList : styles.rowList}>
       {rows.length === 0 && (
-        <p style={styles.emptyText}>No synchronization memory available yet.</p>
+        <p style={styles.bodyText}>No synchronization memory available yet.</p>
       )}
 
       {rows.map((row, index) => (
@@ -438,8 +326,8 @@ const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
     background:
-      'radial-gradient(circle at top left, rgba(201, 162, 39, 0.14), transparent 34%), linear-gradient(135deg, #050505 0%, #0B0B0B 45%, #111111 100%)',
-    color: '#FFFFFF',
+      'radial-gradient(circle at top left, rgba(201,162,39,0.14), transparent 34%), linear-gradient(135deg, #050505 0%, #0b0b0b 45%, #111111 100%)',
+    color: '#fff',
     padding: '40px 24px 72px',
   },
   container: {
@@ -453,18 +341,16 @@ const styles: Record<string, CSSProperties> = {
     gridTemplateColumns: 'minmax(0, 1.45fr) minmax(320px, 0.75fr)',
     gap: 24,
     padding: 32,
-    border: '1px solid rgba(201, 162, 39, 0.34)',
+    border: '1px solid rgba(201,162,39,0.34)',
     borderRadius: 28,
-    background:
-      'linear-gradient(135deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018))',
-    boxShadow: '0 28px 80px rgba(0,0,0,0.38)',
+    background: 'rgba(255,255,255,0.045)',
   },
   kicker: {
     margin: 0,
-    color: '#C9A227',
-    fontSize: 12,
-    fontWeight: 900,
-    letterSpacing: '0.22em',
+    color: '#c9a227',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.18em',
     textTransform: 'uppercase',
   },
   title: {
@@ -477,12 +363,12 @@ const styles: Record<string, CSSProperties> = {
   subtitle: {
     maxWidth: 880,
     margin: '18px 0 0',
-    color: '#C8CDD4',
+    color: '#c8cdd4',
     fontSize: 17,
     lineHeight: 1.8,
   },
   statusBox: {
-    border: '1px solid rgba(201, 162, 39, 0.5)',
+    border: '1px solid rgba(201,162,39,0.5)',
     borderRadius: 24,
     padding: 24,
     background:
@@ -490,7 +376,7 @@ const styles: Record<string, CSSProperties> = {
   },
   statusLabel: {
     margin: 0,
-    color: '#D7B84C',
+    color: '#d7b84c',
     fontSize: 11,
     fontWeight: 950,
     letterSpacing: '0.2em',
@@ -501,81 +387,34 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 950,
     letterSpacing: '-0.04em',
     lineHeight: 1.05,
-    overflowWrap: 'anywhere',
   },
   statusMeaning: {
     margin: '12px 0 0',
-    color: '#ECE7D7',
+    color: '#ece7d7',
     fontSize: 14,
     lineHeight: 1.7,
   },
   message: {
     padding: '14px 18px',
     borderRadius: 16,
-    color: '#D7B84C',
+    color: '#d7b84c',
     background: 'rgba(201,162,39,0.1)',
     border: '1px solid rgba(201,162,39,0.22)',
     fontWeight: 800,
   },
-  commandDeck: {
+  gridTwo: {
     display: 'grid',
-    gridTemplateColumns: '1.4fr 0.8fr',
-    gap: 24,
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 16,
   },
-  primaryCard: {
-    padding: 30,
-    borderRadius: 28,
-    background: '#FFFFFF',
-    color: '#0B0B0B',
-  },
-  consequenceCard: {
-    padding: 30,
-    borderRadius: 28,
-    background: 'rgba(0,0,0,0.38)',
-    border: '1px solid rgba(201,162,39,0.28)',
-  },
-  sectionKicker: {
-    margin: 0,
-    color: '#C9A227',
-    fontSize: 11,
-    fontWeight: 950,
-    letterSpacing: '0.18em',
-    textTransform: 'uppercase',
-  },
-  commandTitle: {
-    margin: '14px 0',
-    fontSize: 'clamp(1.8rem, 3vw, 3.2rem)',
-    lineHeight: 1.05,
-    letterSpacing: '-0.05em',
-    fontWeight: 950,
-  },
-  primaryText: {
-    margin: 0,
-    color: '#4A4A4A',
-    lineHeight: 1.7,
-    fontSize: 14,
-  },
-  consequenceTitle: {
-    margin: '14px 0',
-    fontSize: 28,
-    lineHeight: 1.1,
-    letterSpacing: '-0.04em',
-  },
-  bodyText: {
-    margin: '8px 0 0',
-    color: '#AEB6C2',
-    lineHeight: 1.7,
-    fontSize: 14,
-  },
-  commandMetaGrid: {
+  gridFour: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: 12,
-    marginTop: 24,
+    gap: 16,
   },
-  metricsGrid: {
+  metricGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
     gap: 14,
   },
   metricCard: {
@@ -586,7 +425,7 @@ const styles: Record<string, CSSProperties> = {
   },
   metricLabel: {
     margin: 0,
-    color: '#858D98',
+    color: '#858d98',
     fontSize: 10,
     fontWeight: 950,
     letterSpacing: '0.14em',
@@ -594,43 +433,9 @@ const styles: Record<string, CSSProperties> = {
   },
   metricValue: {
     margin: '10px 0 0',
-    color: '#FFFFFF',
-    fontSize: 28,
+    color: '#fff',
+    fontSize: 26,
     fontWeight: 950,
-    lineHeight: 1.15,
-    overflowWrap: 'anywhere',
-  },
-  metricTextValue: {
-    margin: '10px 0 0',
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: 950,
-    lineHeight: 1.25,
-    overflowWrap: 'anywhere',
-  },
-  miniStat: {
-    padding: 14,
-    borderRadius: 16,
-    background: 'rgba(255,255,255,0.055)',
-    border: '1px solid rgba(255,255,255,0.09)',
-  },
-  miniValue: {
-    margin: '8px 0 0',
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: 850,
-    lineHeight: 1.45,
-    overflowWrap: 'anywhere',
-  },
-  gridFour: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: 16,
-  },
-  gridTwo: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: 16,
   },
   panel: {
     padding: 28,
@@ -638,17 +443,26 @@ const styles: Record<string, CSSProperties> = {
     background: 'rgba(255,255,255,0.045)',
     border: '1px solid rgba(255,255,255,0.1)',
   },
-  panelCard: {
+  card: {
     padding: 22,
     borderRadius: 22,
     background: 'rgba(255,255,255,0.045)',
     border: '1px solid rgba(255,255,255,0.09)',
     minHeight: 150,
   },
-  activePanelCard: {
-    background:
-      'linear-gradient(135deg, rgba(201,162,39,0.14), rgba(255,255,255,0.035))',
-    border: '1px solid rgba(201,162,39,0.38)',
+  cardValue: {
+    margin: '12px 0 0',
+    color: '#fff',
+    fontSize: 19,
+    lineHeight: 1.25,
+    overflowWrap: 'anywhere',
+  },
+  bigText: {
+    margin: '14px 0',
+    fontSize: 'clamp(1.55rem, 3vw, 2.7rem)',
+    lineHeight: 1.05,
+    letterSpacing: '-0.05em',
+    fontWeight: 950,
   },
   panelTitle: {
     margin: '12px 0 0',
@@ -656,31 +470,11 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.15,
     letterSpacing: '-0.045em',
   },
-  cardValue: {
-    margin: '12px 0 0',
-    color: '#FFFFFF',
-    fontSize: 19,
-    lineHeight: 1.25,
-    overflowWrap: 'anywhere',
-  },
-  panelBody: {
-    marginTop: 10,
-    color: '#AEB6C2',
+  bodyText: {
+    margin: '10px 0 0',
+    color: '#aeb6c2',
+    lineHeight: 1.7,
     fontSize: 14,
-    lineHeight: 1.65,
-  },
-  memoryPanel: {
-    padding: 28,
-    borderRadius: 28,
-    background:
-      'linear-gradient(135deg, rgba(201,162,39,0.13), rgba(255,255,255,0.035))',
-    border: '1px solid rgba(201,162,39,0.32)',
-  },
-  memoryGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: 12,
-    marginTop: 20,
   },
   infoList: {
     display: 'grid',
@@ -697,14 +491,14 @@ const styles: Record<string, CSSProperties> = {
     border: '1px solid rgba(255,255,255,0.08)',
   },
   infoLabel: {
-    color: '#858D98',
+    color: '#858d98',
     fontWeight: 900,
     fontSize: 12,
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
   },
   infoValue: {
-    color: '#FFFFFF',
+    color: '#fff',
     lineHeight: 1.5,
     overflowWrap: 'anywhere',
   },
@@ -718,74 +512,76 @@ const styles: Record<string, CSSProperties> = {
     background: 'rgba(255,255,255,0.045)',
     border: '1px solid rgba(201,162,39,0.24)',
   },
-  actionTitle: {
-    margin: '12px 0 0',
-    color: '#FFFFFF',
-    fontSize: 26,
-    lineHeight: 1.15,
-    letterSpacing: '-0.04em',
-  },
-  actionText: {
-    margin: '12px 0 0',
-    color: '#AEB6C2',
-    lineHeight: 1.7,
-    maxWidth: 820,
-  },
-  primaryButton: {
+  button: {
     border: 'none',
     borderRadius: 999,
     padding: '14px 22px',
-    background: '#C9A227',
+    background: '#c9a227',
     color: '#090909',
     fontWeight: 950,
     cursor: 'pointer',
     whiteSpace: 'nowrap',
   },
+  memoryGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 14,
+  },
+  memoryGroup: {
+    padding: 16,
+    borderRadius: 20,
+    background: 'rgba(0,0,0,0.2)',
+    border: '1px solid rgba(255,255,255,0.08)',
+  },
+  memoryTitle: {
+    margin: '0 0 12px',
+    color: '#d7b84c',
+    fontSize: 12,
+    fontWeight: 950,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+  },
   rowList: {
     display: 'grid',
     gap: 10,
+  },
+  compactRowList: {
+    display: 'grid',
+    gap: 8,
   },
   rowItem: {
     display: 'flex',
     justifyContent: 'space-between',
     gap: 16,
-    alignItems: 'flex-start',
     padding: 14,
     borderRadius: 16,
     background: 'rgba(0,0,0,0.22)',
     border: '1px solid rgba(255,255,255,0.08)',
   },
   rowLabel: {
-    color: '#FFFFFF',
-    lineHeight: 1.35,
+    color: '#fff',
   },
   rowDetail: {
-    color: '#AEB6C2',
+    color: '#aeb6c2',
     margin: '6px 0 0',
     fontSize: 12,
-    lineHeight: 1.4,
   },
   rowValue: {
-    color: '#D7B84C',
+    color: '#d7b84c',
     fontSize: 18,
   },
-  emptyText: {
-    margin: 0,
-    color: '#AEB6C2',
-    lineHeight: 1.6,
-  },
-  orderPanel: {
+  reportPanel: {
     padding: 28,
     borderRadius: 28,
-    background: '#FFFFFF',
-    color: '#0B0B0B',
+    background: '#fff',
+    color: '#0b0b0b',
   },
-  summaryBox: {
+  pre: {
     marginTop: 20,
     padding: 22,
     borderRadius: 20,
-    background: '#0A0A0A',
-    color: '#F8F6F1',
+    background: '#0a0a0a',
+    color: '#f8f6f1',
     whiteSpace: 'pre-wrap',
     fontSize: 13,
     lineHeight: 1.7,
@@ -798,7 +594,7 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: 24,
     background: '#050505',
     border: '1px solid rgba(201,162,39,0.42)',
-    color: '#FFFFFF',
+    color: '#fff',
     lineHeight: 1.7,
   },
 }
