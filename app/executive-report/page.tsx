@@ -1,18 +1,13 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import type { CSSProperties, ReactNode } from 'react'
+import { useMemo, useState } from 'react'
+import type { CSSProperties } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { buildCGIDemoScenario } from '@/lib/cgiDemoScenarioEngine'
 import { buildExecutiveConclusionReport } from '@/lib/cgiExecutiveReportDoctrineEngine'
-import {
-  loadCGIExecutiveReports,
-  saveCGIExecutiveReport,
-} from '@/lib/cgiPersistenceEngine'
-
-type PersistedExecutiveReport = Record<string, any>
+import { saveCGIExecutiveReport } from '@/lib/cgiPersistenceEngine'
 
 export default function ExecutiveReportPage() {
   return (
@@ -29,9 +24,6 @@ export default function ExecutiveReportPage() {
 function ExecutiveReportContent() {
   const [saveMessage, setSaveMessage] = useState('')
   const [saving, setSaving] = useState(false)
-  const [reports, setReports] = useState<PersistedExecutiveReport[]>([])
-  const [loadingReports, setLoadingReports] = useState(false)
-  const [reportMessage, setReportMessage] = useState('')
 
   const featured = useMemo(
     () => buildCGIDemoScenario('FUEL_LOGISTICS_CHAIN_PROOF'),
@@ -44,27 +36,6 @@ function ExecutiveReportContent() {
     () => buildExecutiveConclusionReport(featured),
     [featured],
   )
-
-  async function loadReports() {
-    try {
-      setLoadingReports(true)
-      setReportMessage('Loading persisted executive reports...')
-
-      const loadedReports = await loadCGIExecutiveReports()
-
-      setReports(Array.isArray(loadedReports) ? loadedReports : [])
-      setReportMessage('Executive report archive loaded.')
-    } catch (error) {
-      console.error(error)
-      setReportMessage('Executive report archive could not be loaded.')
-    } finally {
-      setLoadingReports(false)
-    }
-  }
-
-  useEffect(() => {
-    loadReports()
-  }, [])
 
   async function handleSaveReport() {
     try {
@@ -97,7 +68,6 @@ function ExecutiveReportContent() {
       })
 
       setSaveMessage('Executive continuity conclusion saved.')
-      await loadReports()
     } catch (error) {
       console.error(error)
       setSaveMessage('Executive continuity conclusion could not be saved.')
@@ -115,15 +85,15 @@ function ExecutiveReportContent() {
           <h1 style={styles.title}>Institutional Continuity Conclusion</h1>
 
           <p style={styles.subtitle}>
-            Board-ready conclusion layer converting the full CGI continuity
-            chain into a stability decision, CEO sentence, executive
-            recommendation, memory transfer package, and audit confidence.
+            Board-ready conclusion layer converting the CGI continuity chain
+            into a stability decision, CEO sentence, executive recommendation,
+            memory transfer, and audit confidence.
           </p>
         </section>
 
         <section style={styles.heroCard}>
           <div>
-            <p style={styles.sectionKicker}>Enterprise Continuity Conclusion</p>
+            <p style={styles.sectionKicker}>Executive Conclusion</p>
 
             <h2 style={styles.heroTitle}>
               {executiveReport.stabilityDecision}
@@ -142,7 +112,7 @@ function ExecutiveReportContent() {
 
         <section style={styles.decisionCard}>
           <div>
-            <p style={styles.sectionKicker}>Institutional Stability Decision</p>
+            <p style={styles.sectionKicker}>Stability Decision</p>
 
             <h2 style={styles.cardTitle}>
               {executiveReport.institutionalStabilityDecision}
@@ -158,7 +128,7 @@ function ExecutiveReportContent() {
             />
             <PriorityItem title="Trust Level" body={executiveReport.trustLevel} />
             <PriorityItem
-              title="Stability Board Eligibility"
+              title="Board Eligibility"
               body={executiveReport.stabilityBoardEligibility}
             />
             <PriorityItem
@@ -169,13 +139,71 @@ function ExecutiveReportContent() {
         </section>
 
         <section style={styles.card}>
-          <p style={styles.sectionKicker}>Continuity Derivation Standard</p>
+          <p style={styles.sectionKicker}>Required Executive Action</p>
 
           <h2 style={styles.cardTitle}>
-            The report conclusion now derives from one CGI doctrine layer.
+            {executiveReport.executiveRecommendation}
+          </h2>
+
+          <p style={styles.bodyText}>{executiveReport.executiveSummary}</p>
+
+          <div style={styles.priorityGrid}>
+            <PriorityItem
+              title="Required Action"
+              body={executiveReport.requiredExecutiveAction}
+            />
+            <PriorityItem
+              title="Dominant Concern"
+              body={executiveReport.dominantConcern}
+            />
+            <PriorityItem
+              title="Required Evidence"
+              body={executiveReport.requiredEvidence}
+            />
+          </div>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Memory Transfer</p>
+
+          <h2 style={styles.cardTitle}>
+            What must survive after the executive report?
           </h2>
 
           <div style={styles.memoryGrid}>
+            <PriorityItem
+              title="Structural Lesson"
+              body={executiveReport.memoryTransfer.structuralLesson}
+            />
+            <PriorityItem
+              title="Recurrence Risk"
+              body={executiveReport.memoryTransfer.recurrenceRisk}
+            />
+            <PriorityItem
+              title="Durability Status"
+              body={executiveReport.memoryTransfer.durabilityStatus}
+            />
+            <PriorityItem
+              title="Evidence Status"
+              body={executiveReport.memoryTransfer.evidenceStatus}
+            />
+            <PriorityItem
+              title="Institutional Learning"
+              body={executiveReport.memoryTransfer.institutionalLearning}
+            />
+            <PriorityItem title="Memory Destination" body="CGI Memory Board" />
+          </div>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Evidence Standard</p>
+
+          <h2 style={styles.cardTitle}>
+            The conclusion remains reconstructable without becoming an audit
+            page.
+          </h2>
+
+          <div style={styles.priorityGrid}>
             <PriorityItem
               title="What Is Visible"
               body={executiveReport.continuityStandard.whatIsVisible}
@@ -188,144 +216,7 @@ function ExecutiveReportContent() {
               title="Continuity Risk"
               body={executiveReport.continuityStandard.continuityRisk}
             />
-            <PriorityItem
-              title="Required Movement"
-              body={executiveReport.continuityStandard.requiredMovement}
-            />
-            <PriorityItem
-              title="Trust Level"
-              body={executiveReport.continuityStandard.trustLevel}
-            />
-            <PriorityItem
-              title="Institutional Meaning"
-              body={executiveReport.continuityStandard.institutionalMeaning}
-            />
           </div>
-        </section>
-
-        <section style={styles.gridThree}>
-          <SignalCard
-            title="Case ID"
-            value={executiveReport.caseId}
-            body="The governed continuity event used for this conclusion."
-          />
-
-          <SignalCard
-            title="Trajectory"
-            value={executiveReport.trajectory}
-            body="Continuity direction remains under executive interpretation."
-          />
-
-          <SignalCard
-            title="Report Classification"
-            value={executiveReport.classification}
-            body="This report is designed as an institutional conclusion, not a dashboard summary."
-          />
-        </section>
-
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Executive Recommendation</p>
-
-          <h2 style={styles.cardTitle}>
-            {executiveReport.executiveRecommendation}
-          </h2>
-
-          <p style={styles.bodyText}>{executiveReport.executiveSummary}</p>
-
-          <div style={styles.priorityGrid}>
-            <PriorityItem
-              title="Primary Vulnerability"
-              body={executiveReport.primaryVulnerability}
-            />
-
-            <PriorityItem
-              title="Secondary Vulnerability"
-              body={executiveReport.secondaryVulnerability}
-            />
-
-            <PriorityItem
-              title="Dominant Concern"
-              body={executiveReport.dominantConcern}
-            />
-          </div>
-        </section>
-
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Stability Board Readiness</p>
-
-          <h2 style={styles.cardTitle}>
-            Can this instability move toward institutional stability absorption?
-          </h2>
-
-          <div style={styles.gridThree}>
-            <PriorityItem
-              title="Eligibility"
-              body={executiveReport.stabilityBoardEligibility}
-            />
-
-            <PriorityItem
-              title="Decision"
-              body={executiveReport.stabilityDecision}
-            />
-
-            <PriorityItem
-              title="Required Action"
-              body={executiveReport.requiredExecutiveAction}
-            />
-          </div>
-
-          <p style={styles.bodyText}>
-            Stability Board movement is not a visual downgrade. It is a governed
-            absorption decision. CGI should only allow movement when durability,
-            evidence, recurrence memory, and audit reconstructability remain
-            attached.
-          </p>
-        </section>
-
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Memory Transfer Package</p>
-
-          <h2 style={styles.cardTitle}>
-            What must survive after the executive report?
-          </h2>
-
-          <div style={styles.memoryGrid}>
-            <PriorityItem
-              title="Structural Lesson"
-              body={executiveReport.memoryTransfer.structuralLesson}
-            />
-
-            <PriorityItem
-              title="Recurrence Risk"
-              body={executiveReport.memoryTransfer.recurrenceRisk}
-            />
-
-            <PriorityItem
-              title="Durability Status"
-              body={executiveReport.memoryTransfer.durabilityStatus}
-            />
-
-            <PriorityItem
-              title="Evidence Status"
-              body={executiveReport.memoryTransfer.evidenceStatus}
-            />
-
-            <PriorityItem
-              title="Institutional Learning"
-              body={executiveReport.memoryTransfer.institutionalLearning}
-            />
-
-            <PriorityItem title="Memory Destination" body="CGI Memory Board" />
-          </div>
-        </section>
-
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Continuity Chain Evidence</p>
-
-          <h2 style={styles.cardTitle}>
-            The conclusion remains reconstructable without turning the report
-            into another audit page.
-          </h2>
 
           <div style={styles.chainCompact}>
             {pilotThread.chain.map((stage, index) => (
@@ -337,46 +228,14 @@ function ExecutiveReportContent() {
           </div>
         </section>
 
-        <section style={styles.gridTwo}>
-          <Panel title="Cross-Site Meaning">
-            <p style={styles.panelText}>
-              The disruption did not remain isolated. North Operations, South
-              Operations, and East Operations exposed a shared logistics
-              dependency pattern requiring executive continuity interpretation.
-            </p>
+        <section style={styles.copyCard}>
+          <p style={styles.sectionKicker}>Copy-Ready Board Report</p>
 
-            <div style={styles.siteGrid}>
-              {pilotThread.sites.map((site) => (
-                <PriorityItem
-                  key={site.siteName}
-                  title={`${site.siteName} • ${site.posture}`}
-                  body={site.finding}
-                />
-              ))}
-            </div>
-          </Panel>
+          <h2 style={styles.cardTitle}>
+            What must be communicated to leadership?
+          </h2>
 
-          <Panel title="Audit Meaning">
-            <p style={styles.panelText}>{executiveReport.auditMeaning}</p>
-          </Panel>
-        </section>
-
-        <section style={styles.actionPanel}>
-          <div>
-            <p style={styles.sectionKicker}>Persistence Action</p>
-
-            <h2 style={styles.actionTitle}>
-              Preserve this executive conclusion as continuity memory.
-            </h2>
-
-            <p style={styles.actionText}>
-              Saving this conclusion creates a reconstructable executive record
-              for continuity history, institutional memory, board review, and
-              audit verification.
-            </p>
-
-            {saveMessage && <p style={styles.saveMessage}>{saveMessage}</p>}
-          </div>
+          <pre style={styles.compactPre}>{executiveReport.copyReadyReport}</pre>
 
           <button
             type="button"
@@ -389,120 +248,19 @@ function ExecutiveReportContent() {
           >
             {saving ? 'Saving...' : 'Save Conclusion'}
           </button>
+
+          {saveMessage && <p style={styles.saveMessage}>{saveMessage}</p>}
         </section>
 
-        <section style={styles.actionPanel}>
-          <div>
-            <p style={styles.sectionKicker}>Report Memory Retrieval</p>
+        <section style={styles.doctrineCard}>
+          <strong>EXECUTIVE REPORT DOCTRINE</strong>
 
-            <h2 style={styles.actionTitle}>
-              Retrieve persisted executive report history.
-            </h2>
-
-            <p style={styles.actionText}>
-              CGI can retrieve prior executive conclusions to support continuity
-              memory, board review, institutional learning, and audit
-              reconstruction.
-            </p>
-
-            {reportMessage && <p style={styles.saveMessage}>{reportMessage}</p>}
-          </div>
-
-          <button
-            type="button"
-            onClick={loadReports}
-            disabled={loadingReports}
-            style={{
-              ...styles.secondaryButton,
-              ...(loadingReports ? styles.disabledButton : {}),
-            }}
-          >
-            {loadingReports ? 'Refreshing...' : 'Refresh Reports'}
-          </button>
-        </section>
-
-        <section style={styles.gridTwo}>
-          <Panel title="Copy-Ready Board Conclusion">
-            <pre style={styles.compactPre}>{executiveReport.copyReadyReport}</pre>
-          </Panel>
-
-          <Panel title="Executive Summary">
-            <pre style={styles.compactPre}>{executiveReport.copyReadySummary}</pre>
-          </Panel>
-        </section>
-
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Persisted Report Archive</p>
-
-          <h2 style={styles.cardTitle}>
-            Executive continuity reports retrieved from Supabase.
-          </h2>
-
-          <p style={styles.bodyText}>Report Count: {reports.length}</p>
-
-          <div style={styles.archiveList}>
-            {reports.length === 0 ? (
-              <p style={styles.emptyText}>
-                No persisted executive reports are currently available.
-              </p>
-            ) : (
-              reports.map((item, index) => (
-                <article
-                  key={item.id ?? `${getReportValue(item, 'createdAt')}-${index}`}
-                  style={styles.archiveItem}
-                >
-                  <div style={styles.archiveHeader}>
-                    <div>
-                      <p style={styles.panelKicker}>
-                        {getReportValue(item, 'reportClassification') ??
-                          'EXECUTIVE_REPORT'}
-                      </p>
-
-                      <h3 style={styles.archiveTitle}>
-                        {getReportValue(item, 'reportTitle') ??
-                          'Executive Continuity Report'}
-                      </h3>
-                    </div>
-
-                    <p style={styles.archiveDate}>
-                      {formatDate(getReportValue(item, 'createdAt'))}
-                    </p>
-                  </div>
-
-                  <div style={styles.archiveGrid}>
-                    <PriorityItem
-                      title="Current Posture"
-                      body={
-                        getReportValue(item, 'currentContinuityPosture') ??
-                        'Not recorded'
-                      }
-                    />
-
-                    <PriorityItem
-                      title="History Direction"
-                      body={
-                        getReportValue(item, 'historyDirection') ??
-                        'Not recorded'
-                      }
-                    />
-
-                    <PriorityItem
-                      title="Required Action"
-                      body={
-                        getReportValue(item, 'requiredExecutiveAction') ??
-                        'Not recorded'
-                      }
-                    />
-                  </div>
-
-                  <p style={styles.archiveSummary}>
-                    {getReportValue(item, 'executiveSummary') ??
-                      'No executive summary was recorded for this report.'}
-                  </p>
-                </article>
-              ))
-            )}
-          </div>
+          <span>
+            Executive Report concludes. It does not reopen operations, replace
+            Command, become the Memory Board, or duplicate Audit. It preserves
+            the stability decision, required communication, evidence standard,
+            memory transfer, and reconstructable conclusion.
+          </span>
         </section>
       </div>
     </main>
@@ -513,81 +271,12 @@ function formatLabel(value: string): string {
   return value.replaceAll('_', ' ')
 }
 
-function getReportValue(
-  report: PersistedExecutiveReport,
-  key: string,
-): string | null {
-  const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
-
-  const value =
-    report[key] ??
-    report[snakeKey] ??
-    report.rawPayload?.report?.[key] ??
-    report.raw_payload?.report?.[key] ??
-    report.rawPayload?.executiveReport?.[key] ??
-    report.raw_payload?.executiveReport?.[key] ??
-    null
-
-  if (value === null || value === undefined) return null
-
-  return String(value)
-}
-
-function formatDate(value: string | null) {
-  if (!value) return 'Date not recorded'
-
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) return value
-
-  return date.toLocaleString()
-}
-
-function SignalCard({
-  title,
-  value,
-  body,
-}: {
-  title: string
-  value: string
-  body: string
-}) {
-  return (
-    <article style={styles.signalCard}>
-      <p style={styles.panelKicker}>{title}</p>
-      <h3 style={styles.signalValue}>{value}</h3>
-      <p style={styles.panelBody}>{body}</p>
-    </article>
-  )
-}
-
-function PriorityItem({
-  title,
-  body,
-}: {
-  title: string
-  body: string
-}) {
+function PriorityItem({ title, body }: { title: string; body: string }) {
   return (
     <article style={styles.priorityItem}>
       <p style={styles.panelKicker}>{title}</p>
       <p style={styles.priorityBody}>{body}</p>
     </article>
-  )
-}
-
-function Panel({
-  title,
-  children,
-}: {
-  title: string
-  children: ReactNode
-}) {
-  return (
-    <section style={styles.panel}>
-      <p style={styles.panelKicker}>{title}</p>
-      <div style={styles.panelBody}>{children}</div>
-    </section>
   )
 }
 
@@ -605,14 +294,14 @@ const styles: Record<string, CSSProperties> = {
     boxSizing: 'border-box',
   },
   header: {
-    marginBottom: '20px',
-    paddingTop: '4px',
+    marginBottom: 20,
+    paddingTop: 4,
   },
   kicker: {
     color: '#d6b25e',
-    fontSize: '12px',
+    fontSize: 12,
     fontWeight: 900,
-    letterSpacing: '2px',
+    letterSpacing: 2,
     margin: 0,
   },
   title: {
@@ -623,38 +312,22 @@ const styles: Record<string, CSSProperties> = {
   },
   subtitle: {
     color: '#cfc7b5',
-    maxWidth: '860px',
+    maxWidth: 860,
     lineHeight: 1.65,
-    fontSize: '16px',
+    fontSize: 16,
     margin: 0,
   },
   heroCard: {
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1.35fr) minmax(260px, 0.65fr)',
-    gap: '16px',
+    gap: 16,
     background:
       'linear-gradient(135deg, rgba(214,178,94,0.1), rgba(255,255,255,0.02))',
     border: '1px solid rgba(214,178,94,0.28)',
-    borderRadius: '26px',
-    padding: '24px',
-    marginBottom: '16px',
+    borderRadius: 26,
+    padding: 24,
+    marginBottom: 16,
     boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
-  },
-  decisionCard: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.1fr) minmax(300px, 0.9fr)',
-    gap: '16px',
-    background:
-      'linear-gradient(135deg, rgba(214,178,94,0.1), rgba(255,255,255,0.02))',
-    border: '1px solid rgba(214,178,94,0.34)',
-    borderRadius: '26px',
-    padding: '24px',
-    marginBottom: '16px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
-  },
-  decisionStack: {
-    display: 'grid',
-    gap: '12px',
   },
   sectionKicker: {
     color: '#d6b25e',
@@ -662,7 +335,7 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: '0.14em',
     textTransform: 'uppercase',
     margin: 0,
-    fontSize: '12px',
+    fontSize: 12,
   },
   heroTitle: {
     color: '#fff8e7',
@@ -675,91 +348,102 @@ const styles: Record<string, CSSProperties> = {
     color: '#cfc7b5',
     lineHeight: 1.65,
     margin: 0,
-    maxWidth: '760px',
-    fontSize: '16px',
+    maxWidth: 760,
+    fontSize: 16,
   },
   statusBox: {
     background: 'rgba(214,178,94,0.12)',
     border: '1px solid rgba(214,178,94,0.28)',
-    borderRadius: '20px',
-    padding: '18px',
+    borderRadius: 20,
+    padding: 18,
     alignSelf: 'stretch',
   },
   statusLabel: {
     color: '#d6b25e',
     fontWeight: 900,
     margin: '0 0 10px',
-    fontSize: '12px',
+    fontSize: 12,
     textTransform: 'uppercase',
     letterSpacing: '0.12em',
   },
   statusValue: {
     color: '#fff8e7',
-    fontSize: '22px',
+    fontSize: 22,
     lineHeight: 1.25,
     margin: 0,
     fontWeight: 900,
   },
-  gridThree: {
+  decisionCard: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '14px',
-    marginBottom: '16px',
+    gridTemplateColumns: 'minmax(0, 1.1fr) minmax(300px, 0.9fr)',
+    gap: 16,
+    background:
+      'linear-gradient(135deg, rgba(214,178,94,0.1), rgba(255,255,255,0.02))',
+    border: '1px solid rgba(214,178,94,0.34)',
+    borderRadius: 26,
+    padding: 24,
+    marginBottom: 16,
+    boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
   },
-  gridTwo: {
+  decisionStack: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '16px',
-    marginBottom: '16px',
-  },
-  signalCard: {
-    background: '#11100d',
-    border: '1px solid rgba(214,178,94,0.18)',
-    borderRadius: '18px',
-    padding: '16px',
-    minHeight: '150px',
-    boxSizing: 'border-box',
-  },
-  signalValue: {
-    color: '#fff8e7',
-    fontSize: '22px',
-    lineHeight: 1.15,
-    margin: '10px 0',
-    overflowWrap: 'anywhere',
+    gap: 12,
   },
   card: {
     background: '#090807',
     border: '1px solid rgba(214,178,94,0.18)',
-    borderRadius: '22px',
-    padding: '20px',
-    marginBottom: '16px',
+    borderRadius: 22,
+    padding: 20,
+    marginBottom: 16,
     boxShadow: '0 20px 50px rgba(0,0,0,0.24)',
     boxSizing: 'border-box',
     overflow: 'hidden',
   },
+  copyCard: {
+    background: '#090807',
+    border: '1px solid rgba(214,178,94,0.28)',
+    borderRadius: 22,
+    padding: 20,
+    marginBottom: 16,
+    boxShadow: '0 20px 50px rgba(0,0,0,0.24)',
+  },
   cardTitle: {
     color: '#fff8e7',
-    fontSize: '26px',
+    fontSize: 26,
     lineHeight: 1.15,
-    margin: '10px 0 10px',
+    margin: '10px 0',
   },
   bodyText: {
     color: '#cfc7b5',
     lineHeight: 1.7,
     margin: 0,
-    maxWidth: '900px',
+    maxWidth: 900,
   },
   priorityGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '12px',
-    marginTop: '16px',
+    gap: 12,
+    marginTop: 16,
+  },
+  memoryGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 16,
   },
   priorityItem: {
     background: '#11100d',
     border: '1px solid rgba(214,178,94,0.18)',
-    borderRadius: '16px',
-    padding: '14px',
+    borderRadius: 16,
+    padding: 14,
+  },
+  panelKicker: {
+    color: '#d6b25e',
+    fontSize: 12,
+    fontWeight: 900,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    margin: 0,
   },
   priorityBody: {
     color: '#fff8e7',
@@ -768,27 +452,21 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 700,
     overflowWrap: 'anywhere',
   },
-  memoryGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '12px',
-    marginTop: '16px',
-  },
   chainCompact: {
     display: 'flex',
     flexWrap: 'wrap',
-    gap: '10px',
-    marginTop: '16px',
+    gap: 10,
+    marginTop: 16,
   },
   chainPill: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '8px',
+    gap: 8,
     background: '#11100d',
     border: '1px solid rgba(214,178,94,0.18)',
-    borderRadius: '999px',
+    borderRadius: 999,
     color: '#fff8e7',
-    fontSize: '13px',
+    fontSize: 13,
     fontWeight: 800,
     padding: '8px 12px',
   },
@@ -796,163 +474,56 @@ const styles: Record<string, CSSProperties> = {
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '22px',
-    height: '22px',
-    borderRadius: '999px',
+    width: 22,
+    height: 22,
+    borderRadius: 999,
     background: 'rgba(214,178,94,0.16)',
     color: '#d6b25e',
-    fontSize: '12px',
+    fontSize: 12,
     fontWeight: 900,
   },
-  panel: {
-    background: '#11100d',
+  compactPre: {
+    whiteSpace: 'pre-wrap',
+    background: '#050505',
     border: '1px solid rgba(214,178,94,0.18)',
-    borderRadius: '18px',
-    padding: '16px',
-    minHeight: '220px',
-    boxSizing: 'border-box',
-    overflow: 'hidden',
-  },
-  panelKicker: {
-    color: '#d6b25e',
-    fontSize: '12px',
-    fontWeight: 900,
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
-    margin: 0,
-  },
-  panelBody: {
-    color: '#cfc7b5',
-    fontSize: '14px',
-    lineHeight: 1.6,
-    marginTop: '10px',
-  },
-  panelText: {
-    color: '#cfc7b5',
-    lineHeight: 1.7,
-    margin: '0 0 12px',
-  },
-  siteGrid: {
-    display: 'grid',
-    gap: '12px',
-    marginTop: '16px',
-  },
-  actionPanel: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1fr) auto',
-    gap: '16px',
-    alignItems: 'center',
-    background:
-      'linear-gradient(135deg, rgba(214,178,94,0.12), rgba(255,255,255,0.02))',
-    border: '1px solid rgba(214,178,94,0.28)',
-    borderRadius: '22px',
-    padding: '18px',
-    marginBottom: '16px',
-    boxSizing: 'border-box',
-  },
-  actionTitle: {
+    borderRadius: 14,
+    padding: 14,
     color: '#fff8e7',
-    fontSize: '22px',
-    lineHeight: 1.2,
-    margin: '8px 0',
+    lineHeight: 1.5,
+    fontSize: 13,
+    overflowX: 'auto',
+    margin: '16px 0 0',
   },
-  actionText: {
-    color: '#cfc7b5',
-    lineHeight: 1.55,
-    margin: 0,
-    maxWidth: '760px',
+  primaryButton: {
+    border: 'none',
+    borderRadius: 14,
+    background: '#c9a227',
+    color: '#050505',
+    cursor: 'pointer',
+    fontSize: 14,
+    fontWeight: 900,
+    minHeight: 48,
+    padding: '0 18px',
+    whiteSpace: 'nowrap',
+    marginTop: 16,
+  },
+  disabledButton: {
+    cursor: 'not-allowed',
+    opacity: 0.65,
   },
   saveMessage: {
     color: '#d6b25e',
     fontWeight: 900,
     margin: '12px 0 0',
   },
-  primaryButton: {
-    border: 'none',
-    borderRadius: '14px',
-    background: '#c9a227',
-    color: '#050505',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: 900,
-    minHeight: '48px',
-    padding: '0 18px',
-    whiteSpace: 'nowrap',
-  },
-  secondaryButton: {
-    border: '1px solid rgba(214,178,94,0.34)',
-    borderRadius: '14px',
-    background: 'rgba(214,178,94,0.1)',
-    color: '#fff8e7',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: 900,
-    minHeight: '48px',
-    padding: '0 18px',
-    whiteSpace: 'nowrap',
-  },
-  disabledButton: {
-    cursor: 'not-allowed',
-    opacity: 0.65,
-  },
-  compactPre: {
-    whiteSpace: 'pre-wrap',
+  doctrineCard: {
+    display: 'grid',
+    gap: 10,
     background: '#050505',
-    border: '1px solid rgba(214,178,94,0.18)',
-    borderRadius: '14px',
-    padding: '14px',
+    border: '1px solid rgba(214,178,94,0.28)',
+    borderRadius: 18,
+    padding: 18,
     color: '#fff8e7',
-    lineHeight: 1.5,
-    fontSize: '13px',
-    overflowX: 'auto',
-    margin: 0,
-  },
-  archiveList: {
-    display: 'grid',
-    gap: '14px',
-    marginTop: '16px',
-  },
-  archiveItem: {
-    background: '#11100d',
-    border: '1px solid rgba(214,178,94,0.18)',
-    borderRadius: '18px',
-    padding: '16px',
-  },
-  archiveHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    gap: '14px',
-    alignItems: 'flex-start',
-    marginBottom: '14px',
-  },
-  archiveTitle: {
-    color: '#fff8e7',
-    fontSize: '20px',
-    lineHeight: 1.2,
-    margin: '8px 0 0',
-  },
-  archiveDate: {
-    color: '#d6b25e',
-    fontWeight: 800,
-    fontSize: '13px',
-    lineHeight: 1.4,
-    margin: 0,
-    textAlign: 'right',
-    minWidth: '180px',
-  },
-  archiveGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '12px',
-  },
-  archiveSummary: {
-    color: '#cfc7b5',
     lineHeight: 1.65,
-    margin: '14px 0 0',
-  },
-  emptyText: {
-    color: '#cfc7b5',
-    lineHeight: 1.6,
-    margin: 0,
   },
 }
