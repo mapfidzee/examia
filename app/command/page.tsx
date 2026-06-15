@@ -251,16 +251,16 @@ function CommandContent() {
             <h2 style={styles.commandTitle}>{intelligence.executiveAction}</h2>
 
             <div style={styles.commandMetaGrid}>
-              <MiniStat
+              <ActionStat
                 label="Movement"
                 value={intelligence.movementDecision}
               />
-              <MiniStat
+              <ActionStat
                 label="Next Destination"
                 value={intelligence.nextDestination}
               />
-              <MiniStat label="Readiness" value={intelligence.readiness} />
-              <MiniStat
+              <ActionStat label="Readiness" value={intelligence.readiness} />
+              <ActionStat
                 label="Dominant Threat"
                 value={intelligence.dominantThreat}
               />
@@ -317,7 +317,7 @@ function CommandContent() {
               body="Next governed destination"
               active
             />
-            <ChainStep label="Executive Report" body="Formal conclusion" />
+            <ChainStep label="Executive Center" body="Interprets meaning" />
             <ChainStep label="Audit" body="Reconstructs truth" />
           </div>
         </section>
@@ -1106,6 +1106,15 @@ function Metric({ label, value }: { label: string; value: string }) {
   )
 }
 
+function ActionStat({ label, value }: { label: string; value: string }) {
+  return (
+    <article style={styles.actionStat}>
+      <p style={styles.actionStatLabel}>{label}</p>
+      <p style={styles.actionStatValue}>{value}</p>
+    </article>
+  )
+}
+
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
     <article style={styles.miniStat}>
@@ -1229,6 +1238,7 @@ const styles: Record<string, CSSProperties> = {
   consequenceCard: v.emphasisPanel,
   commandTitle: {
     margin: '14px 0',
+    color: '#050505',
     fontSize: 'clamp(1.8rem, 3vw, 3.2rem)',
     lineHeight: 1.05,
     letterSpacing: '-0.05em',
@@ -1246,6 +1256,29 @@ const styles: Record<string, CSSProperties> = {
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
     gap: 12,
     marginTop: 24,
+  },
+  actionStat: {
+    minHeight: 92,
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(5,5,5,0.06)',
+    border: '1px solid rgba(5,5,5,0.12)',
+  },
+  actionStatLabel: {
+    margin: 0,
+    color: '#9f8142',
+    fontSize: 10,
+    fontWeight: 950,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+  },
+  actionStatValue: {
+    margin: '10px 0 0',
+    color: '#050505',
+    fontSize: 13,
+    fontWeight: 950,
+    lineHeight: 1.35,
+    overflowWrap: 'anywhere',
   },
   metricsGrid: v.gridSix,
   metricCard: v.card,
