@@ -162,7 +162,10 @@ function CoordinationCenterContent() {
               label="Required Action"
               value={coordination.executivePosture.actionLanguage}
             />
-            <Info label="Required Evidence" value={coordination.evidenceLanguage} />
+            <Info
+              label="Required Evidence"
+              value={coordination.evidenceLanguage}
+            />
             <Info label="Dominant Site" value={coordination.dominantSite.name} />
           </Panel>
 
@@ -227,24 +230,22 @@ function CoordinationCenterContent() {
           </div>
         </section>
 
-        <section style={styles.gridThree}>
-          {coordination.siteBriefings.map(({ site, briefing }) => (
-            <article key={site.name} style={styles.siteCard}>
-              <p style={styles.kicker}>{site.region}</p>
-              <h3 style={styles.cardValue}>{site.name}</h3>
+        <Panel title="Site Synchronization Matrix">
+          <div style={styles.matrix}>
+            <div style={styles.matrixHeader}>Site</div>
+            <div style={styles.matrixHeader}>Need</div>
+            <div style={styles.matrixHeader}>Posture</div>
 
-              <div style={styles.siteMeta}>
-                <MiniStat label="Need" value={site.coordinationNeed} />
-                <MiniStat
-                  label="Posture"
-                  value={briefing.synthesis.synthesisPosture}
-                />
-              </div>
-
-              <p style={styles.bodyText}>{briefing.executiveSummary}</p>
-            </article>
-          ))}
-        </section>
+            {coordination.siteBriefings.map(({ site, briefing }) => (
+              <SiteMatrixRow
+                key={site.name}
+                site={site.name}
+                need={site.coordinationNeed}
+                posture={briefing.synthesis.synthesisPosture}
+              />
+            ))}
+          </div>
+        </Panel>
 
         <Panel title="Recent Coordination Memory">
           <div style={styles.memorySummaryGrid}>
@@ -261,12 +262,35 @@ function CoordinationCenterContent() {
         </Panel>
 
         <section style={styles.reportPanel}>
-          <p style={styles.kicker}>COPY-READY COORDINATION BRIEF</p>
+          <p style={styles.kicker}>COORDINATION BRIEF</p>
           <h2 style={styles.bigText}>
             Coordination must remain executive-readable, evidence-bound, and
             reconstructable.
           </h2>
-          <pre style={styles.pre}>{coordination.copyReadyCoordinationBrief}</pre>
+
+          <div style={styles.briefGrid}>
+            <Info
+              label="Question"
+              value={coordination.coordinationQuestion}
+            />
+            <Info label="Priority Site" value={coordination.dominantSite.name} />
+            <Info
+              label="Need"
+              value={coordination.dominantSite.coordinationNeed}
+            />
+            <Info
+              label="Posture"
+              value={coordination.dominantBriefing.synthesis.synthesisPosture}
+            />
+            <Info
+              label="Required Action"
+              value={coordination.executivePosture.actionLanguage}
+            />
+            <Info
+              label="Required Evidence"
+              value={coordination.evidenceLanguage}
+            />
+          </div>
         </section>
 
         <section style={styles.doctrineCard}>
@@ -298,6 +322,24 @@ function MiniStat({ label, value }: { label: string; value: string }) {
       <p style={styles.metricLabel}>{label}</p>
       <p style={styles.miniValue}>{value}</p>
     </article>
+  )
+}
+
+function SiteMatrixRow({
+  site,
+  need,
+  posture,
+}: {
+  site: string
+  need: string
+  posture: string
+}) {
+  return (
+    <>
+      <div style={styles.matrixCellStrong}>{site}</div>
+      <div style={styles.matrixCell}>{need}</div>
+      <div style={styles.matrixCell}>{posture}</div>
+    </>
   )
 }
 
@@ -405,11 +447,6 @@ const styles: Record<string, CSSProperties> = {
   gridTwo: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: 16,
-  },
-  gridThree: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
     gap: 16,
   },
   metricGrid: {
@@ -531,18 +568,6 @@ const styles: Record<string, CSSProperties> = {
     cursor: 'not-allowed',
     opacity: 0.65,
   },
-  siteCard: {
-    padding: 24,
-    borderRadius: 24,
-    background: 'rgba(255,255,255,0.045)',
-    border: '1px solid rgba(255,255,255,0.1)',
-  },
-  siteMeta: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: 10,
-    margin: '16px 0',
-  },
   miniStat: {
     padding: 14,
     borderRadius: 16,
@@ -557,18 +582,42 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.45,
     overflowWrap: 'anywhere',
   },
-  cardValue: {
-    margin: '12px 0 0',
-    color: '#fff',
-    fontSize: 19,
-    lineHeight: 1.25,
-    overflowWrap: 'anywhere',
-  },
   memorySummaryGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
     gap: 12,
     marginTop: 18,
+  },
+  matrix: {
+    display: 'grid',
+    gridTemplateColumns: '1.2fr 0.8fr 0.8fr',
+    gap: 10,
+    marginTop: 18,
+  },
+  matrixHeader: {
+    color: '#858d98',
+    fontSize: 10,
+    fontWeight: 950,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+    padding: '0 12px 4px',
+  },
+  matrixCellStrong: {
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(0,0,0,0.22)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    color: '#fff',
+    fontWeight: 950,
+  },
+  matrixCell: {
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(0,0,0,0.22)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    color: '#fff',
+    fontWeight: 850,
+    textTransform: 'uppercase',
   },
   reportPanel: {
     padding: 28,
@@ -576,18 +625,11 @@ const styles: Record<string, CSSProperties> = {
     background: '#fff',
     color: '#0b0b0b',
   },
-  pre: {
-    marginTop: 20,
-    maxHeight: 420,
-    padding: 22,
-    borderRadius: 20,
-    background: '#0a0a0a',
-    color: '#f8f6f1',
-    whiteSpace: 'pre-wrap',
-    fontSize: 13,
-    lineHeight: 1.7,
-    overflowY: 'auto',
-    overflowX: 'auto',
+  briefGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 18,
   },
   doctrineCard: {
     display: 'grid',
