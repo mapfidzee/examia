@@ -9,7 +9,6 @@ import {
   buildAuditMemory,
   buildChainReconstruction,
   buildEvidenceGapDashboard,
-  buildEvidenceProvenance,
   buildEvidenceSummary,
   getActor,
   getActorKey,
@@ -29,7 +28,6 @@ import {
   type AuditLogForDoctrine,
   type ChainStage,
   type EvidenceGapItem,
-  type ProvenanceStage,
 } from '@/lib/cgiAuditDoctrineEngine'
 import { buildCGIDemoScenario } from '@/lib/cgiDemoScenarioEngine'
 import { supabase } from '../../lib/supabase'
@@ -141,11 +139,6 @@ function GovernanceEvidenceLedger() {
     [filteredLogs, chainReconstruction],
   )
 
-  const provenance = useMemo(
-    () => buildEvidenceProvenance(filteredLogs),
-    [filteredLogs],
-  )
-
   const evidenceGaps = useMemo(
     () => buildEvidenceGapDashboard(filteredLogs),
     [filteredLogs],
@@ -159,8 +152,8 @@ function GovernanceEvidenceLedger() {
   )
 
   const integrityGroups = useMemo(
-    () => buildIntegrityGroups(provenance, evidenceGaps, auditMemory),
-    [provenance, evidenceGaps, auditMemory],
+    () => buildIntegrityGroups(evidenceGaps, auditMemory, summary.total),
+    [evidenceGaps, auditMemory, summary.total],
   )
 
   const recentExecutiveReview = useMemo(() => {
@@ -189,6 +182,8 @@ function GovernanceEvidenceLedger() {
       return bTime - aTime
     })
   }, [filteredLogs])
+
+  const evidenceUnavailable = summary.total === 0
 
   return (
     <main style={styles.page}>
@@ -220,10 +215,16 @@ function GovernanceEvidenceLedger() {
             <p style={styles.sectionKicker}>Audit Verdict</p>
 
             <h2 style={styles.heroTitle}>
-              {summary.doctrine.auditCredibility}
+              {evidenceUnavailable
+                ? 'AUDIT CREDIBILITY NOT YET ESTABLISHED'
+                : summary.doctrine.auditCredibility}
             </h2>
 
-            <p style={styles.heroMeaning}>{summary.doctrine.trustMeaning}</p>
+            <p style={styles.heroMeaning}>
+              {evidenceUnavailable
+                ? 'No audit evidence currently exists. The system remains ready to reconstruct continuity when evidence becomes available.'
+                : summary.doctrine.trustMeaning}
+            </p>
           </div>
 
           <div style={styles.questionBox}>
@@ -254,7 +255,9 @@ function GovernanceEvidenceLedger() {
           <MetricCard title="Evidence Records" value={summary.total} />
           <MetricCard
             title="Trust Status"
-            value={summary.total === 0 ? 'UNVERIFIED' : summary.executiveTrustScore}
+            value={
+              evidenceUnavailable ? 'UNVERIFIED' : summary.executiveTrustScore
+            }
           />
           <MetricCard title="Linked Snapshots" value={summary.linkedSnapshots} />
           <MetricCard
@@ -287,13 +290,16 @@ function GovernanceEvidenceLedger() {
           <p style={styles.sectionKicker}>Reconstruction Gaps</p>
 
           <h2 style={styles.cardTitle}>
-            {summary.total === 0
+            {evidenceUnavailable
               ? 'RECONSTRUCTION CANNOT YET BE VERIFIED'
               : chainReconstruction.chainTrust}
           </h2>
 
           <p style={styles.bodyText}>
-            Weakest link: {chainReconstruction.weakestLink}
+            Weakest link:{' '}
+            {evidenceUnavailable
+              ? 'Evidence unavailable'
+              : chainReconstruction.weakestLink}
           </p>
 
           <div style={styles.groupGrid}>
@@ -308,79 +314,87 @@ function GovernanceEvidenceLedger() {
 
           <h2 style={styles.cardTitle}>Where is credibility weak?</h2>
 
-          <p style={styles.bodyText}>{summary.doctrine.evidenceGap}</p>
+          <p style={styles.bodyText}>
+            {evidenceUnavailable
+              ? 'Evidence is not yet available. Audit cannot infer credibility, ownership, or memory sufficiency until records exist.'
+              : summary.doctrine.evidenceGap}
+          </p>
 
-          <div style={styles.groupGrid}>
+          <div style={styles.integrityGrid}>
             {integrityGroups.map((group) => (
               <GroupCard key={group.label} group={group} />
             ))}
           </div>
         </section>
 
-        <details style={styles.filterCard}>
-          <summary style={styles.filterSummary}>Advanced Evidence Filters</summary>
+        {summary.total > 0 && (
+          <details style={styles.filterCard}>
+            <summary style={styles.filterSummary}>
+              Advanced Evidence Filters
+            </summary>
 
-          <div style={styles.filterGrid}>
-            <select
-              value={severityFilter}
-              onChange={(event) => setSeverityFilter(event.target.value)}
-              style={styles.select}
-            >
-              <option value="ALL">All severities</option>
-              <option value="CRITICAL">Critical</option>
-              <option value="HIGH">High</option>
-              <option value="MODERATE">Moderate</option>
-              <option value="LOW">Low</option>
-              <option value="INFO">Info</option>
-            </select>
+            <div style={styles.filterGrid}>
+              <select
+                value={severityFilter}
+                onChange={(event) => setSeverityFilter(event.target.value)}
+                style={styles.select}
+              >
+                <option value="ALL">All severities</option>
+                <option value="CRITICAL">Critical</option>
+                <option value="HIGH">High</option>
+                <option value="MODERATE">Moderate</option>
+                <option value="LOW">Low</option>
+                <option value="INFO">Info</option>
+              </select>
 
-            <select
-              value={actorFilter}
-              onChange={(event) => setActorFilter(event.target.value)}
-              style={styles.select}
-            >
-              {actors.map((actor) => (
-                <option key={actor} value={actor}>
-                  {actor === 'ALL' ? 'All actors' : actor}
+              <select
+                value={actorFilter}
+                onChange={(event) => setActorFilter(event.target.value)}
+                style={styles.select}
+              >
+                {actors.map((actor) => (
+                  <option key={actor} value={actor}>
+                    {actor === 'ALL' ? 'All actors' : actor}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={routeFilter}
+                onChange={(event) => setRouteFilter(event.target.value)}
+                style={styles.select}
+              >
+                {routes.map((route) => (
+                  <option key={route} value={route}>
+                    {route === 'ALL' ? 'All routes' : route}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={maturityFilter}
+                onChange={(event) => setMaturityFilter(event.target.value)}
+                style={styles.select}
+              >
+                <option value="ALL">All maturity levels</option>
+                <option value="LEGACY EVIDENCE">Legacy Evidence</option>
+                <option value="HARDENED GOVERNANCE EVIDENCE">
+                  Hardened Governance Evidence
                 </option>
-              ))}
-            </select>
-
-            <select
-              value={routeFilter}
-              onChange={(event) => setRouteFilter(event.target.value)}
-              style={styles.select}
-            >
-              {routes.map((route) => (
-                <option key={route} value={route}>
-                  {route === 'ALL' ? 'All routes' : route}
+                <option value="EXECUTIVE RECONSTRUCTABLE">
+                  Executive Reconstructable
                 </option>
-              ))}
-            </select>
+              </select>
 
-            <select
-              value={maturityFilter}
-              onChange={(event) => setMaturityFilter(event.target.value)}
-              style={styles.select}
-            >
-              <option value="ALL">All maturity levels</option>
-              <option value="LEGACY EVIDENCE">Legacy Evidence</option>
-              <option value="HARDENED GOVERNANCE EVIDENCE">
-                Hardened Governance Evidence
-              </option>
-              <option value="EXECUTIVE RECONSTRUCTABLE">
-                Executive Reconstructable
-              </option>
-            </select>
-
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search evidence..."
-              style={styles.searchInput}
-            />
-          </div>
-        </details>
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search evidence..."
+                style={styles.searchInput}
+              />
+            </div>
+          </details>
+        )}
 
         <section style={styles.gridTwo}>
           <section style={styles.card}>
@@ -392,7 +406,11 @@ function GovernanceEvidenceLedger() {
               {recentExecutiveReview.length === 0 ? (
                 <EmptyPanel
                   title="No critical or high-risk evidence visible."
-                  body="Executive review evidence will appear here when severity rises."
+                  body={
+                    evidenceUnavailable
+                      ? 'Executive review evidence cannot be assessed until records exist.'
+                      : 'Executive review evidence will appear here when severity rises.'
+                  }
                 />
               ) : (
                 recentExecutiveReview.map((log) => (
@@ -429,10 +447,16 @@ function GovernanceEvidenceLedger() {
             <p style={styles.sectionKicker}>Required Next Action</p>
 
             <h2 style={styles.cardTitle}>
-              {summary.doctrine.auditCredibility}
+              {evidenceUnavailable
+                ? 'AUDIT CREDIBILITY NOT YET ESTABLISHED'
+                : summary.doctrine.auditCredibility}
             </h2>
 
-            <p style={styles.bodyText}>{summary.doctrine.requiredMovement}</p>
+            <p style={styles.bodyText}>
+              {evidenceUnavailable
+                ? 'Generate or preserve audit evidence across request, triage, lifecycle movement, executive report, memory, and audit.'
+                : summary.doctrine.requiredMovement}
+            </p>
 
             <button
               type="button"
@@ -597,10 +621,18 @@ function buildReconstructionGroups(
 }
 
 function buildIntegrityGroups(
-  provenance: ProvenanceStage[],
   evidenceGaps: EvidenceGapItem[],
   auditMemory: { label: string; count: number }[],
+  totalEvidence: number,
 ): ReconstructionGroup[] {
+  if (totalEvidence === 0) {
+    return [
+      { label: 'Evidence Coverage', count: 0, status: 'Evidence unavailable' },
+      { label: 'Ownership Coverage', count: 0, status: 'Evidence unavailable' },
+      { label: 'Memory Coverage', count: 0, status: 'Evidence unavailable' },
+    ]
+  }
+
   const evidenceGapCount = evidenceGaps.reduce(
     (total, gap) => total + gap.count,
     0,
@@ -614,18 +646,6 @@ function buildIntegrityGroups(
     )
     .reduce((total, gap) => total + gap.count, 0)
 
-  const visibilityGapCount =
-    evidenceGaps
-      .filter((gap) =>
-        ['VISIBILITY', 'SNAPSHOT', 'LINK'].some((key) =>
-          gap.label.toUpperCase().includes(key),
-        ),
-      )
-      .reduce((total, gap) => total + gap.count, 0) +
-    provenance
-      .filter((stage) => stage.status === 'MISSING')
-      .reduce((total, stage) => total + stage.count, 0)
-
   const memoryGapCount = auditMemory.reduce(
     (total, item) => total + item.count,
     0,
@@ -633,25 +653,19 @@ function buildIntegrityGroups(
 
   return [
     {
-      label: 'Evidence',
+      label: 'Evidence Coverage',
       count: evidenceGapCount,
-      status: evidenceGapCount > 0 ? 'Needs evidence' : 'Evidence unavailable',
+      status: evidenceGapCount > 0 ? 'Needs evidence' : 'Verified',
     },
     {
-      label: 'Ownership',
+      label: 'Ownership Coverage',
       count: ownershipGapCount,
-      status: ownershipGapCount > 0 ? 'Needs owner' : 'Evidence unavailable',
+      status: ownershipGapCount > 0 ? 'Needs owner' : 'Verified',
     },
     {
-      label: 'Visibility',
-      count: visibilityGapCount,
-      status:
-        visibilityGapCount > 0 ? 'Needs visibility' : 'Evidence unavailable',
-    },
-    {
-      label: 'Memory',
+      label: 'Memory Coverage',
       count: memoryGapCount,
-      status: memoryGapCount > 0 ? 'Needs memory' : 'Evidence unavailable',
+      status: memoryGapCount > 0 ? 'Needs memory' : 'Verified',
     },
   ]
 }
@@ -697,7 +711,7 @@ function GroupCard({ group }: { group: ReconstructionGroup }) {
         ...styles.groupCard,
         ...(group.status === 'NOT VERIFIED' ||
         group.status === 'Evidence unavailable'
-          ? styles.groupCardMissing
+          ? styles.groupCardUnverified
           : {}),
       }}
     >
@@ -745,11 +759,11 @@ const styles: Record<string, CSSProperties> = {
     width: '100%',
     maxWidth: 1120,
     margin: '0 auto',
-    padding: '16px 28px 72px',
+    padding: '14px 24px 56px',
     boxSizing: 'border-box',
   },
   header: {
-    marginBottom: 24,
+    marginBottom: 18,
   },
   kicker: {
     color: gold,
@@ -768,45 +782,45 @@ const styles: Record<string, CSSProperties> = {
   subtitle: {
     color: '#cfc7b5',
     maxWidth: 820,
-    lineHeight: 1.65,
+    lineHeight: 1.6,
     fontSize: 14,
     margin: 0,
   },
   doctrineGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: 12,
-    marginTop: 18,
+    gap: 10,
+    marginTop: 16,
   },
   doctrineCard: {
     background: panelBlack,
     border: `1px solid ${softLine}`,
     borderRadius: 14,
-    padding: 14,
+    padding: 12,
     color: '#fff8e7',
     fontSize: 12,
-    lineHeight: 1.45,
+    lineHeight: 1.4,
     fontWeight: 800,
   },
   errorBox: {
     background: 'rgba(127, 29, 29, 0.52)',
     border: '1px solid rgba(248, 113, 113, 0.45)',
     color: '#fecaca',
-    padding: '13px 16px',
+    padding: '12px 14px',
     borderRadius: 14,
     fontWeight: 800,
-    marginBottom: 24,
+    marginBottom: 16,
     fontSize: 13,
   },
   heroCard: {
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1.35fr) minmax(280px, 0.65fr)',
-    gap: 24,
+    gap: 20,
     background: 'linear-gradient(135deg, rgba(214,178,94,0.13), #030303)',
     border: `1px solid ${gold}`,
     borderRadius: 22,
-    padding: 24,
-    marginBottom: 20,
+    padding: 22,
+    marginBottom: 16,
   },
   sectionKicker: {
     color: mutedGold,
@@ -825,7 +839,7 @@ const styles: Record<string, CSSProperties> = {
   },
   heroMeaning: {
     color: '#cfc7b5',
-    lineHeight: 1.6,
+    lineHeight: 1.55,
     margin: 0,
     fontSize: 14,
   },
@@ -833,7 +847,7 @@ const styles: Record<string, CSSProperties> = {
     background: '#15110a',
     border: `1px solid ${softLine}`,
     borderRadius: 18,
-    padding: 20,
+    padding: 18,
   },
   questionText: {
     color: '#fff8e7',
@@ -850,8 +864,8 @@ const styles: Record<string, CSSProperties> = {
     background: panelBlack,
     border: `1px solid ${gold}`,
     borderRadius: 22,
-    padding: 22,
-    marginBottom: 20,
+    padding: 20,
+    marginBottom: 16,
   },
   principleIcon: {
     width: 48,
@@ -866,23 +880,23 @@ const styles: Record<string, CSSProperties> = {
   },
   principleText: {
     color: '#fff8e7',
-    fontSize: 17,
-    lineHeight: 1.55,
+    fontSize: 16,
+    lineHeight: 1.5,
     margin: '8px 0 0',
     fontWeight: 800,
   },
   metricGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: 14,
-    marginBottom: 20,
+    gap: 12,
+    marginBottom: 16,
   },
   metricCard: {
     background: cardBlack,
     border: `1px solid ${softLine}`,
     borderRadius: 16,
-    padding: 16,
-    minHeight: 104,
+    padding: 14,
+    minHeight: 96,
   },
   metricLabel: {
     color: mutedGold,
@@ -894,17 +908,18 @@ const styles: Record<string, CSSProperties> = {
   },
   metricValue: {
     color: gold,
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: 950,
     lineHeight: 1,
     margin: '12px 0 0',
+    overflowWrap: 'anywhere',
   },
   card: {
     background: deepBlack,
     border: `1px solid ${softLine}`,
     borderRadius: 22,
-    padding: 24,
-    marginBottom: 20,
+    padding: 20,
+    marginBottom: 16,
     overflow: 'hidden',
   },
   cardTitle: {
@@ -916,15 +931,15 @@ const styles: Record<string, CSSProperties> = {
   },
   bodyText: {
     color: '#cfc7b5',
-    lineHeight: 1.6,
+    lineHeight: 1.55,
     fontSize: 13,
     margin: 0,
   },
   pilotGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: 12,
-    marginTop: 16,
+    gap: 10,
+    marginTop: 14,
   },
   pilotItem: {
     background: '#15110a',
@@ -935,25 +950,31 @@ const styles: Record<string, CSSProperties> = {
   panelBody: {
     color: '#cfc7b5',
     fontSize: 13,
-    lineHeight: 1.6,
+    lineHeight: 1.55,
     marginTop: 10,
   },
   groupGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: 12,
-    marginTop: 16,
+    gap: 10,
+    marginTop: 14,
+  },
+  integrityGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: 10,
+    marginTop: 14,
   },
   groupCard: {
     background: '#15110a',
     border: `1px solid ${softLine}`,
     borderRadius: 16,
     padding: 14,
-    minHeight: 116,
+    minHeight: 108,
   },
-  groupCardMissing: {
-    border: '1px solid rgba(248,113,113,0.45)',
-    background: 'rgba(127,29,29,0.18)',
+  groupCardUnverified: {
+    background: 'rgba(214,178,94,0.08)',
+    border: '1px solid rgba(214,178,94,0.32)',
   },
   groupValue: {
     color: gold,
@@ -972,8 +993,8 @@ const styles: Record<string, CSSProperties> = {
     background: panelBlack,
     border: `1px solid ${softLine}`,
     borderRadius: 22,
-    padding: 20,
-    marginBottom: 20,
+    padding: 18,
+    marginBottom: 16,
   },
   filterSummary: {
     color: gold,
@@ -985,8 +1006,8 @@ const styles: Record<string, CSSProperties> = {
   filterGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-    gap: 12,
-    marginTop: 16,
+    gap: 10,
+    marginTop: 14,
   },
   select: {
     background: '#15110a',
@@ -1011,19 +1032,19 @@ const styles: Record<string, CSSProperties> = {
   gridTwo: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: 20,
-    marginBottom: 20,
+    gap: 16,
+    marginBottom: 16,
   },
   stack: {
     display: 'grid',
-    gap: 12,
-    marginTop: 16,
+    gap: 10,
+    marginTop: 14,
   },
   reviewCard: {
     background: '#15110a',
     border: `1px solid ${softLine}`,
     borderRadius: 16,
-    padding: 16,
+    padding: 14,
   },
   badgeRow: {
     display: 'flex',
@@ -1111,14 +1132,14 @@ const styles: Record<string, CSSProperties> = {
   },
   ledgerList: {
     display: 'grid',
-    gap: 14,
-    marginTop: 16,
+    gap: 12,
+    marginTop: 14,
   },
   ledgerItem: {
     background: '#15110a',
     border: `1px solid ${softLine}`,
     borderRadius: 18,
-    padding: 16,
+    padding: 14,
   },
   ledgerHeader: {
     display: 'flex',
@@ -1186,7 +1207,7 @@ const styles: Record<string, CSSProperties> = {
     background: '#15110a',
     border: `1px solid ${softLine}`,
     borderRadius: 16,
-    padding: 16,
+    padding: 14,
   },
   emptyTitle: {
     color: '#fff8e7',
@@ -1196,6 +1217,6 @@ const styles: Record<string, CSSProperties> = {
   emptyText: {
     color: '#cfc7b5',
     margin: 0,
-    lineHeight: 1.6,
+    lineHeight: 1.55,
   },
 }
