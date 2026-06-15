@@ -253,8 +253,8 @@ function GovernanceEvidenceLedger() {
         <section style={styles.metricGrid}>
           <MetricCard title="Evidence Records" value={summary.total} />
           <MetricCard
-            title="Trust Score"
-            value={summary.executiveTrustScore}
+            title="Trust Status"
+            value={summary.total === 0 ? 'UNVERIFIED' : summary.executiveTrustScore}
           />
           <MetricCard title="Linked Snapshots" value={summary.linkedSnapshots} />
           <MetricCard
@@ -286,7 +286,11 @@ function GovernanceEvidenceLedger() {
         <section style={styles.card}>
           <p style={styles.sectionKicker}>Reconstruction Gaps</p>
 
-          <h2 style={styles.cardTitle}>{chainReconstruction.chainTrust}</h2>
+          <h2 style={styles.cardTitle}>
+            {summary.total === 0
+              ? 'RECONSTRUCTION CANNOT YET BE VERIFIED'
+              : chainReconstruction.chainTrust}
+          </h2>
 
           <p style={styles.bodyText}>
             Weakest link: {chainReconstruction.weakestLink}
@@ -631,22 +635,23 @@ function buildIntegrityGroups(
     {
       label: 'Evidence',
       count: evidenceGapCount,
-      status: evidenceGapCount > 0 ? 'Needs evidence' : 'No gap visible',
+      status: evidenceGapCount > 0 ? 'Needs evidence' : 'Evidence unavailable',
     },
     {
       label: 'Ownership',
       count: ownershipGapCount,
-      status: ownershipGapCount > 0 ? 'Needs owner' : 'No gap visible',
+      status: ownershipGapCount > 0 ? 'Needs owner' : 'Evidence unavailable',
     },
     {
       label: 'Visibility',
       count: visibilityGapCount,
-      status: visibilityGapCount > 0 ? 'Needs visibility' : 'No gap visible',
+      status:
+        visibilityGapCount > 0 ? 'Needs visibility' : 'Evidence unavailable',
     },
     {
       label: 'Memory',
       count: memoryGapCount,
-      status: memoryGapCount > 0 ? 'Needs memory' : 'No gap visible',
+      status: memoryGapCount > 0 ? 'Needs memory' : 'Evidence unavailable',
     },
   ]
 }
@@ -661,7 +666,13 @@ function formatDate(value?: string | null) {
   return date.toLocaleString()
 }
 
-function MetricCard({ title, value }: { title: string; value: number }) {
+function MetricCard({
+  title,
+  value,
+}: {
+  title: string
+  value: number | string
+}) {
   return (
     <article style={styles.metricCard}>
       <p style={styles.metricLabel}>{title}</p>
@@ -684,7 +695,10 @@ function GroupCard({ group }: { group: ReconstructionGroup }) {
     <article
       style={{
         ...styles.groupCard,
-        ...(group.status === 'NOT VERIFIED' ? styles.groupCardMissing : {}),
+        ...(group.status === 'NOT VERIFIED' ||
+        group.status === 'Evidence unavailable'
+          ? styles.groupCardMissing
+          : {}),
       }}
     >
       <p style={styles.metricLabel}>{group.label}</p>
