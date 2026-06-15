@@ -220,7 +220,7 @@ function GovernanceEvidenceLedger() {
             <p style={styles.sectionKicker}>Audit Verdict</p>
 
             <h2 style={styles.heroTitle}>
-              {summary.doctrine.reconstructionPosture}
+              {summary.doctrine.auditCredibility}
             </h2>
 
             <p style={styles.heroMeaning}>{summary.doctrine.trustMeaning}</p>
@@ -231,6 +231,21 @@ function GovernanceEvidenceLedger() {
 
             <p style={styles.questionText}>
               Can continuity be reconstructed from the available evidence?
+            </p>
+          </div>
+        </section>
+
+        <section style={styles.principleCard}>
+          <div style={styles.principleIcon}>§</div>
+
+          <div>
+            <p style={styles.sectionKicker}>Audit Principle</p>
+
+            <p style={styles.principleText}>
+              Audit preserves evidence integrity. It does not create blame,
+              closure, or operational noise. It protects the institution’s
+              ability to reconstruct what happened when continuity credibility is
+              questioned.
             </p>
           </div>
         </section>
@@ -523,21 +538,6 @@ function GovernanceEvidenceLedger() {
             </div>
           )}
         </section>
-
-        <section style={styles.principleCard}>
-          <div style={styles.principleIcon}>§</div>
-
-          <div>
-            <p style={styles.sectionKicker}>Audit Principle</p>
-
-            <p style={styles.principleText}>
-              Audit preserves evidence integrity. It does not create blame,
-              closure, or operational noise. It protects the institution’s
-              ability to reconstruct what happened when continuity credibility is
-              questioned.
-            </p>
-          </div>
-        </section>
       </div>
     </main>
   )
@@ -579,12 +579,15 @@ function buildReconstructionGroups(
     )
 
     const count = matched.reduce((total, stage) => total + stage.count, 0)
-    const missing = matched.length === 0 || matched.some((stage) => stage.status === 'MISSING')
+    const verified =
+      matched.length > 0 &&
+      matched.every((stage) => stage.status !== 'MISSING') &&
+      count > 0
 
     return {
       label: group.label,
       count,
-      status: missing ? 'MISSING' : 'VISIBLE',
+      status: verified ? 'VERIFIED' : 'NOT VERIFIED',
     }
   })
 }
@@ -625,10 +628,26 @@ function buildIntegrityGroups(
   )
 
   return [
-    { label: 'Evidence Gaps', count: evidenceGapCount, status: 'Gap' },
-    { label: 'Ownership Gaps', count: ownershipGapCount, status: 'Gap' },
-    { label: 'Visibility Gaps', count: visibilityGapCount, status: 'Gap' },
-    { label: 'Memory Gaps', count: memoryGapCount, status: 'Memory' },
+    {
+      label: 'Evidence',
+      count: evidenceGapCount,
+      status: evidenceGapCount > 0 ? 'Needs evidence' : 'No gap visible',
+    },
+    {
+      label: 'Ownership',
+      count: ownershipGapCount,
+      status: ownershipGapCount > 0 ? 'Needs owner' : 'No gap visible',
+    },
+    {
+      label: 'Visibility',
+      count: visibilityGapCount,
+      status: visibilityGapCount > 0 ? 'Needs visibility' : 'No gap visible',
+    },
+    {
+      label: 'Memory',
+      count: memoryGapCount,
+      status: memoryGapCount > 0 ? 'Needs memory' : 'No gap visible',
+    },
   ]
 }
 
@@ -665,7 +684,7 @@ function GroupCard({ group }: { group: ReconstructionGroup }) {
     <article
       style={{
         ...styles.groupCard,
-        ...(group.status === 'MISSING' ? styles.groupCardMissing : {}),
+        ...(group.status === 'NOT VERIFIED' ? styles.groupCardMissing : {}),
       }}
     >
       <p style={styles.metricLabel}>{group.label}</p>
@@ -808,6 +827,35 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.25,
     margin: '10px 0 0',
     fontWeight: 900,
+  },
+  principleCard: {
+    display: 'grid',
+    gridTemplateColumns: '58px minmax(0, 1fr)',
+    gap: 16,
+    alignItems: 'start',
+    background: panelBlack,
+    border: `1px solid ${gold}`,
+    borderRadius: 22,
+    padding: 22,
+    marginBottom: 20,
+  },
+  principleIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 999,
+    background: gold,
+    color: deepBlack,
+    display: 'grid',
+    placeItems: 'center',
+    fontSize: 28,
+    fontWeight: 950,
+  },
+  principleText: {
+    color: '#fff8e7',
+    fontSize: 17,
+    lineHeight: 1.55,
+    margin: '8px 0 0',
+    fontWeight: 800,
   },
   metricGrid: {
     display: 'grid',
@@ -1135,33 +1183,5 @@ const styles: Record<string, CSSProperties> = {
     color: '#cfc7b5',
     margin: 0,
     lineHeight: 1.6,
-  },
-  principleCard: {
-    display: 'grid',
-    gridTemplateColumns: '58px minmax(0, 1fr)',
-    gap: 16,
-    alignItems: 'start',
-    background: panelBlack,
-    border: `1px solid ${gold}`,
-    borderRadius: 22,
-    padding: 22,
-  },
-  principleIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 999,
-    background: gold,
-    color: deepBlack,
-    display: 'grid',
-    placeItems: 'center',
-    fontSize: 28,
-    fontWeight: 950,
-  },
-  principleText: {
-    color: '#fff8e7',
-    fontSize: 17,
-    lineHeight: 1.55,
-    margin: '8px 0 0',
-    fontWeight: 800,
   },
 }
