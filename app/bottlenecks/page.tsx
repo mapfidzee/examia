@@ -5,14 +5,7 @@ import type { CSSProperties, ReactNode } from 'react'
 
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { interpretBottleneck } from '@/lib/cgi/interpreters/interpretBottleneck'
-import {
-  clamp,
-  interpretRegionalPressure,
-  interpretResponderPressure,
-  interpretRoutingCongestion,
-  interpretSafeguarding,
-  interpretStabilizationDelay,
-} from '@/lib/cgiConstraintInterpretationEngine'
+import { clamp } from '@/lib/cgiConstraintInterpretationEngine'
 import {
   buildEnterpriseConstraintIntelligence,
   type EnterpriseConstraintIntelligence,
@@ -50,35 +43,23 @@ type Responder = {
   full_name: string
 }
 
-type ResponderConcentration = {
-  responderId: string
-  responderName: string
-  posture: string
-  interpretation: string
-}
-
-const REPORT_TEMPLATES = [
-  'Executive constraint intelligence brief',
-  'Routing constraint governance brief',
-  'Ownership concentration governance brief',
-  'Stabilization blockage intelligence brief',
-  'Regional continuity constraint brief',
-]
-
-const CONSTRAINT_FOCUS_OPTIONS = [
-  'Routing constraint visibility',
-  'Ownership concentration pressure',
-  'Stabilization blockage visibility',
-  'Safeguarding continuity constraint',
-  'Regional continuity constraint',
-]
-
-const OPERATING_SCOPE_OPTIONS = [
-  'Enterprise continuity view',
-  'Regional continuity view',
-  'District continuity view',
-  'Routing governance view',
-  'Executive command view',
+const ACTIVE_CASE_STATUSES = [
+  'NEED_DETECTED',
+  'UNDER_ASSESSMENT',
+  'ROUTED',
+  'RESPONDER_ASSIGNED',
+  'INTERVENTION_ACTIVE',
+  'STABILIZING',
+  'ACCEPTED_FOR_GOVERNANCE',
+  'STABILIZATION_OWNER_ROUTED',
+  'GOVERNANCE_REVIEW_REQUIRED',
+  'EVIDENCE_REQUIRED_BEFORE_ROUTING',
+  'OWNERSHIP_CLARITY_REQUIRED',
+  'ROUTING_STALLED',
+  'ACTION_ACTIVE',
+  'RECOVERY_MONITORING',
+  'ESCALATED',
+  'REOPENED',
 ]
 
 export default function BottlenecksPage() {
@@ -96,15 +77,6 @@ function BottlenecksContent() {
   const [outcomes, setOutcomes] = useState<Outcome[]>([])
   const [responders, setResponders] = useState<Responder[]>([])
   const [message, setMessage] = useState('')
-
-  const [reportTemplate, setReportTemplate] = useState(REPORT_TEMPLATES[0])
-  const [constraintFocus, setConstraintFocus] = useState(
-    CONSTRAINT_FOCUS_OPTIONS[0],
-  )
-  const [operatingScope, setOperatingScope] = useState(
-    OPERATING_SCOPE_OPTIONS[0],
-  )
-  const [additionalNotes, setAdditionalNotes] = useState('')
 
   useEffect(() => {
     loadData()
@@ -133,11 +105,11 @@ function BottlenecksContent() {
     if (outcomesResult.error) console.error(outcomesResult.error)
     if (respondersResult.error) console.error(respondersResult.error)
 
-    setCases(casesResult.data || [])
-    setRoutingActions(routingResult.data || [])
-    setInterventions(interventionsResult.data || [])
-    setOutcomes(outcomesResult.data || [])
-    setResponders(respondersResult.data || [])
+    setCases((casesResult.data || []) as BeneficiaryCase[])
+    setRoutingActions((routingResult.data || []) as RoutingAction[])
+    setInterventions((interventionsResult.data || []) as Intervention[])
+    setOutcomes((outcomesResult.data || []) as Outcome[])
+    setResponders((respondersResult.data || []) as Responder[])
 
     setMessage('Enterprise constraint intelligence loaded.')
   }
@@ -146,24 +118,7 @@ function BottlenecksContent() {
     const safeguardingFlags = cases.filter((item) => item.safeguarding_flag).length
 
     const activeCases = cases.filter((item) =>
-      [
-        'NEED_DETECTED',
-        'UNDER_ASSESSMENT',
-        'ROUTED',
-        'RESPONDER_ASSIGNED',
-        'INTERVENTION_ACTIVE',
-        'STABILIZING',
-        'ACCEPTED_FOR_GOVERNANCE',
-        'STABILIZATION_OWNER_ROUTED',
-        'GOVERNANCE_REVIEW_REQUIRED',
-        'EVIDENCE_REQUIRED_BEFORE_ROUTING',
-        'OWNERSHIP_CLARITY_REQUIRED',
-        'ROUTING_STALLED',
-        'ACTION_ACTIVE',
-        'RECOVERY_MONITORING',
-        'ESCALATED',
-        'REOPENED',
-      ].includes(item.case_status),
+      ACTIVE_CASE_STATUSES.includes(item.case_status),
     )
 
     const interventionCaseIds = new Set(interventions.map((item) => item.case_id))
@@ -212,43 +167,12 @@ function BottlenecksContent() {
       propagationRisk: clamp(safeguardingFlags * 25 + highestRegionalLoad * 10),
     })
 
-    const responderConcentration: ResponderConcentration[] = Object.entries(
-      responderLoadMap,
-    ).map(([responderId, load]) => {
-      const responder = responders.find((item) => item.id === responderId) || null
-
-      const responderName =
-        responderId === 'UNASSIGNED'
-          ? 'Unassigned Pathways'
-          : responder?.full_name || 'Unknown Responder'
-
-      let posture = 'OWNERSHIP LOAD CONTROLLED'
-      let interpretation = 'Continuity ownership appears controlled.'
-
-      if (load >= 4) {
-        posture = 'OWNERSHIP CONCENTRATION CRITICAL'
-        interpretation =
-          'Continuity ownership concentration may prevent movement and threaten survivability.'
-      } else if (load >= 2) {
-        posture = 'OWNERSHIP CONCENTRATION VISIBLE'
-        interpretation =
-          'Visible ownership concentration should remain under governance review.'
-      }
-
-      return {
-        responderId,
-        responderName,
-        posture,
-        interpretation,
-      }
-    })
-
     const enterprise: EnterpriseConstraintIntelligence =
       buildEnterpriseConstraintIntelligence({
-        reportTemplate,
-        constraintFocus,
-        operatingScope,
-        additionalNotes,
+        reportTemplate: 'Executive constraint intelligence brief',
+        constraintFocus: 'Routing constraint visibility',
+        operatingScope: 'Enterprise continuity view',
+        additionalNotes: '',
         bottleneckPosture: centralizedConstraint.posture,
         bottleneckInterpretation: centralizedConstraint.summary,
         bottleneckAction: centralizedConstraint.executiveAction,
@@ -270,29 +194,9 @@ function BottlenecksContent() {
       stalledCases,
       unroutedCases,
       unclearOwnership,
-      highestResponderLoad,
       highestRegionalLoad,
-      routingCongestion: interpretRoutingCongestion(
-        highestResponderLoad,
-        unroutedCases,
-      ),
-      stabilizationDelay: interpretStabilizationDelay(stalledCases),
-      safeguardingVisibility: interpretSafeguarding(safeguardingFlags),
-      responderPressure: interpretResponderPressure(highestResponderLoad),
-      regionalPressure: interpretRegionalPressure(highestRegionalLoad),
-      responderConcentration,
     }
-  }, [
-    cases,
-    routingActions,
-    interventions,
-    outcomes,
-    responders,
-    reportTemplate,
-    constraintFocus,
-    operatingScope,
-    additionalNotes,
-  ])
+  }, [cases, routingActions, interventions, outcomes, responders])
 
   return (
     <main style={styles.page}>
@@ -300,304 +204,174 @@ function BottlenecksContent() {
         <section style={styles.hero}>
           <div>
             <p style={styles.kicker}>TSINAXA CGI • ENTERPRISE CONSTRAINTS</p>
-
             <h1 style={styles.title}>Enterprise Constraint Intelligence</h1>
-
             <p style={styles.subtitle}>
               Constraint Intelligence identifies what is preventing continuity
-              from moving forward. CGI does not treat delay as administration;
-              it treats blocked movement as a continuity risk.
+              from moving forward.
             </p>
           </div>
 
           <div style={styles.statusBox}>
             <p style={styles.statusLabel}>CONSTRAINT POSTURE</p>
-            <p style={styles.statusValue}>
-              {intelligence.enterprise.posture}
-            </p>
-            <p style={styles.statusMeaning}>
-              {intelligence.enterprise.thesis}
-            </p>
+            <p style={styles.statusValue}>{intelligence.enterprise.posture}</p>
+            <p style={styles.statusMeaning}>{intelligence.enterprise.thesis}</p>
           </div>
         </section>
 
         {message && <div style={styles.message}>{message}</div>}
 
-        <section style={styles.commandDeck}>
-          <div style={styles.primaryCard}>
-            <p style={styles.sectionKicker}>Executive Constraint Question</p>
-
-            <h2 style={styles.commandTitle}>
-              {intelligence.enterprise.question}
-            </h2>
-
-            <p style={styles.primaryText}>
+        <section style={styles.gridTwo}>
+          <Panel title="Executive Constraint Question">
+            <h2 style={styles.bigText}>{intelligence.enterprise.question}</h2>
+            <p style={styles.bodyText}>
               {intelligence.enterprise.dominantConstraint}
             </p>
+          </Panel>
 
-            <div style={styles.commandMetaGrid}>
-              <MiniStat
-                label="Active Cases"
-                value={String(intelligence.activeCases)}
-              />
-
-              <MiniStat
-                label="Unrouted"
-                value={String(intelligence.unroutedCases)}
-              />
-
-              <MiniStat
-                label="Unclear Ownership"
-                value={String(intelligence.unclearOwnership)}
-              />
-
-              <MiniStat
-                label="Highest Load"
-                value={String(intelligence.highestResponderLoad)}
-              />
-            </div>
-          </div>
-
-          <div style={styles.consequenceCard}>
-            <p style={styles.sectionKicker}>Board Warning</p>
-
-            <h2 style={styles.consequenceTitle}>
+          <Panel title="Board Warning">
+            <h2 style={styles.bigText}>
               Blocked movement becomes hidden instability.
             </h2>
-
             <p style={styles.bodyText}>
               {intelligence.enterprise.boardWarning}
             </p>
-          </div>
+          </Panel>
         </section>
 
-        <section style={styles.metricsGrid}>
-          <Metric label="Routing" value={intelligence.routingCongestion} />
-
-          <Metric label="Ownership" value={intelligence.responderPressure} />
-
+        <section style={styles.metricGrid}>
+          <Metric label="Active Cases" value={String(intelligence.activeCases)} />
+          <Metric label="Unrouted" value={String(intelligence.unroutedCases)} />
           <Metric
-            label="Stabilization"
-            value={intelligence.stabilizationDelay}
+            label="Ownership Gaps"
+            value={String(intelligence.unclearOwnership)}
           />
-
-          <Metric
-            label="Safeguarding"
-            value={intelligence.safeguardingVisibility}
-          />
-
-          <Metric label="Regional" value={intelligence.regionalPressure} />
-
           <Metric label="Stalled" value={String(intelligence.stalledCases)} />
         </section>
 
-        <section style={styles.gridFour}>
-          <ExecutiveCard
-            title="Routing Constraint"
-            value={intelligence.enterprise.routingConstraint}
-            body="Whether the chain is blocked before ownership or action."
-          />
-
-          <ExecutiveCard
-            title="Ownership Constraint"
-            value={intelligence.enterprise.ownershipConstraint}
-            body="Whether too much continuity depends on unclear or concentrated ownership."
-          />
-
-          <ExecutiveCard
-            title="Stabilization Constraint"
-            value={intelligence.enterprise.stabilizationConstraint}
-            body="Whether interventions are failing to convert into verified outcomes."
-          />
-
-          <ExecutiveCard
-            title="Safeguarding Constraint"
-            value={intelligence.enterprise.safeguardingConstraint}
-            body="Whether safeguarding visibility raises continuity risk."
-          />
-        </section>
-
-        <section style={styles.gridFour}>
-          <ExecutiveCard
-            title="Regional Constraint"
-            value={intelligence.enterprise.regionalConstraint}
-            body="Whether constraint pressure may be geographically concentrated."
-          />
-
-          <ExecutiveCard
-            title="Command"
-            value={intelligence.enterprise.commandImplication}
-            body="How Command should treat the constraint posture."
-          />
-
-          <ExecutiveCard
-            title="Coordination"
-            value={intelligence.enterprise.coordinationImplication}
-            body="What synchronization is required to unblock movement."
-          />
-
-          <ExecutiveCard
-            title="Reliability"
-            value={intelligence.enterprise.reliabilityImplication}
-            body="How constraints affect repeatable stabilization."
-          />
-        </section>
-
-        <section style={styles.memoryPanel}>
-          <p style={styles.sectionKicker}>Constraint Memory</p>
-
-          <h2 style={styles.panelTitle}>
-            The institution must remember what repeatedly prevents continuity
-            from moving.
-          </h2>
-
-          <div style={styles.memoryGrid}>
-            <MiniStat
-              label="Unresolved"
-              value={String(intelligence.unresolvedCases)}
-            />
-
-            <MiniStat
-              label="Stalled"
-              value={String(intelligence.stalledCases)}
-            />
-
-            <MiniStat
-              label="Safeguarding"
-              value={String(intelligence.safeguardingFlags)}
-            />
-
-            <MiniStat
-              label="Regional Load"
-              value={String(intelligence.highestRegionalLoad)}
-            />
-          </div>
-        </section>
-
         <section style={styles.gridTwo}>
-          <Panel title="Enterprise Constraint Requirements">
+          <Panel title="Required Movement">
             <Info
-              label="Executive Action"
+              label="Required Action"
               value={intelligence.enterprise.executiveAction}
             />
-
             <Info
-              label="Evidence"
-              value={intelligence.enterprise.evidenceRequirement}
+              label="Required Evidence"
+              value="Preserve routing blockage, ownership gaps, stalled outcomes, safeguarding pressure, and evidence of movement."
             />
-
             <Info
-              label="Memory"
-              value={intelligence.enterprise.memoryRequirement}
-            />
-
-            <Info
-              label="Cross-Site"
+              label="Cross-Site Impact"
               value={intelligence.enterprise.crossSiteImplication}
             />
           </Panel>
 
-          <Panel title="Brief Controls">
-            <Select
-              label="Report Template"
-              value={reportTemplate}
-              setValue={setReportTemplate}
-              options={REPORT_TEMPLATES}
+          <Panel title="Continuity Standard">
+            <Info
+              label="Command"
+              value={intelligence.enterprise.commandImplication}
             />
-
-            <Select
-              label="Constraint Focus"
-              value={constraintFocus}
-              setValue={setConstraintFocus}
-              options={CONSTRAINT_FOCUS_OPTIONS}
+            <Info
+              label="Coordination"
+              value={intelligence.enterprise.coordinationImplication}
             />
-
-            <Select
-              label="Operating Scope"
-              value={operatingScope}
-              setValue={setOperatingScope}
-              options={OPERATING_SCOPE_OPTIONS}
+            <Info
+              label="Reliability"
+              value={intelligence.enterprise.reliabilityImplication}
             />
-
-            <label style={styles.label}>
-              Additional Operational Notes
-
-              <textarea
-                value={additionalNotes}
-                onChange={(event) => setAdditionalNotes(event.target.value)}
-                placeholder="Use governance-safe operational language only."
-                style={styles.textarea}
-              />
-            </label>
-
-            <button onClick={loadData} style={styles.primaryButton}>
-              Refresh Constraint Intelligence
-            </button>
           </Panel>
         </section>
 
-        <section style={styles.panel}>
-          <div style={styles.cardHeader}>
-            <div>
-              <p style={styles.sectionKicker}>
-                Ownership Concentration Visibility
-              </p>
+        <Panel title="Constraint Drivers">
+          <div style={styles.infoGrid}>
+            <Info
+              label="Routing"
+              value={intelligence.enterprise.routingConstraint}
+            />
+            <Info
+              label="Ownership"
+              value={intelligence.enterprise.ownershipConstraint}
+            />
+            <Info
+              label="Stabilization"
+              value={intelligence.enterprise.stabilizationConstraint}
+            />
+            <Info
+              label="Safeguarding"
+              value={intelligence.enterprise.safeguardingConstraint}
+            />
+          </div>
+        </Panel>
 
-              <h2 style={styles.panelTitle}>
-                Constraint concentration across responders
-              </h2>
+        <Panel title="Enterprise Implications">
+          <div style={styles.infoGrid}>
+            <Info
+              label="Regional"
+              value={intelligence.enterprise.regionalConstraint}
+            />
+            <Info
+              label="Command"
+              value={intelligence.enterprise.commandImplication}
+            />
+            <Info
+              label="Coordination"
+              value={intelligence.enterprise.coordinationImplication}
+            />
+            <Info
+              label="Reliability"
+              value={intelligence.enterprise.reliabilityImplication}
+            />
+          </div>
+        </Panel>
 
-              <p style={styles.bodyText}>
-                Ownership concentration shows where continuity movement may
-                depend too heavily on one person, one pathway, or no assigned
-                owner.
-              </p>
-            </div>
+        <section style={styles.memoryPanel}>
+          <div>
+            <p style={styles.kicker}>Constraint Memory</p>
+            <h2 style={styles.panelTitle}>Memory Signals</h2>
+            <p style={styles.bodyText}>
+              {intelligence.unresolvedCases} unresolved •{' '}
+              {intelligence.stalledCases} stalled •{' '}
+              {intelligence.safeguardingFlags} safeguarding • regional load{' '}
+              {intelligence.highestRegionalLoad}
+            </p>
           </div>
 
-          <div style={styles.responderGrid}>
-            {intelligence.responderConcentration.length === 0 && (
-              <div style={styles.responderCard}>
-                <p style={styles.metricLabel}>
-                  No ownership concentration visible
-                </p>
-
-                <h3 style={styles.cardValue}>OWNERSHIP LOAD CONTROLLED</h3>
-
-                <p style={styles.panelBody}>
-                  No routing concentration is currently visible in constraint
-                  memory.
-                </p>
-              </div>
-            )}
-
-            {intelligence.responderConcentration.map((item) => (
-              <div key={item.responderId} style={styles.responderCard}>
-                <p style={styles.metricLabel}>{item.responderName}</p>
-
-                <h3 style={styles.cardValue}>{item.posture}</h3>
-
-                <p style={styles.panelBody}>{item.interpretation}</p>
-              </div>
-            ))}
-          </div>
+          <button onClick={loadData} style={styles.button}>
+            Refresh Constraints
+          </button>
         </section>
 
-        <section style={styles.orderPanel}>
-          <p style={styles.sectionKicker}>Copy-Ready Constraint Brief</p>
-
-          <h2 style={styles.panelTitle}>
+        <section style={styles.reportPanel}>
+          <p style={styles.kicker}>CONSTRAINT BRIEF</p>
+          <h2 style={styles.bigText}>
             What is preventing continuity from moving forward?
           </h2>
 
-          <pre style={styles.summaryBox}>
-            {intelligence.enterprise.generatedBrief}
-          </pre>
+          <div style={styles.briefGrid}>
+            <Info label="Question" value={intelligence.enterprise.question} />
+            <Info
+              label="Primary Constraint"
+              value={intelligence.enterprise.dominantConstraint}
+            />
+            <Info
+              label="Required Action"
+              value={intelligence.enterprise.executiveAction}
+            />
+            <Info
+              label="Evidence"
+              value="Preserve routing blockage, ownership gaps, stalled outcomes, safeguarding pressure, and evidence of movement."
+            />
+            <Info
+              label="Cross-Site"
+              value={intelligence.enterprise.crossSiteImplication}
+            />
+            <Info
+              label="Command Meaning"
+              value={intelligence.enterprise.commandImplication}
+            />
+          </div>
         </section>
 
         <section style={styles.doctrineCard}>
           <strong>ENTERPRISE CONSTRAINT DOCTRINE</strong>
-
           <span>
             Constraints are not delays. Constraints are blocked continuity
             movement. When routing, ownership, evidence, stabilization, or
@@ -619,38 +393,11 @@ function Metric({ label, value }: { label: string; value: string }) {
   )
 }
 
-function MiniStat({ label, value }: { label: string; value: string }) {
-  return (
-    <article style={styles.miniStat}>
-      <p style={styles.metricLabel}>{label}</p>
-      <p style={styles.miniValue}>{value}</p>
-    </article>
-  )
-}
-
-function ExecutiveCard({
-  title,
-  value,
-  body,
-}: {
-  title: string
-  value: string
-  body: string
-}) {
-  return (
-    <article style={styles.panelCard}>
-      <p style={styles.sectionKicker}>{title}</p>
-      <h3 style={styles.cardValue}>{value}</h3>
-      <p style={styles.panelBody}>{body}</p>
-    </article>
-  )
-}
-
 function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section style={styles.panel}>
-      <p style={styles.sectionKicker}>{title}</p>
-      <div style={styles.infoList}>{children}</div>
+      <p style={styles.kicker}>{title}</p>
+      {children}
     </section>
   )
 }
@@ -664,59 +411,26 @@ function Info({ label, value }: { label: string; value: string }) {
   )
 }
 
-function Select({
-  label,
-  value,
-  setValue,
-  options,
-}: {
-  label: string
-  value: string
-  setValue: (value: string) => void
-  options: string[]
-}) {
-  const id = label.toLowerCase().replaceAll(' ', '-')
-
-  return (
-    <label style={styles.label} htmlFor={id}>
-      {label}
-      <select
-        id={id}
-        name={id}
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        style={styles.select}
-      >
-        {options.map((item) => (
-          <option key={item} value={item}>
-            {item}
-          </option>
-        ))}
-      </select>
-    </label>
-  )
-}
-
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
     background:
-      'radial-gradient(circle at top left, rgba(201, 162, 39, 0.14), transparent 34%), linear-gradient(135deg, #050505 0%, #0B0B0B 45%, #111111 100%)',
-    color: '#FFFFFF',
+      'radial-gradient(circle at top left, rgba(201,162,39,0.14), transparent 34%), linear-gradient(135deg, #050505 0%, #0b0b0b 45%, #111111 100%)',
+    color: '#fff',
     padding: '40px 24px 72px',
   },
   container: {
     width: 'min(1440px, 100%)',
     margin: '0 auto',
     display: 'grid',
-    gap: 24,
+    gap: 20,
   },
   hero: {
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1.45fr) minmax(320px, 0.75fr)',
-    gap: 24,
-    padding: 32,
-    border: '1px solid rgba(201, 162, 39, 0.34)',
+    gap: 20,
+    padding: 22,
+    border: '1px solid rgba(201,162,39,0.34)',
     borderRadius: 28,
     background:
       'linear-gradient(135deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018))',
@@ -724,323 +438,186 @@ const styles: Record<string, CSSProperties> = {
   },
   kicker: {
     margin: 0,
-    color: '#C9A227',
-    fontSize: 12,
-    fontWeight: 900,
-    letterSpacing: '0.22em',
-    textTransform: 'uppercase',
-  },
-  title: {
-    margin: '14px 0 0',
-    fontSize: 'clamp(2.3rem, 5vw, 5rem)',
-    lineHeight: 0.95,
-    letterSpacing: '-0.07em',
-    fontWeight: 950,
-  },
-  subtitle: {
-    maxWidth: 880,
-    margin: '18px 0 0',
-    color: '#C8CDD4',
-    fontSize: 17,
-    lineHeight: 1.8,
-  },
-  statusBox: {
-    border: '1px solid rgba(201, 162, 39, 0.5)',
-    borderRadius: 24,
-    padding: 24,
-    background:
-      'linear-gradient(180deg, rgba(201,162,39,0.18), rgba(0,0,0,0.38))',
-  },
-  statusLabel: {
-    margin: 0,
-    color: '#D7B84C',
-    fontSize: 11,
-    fontWeight: 950,
-    letterSpacing: '0.2em',
-  },
-  statusValue: {
-    margin: '16px 0 0',
-    fontSize: 30,
-    fontWeight: 950,
-    letterSpacing: '-0.04em',
-    lineHeight: 1.05,
-  },
-  statusMeaning: {
-    margin: '12px 0 0',
-    color: '#ECE7D7',
-    fontSize: 14,
-    lineHeight: 1.7,
-  },
-  message: {
-    padding: '14px 18px',
-    borderRadius: 16,
-    color: '#D7B84C',
-    background: 'rgba(201,162,39,0.1)',
-    border: '1px solid rgba(201,162,39,0.22)',
-    fontWeight: 800,
-  },
-  commandDeck: {
-    display: 'grid',
-    gridTemplateColumns: '1.4fr 0.8fr',
-    gap: 24,
-  },
-  primaryCard: {
-    padding: 30,
-    borderRadius: 28,
-    background: '#FFFFFF',
-    color: '#0B0B0B',
-    border: '1px solid rgba(255,255,255,0.12)',
-  },
-  consequenceCard: {
-    padding: 30,
-    borderRadius: 28,
-    background: 'rgba(0,0,0,0.38)',
-    border: '1px solid rgba(201,162,39,0.28)',
-  },
-  sectionKicker: {
-    margin: 0,
-    color: '#C9A227',
+    color: '#c9a227',
     fontSize: 11,
     fontWeight: 950,
     letterSpacing: '0.18em',
     textTransform: 'uppercase',
   },
-  commandTitle: {
-    margin: '14px 0',
-    fontSize: 'clamp(1.8rem, 3vw, 3.2rem)',
-    lineHeight: 1.05,
-    letterSpacing: '-0.05em',
+  title: {
+    margin: '10px 0 0',
+    fontSize: 'clamp(2.15rem, 4.6vw, 4.45rem)',
+    lineHeight: 0.93,
+    letterSpacing: '-0.07em',
     fontWeight: 950,
   },
-  primaryText: {
+  subtitle: {
+    maxWidth: 820,
+    margin: '12px 0 0',
+    color: '#c8cdd4',
+    fontSize: 16,
+    lineHeight: 1.55,
+  },
+  statusBox: {
+    border: '1px solid rgba(201,162,39,0.5)',
+    borderRadius: 24,
+    padding: 18,
+    background:
+      'linear-gradient(180deg, rgba(201,162,39,0.18), rgba(0,0,0,0.38))',
+  },
+  statusLabel: {
     margin: 0,
-    color: '#4A4A4A',
-    lineHeight: 1.7,
-    fontSize: 14,
+    color: '#d7b84c',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.2em',
   },
-  consequenceTitle: {
-    margin: '14px 0',
-    fontSize: 28,
-    lineHeight: 1.1,
+  statusValue: {
+    margin: '12px 0 0',
+    fontSize: 27,
+    fontWeight: 950,
     letterSpacing: '-0.04em',
+    lineHeight: 1.05,
+    overflowWrap: 'anywhere',
   },
-  bodyText: {
-    margin: '8px 0 0',
-    color: '#AEB6C2',
-    lineHeight: 1.7,
-    fontSize: 14,
+  statusMeaning: {
+    margin: '10px 0 0',
+    color: '#ece7d7',
+    fontSize: 13,
+    lineHeight: 1.5,
   },
-  commandMetaGrid: {
+  message: {
+    padding: '12px 16px',
+    borderRadius: 16,
+    color: '#d7b84c',
+    background: 'rgba(201,162,39,0.1)',
+    border: '1px solid rgba(201,162,39,0.22)',
+    fontWeight: 800,
+  },
+  gridTwo: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 12,
+  },
+  metricGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
     gap: 12,
-    marginTop: 24,
-  },
-  metricsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
-    gap: 14,
   },
   metricCard: {
-    padding: 18,
+    padding: 16,
     borderRadius: 20,
     background: 'rgba(255,255,255,0.055)',
     border: '1px solid rgba(255,255,255,0.1)',
   },
   metricLabel: {
     margin: 0,
-    color: '#858D98',
+    color: '#858d98',
     fontSize: 10,
     fontWeight: 950,
     letterSpacing: '0.14em',
     textTransform: 'uppercase',
   },
   metricValue: {
-    margin: '10px 0 0',
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: 950,
-    lineHeight: 1.15,
-    overflowWrap: 'anywhere',
-  },
-  miniStat: {
-    padding: 14,
-    borderRadius: 16,
-    background: 'rgba(255,255,255,0.055)',
-    border: '1px solid rgba(255,255,255,0.09)',
-  },
-  miniValue: {
     margin: '8px 0 0',
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: 850,
-    lineHeight: 1.45,
-    overflowWrap: 'anywhere',
-  },
-  gridFour: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: 16,
-  },
-  gridTwo: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: 16,
+    color: '#fff',
+    fontSize: 26,
+    fontWeight: 950,
+    lineHeight: 1.1,
   },
   panel: {
-    padding: 28,
-    borderRadius: 28,
+    padding: 20,
+    borderRadius: 26,
     background: 'rgba(255,255,255,0.045)',
     border: '1px solid rgba(255,255,255,0.1)',
   },
-  panelCard: {
-    padding: 22,
-    borderRadius: 22,
-    background: 'rgba(255,255,255,0.045)',
-    border: '1px solid rgba(255,255,255,0.09)',
-    minHeight: 150,
+  bigText: {
+    margin: '12px 0',
+    fontSize: 'clamp(1.5rem, 2.8vw, 2.55rem)',
+    lineHeight: 1.03,
+    letterSpacing: '-0.05em',
+    fontWeight: 950,
   },
   panelTitle: {
-    margin: '12px 0 0',
-    fontSize: 26,
-    lineHeight: 1.15,
+    margin: '8px 0 0',
+    fontSize: 23,
+    lineHeight: 1.1,
     letterSpacing: '-0.045em',
   },
-  cardValue: {
-    margin: '12px 0 0',
-    color: '#FFFFFF',
-    fontSize: 19,
-    lineHeight: 1.25,
-    overflowWrap: 'anywhere',
-  },
-  panelBody: {
-    marginTop: 10,
-    color: '#AEB6C2',
+  bodyText: {
+    margin: '8px 0 0',
+    color: '#aeb6c2',
+    lineHeight: 1.6,
     fontSize: 14,
-    lineHeight: 1.65,
   },
-  memoryPanel: {
-    padding: 28,
-    borderRadius: 28,
-    background:
-      'linear-gradient(135deg, rgba(201,162,39,0.13), rgba(255,255,255,0.035))',
-    border: '1px solid rgba(201,162,39,0.32)',
-  },
-  memoryGrid: {
+  infoGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
     gap: 12,
-    marginTop: 20,
-  },
-  infoList: {
-    display: 'grid',
-    gap: 10,
-    marginTop: 18,
+    marginTop: 14,
   },
   infoRow: {
     display: 'grid',
-    gridTemplateColumns: '170px minmax(0, 1fr)',
+    gridTemplateColumns: '160px minmax(0, 1fr)',
     gap: 12,
-    padding: 14,
+    padding: 12,
     borderRadius: 16,
     background: 'rgba(0,0,0,0.22)',
     border: '1px solid rgba(255,255,255,0.08)',
   },
   infoLabel: {
-    color: '#858D98',
+    color: '#858d98',
     fontWeight: 900,
-    fontSize: 12,
+    fontSize: 11,
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
   },
   infoValue: {
-    color: '#FFFFFF',
-    lineHeight: 1.5,
+    color: '#fff',
+    lineHeight: 1.45,
     overflowWrap: 'anywhere',
   },
-  label: {
+  memoryPanel: {
     display: 'grid',
-    gap: 8,
-    color: '#DDE3EA',
-    fontSize: 12,
-    fontWeight: 900,
-    letterSpacing: '0.08em',
-    textTransform: 'uppercase',
+    gridTemplateColumns: 'minmax(0, 1fr) auto',
+    gap: 16,
+    alignItems: 'center',
+    padding: 18,
+    borderRadius: 26,
+    background:
+      'linear-gradient(135deg, rgba(201,162,39,0.13), rgba(255,255,255,0.035))',
+    border: '1px solid rgba(201,162,39,0.32)',
   },
-  select: {
-    width: '100%',
-    borderRadius: 16,
-    border: '1px solid rgba(201,162,39,0.22)',
-    background: '#0D0D0D',
-    color: '#FFFFFF',
-    padding: '14px 16px',
-    fontSize: 14,
-    outline: 'none',
-  },
-  textarea: {
-    minHeight: 120,
-    resize: 'vertical',
-    borderRadius: 18,
-    border: '1px solid rgba(201,162,39,0.22)',
-    background: '#0D0D0D',
-    color: '#FFFFFF',
-    padding: 16,
-    fontSize: 14,
-    lineHeight: 1.6,
-    outline: 'none',
-  },
-  primaryButton: {
+  button: {
     border: 'none',
     borderRadius: 999,
-    padding: '14px 22px',
-    background: '#C9A227',
+    padding: '12px 20px',
+    background: '#c9a227',
     color: '#090909',
     fontWeight: 950,
     cursor: 'pointer',
+    whiteSpace: 'nowrap',
   },
-  cardHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    gap: 16,
-    alignItems: 'flex-start',
-  },
-  responderGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-    gap: 16,
-    marginTop: 20,
-  },
-  responderCard: {
-    padding: 20,
-    borderRadius: 22,
-    background: 'rgba(255,255,255,0.045)',
-    border: '1px solid rgba(255,255,255,0.09)',
-  },
-  orderPanel: {
-    padding: 28,
-    borderRadius: 28,
-    background: '#FFFFFF',
-    color: '#0B0B0B',
-  },
-  summaryBox: {
-    marginTop: 20,
+  reportPanel: {
     padding: 22,
-    borderRadius: 20,
-    background: '#0A0A0A',
-    color: '#F8F6F1',
-    whiteSpace: 'pre-wrap',
-    fontSize: 13,
-    lineHeight: 1.7,
-    overflowX: 'auto',
+    borderRadius: 26,
+    background: '#fff',
+    color: '#0b0b0b',
+  },
+  briefGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 14,
   },
   doctrineCard: {
     display: 'grid',
     gap: 10,
-    padding: 24,
+    padding: 22,
     borderRadius: 24,
     background: '#050505',
     border: '1px solid rgba(201,162,39,0.42)',
-    color: '#FFFFFF',
-    lineHeight: 1.7,
+    color: '#fff',
+    lineHeight: 1.65,
   },
 }
