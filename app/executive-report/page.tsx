@@ -7,7 +7,12 @@ import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { buildCGIDemoScenario } from '@/lib/cgiDemoScenarioEngine'
 import { buildExecutiveConclusionReport } from '@/lib/cgiExecutiveReportDoctrineEngine'
-import { saveCGIExecutiveReport } from '@/lib/cgiPersistenceEngine'
+import {
+  loadCGIExecutiveReports,
+  saveCGIExecutiveReport,
+} from '@/lib/cgiPersistenceEngine'
+
+type PersistedExecutiveReport = Record<string, any>
 
 export default function ExecutiveReportPage() {
   return (
@@ -24,6 +29,9 @@ export default function ExecutiveReportPage() {
 function ExecutiveReportContent() {
   const [saveMessage, setSaveMessage] = useState('')
   const [saving, setSaving] = useState(false)
+  const [loadingReports, setLoadingReports] = useState(false)
+  const [reportMessage, setReportMessage] = useState('')
+  const [reports, setReports] = useState<PersistedExecutiveReport[]>([])
 
   const featured = useMemo(
     () => buildCGIDemoScenario('FUEL_LOGISTICS_CHAIN_PROOF'),
@@ -73,6 +81,23 @@ function ExecutiveReportContent() {
       setSaveMessage('Executive continuity conclusion could not be saved.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function loadRecentReports() {
+    try {
+      setLoadingReports(true)
+      setReportMessage('Loading recent executive conclusions...')
+
+      const loadedReports = await loadCGIExecutiveReports()
+
+      setReports(Array.isArray(loadedReports) ? loadedReports.slice(0, 3) : [])
+      setReportMessage('Recent executive conclusions loaded.')
+    } catch (error) {
+      console.error(error)
+      setReportMessage('Recent executive conclusions could not be loaded.')
+    } finally {
+      setLoadingReports(false)
     }
   }
 
@@ -237,20 +262,99 @@ function ExecutiveReportContent() {
 
           <pre style={styles.compactPre}>{executiveReport.copyReadyReport}</pre>
 
-          <button
-            type="button"
-            onClick={handleSaveReport}
-            disabled={saving}
-            style={{
-              ...styles.primaryButton,
-              ...(saving ? styles.disabledButton : {}),
-            }}
-          >
-            {saving ? 'Saving...' : 'Save Conclusion'}
-          </button>
+          <div style={styles.buttonRow}>
+            <button
+              type="button"
+              onClick={handleSaveReport}
+              disabled={saving}
+              style={{
+                ...styles.primaryButton,
+                ...(saving ? styles.disabledButton : {}),
+              }}
+            >
+              {saving ? 'Saving...' : 'Save Conclusion'}
+            </button>
 
-          {saveMessage && <p style={styles.saveMessage}>{saveMessage}</p>}
+            <button
+              type="button"
+              onClick={loadRecentReports}
+              disabled={loadingReports}
+              style={{
+                ...styles.secondaryButton,
+                ...(loadingReports ? styles.disabledButton : {}),
+              }}
+            >
+              {loadingReports ? 'Loading...' : 'Load Recent Reports'}
+            </button>
+          </div>
+
+          {(saveMessage || reportMessage) && (
+            <p style={styles.saveMessage}>
+              {[saveMessage, reportMessage].filter(Boolean).join(' ')}
+            </p>
+          )}
         </section>
+
+        {reports.length > 0 && (
+          <section style={styles.card}>
+            <p style={styles.sectionKicker}>Recent Report Memory</p>
+
+            <h2 style={styles.cardTitle}>
+              Latest executive conclusions only.
+            </h2>
+
+            <div style={styles.archiveList}>
+              {reports.map((item, index) => (
+                <article
+                  key={item.id ?? `${getReportValue(item, 'createdAt')}-${index}`}
+                  style={styles.archiveItem}
+                >
+                  <div style={styles.archiveHeader}>
+                    <div>
+                      <p style={styles.panelKicker}>
+                        {getReportValue(item, 'reportClassification') ??
+                          'EXECUTIVE_REPORT'}
+                      </p>
+
+                      <h3 style={styles.archiveTitle}>
+                        {getReportValue(item, 'reportTitle') ??
+                          'Executive Continuity Report'}
+                      </h3>
+                    </div>
+
+                    <p style={styles.archiveDate}>
+                      {formatDate(getReportValue(item, 'createdAt'))}
+                    </p>
+                  </div>
+
+                  <div style={styles.archiveGrid}>
+                    <PriorityItem
+                      title="Posture"
+                      body={
+                        getReportValue(item, 'currentContinuityPosture') ??
+                        'Not recorded'
+                      }
+                    />
+                    <PriorityItem
+                      title="Direction"
+                      body={
+                        getReportValue(item, 'historyDirection') ??
+                        'Not recorded'
+                      }
+                    />
+                    <PriorityItem
+                      title="Required Action"
+                      body={
+                        getReportValue(item, 'requiredExecutiveAction') ??
+                        'Not recorded'
+                      }
+                    />
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section style={styles.doctrineCard}>
           <strong>EXECUTIVE REPORT DOCTRINE</strong>
@@ -271,6 +375,36 @@ function formatLabel(value: string): string {
   return value.replaceAll('_', ' ')
 }
 
+function getReportValue(
+  report: PersistedExecutiveReport,
+  key: string,
+): string | null {
+  const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
+
+  const value =
+    report[key] ??
+    report[snakeKey] ??
+    report.rawPayload?.report?.[key] ??
+    report.raw_payload?.report?.[key] ??
+    report.rawPayload?.executiveReport?.[key] ??
+    report.raw_payload?.executiveReport?.[key] ??
+    null
+
+  if (value === null || value === undefined) return null
+
+  return String(value)
+}
+
+function formatDate(value: string | null) {
+  if (!value) return 'Date not recorded'
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) return value
+
+  return date.toLocaleString()
+}
+
 function PriorityItem({ title, body }: { title: string; body: string }) {
   return (
     <article style={styles.priorityItem}>
@@ -288,7 +422,7 @@ const styles: Record<string, CSSProperties> = {
   },
   container: {
     width: '100%',
-    maxWidth: '1120px',
+    maxWidth: 1120,
     margin: '0 auto',
     padding: '0 20px 48px',
     boxSizing: 'border-box',
@@ -492,7 +626,14 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.5,
     fontSize: 13,
     overflowX: 'auto',
+    maxHeight: 520,
     margin: '16px 0 0',
+  },
+  buttonRow: {
+    display: 'flex',
+    gap: 12,
+    flexWrap: 'wrap',
+    marginTop: 16,
   },
   primaryButton: {
     border: 'none',
@@ -505,7 +646,18 @@ const styles: Record<string, CSSProperties> = {
     minHeight: 48,
     padding: '0 18px',
     whiteSpace: 'nowrap',
-    marginTop: 16,
+  },
+  secondaryButton: {
+    border: '1px solid rgba(214,178,94,0.34)',
+    borderRadius: 14,
+    background: 'rgba(214,178,94,0.1)',
+    color: '#fff8e7',
+    cursor: 'pointer',
+    fontSize: 14,
+    fontWeight: 900,
+    minHeight: 48,
+    padding: '0 18px',
+    whiteSpace: 'nowrap',
   },
   disabledButton: {
     cursor: 'not-allowed',
@@ -515,6 +667,44 @@ const styles: Record<string, CSSProperties> = {
     color: '#d6b25e',
     fontWeight: 900,
     margin: '12px 0 0',
+  },
+  archiveList: {
+    display: 'grid',
+    gap: 12,
+    marginTop: 16,
+  },
+  archiveItem: {
+    background: '#11100d',
+    border: '1px solid rgba(214,178,94,0.18)',
+    borderRadius: 18,
+    padding: 16,
+  },
+  archiveHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: 14,
+    alignItems: 'flex-start',
+    marginBottom: 14,
+  },
+  archiveTitle: {
+    color: '#fff8e7',
+    fontSize: 18,
+    lineHeight: 1.2,
+    margin: '8px 0 0',
+  },
+  archiveDate: {
+    color: '#d6b25e',
+    fontWeight: 800,
+    fontSize: 13,
+    lineHeight: 1.4,
+    margin: 0,
+    textAlign: 'right',
+    minWidth: 160,
+  },
+  archiveGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: 12,
   },
   doctrineCard: {
     display: 'grid',
