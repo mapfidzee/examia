@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import type { CSSProperties, ReactNode } from 'react'
+import type { CSSProperties } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
@@ -27,10 +27,8 @@ import {
   severityOrder,
   type AuditDetails,
   type AuditLogForDoctrine,
-  type AuditMemoryItem,
   type ChainStage,
   type EvidenceGapItem,
-  type EvidenceMaturity,
   type ProvenanceStage,
 } from '@/lib/cgiAuditDoctrineEngine'
 import { buildCGIDemoScenario } from '@/lib/cgiDemoScenarioEngine'
@@ -38,6 +36,12 @@ import { supabase } from '../../lib/supabase'
 
 type AuditLog = AuditLogForDoctrine & {
   details?: AuditDetails | null
+}
+
+type ReconstructionGroup = {
+  label: string
+  count: number
+  status: string
 }
 
 const LEDGER_DOCTRINE = [
@@ -149,6 +153,16 @@ function GovernanceEvidenceLedger() {
 
   const auditMemory = useMemo(() => buildAuditMemory(filteredLogs), [filteredLogs])
 
+  const groupedChain = useMemo(
+    () => buildReconstructionGroups(chainReconstruction.stages),
+    [chainReconstruction],
+  )
+
+  const integrityGroups = useMemo(
+    () => buildIntegrityGroups(provenance, evidenceGaps, auditMemory),
+    [provenance, evidenceGaps, auditMemory],
+  )
+
   const recentExecutiveReview = useMemo(() => {
     return filteredLogs
       .filter((log) =>
@@ -250,15 +264,12 @@ function GovernanceEvidenceLedger() {
               title="Verdict"
               body="Pilot chain remains reconstructable."
             />
-            <PilotItem
-              title="Memory"
-              body={pilotThread.executiveMemory}
-            />
+            <PilotItem title="Memory" body={pilotThread.executiveMemory} />
           </div>
         </section>
 
         <section style={styles.card}>
-          <p style={styles.sectionKicker}>Reconstruction Chain</p>
+          <p style={styles.sectionKicker}>Reconstruction Gaps</p>
 
           <h2 style={styles.cardTitle}>{chainReconstruction.chainTrust}</h2>
 
@@ -266,9 +277,9 @@ function GovernanceEvidenceLedger() {
             Weakest link: {chainReconstruction.weakestLink}
           </p>
 
-          <div style={styles.chainStrip}>
-            {chainReconstruction.stages.map((stage) => (
-              <ChainStageCard key={stage.label} stage={stage} />
+          <div style={styles.groupGrid}>
+            {groupedChain.map((group) => (
+              <GroupCard key={group.label} group={group} />
             ))}
           </div>
         </section>
@@ -280,25 +291,15 @@ function GovernanceEvidenceLedger() {
 
           <p style={styles.bodyText}>{summary.doctrine.evidenceGap}</p>
 
-          <div style={styles.integrityGrid}>
-            {provenance.slice(0, 4).map((stage) => (
-              <ProvenanceCard key={stage.label} stage={stage} />
-            ))}
-
-            {evidenceGaps.slice(0, 4).map((gap) => (
-              <EvidenceGapCard key={gap.label} gap={gap} />
-            ))}
-
-            {auditMemory.slice(0, 4).map((item) => (
-              <AuditMemoryCard key={item.label} item={item} />
+          <div style={styles.groupGrid}>
+            {integrityGroups.map((group) => (
+              <GroupCard key={group.label} group={group} />
             ))}
           </div>
         </section>
 
-        <section style={styles.filterCard}>
-          <p style={styles.sectionKicker}>Evidence Filters</p>
-
-          <h2 style={styles.cardTitle}>Review without altering the record.</h2>
+        <details style={styles.filterCard}>
+          <summary style={styles.filterSummary}>Advanced Evidence Filters</summary>
 
           <div style={styles.filterGrid}>
             <select
@@ -360,7 +361,7 @@ function GovernanceEvidenceLedger() {
               style={styles.searchInput}
             />
           </div>
-        </section>
+        </details>
 
         <section style={styles.gridTwo}>
           <section style={styles.card}>
@@ -406,7 +407,7 @@ function GovernanceEvidenceLedger() {
           </section>
 
           <section style={styles.card}>
-            <p style={styles.sectionKicker}>Next Audit Action</p>
+            <p style={styles.sectionKicker}>Required Next Action</p>
 
             <h2 style={styles.cardTitle}>
               {summary.doctrine.auditCredibility}
@@ -435,19 +436,19 @@ function GovernanceEvidenceLedger() {
             Evidence must support reconstruction without becoming surveillance.
           </h2>
 
-          <div style={styles.ledgerList}>
-            {loading ? (
-              <EmptyPanel
-                title="Loading governance evidence..."
-                body="Audit records are being retrieved from the ledger."
-              />
-            ) : sortedLogs.length === 0 ? (
-              <EmptyPanel
-                title="No evidence records match the current view."
-                body="The ledger is clean, filters are too narrow, or audit records have not yet been created."
-              />
-            ) : (
-              sortedLogs.map((log) => {
+          {loading ? (
+            <EmptyPanel
+              title="Loading governance evidence..."
+              body="Audit records are being retrieved from the ledger."
+            />
+          ) : sortedLogs.length === 0 ? (
+            <EmptyPanel
+              title="Immutable ledger activates when audit evidence exists."
+              body="No live evidence records match the current view. The interface remains ready without displaying empty archives."
+            />
+          ) : (
+            <div style={styles.ledgerList}>
+              {sortedLogs.map((log) => {
                 const maturity = resolveEvidenceMaturity(log)
 
                 return (
@@ -518,9 +519,9 @@ function GovernanceEvidenceLedger() {
                     </details>
                   </article>
                 )
-              })
-            )}
-          </div>
+              })}
+            </div>
+          )}
         </section>
 
         <section style={styles.principleCard}>
@@ -540,6 +541,95 @@ function GovernanceEvidenceLedger() {
       </div>
     </main>
   )
+}
+
+function buildReconstructionGroups(
+  stages: ChainStage[],
+): ReconstructionGroup[] {
+  const groups = [
+    {
+      label: 'Lifecycle',
+      keys: [
+        'REQUEST',
+        'TRIAGE',
+        'CASES',
+        'ROUTING',
+        'INTERVENTION',
+        'OUTCOMES',
+        'RECOVERY',
+      ],
+    },
+    {
+      label: 'Executive',
+      keys: ['COMMAND', 'COORDINATION', 'CROSS', 'SITUATION', 'EXECUTIVE'],
+    },
+    {
+      label: 'Memory',
+      keys: ['MEMORY'],
+    },
+    {
+      label: 'Audit',
+      keys: ['AUDIT'],
+    },
+  ]
+
+  return groups.map((group) => {
+    const matched = stages.filter((stage) =>
+      group.keys.some((key) => stage.label.toUpperCase().includes(key)),
+    )
+
+    const count = matched.reduce((total, stage) => total + stage.count, 0)
+    const missing = matched.length === 0 || matched.some((stage) => stage.status === 'MISSING')
+
+    return {
+      label: group.label,
+      count,
+      status: missing ? 'MISSING' : 'VISIBLE',
+    }
+  })
+}
+
+function buildIntegrityGroups(
+  provenance: ProvenanceStage[],
+  evidenceGaps: EvidenceGapItem[],
+  auditMemory: { label: string; count: number }[],
+): ReconstructionGroup[] {
+  const evidenceGapCount = evidenceGaps.reduce(
+    (total, gap) => total + gap.count,
+    0,
+  )
+
+  const ownershipGapCount = evidenceGaps
+    .filter((gap) =>
+      ['OWNER', 'ACTOR', 'ROUTE', 'SCOPE'].some((key) =>
+        gap.label.toUpperCase().includes(key),
+      ),
+    )
+    .reduce((total, gap) => total + gap.count, 0)
+
+  const visibilityGapCount =
+    evidenceGaps
+      .filter((gap) =>
+        ['VISIBILITY', 'SNAPSHOT', 'LINK'].some((key) =>
+          gap.label.toUpperCase().includes(key),
+        ),
+      )
+      .reduce((total, gap) => total + gap.count, 0) +
+    provenance
+      .filter((stage) => stage.status === 'MISSING')
+      .reduce((total, stage) => total + stage.count, 0)
+
+  const memoryGapCount = auditMemory.reduce(
+    (total, item) => total + item.count,
+    0,
+  )
+
+  return [
+    { label: 'Evidence Gaps', count: evidenceGapCount, status: 'Gap' },
+    { label: 'Ownership Gaps', count: ownershipGapCount, status: 'Gap' },
+    { label: 'Visibility Gaps', count: visibilityGapCount, status: 'Gap' },
+    { label: 'Memory Gaps', count: memoryGapCount, status: 'Memory' },
+  ]
 }
 
 function formatDate(value?: string | null) {
@@ -570,53 +660,17 @@ function PilotItem({ title, body }: { title: string; body: string }) {
   )
 }
 
-function ChainStageCard({ stage }: { stage: ChainStage }) {
+function GroupCard({ group }: { group: ReconstructionGroup }) {
   return (
     <article
       style={{
-        ...styles.chainStageCard,
-        ...(stage.status === 'MISSING' ? styles.chainStageMissing : {}),
+        ...styles.groupCard,
+        ...(group.status === 'MISSING' ? styles.groupCardMissing : {}),
       }}
     >
-      <p style={styles.metricLabel}>{stage.label}</p>
-      <p style={styles.chainStageValue}>{stage.count}</p>
-      <strong style={styles.provenanceStatus}>{stage.status}</strong>
-    </article>
-  )
-}
-
-function ProvenanceCard({ stage }: { stage: ProvenanceStage }) {
-  return (
-    <IntegrityCard
-      title={stage.label}
-      value={stage.count}
-      status={stage.status}
-    />
-  )
-}
-
-function EvidenceGapCard({ gap }: { gap: EvidenceGapItem }) {
-  return <IntegrityCard title={gap.label} value={gap.count} status="Gap" />
-}
-
-function AuditMemoryCard({ item }: { item: AuditMemoryItem }) {
-  return <IntegrityCard title={item.label} value={item.count} status="Memory" />
-}
-
-function IntegrityCard({
-  title,
-  value,
-  status,
-}: {
-  title: string
-  value: number
-  status: string
-}) {
-  return (
-    <article style={styles.integrityCard}>
-      <p style={styles.metricLabel}>{title}</p>
-      <p style={styles.integrityValue}>{value}</p>
-      <strong style={styles.provenanceStatus}>{status}</strong>
+      <p style={styles.metricLabel}>{group.label}</p>
+      <p style={styles.groupValue}>{group.count}</p>
+      <strong style={styles.groupStatus}>{group.status}</strong>
     </article>
   )
 }
@@ -822,55 +876,35 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.6,
     marginTop: 10,
   },
-  chainStrip: {
+  groupGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
     gap: 12,
     marginTop: 16,
   },
-  chainStageCard: {
+  groupCard: {
     background: '#15110a',
     border: `1px solid ${softLine}`,
     borderRadius: 16,
     padding: 14,
     minHeight: 116,
   },
-  chainStageMissing: {
+  groupCardMissing: {
     border: '1px solid rgba(248,113,113,0.45)',
     background: 'rgba(127,29,29,0.18)',
   },
-  chainStageValue: {
+  groupValue: {
     color: gold,
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: 950,
     margin: '10px 0 4px',
     lineHeight: 1,
   },
-  provenanceStatus: {
+  groupStatus: {
     display: 'block',
     color: '#fff8e7',
     fontSize: 12,
     marginTop: 8,
-  },
-  integrityGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: 12,
-    marginTop: 16,
-  },
-  integrityCard: {
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: 16,
-    padding: 14,
-    minHeight: 112,
-  },
-  integrityValue: {
-    color: gold,
-    fontSize: 30,
-    fontWeight: 950,
-    margin: '10px 0 0',
-    lineHeight: 1,
   },
   filterCard: {
     background: panelBlack,
@@ -878,6 +912,13 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: 22,
     padding: 20,
     marginBottom: 20,
+  },
+  filterSummary: {
+    color: gold,
+    cursor: 'pointer',
+    fontWeight: 950,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
   },
   filterGrid: {
     display: 'grid',
