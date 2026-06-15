@@ -19,9 +19,6 @@ import {
   getMaturityMeaning,
   getRecordType,
   getVisibilityLevel,
-  hasInstitutionScope,
-  hasLinkedSnapshot,
-  hasVisibilityClassification,
   isImmutableRecord,
   maturityOrder,
   normalizeSeverity,
@@ -46,7 +43,6 @@ type AuditLog = AuditLogForDoctrine & {
 const LEDGER_DOCTRINE = [
   'Governance evidence must remain visible.',
   'Continuity memory must be reconstructable.',
-  'Audit history must not become a developer log.',
   'Evidence protects lifecycle credibility.',
 ]
 
@@ -72,7 +68,11 @@ function GovernanceEvidenceLedger() {
   const [maturityFilter, setMaturityFilter] = useState('ALL')
   const [search, setSearch] = useState('')
 
-  const featured = buildCGIDemoScenario('FUEL_LOGISTICS_CHAIN_PROOF')
+  const featured = useMemo(
+    () => buildCGIDemoScenario('FUEL_LOGISTICS_CHAIN_PROOF'),
+    [],
+  )
+
   const pilotThread = featured.pilotThread
 
   useEffect(() => {
@@ -186,340 +186,119 @@ function GovernanceEvidenceLedger() {
 
           <p style={styles.subtitle}>
             Final evidence seal proving whether visible instability can be
-            reconstructed from request through recovery, command, coordination,
-            cross-site interpretation, executive report, memory board, and audit
-            preservation.
+            reconstructed from request through recovery, command, executive
+            reporting, memory preservation, and audit.
           </p>
 
-          <section style={styles.doctrinePanel}>
-            <p style={styles.doctrineTitle}>AUDIT DOCTRINE</p>
-
-            <div style={styles.doctrineGrid}>
-              {LEDGER_DOCTRINE.map((item) => (
-                <div key={item} style={styles.doctrineCard}>
-                  {item}
-                </div>
-              ))}
-            </div>
-          </section>
+          <div style={styles.doctrineGrid}>
+            {LEDGER_DOCTRINE.map((item) => (
+              <div key={item} style={styles.doctrineCard}>
+                {item}
+              </div>
+            ))}
+          </div>
         </section>
 
         {error && <section style={styles.errorBox}>{error}</section>}
 
-        <section style={styles.pilotHero}>
-          <div>
-            <p style={styles.sectionKicker}>Pilot Audit Subject</p>
-            <h2 style={styles.heroTitle}>{pilotThread.scenarioName}</h2>
-            <p style={styles.heroMeaning}>
-              Audit confirms whether the full pilot story remains reconstructable
-              as evidence, memory, executive report, and governance meaning.
-            </p>
-          </div>
-
-          <div style={styles.questionBox}>
-            <p style={styles.metricLabel}>Audit Verdict</p>
-            <p style={styles.questionText}>PILOT CHAIN RECONSTRUCTABLE</p>
-          </div>
-        </section>
-
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Audit Doctrine Reading</p>
-          <h2 style={styles.cardTitle}>{summary.doctrine.auditCredibility}</h2>
-          <p style={styles.bodyText}>{summary.doctrine.institutionalMeaning}</p>
-
-          <div style={styles.doctrineReadingGrid}>
-            <Info label="What Is Visible" value={summary.doctrine.whatIsVisible} />
-            <Info label="Why It Matters" value={summary.doctrine.whyItMatters} />
-            <Info label="Continuity Risk" value={summary.doctrine.continuityRisk} />
-            <Info
-              label="Required Movement"
-              value={summary.doctrine.requiredMovement}
-            />
-            <Info label="Trust Reading" value={summary.doctrine.trustReading} />
-            <Info label="Trust Level" value={summary.doctrine.trustLevel} />
-          </div>
-        </section>
-
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Executive Demonstration Reconstruction</p>
-
-          <h2 style={styles.cardTitle}>
-            One instability. One chain. One memory. One audit trail.
-          </h2>
-
-          <p style={styles.bodyText}>{pilotThread.executiveThesis}</p>
-
-          <div style={styles.pilotChainList}>
-            {pilotThread.chain.map((stage, index) => (
-              <article
-                key={`${stage.stage}-${stage.title}`}
-                style={styles.pilotChainItem}
-              >
-                <p style={styles.panelKicker}>
-                  Step {index + 1} • {formatLabel(stage.stage)}
-                </p>
-
-                <h3 style={styles.pilotStageTitle}>{stage.title}</h3>
-                <p style={styles.panelText}>{stage.executiveFinding}</p>
-                <p style={styles.evidenceText}>{stage.evidencePreserved}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section style={styles.gridThree}>
-          {pilotThread.sites.map((site) => (
-            <SignalCard
-              key={site.siteName}
-              title={site.siteName}
-              value={site.posture}
-              body={site.finding}
-            />
-          ))}
-        </section>
-
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Pilot Audit Memory</p>
-
-          <h2 style={styles.cardTitle}>
-            The institutional lesson remains attached to the evidence chain.
-          </h2>
-
-          <p style={styles.bodyText}>{pilotThread.executiveMemory}</p>
-
-          <div style={styles.gapGrid}>
-            {pilotThread.auditReconstruction.map((item) => (
-              <article key={item} style={styles.gapCard}>
-                <p style={styles.panelBody}>{item}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
         <section style={styles.heroCard}>
           <div>
-            <p style={styles.sectionKicker}>Live Evidence Integrity Posture</p>
+            <p style={styles.sectionKicker}>Audit Verdict</p>
+
             <h2 style={styles.heroTitle}>
               {summary.doctrine.reconstructionPosture}
             </h2>
+
             <p style={styles.heroMeaning}>{summary.doctrine.trustMeaning}</p>
           </div>
 
           <div style={styles.questionBox}>
-            <p style={styles.metricLabel}>Live Audit Question</p>
+            <p style={styles.metricLabel}>Audit Question</p>
+
             <p style={styles.questionText}>
-              Can leadership reconstruct the live continuity chain from the
-              available ledger records?
+              Can continuity be reconstructed from the available evidence?
             </p>
           </div>
         </section>
 
-        <section style={styles.chainHero}>
-          <div>
-            <p style={styles.sectionKicker}>Live Chain Reconstruction</p>
-            <h2 style={styles.cardTitle}>
-              {summary.doctrine.reconstructionPosture}
-            </h2>
-            <p style={styles.bodyText}>{summary.doctrine.evidenceGap}</p>
-          </div>
-
-          <div style={styles.questionBox}>
-            <p style={styles.metricLabel}>Weakest Link</p>
-            <p style={styles.questionText}>{chainReconstruction.weakestLink}</p>
-          </div>
-        </section>
-
-        <section style={styles.chainGrid}>
-          {chainReconstruction.stages.map((stage) => (
-            <ChainStageCard key={stage.label} stage={stage} />
-          ))}
-        </section>
-
-        <section style={styles.gridTwo}>
-          <Panel title="Next Audit Action">
-            <p style={styles.panelText}>{summary.doctrine.requiredMovement}</p>
-          </Panel>
-
-          <Panel title="Required Evidence">
-            <p style={styles.panelText}>{summary.doctrine.evidenceGap}</p>
-          </Panel>
-        </section>
-
-        <section style={styles.reconstructionPanel}>
-          <div>
-            <p style={styles.sectionKicker}>Institutional Credibility Reading</p>
-            <h2 style={styles.cardTitle}>{summary.doctrine.auditCredibility}</h2>
-            <p style={styles.bodyText}>{summary.doctrine.institutionalMeaning}</p>
-          </div>
-
-          <button
-            type="button"
-            onClick={loadAuditLogs}
-            disabled={loading}
-            style={{
-              ...styles.primaryButton,
-              ...(loading ? styles.disabledButton : {}),
-            }}
-          >
-            {loading ? 'Refreshing...' : 'Refresh Evidence Ledger'}
-          </button>
-        </section>
-
-        <section style={styles.summaryGrid}>
+        <section style={styles.metricGrid}>
           <MetricCard title="Evidence Records" value={summary.total} />
-          <MetricCard title="Trust Score" value={summary.executiveTrustScore} />
-          <MetricCard title="Legacy Evidence" value={summary.legacyEvidence} />
-          <MetricCard title="Hardened Evidence" value={summary.hardenedEvidence} />
           <MetricCard
-            title="Executive Reconstructable"
-            value={summary.executiveReconstructable}
+            title="Trust Score"
+            value={summary.executiveTrustScore}
           />
-          <MetricCard title="Immutable Records" value={summary.immutableRecords} />
-          <MetricCard title="Institution Scoped" value={summary.institutionScoped} />
           <MetricCard title="Linked Snapshots" value={summary.linkedSnapshots} />
-        </section>
-
-        <section style={styles.gridTwo}>
-          <Panel title="Executive Trust Score">
-            <div style={styles.scoreBlock}>
-              <p style={styles.scoreNumber}>{summary.executiveTrustScore}</p>
-              <p style={styles.scoreLabel}>out of 100</p>
-              <p style={styles.panelText}>{summary.doctrine.trustMeaning}</p>
-            </div>
-          </Panel>
-
-          <Panel title="Audit Escalation Logic">
-            <div style={styles.infoList}>
-              <Info label="Escalation" value={summary.doctrine.auditEscalation} />
-              <Info label="Reason" value={summary.doctrine.executiveDecision} />
-              <Info label="Chain Trust" value={chainReconstruction.chainTrust} />
-              <Info
-                label="Command Concern"
-                value={
-                  summary.doctrine.auditEscalation === 'COMMAND WATCH' ||
-                  summary.doctrine.auditEscalation === 'EXECUTIVE REVIEW'
-                    ? 'VISIBLE'
-                    : 'NOT CURRENTLY VISIBLE'
-                }
-              />
-            </div>
-          </Panel>
+          <MetricCard
+            title="Immutable Records"
+            value={summary.immutableRecords}
+          />
         </section>
 
         <section style={styles.card}>
-          <p style={styles.sectionKicker}>Evidence Provenance</p>
-          <h2 style={styles.cardTitle}>Where did evidence come from?</h2>
+          <p style={styles.sectionKicker}>Pilot Reconstruction Proof</p>
+
+          <h2 style={styles.cardTitle}>{pilotThread.scenarioName}</h2>
+
+          <p style={styles.bodyText}>{pilotThread.executiveThesis}</p>
+
+          <div style={styles.pilotGrid}>
+            <PilotItem
+              title="Subject"
+              body="Repeated fuel logistics disruption."
+            />
+            <PilotItem
+              title="Verdict"
+              body="Pilot chain remains reconstructable."
+            />
+            <PilotItem
+              title="Memory"
+              body={pilotThread.executiveMemory}
+            />
+          </div>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Reconstruction Chain</p>
+
+          <h2 style={styles.cardTitle}>{chainReconstruction.chainTrust}</h2>
+
           <p style={styles.bodyText}>
-            Audit reveals which lifecycle stages generated evidence and which
-            stages remain difficult to reconstruct.
+            Weakest link: {chainReconstruction.weakestLink}
           </p>
 
-          <div style={styles.provenanceGrid}>
-            {provenance.map((stage) => (
+          <div style={styles.chainStrip}>
+            {chainReconstruction.stages.map((stage) => (
+              <ChainStageCard key={stage.label} stage={stage} />
+            ))}
+          </div>
+        </section>
+
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Evidence Integrity</p>
+
+          <h2 style={styles.cardTitle}>Where is credibility weak?</h2>
+
+          <p style={styles.bodyText}>{summary.doctrine.evidenceGap}</p>
+
+          <div style={styles.integrityGrid}>
+            {provenance.slice(0, 4).map((stage) => (
               <ProvenanceCard key={stage.label} stage={stage} />
             ))}
-          </div>
-        </section>
 
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Evidence Gaps Dashboard</p>
-          <h2 style={styles.cardTitle}>Where is credibility weak?</h2>
-          <p style={styles.bodyText}>
-            Evidence gaps show where lifecycle credibility may weaken if
-            decisions, actions, recovery, coordination, cross-site review,
-            executive reporting, memory preservation, or audit reconstruction are
-            not preserved.
-          </p>
-
-          <div style={styles.gapGrid}>
-            {evidenceGaps.map((gap) => (
+            {evidenceGaps.slice(0, 4).map((gap) => (
               <EvidenceGapCard key={gap.label} gap={gap} />
             ))}
-          </div>
-        </section>
 
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Audit Memory</p>
-          <h2 style={styles.cardTitle}>Which evidence gaps keep returning?</h2>
-          <p style={styles.bodyText}>
-            Audit memory tracks recurring weaknesses in reconstruction, evidence
-            maturity, governance scope, lifecycle proof, and continuity chain
-            preservation.
-          </p>
-
-          <div style={styles.gapGrid}>
-            {auditMemory.map((item) => (
+            {auditMemory.slice(0, 4).map((item) => (
               <AuditMemoryCard key={item.label} item={item} />
             ))}
           </div>
         </section>
 
-        <section style={styles.gridTwo}>
-          <Panel title="What Evidence Exists?">
-            <div style={styles.infoList}>
-              <Info label="Total Records" value={String(summary.total)} />
-              <Info
-                label="Governance Actions"
-                value={String(summary.governanceActions)}
-              />
-              <Info
-                label="Visibility Classified"
-                value={String(summary.visibilityClassified)}
-              />
-              <Info label="Evidence Actors" value={String(summary.uniqueActors)} />
-            </div>
-          </Panel>
-
-          <Panel title="What Evidence Is Missing?">
-            <p style={styles.panelText}>{summary.doctrine.evidenceGap}</p>
-          </Panel>
-        </section>
-
-        <section style={styles.gridTwo}>
-          <Panel title="What Requires Executive Review?">
-            <div style={styles.infoList}>
-              <Info label="Critical Records" value={String(summary.critical)} />
-              <Info label="High Records" value={String(summary.high)} />
-              <Info
-                label="Executive Review"
-                value={
-                  recentExecutiveReview.length > 0
-                    ? 'VISIBLE'
-                    : 'NOT CURRENTLY VISIBLE'
-                }
-              />
-            </div>
-          </Panel>
-
-          <Panel title="What Must Be Preserved For Memory?">
-            <p style={styles.panelText}>
-              Audit memory must preserve actor context, route context,
-              institution scope, evidence reason, linked lifecycle records, and
-              timestamp integrity without converting governance into blame.
-            </p>
-          </Panel>
-        </section>
-
-        <section style={styles.whyCard}>
-          <p style={styles.sectionKicker}>Why Evidence Matters</p>
-          <h2 style={styles.cardTitle}>Evidence separates recovery from appearance.</h2>
-          <p style={styles.bodyText}>
-            Without reconstructable evidence, leadership cannot distinguish
-            recovery from appearance, closure from stabilization, coordination
-            from assumption, cross-site exposure from isolated pressure, or
-            confidence from proof. Audit protects continuity credibility by
-            preserving what happened, why it mattered, what proof exists, and
-            what remains unresolved.
-          </p>
-        </section>
-
         <section style={styles.filterCard}>
           <p style={styles.sectionKicker}>Evidence Filters</p>
+
           <h2 style={styles.cardTitle}>Review without altering the record.</h2>
-          <p style={styles.bodyText}>
-            Filter the ledger by severity, actor, route, maturity, or evidence
-            content. Filtering does not change the preserved audit record.
-          </p>
 
           <div style={styles.filterGrid}>
             <select
@@ -577,7 +356,7 @@ function GovernanceEvidenceLedger() {
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search governance evidence..."
+              placeholder="Search evidence..."
               style={styles.searchInput}
             />
           </div>
@@ -586,70 +365,75 @@ function GovernanceEvidenceLedger() {
         <section style={styles.gridTwo}>
           <section style={styles.card}>
             <p style={styles.sectionKicker}>Executive Review Evidence</p>
+
             <h2 style={styles.cardTitle}>Evidence requiring visibility.</h2>
-            <p style={styles.bodyText}>
-              Critical and high-risk records remain visible for executive review
-              before continuity confidence is restored.
-            </p>
 
             <div style={styles.stack}>
-              {recentExecutiveReview.length === 0 && (
+              {recentExecutiveReview.length === 0 ? (
                 <EmptyPanel
                   title="No critical or high-risk evidence visible."
-                  body="This is acceptable when the lifecycle is clear. Executive review evidence will appear here when severity rises."
+                  body="Executive review evidence will appear here when severity rises."
                 />
+              ) : (
+                recentExecutiveReview.map((log) => (
+                  <article key={log.id} style={styles.reviewCard}>
+                    <div style={styles.badgeRow}>
+                      <span style={styles.severityBadge}>
+                        {normalizeSeverity(log.severity)}
+                      </span>
+
+                      <span style={styles.dateText}>
+                        {formatDate(log.created_at)}
+                      </span>
+                    </div>
+
+                    <h3 style={styles.reviewTitle}>
+                      {safeText(log.action_type)}
+                    </h3>
+
+                    <p style={styles.reviewText}>Actor: {getActor(log)}</p>
+                    <p style={styles.reviewText}>
+                      Institution: {getInstitution(log)}
+                    </p>
+
+                    <div style={styles.maturityPill}>
+                      {resolveEvidenceMaturity(log)}
+                    </div>
+                  </article>
+                ))
               )}
-
-              {recentExecutiveReview.map((log) => (
-                <article key={log.id} style={styles.reviewCard}>
-                  <div style={styles.badgeRow}>
-                    <span style={styles.severityBadge}>
-                      {normalizeSeverity(log.severity)}
-                    </span>
-                    <span style={styles.dateText}>{formatDate(log.created_at)}</span>
-                  </div>
-
-                  <h3 style={styles.reviewTitle}>{safeText(log.action_type)}</h3>
-                  <p style={styles.reviewText}>Actor: {getActor(log)}</p>
-                  <p style={styles.reviewText}>Institution: {getInstitution(log)}</p>
-
-                  <div style={styles.maturityPill}>{resolveEvidenceMaturity(log)}</div>
-                </article>
-              ))}
             </div>
           </section>
 
           <section style={styles.card}>
-            <p style={styles.sectionKicker}>Governance Reconstruction Meaning</p>
-            <h2 style={styles.cardTitle}>Evidence maturity levels.</h2>
+            <p style={styles.sectionKicker}>Next Audit Action</p>
 
-            <div style={styles.stack}>
-              <MeaningCard
-                title="Legacy Evidence"
-                text="Historical evidence remains visible, but is clearly separated from newer hardened governance records."
-              />
-              <MeaningCard
-                title="Hardened Evidence"
-                text="Structured governance meaning is preserved so role, routing, intervention, coordination, and operational decisions do not disappear."
-              />
-              <MeaningCard
-                title="Executive Reconstruction"
-                text="The strongest records preserve enough context for leaders to reconstruct what happened, why it mattered, whether continuity was governed, and whether the chain can be trusted."
-              />
-            </div>
+            <h2 style={styles.cardTitle}>
+              {summary.doctrine.auditCredibility}
+            </h2>
+
+            <p style={styles.bodyText}>{summary.doctrine.requiredMovement}</p>
+
+            <button
+              type="button"
+              onClick={loadAuditLogs}
+              disabled={loading}
+              style={{
+                ...styles.primaryButton,
+                ...(loading ? styles.disabledButton : {}),
+              }}
+            >
+              {loading ? 'Refreshing...' : 'Refresh Evidence Ledger'}
+            </button>
           </section>
         </section>
 
         <section style={styles.card}>
           <p style={styles.sectionKicker}>Immutable Continuity Ledger</p>
+
           <h2 style={styles.cardTitle}>
             Evidence must support reconstruction without becoming surveillance.
           </h2>
-          <p style={styles.bodyText}>
-            Records are sorted by maturity, severity, and recency. Each record
-            supports continuity reconstruction while preserving governance-safe
-            interpretation.
-          </p>
 
           <div style={styles.ledgerList}>
             {loading ? (
@@ -660,7 +444,7 @@ function GovernanceEvidenceLedger() {
             ) : sortedLogs.length === 0 ? (
               <EmptyPanel
                 title="No evidence records match the current view."
-                body="This may mean the ledger is clean, the filters are too narrow, or audit records have not yet been created."
+                body="The ledger is clean, filters are too narrow, or audit records have not yet been created."
               />
             ) : (
               sortedLogs.map((log) => {
@@ -673,32 +457,35 @@ function GovernanceEvidenceLedger() {
                         <span style={styles.severityBadge}>
                           {normalizeSeverity(log.severity)}
                         </span>
+
                         <span style={styles.actionBadge}>
                           {safeText(log.action_type)}
                         </span>
-                        <span style={styles.integrityBadge}>
-                          {isImmutableRecord(log)
-                            ? 'Immutable record'
-                            : 'Integrity incomplete'}
-                        </span>
+
                         <span style={styles.maturityBadge}>{maturity}</span>
                       </div>
 
                       <p style={styles.dateText}>{formatDate(log.created_at)}</p>
                     </div>
 
-                    <p style={styles.maturityMeaning}>
-                      {getMaturityMeaning(maturity)}
-                    </p>
-
-                    <div style={styles.evidenceGrid}>
+                    <div style={styles.ledgerSummaryGrid}>
                       <EvidenceLine label="Actor" value={getActor(log)} />
                       <EvidenceLine
-                        label="Route / Source"
-                        value={safeText(log.route)}
+                        label="Institution"
+                        value={getInstitution(log)}
                       />
-                      <EvidenceLine label="Record Type" value={getRecordType(log)} />
-                      <EvidenceLine label="Institution" value={getInstitution(log)} />
+                      <EvidenceLine
+                        label="Record Type"
+                        value={getRecordType(log)}
+                      />
+                      <EvidenceLine
+                        label="Integrity"
+                        value={
+                          isImmutableRecord(log)
+                            ? 'Immutable record'
+                            : 'Integrity incomplete'
+                        }
+                      />
                       <EvidenceLine
                         label="Visibility"
                         value={getVisibilityLevel(log)}
@@ -707,22 +494,28 @@ function GovernanceEvidenceLedger() {
                         label="Linked Snapshot"
                         value={getLinkedSnapshot(log)}
                       />
+                    </div>
+
+                    <details style={styles.detailsBox}>
+                      <summary style={styles.detailsSummary}>
+                        View evidence details
+                      </summary>
+
+                      <p style={styles.maturityMeaning}>
+                        {getMaturityMeaning(maturity)}
+                      </p>
+
                       <EvidenceLine
                         label="Governance Reason"
                         value={getEvidenceReason(log)}
                       />
-                    </div>
 
-                    {log.details && (
-                      <details style={styles.detailsBox}>
-                        <summary style={styles.detailsSummary}>
-                          View preserved evidence details
-                        </summary>
+                      {log.details && (
                         <pre style={styles.preBlock}>
                           {JSON.stringify(log.details, null, 2)}
                         </pre>
-                      </details>
-                    )}
+                      )}
+                    </details>
                   </article>
                 )
               })
@@ -732,8 +525,10 @@ function GovernanceEvidenceLedger() {
 
         <section style={styles.principleCard}>
           <div style={styles.principleIcon}>§</div>
+
           <div>
             <p style={styles.sectionKicker}>Audit Principle</p>
+
             <p style={styles.principleText}>
               Audit preserves evidence integrity. It does not create blame,
               closure, or operational noise. It protects the institution’s
@@ -745,10 +540,6 @@ function GovernanceEvidenceLedger() {
       </div>
     </main>
   )
-}
-
-function formatLabel(value: string) {
-  return value.replaceAll('_', ' ')
 }
 
 function formatDate(value?: string | null) {
@@ -770,19 +561,10 @@ function MetricCard({ title, value }: { title: string; value: number }) {
   )
 }
 
-function SignalCard({
-  title,
-  value,
-  body,
-}: {
-  title: string
-  value: string
-  body: string
-}) {
+function PilotItem({ title, body }: { title: string; body: string }) {
   return (
-    <article style={styles.signalCard}>
+    <article style={styles.pilotItem}>
       <p style={styles.metricLabel}>{title}</p>
-      <p style={styles.signalValue}>{value}</p>
       <p style={styles.panelBody}>{body}</p>
     </article>
   )
@@ -799,48 +581,43 @@ function ChainStageCard({ stage }: { stage: ChainStage }) {
       <p style={styles.metricLabel}>{stage.label}</p>
       <p style={styles.chainStageValue}>{stage.count}</p>
       <strong style={styles.provenanceStatus}>{stage.status}</strong>
-      <p style={styles.panelBody}>{stage.meaning}</p>
     </article>
   )
 }
 
 function ProvenanceCard({ stage }: { stage: ProvenanceStage }) {
   return (
-    <article style={styles.provenanceCard}>
-      <p style={styles.metricLabel}>{stage.label}</p>
-      <p style={styles.provenanceValue}>{stage.count}</p>
-      <strong style={styles.provenanceStatus}>{stage.status}</strong>
-      <p style={styles.panelBody}>{stage.meaning}</p>
-    </article>
+    <IntegrityCard
+      title={stage.label}
+      value={stage.count}
+      status={stage.status}
+    />
   )
 }
 
 function EvidenceGapCard({ gap }: { gap: EvidenceGapItem }) {
-  return (
-    <article style={styles.gapCard}>
-      <p style={styles.metricLabel}>{gap.label}</p>
-      <p style={styles.gapValue}>{gap.count}</p>
-      <p style={styles.panelBody}>{gap.meaning}</p>
-    </article>
-  )
+  return <IntegrityCard title={gap.label} value={gap.count} status="Gap" />
 }
 
 function AuditMemoryCard({ item }: { item: AuditMemoryItem }) {
-  return (
-    <article style={styles.gapCard}>
-      <p style={styles.metricLabel}>{item.label}</p>
-      <p style={styles.gapValue}>{item.count}</p>
-      <p style={styles.panelBody}>{item.meaning}</p>
-    </article>
-  )
+  return <IntegrityCard title={item.label} value={item.count} status="Memory" />
 }
 
-function Panel({ title, children }: { title: string; children: ReactNode }) {
+function IntegrityCard({
+  title,
+  value,
+  status,
+}: {
+  title: string
+  value: number
+  status: string
+}) {
   return (
-    <section style={styles.panel}>
-      <p style={styles.panelKicker}>{title}</p>
-      <div style={styles.panelBody}>{children}</div>
-    </section>
+    <article style={styles.integrityCard}>
+      <p style={styles.metricLabel}>{title}</p>
+      <p style={styles.integrityValue}>{value}</p>
+      <strong style={styles.provenanceStatus}>{status}</strong>
+    </article>
   )
 }
 
@@ -850,24 +627,6 @@ function EmptyPanel({ title, body }: { title: string; body: string }) {
       <p style={styles.emptyTitle}>{title}</p>
       <p style={styles.emptyText}>{body}</p>
     </div>
-  )
-}
-
-function Info({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={styles.infoRow}>
-      <span style={styles.infoLabel}>{label}</span>
-      <strong style={styles.infoValue}>{value}</strong>
-    </div>
-  )
-}
-
-function MeaningCard({ title, text }: { title: string; text: string }) {
-  return (
-    <article style={styles.meaningCard}>
-      <h3 style={styles.meaningTitle}>{title}</h3>
-      <p style={styles.meaningText}>{text}</p>
-    </article>
   )
 }
 
@@ -897,17 +656,19 @@ const styles: Record<string, CSSProperties> = {
   },
   container: {
     width: '100%',
-    maxWidth: '1120px',
+    maxWidth: 1120,
     margin: '0 auto',
     padding: '16px 28px 72px',
     boxSizing: 'border-box',
   },
-  header: { marginBottom: '28px' },
+  header: {
+    marginBottom: 24,
+  },
   kicker: {
     color: gold,
-    fontSize: '11px',
+    fontSize: 11,
     fontWeight: 900,
-    letterSpacing: '2px',
+    letterSpacing: 2,
     margin: 0,
   },
   title: {
@@ -919,85 +680,46 @@ const styles: Record<string, CSSProperties> = {
   },
   subtitle: {
     color: '#cfc7b5',
-    maxWidth: '820px',
+    maxWidth: 820,
     lineHeight: 1.65,
-    fontSize: '14px',
+    fontSize: 14,
     margin: 0,
-  },
-  doctrinePanel: {
-    background: panelBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '20px',
-    padding: '22px',
-    marginTop: '22px',
-  },
-  doctrineTitle: {
-    color: gold,
-    fontSize: '10px',
-    fontWeight: 900,
-    letterSpacing: '0.15em',
-    margin: '0 0 14px',
   },
   doctrineGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '14px',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 18,
   },
   doctrineCard: {
-    background: deepBlack,
+    background: panelBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '14px',
-    padding: '14px',
+    borderRadius: 14,
+    padding: 14,
     color: '#fff8e7',
-    fontSize: '12px',
+    fontSize: 12,
     lineHeight: 1.45,
     fontWeight: 800,
-  },
-  doctrineReadingGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '12px',
-    marginTop: '18px',
   },
   errorBox: {
     background: 'rgba(127, 29, 29, 0.52)',
     border: '1px solid rgba(248, 113, 113, 0.45)',
     color: '#fecaca',
     padding: '13px 16px',
-    borderRadius: '14px',
+    borderRadius: 14,
     fontWeight: 800,
-    marginBottom: '24px',
-    fontSize: '13px',
-  },
-  pilotHero: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.35fr) minmax(280px, 0.65fr)',
-    gap: '24px',
-    background: 'linear-gradient(135deg, rgba(214,178,94,0.13), #030303)',
-    border: `1px solid ${gold}`,
-    borderRadius: '22px',
-    padding: '24px',
-    marginBottom: '24px',
+    marginBottom: 24,
+    fontSize: 13,
   },
   heroCard: {
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1.35fr) minmax(280px, 0.65fr)',
-    gap: '24px',
-    background: deepBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '22px',
-    padding: '24px',
-    marginBottom: '24px',
-  },
-  chainHero: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.35fr) minmax(280px, 0.65fr)',
-    gap: '24px',
-    background: panelBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '22px',
-    padding: '24px',
-    marginBottom: '24px',
+    gap: 24,
+    background: 'linear-gradient(135deg, rgba(214,178,94,0.13), #030303)',
+    border: `1px solid ${gold}`,
+    borderRadius: 22,
+    padding: 24,
+    marginBottom: 20,
   },
   sectionKicker: {
     color: mutedGold,
@@ -1005,7 +727,7 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: '0.15em',
     textTransform: 'uppercase',
     margin: 0,
-    fontSize: '10px',
+    fontSize: 10,
   },
   heroTitle: {
     color: gold,
@@ -1018,109 +740,37 @@ const styles: Record<string, CSSProperties> = {
     color: '#cfc7b5',
     lineHeight: 1.6,
     margin: 0,
-    fontSize: '14px',
+    fontSize: 14,
   },
   questionBox: {
     background: '#15110a',
     border: `1px solid ${softLine}`,
-    borderRadius: '18px',
-    padding: '20px',
+    borderRadius: 18,
+    padding: 20,
   },
   questionText: {
     color: '#fff8e7',
-    fontSize: '21px',
+    fontSize: 21,
     lineHeight: 1.25,
     margin: '10px 0 0',
     fontWeight: 900,
   },
-  gridThree: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '16px',
-    marginBottom: '24px',
-  },
-  signalCard: {
-    background: cardBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '16px',
-    minHeight: '140px',
-  },
-  signalValue: {
-    color: gold,
-    fontSize: '24px',
-    fontWeight: 950,
-    margin: '12px 0 0',
-    lineHeight: 1.1,
-    overflowWrap: 'anywhere',
-  },
-  chainGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-    gap: '12px',
-    marginBottom: '24px',
-  },
-  chainStageCard: {
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '14px',
-    minHeight: '150px',
-  },
-  chainStageMissing: {
-    border: '1px solid rgba(248,113,113,0.45)',
-    background: 'rgba(127,29,29,0.18)',
-  },
-  chainStageValue: {
-    color: gold,
-    fontSize: '30px',
-    fontWeight: 950,
-    margin: '10px 0 4px',
-    lineHeight: 1,
-  },
-  reconstructionPanel: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1fr) auto',
-    gap: '24px',
-    alignItems: 'center',
-    background: panelBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '22px',
-    padding: '24px',
-    marginBottom: '24px',
-  },
-  primaryButton: {
-    border: 'none',
-    borderRadius: '14px',
-    background: gold,
-    color: '#11100d',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: 950,
-    minHeight: '52px',
-    padding: '0 22px',
-    whiteSpace: 'nowrap',
-  },
-  disabledButton: {
-    cursor: 'not-allowed',
-    opacity: 0.65,
-  },
-  summaryGrid: {
+  metricGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '16px',
-    marginBottom: '24px',
+    gap: 14,
+    marginBottom: 20,
   },
   metricCard: {
     background: cardBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '16px',
-    minHeight: '116px',
+    borderRadius: 16,
+    padding: 16,
+    minHeight: 104,
   },
   metricLabel: {
     color: mutedGold,
-    fontSize: '9px',
+    fontSize: 9,
     fontWeight: 900,
     letterSpacing: '0.14em',
     textTransform: 'uppercase',
@@ -1128,203 +778,17 @@ const styles: Record<string, CSSProperties> = {
   },
   metricValue: {
     color: gold,
-    fontSize: '32px',
+    fontSize: 32,
     fontWeight: 950,
     lineHeight: 1,
     margin: '12px 0 0',
-  },
-  scoreBlock: { textAlign: 'center', padding: '10px' },
-  scoreNumber: {
-    color: gold,
-    fontSize: '64px',
-    fontWeight: 950,
-    lineHeight: 1,
-    margin: 0,
-  },
-  scoreLabel: {
-    color: mutedGold,
-    fontWeight: 900,
-    margin: '6px 0 14px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.12em',
-    fontSize: '11px',
-  },
-  gridTwo: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '24px',
-    marginBottom: '24px',
-  },
-  panel: {
-    background: cardBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '18px',
-    padding: '20px',
-    minHeight: '180px',
-  },
-  panelKicker: {
-    color: mutedGold,
-    fontSize: '10px',
-    fontWeight: 900,
-    letterSpacing: '0.14em',
-    textTransform: 'uppercase',
-    margin: 0,
-  },
-  panelBody: {
-    color: '#cfc7b5',
-    fontSize: '13px',
-    lineHeight: 1.6,
-    marginTop: '10px',
-  },
-  panelText: {
-    color: '#cfc7b5',
-    lineHeight: 1.65,
-    margin: 0,
-  },
-  pilotChainList: {
-    display: 'grid',
-    gap: '14px',
-    marginTop: '18px',
-  },
-  pilotChainItem: {
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '16px',
-  },
-  pilotStageTitle: {
-    color: '#fff8e7',
-    fontSize: '21px',
-    margin: '8px 0',
-  },
-  evidenceText: {
-    color: '#f8e7b8',
-    borderTop: `1px solid ${softLine}`,
-    fontSize: '13px',
-    lineHeight: 1.6,
-    margin: '12px 0 0',
-    paddingTop: '12px',
-    fontWeight: 800,
-  },
-  infoList: {
-    display: 'grid',
-    gap: '10px',
-    marginTop: '14px',
-  },
-  infoRow: {
-    display: 'grid',
-    gridTemplateColumns: '150px minmax(0, 1fr)',
-    gap: '12px',
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '14px',
-    padding: '12px',
-    alignItems: 'start',
-  },
-  infoLabel: {
-    color: mutedGold,
-    fontWeight: 900,
-    fontSize: '11px',
-    letterSpacing: '0.08em',
-    textTransform: 'uppercase',
-  },
-  infoValue: {
-    color: '#fff8e7',
-    lineHeight: 1.45,
-    overflowWrap: 'anywhere',
-  },
-  provenanceGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '14px',
-    marginTop: '18px',
-  },
-  provenanceCard: {
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '14px',
-    minHeight: '150px',
-  },
-  provenanceValue: {
-    color: gold,
-    fontSize: '34px',
-    fontWeight: 950,
-    margin: '10px 0 4px',
-    lineHeight: 1,
-  },
-  provenanceStatus: {
-    display: 'block',
-    color: '#fff8e7',
-    fontSize: '12px',
-    marginBottom: '8px',
-  },
-  gapGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '14px',
-    marginTop: '18px',
-  },
-  gapCard: {
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '14px',
-    minHeight: '120px',
-  },
-  gapValue: {
-    color: gold,
-    fontSize: '34px',
-    fontWeight: 950,
-    margin: '10px 0',
-    lineHeight: 1,
-  },
-  whyCard: {
-    background: 'linear-gradient(135deg, rgba(214,178,94,0.10), #030303)',
-    border: `1px solid ${softLine}`,
-    borderRadius: '22px',
-    padding: '24px',
-    marginBottom: '24px',
-  },
-  filterCard: {
-    background: deepBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '22px',
-    padding: '24px',
-    marginBottom: '24px',
-  },
-  filterGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-    gap: '12px',
-    marginTop: '18px',
-  },
-  select: {
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '12px',
-    color: '#fff8e7',
-    padding: '12px',
-    fontSize: '13px',
-    fontWeight: 800,
-    minWidth: 0,
-  },
-  searchInput: {
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '12px',
-    color: '#fff8e7',
-    padding: '12px',
-    fontSize: '13px',
-    fontWeight: 800,
-    minWidth: 0,
   },
   card: {
     background: deepBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '22px',
-    padding: '24px',
-    marginBottom: '24px',
+    borderRadius: 22,
+    padding: 24,
+    marginBottom: 20,
     overflow: 'hidden',
   },
   cardTitle: {
@@ -1337,33 +801,140 @@ const styles: Record<string, CSSProperties> = {
   bodyText: {
     color: '#cfc7b5',
     lineHeight: 1.6,
-    fontSize: '13px',
+    fontSize: 13,
     margin: 0,
+  },
+  pilotGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 16,
+  },
+  pilotItem: {
+    background: '#15110a',
+    border: `1px solid ${softLine}`,
+    borderRadius: 16,
+    padding: 14,
+  },
+  panelBody: {
+    color: '#cfc7b5',
+    fontSize: 13,
+    lineHeight: 1.6,
+    marginTop: 10,
+  },
+  chainStrip: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 16,
+  },
+  chainStageCard: {
+    background: '#15110a',
+    border: `1px solid ${softLine}`,
+    borderRadius: 16,
+    padding: 14,
+    minHeight: 116,
+  },
+  chainStageMissing: {
+    border: '1px solid rgba(248,113,113,0.45)',
+    background: 'rgba(127,29,29,0.18)',
+  },
+  chainStageValue: {
+    color: gold,
+    fontSize: 28,
+    fontWeight: 950,
+    margin: '10px 0 4px',
+    lineHeight: 1,
+  },
+  provenanceStatus: {
+    display: 'block',
+    color: '#fff8e7',
+    fontSize: 12,
+    marginTop: 8,
+  },
+  integrityGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 16,
+  },
+  integrityCard: {
+    background: '#15110a',
+    border: `1px solid ${softLine}`,
+    borderRadius: 16,
+    padding: 14,
+    minHeight: 112,
+  },
+  integrityValue: {
+    color: gold,
+    fontSize: 30,
+    fontWeight: 950,
+    margin: '10px 0 0',
+    lineHeight: 1,
+  },
+  filterCard: {
+    background: panelBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: 22,
+    padding: 20,
+    marginBottom: 20,
+  },
+  filterGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 16,
+  },
+  select: {
+    background: '#15110a',
+    border: `1px solid ${softLine}`,
+    borderRadius: 12,
+    color: '#fff8e7',
+    padding: 12,
+    fontSize: 13,
+    fontWeight: 800,
+    minWidth: 0,
+  },
+  searchInput: {
+    background: '#15110a',
+    border: `1px solid ${softLine}`,
+    borderRadius: 12,
+    color: '#fff8e7',
+    padding: 12,
+    fontSize: 13,
+    fontWeight: 800,
+    minWidth: 0,
+  },
+  gridTwo: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 20,
+    marginBottom: 20,
   },
   stack: {
     display: 'grid',
-    gap: '14px',
-    marginTop: '18px',
+    gap: 12,
+    marginTop: 16,
   },
   reviewCard: {
     background: '#15110a',
     border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '16px',
+    borderRadius: 16,
+    padding: 16,
   },
   badgeRow: {
     display: 'flex',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: '8px',
+    gap: 8,
   },
   severityBadge: {
     background: 'rgba(127, 29, 29, 0.55)',
     border: '1px solid rgba(248, 113, 113, 0.35)',
-    borderRadius: '999px',
+    borderRadius: 999,
     color: '#fecaca',
     padding: '6px 10px',
-    fontSize: '10px',
+    fontSize: 10,
     fontWeight: 950,
     letterSpacing: '0.08em',
     textTransform: 'uppercase',
@@ -1371,21 +942,10 @@ const styles: Record<string, CSSProperties> = {
   actionBadge: {
     background: 'rgba(214,178,94,0.14)',
     border: `1px solid ${softLine}`,
-    borderRadius: '999px',
+    borderRadius: 999,
     color: '#f8e7b8',
     padding: '6px 10px',
-    fontSize: '10px',
-    fontWeight: 950,
-    letterSpacing: '0.08em',
-    textTransform: 'uppercase',
-  },
-  integrityBadge: {
-    background: 'rgba(22, 163, 74, 0.18)',
-    border: '1px solid rgba(74, 222, 128, 0.26)',
-    borderRadius: '999px',
-    color: '#bbf7d0',
-    padding: '6px 10px',
-    fontSize: '10px',
+    fontSize: 10,
     fontWeight: 950,
     letterSpacing: '0.08em',
     textTransform: 'uppercase',
@@ -1393,97 +953,92 @@ const styles: Record<string, CSSProperties> = {
   maturityBadge: {
     background: '#111827',
     border: '1px solid rgba(148,163,184,0.28)',
-    borderRadius: '999px',
+    borderRadius: 999,
     color: '#e5e7eb',
     padding: '6px 10px',
-    fontSize: '10px',
+    fontSize: 10,
     fontWeight: 950,
     letterSpacing: '0.08em',
     textTransform: 'uppercase',
   },
   dateText: {
     color: '#b8aa8a',
-    fontSize: '12px',
+    fontSize: 12,
     margin: 0,
   },
   reviewTitle: {
     color: '#fff8e7',
     margin: '12px 0 10px',
-    fontSize: '18px',
+    fontSize: 18,
   },
   reviewText: {
     color: '#cfc7b5',
-    fontSize: '13px',
+    fontSize: 13,
     margin: '6px 0',
   },
   maturityPill: {
     display: 'inline-flex',
-    marginTop: '10px',
+    marginTop: 10,
     background: '#111827',
     border: '1px solid rgba(148,163,184,0.28)',
-    borderRadius: '999px',
+    borderRadius: 999,
     color: '#e5e7eb',
     padding: '7px 10px',
-    fontSize: '10px',
+    fontSize: 10,
     fontWeight: 950,
     letterSpacing: '0.08em',
     textTransform: 'uppercase',
   },
-  meaningCard: {
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '16px',
+  primaryButton: {
+    border: 'none',
+    borderRadius: 14,
+    background: gold,
+    color: '#11100d',
+    cursor: 'pointer',
+    fontSize: 14,
+    fontWeight: 950,
+    minHeight: 48,
+    padding: '0 18px',
+    marginTop: 18,
+    whiteSpace: 'nowrap',
   },
-  meaningTitle: {
-    color: '#fff8e7',
-    margin: '0 0 8px',
-    fontSize: '17px',
-  },
-  meaningText: {
-    color: '#cfc7b5',
-    margin: 0,
-    lineHeight: 1.6,
-    fontSize: '13px',
+  disabledButton: {
+    cursor: 'not-allowed',
+    opacity: 0.65,
   },
   ledgerList: {
     display: 'grid',
-    gap: '16px',
-    marginTop: '18px',
+    gap: 14,
+    marginTop: 16,
   },
   ledgerItem: {
     background: '#15110a',
     border: `1px solid ${softLine}`,
-    borderRadius: '18px',
-    padding: '18px',
+    borderRadius: 18,
+    padding: 16,
   },
   ledgerHeader: {
     display: 'flex',
     justifyContent: 'space-between',
-    gap: '12px',
+    gap: 12,
     alignItems: 'flex-start',
     flexWrap: 'wrap',
   },
-  maturityMeaning: {
-    color: '#f8e7b8',
-    lineHeight: 1.6,
-    fontSize: '13px',
-    margin: '14px 0',
-  },
-  evidenceGrid: {
+  ledgerSummaryGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '12px',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: 10,
+    marginTop: 14,
   },
   evidenceLine: {
     background: deepBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '14px',
-    padding: '12px',
+    borderRadius: 14,
+    padding: 12,
   },
   evidenceLabel: {
     color: mutedGold,
-    fontSize: '10px',
+    fontSize: 10,
     fontWeight: 900,
     letterSpacing: '0.12em',
     textTransform: 'uppercase',
@@ -1496,32 +1051,39 @@ const styles: Record<string, CSSProperties> = {
     overflowWrap: 'anywhere',
   },
   detailsBox: {
-    marginTop: '14px',
+    marginTop: 14,
     borderTop: `1px solid ${softLine}`,
-    paddingTop: '14px',
+    paddingTop: 14,
   },
   detailsSummary: {
     color: gold,
     cursor: 'pointer',
     fontWeight: 900,
-    fontSize: '13px',
+    fontSize: 13,
+  },
+  maturityMeaning: {
+    color: '#f8e7b8',
+    lineHeight: 1.6,
+    fontSize: 13,
+    margin: '12px 0',
   },
   preBlock: {
-    marginTop: '12px',
+    marginTop: 12,
     whiteSpace: 'pre-wrap',
     background: deepBlack,
     border: `1px solid ${softLine}`,
-    borderRadius: '12px',
-    padding: '12px',
+    borderRadius: 12,
+    padding: 12,
     color: '#e8dec8',
-    fontSize: '12px',
+    fontSize: 12,
     overflowX: 'auto',
+    maxHeight: 360,
   },
   emptyPanel: {
     background: '#15110a',
     border: `1px solid ${softLine}`,
-    borderRadius: '16px',
-    padding: '16px',
+    borderRadius: 16,
+    padding: 16,
   },
   emptyTitle: {
     color: '#fff8e7',
@@ -1536,27 +1098,27 @@ const styles: Record<string, CSSProperties> = {
   principleCard: {
     display: 'grid',
     gridTemplateColumns: '58px minmax(0, 1fr)',
-    gap: '16px',
+    gap: 16,
     alignItems: 'start',
     background: panelBlack,
     border: `1px solid ${gold}`,
-    borderRadius: '22px',
-    padding: '22px',
+    borderRadius: 22,
+    padding: 22,
   },
   principleIcon: {
-    width: '48px',
-    height: '48px',
-    borderRadius: '999px',
+    width: 48,
+    height: 48,
+    borderRadius: 999,
     background: gold,
     color: deepBlack,
     display: 'grid',
     placeItems: 'center',
-    fontSize: '28px',
+    fontSize: 28,
     fontWeight: 950,
   },
   principleText: {
     color: '#fff8e7',
-    fontSize: '17px',
+    fontSize: 17,
     lineHeight: 1.55,
     margin: '8px 0 0',
     fontWeight: 800,
