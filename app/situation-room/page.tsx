@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import type { CSSProperties, ReactNode } from 'react'
+import type { CSSProperties } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
@@ -22,8 +22,6 @@ import {
 import {
   formatCGIEvidenceLanguage,
   formatCGIExecutivePosture,
-  formatCGIGovernanceSafeLanguage,
-  formatCGISurvivabilityLanguage,
 } from '@/lib/cgiExecutivePostureFormatter'
 
 type PersistedSituationReview = Record<string, any>
@@ -149,24 +147,18 @@ function SituationRoomContent() {
     briefing.synthesis.synthesisPosture,
   )
 
-  const survivabilityLanguage = formatCGISurvivabilityLanguage(
-    briefing.synthesis.synthesisPosture,
-  )
-
-  const governanceLanguage = formatCGIGovernanceSafeLanguage()
-
   async function loadSituationReviews() {
     try {
       setLoadingReviews(true)
-      setReviewMessage('Loading enterprise situation memory...')
+      setReviewMessage('Loading situation memory...')
 
       const loadedReviews = await loadCGISituationReviews()
 
       setReviews(Array.isArray(loadedReviews) ? loadedReviews : [])
-      setReviewMessage('Enterprise situation memory loaded.')
+      setReviewMessage('Situation memory loaded.')
     } catch (error) {
       console.error(error)
-      setReviewMessage('Enterprise situation memory could not be loaded.')
+      setReviewMessage('Situation memory could not be loaded.')
     } finally {
       setLoadingReviews(false)
     }
@@ -179,7 +171,7 @@ function SituationRoomContent() {
   async function handleSaveSituationReview() {
     try {
       setSaving(true)
-      setSaveMessage('Saving enterprise situation review...')
+      setSaveMessage('Saving situation review...')
 
       await saveCGISituationReview({
         situationTitle: 'Enterprise Continuity Situation Room',
@@ -205,11 +197,11 @@ function SituationRoomContent() {
         },
       })
 
-      setSaveMessage('Enterprise situation review saved.')
+      setSaveMessage('Situation review saved.')
       await loadSituationReviews()
     } catch (error) {
       console.error(error)
-      setSaveMessage('Enterprise situation review could not be saved.')
+      setSaveMessage('Situation review could not be saved.')
     } finally {
       setSaving(false)
     }
@@ -220,22 +212,21 @@ function SituationRoomContent() {
       <div style={styles.container}>
         <section style={styles.hero}>
           <div>
-            <p style={styles.kicker}>TSINAXA CGI • ENTERPRISE SITUATION ROOM</p>
+            <p style={styles.kicker}>TSINAXA CGI • SITUATION ROOM</p>
 
-            <h1 style={styles.title}>
-              Enterprise Continuity Situation Intelligence
-            </h1>
+            <h1 style={styles.title}>Enterprise Continuity Situation Room</h1>
 
             <p style={styles.subtitle}>
-              Situation Room fuses pressure, trajectory, predictive warning,
-              recovery durability, reliability confidence, command visibility,
-              coordination exposure, cross-site intelligence, executive meaning,
-              and audit evidence into one operating condition.
+              The Situation Room converges pressure, trajectory, predictive
+              warning, recovery durability, reliability confidence, command
+              visibility, coordination exposure, cross-site intelligence,
+              executive meaning, and audit evidence into one current operating
+              condition.
             </p>
           </div>
 
           <div style={styles.statusBox}>
-            <p style={styles.statusLabel}>CONTINUITY CONDITION</p>
+            <p style={styles.statusLabel}>CURRENT CONDITION</p>
             <p style={styles.statusValue}>{operatingPicture.posture}</p>
             <p style={styles.statusMeaning}>
               {operatingPicture.executiveMeaning}
@@ -250,13 +241,6 @@ function SituationRoomContent() {
             <h2 style={styles.commandTitle}>
               {operatingPicture.operatingQuestion}
             </h2>
-
-            <p style={styles.primaryText}>
-              The current condition is determined through pressure, trajectory,
-              predictive warning, recovery durability, reliability confidence,
-              command visibility, coordination exposure, and cross-site
-              intelligence.
-            </p>
 
             <div style={styles.commandMetaGrid}>
               <MiniStat label="Posture" value={operatingPicture.posture} />
@@ -289,63 +273,45 @@ function SituationRoomContent() {
           <Metric label="Cross-Site" value="VISIBLE" />
         </section>
 
-        <section style={styles.gridFour}>
-          <ExecutiveCard
-            title="Pressure"
-            value="ELEVATED"
-            body={operatingPicture.pressureReading}
-          />
+        <section style={styles.panel}>
+          <p style={styles.sectionKicker}>Operating Condition Summary</p>
 
-          <ExecutiveCard
-            title="Trajectory"
-            value={trajectory.trajectory}
-            body={operatingPicture.trajectoryReading}
-          />
+          <h2 style={styles.panelTitle}>
+            What is driving the current condition?
+          </h2>
 
-          <ExecutiveCard
-            title="Predictive"
-            value="ELEVATED"
-            body={operatingPicture.predictiveReading}
-          />
+          <div style={styles.summaryGrid}>
+            <ExecutiveCard
+              title="Pressure"
+              value="ELEVATED"
+              body={operatingPicture.pressureReading}
+            />
 
-          <ExecutiveCard
-            title="Recovery"
-            value="PARTIAL"
-            body={operatingPicture.recoveryReading}
-          />
-        </section>
+            <ExecutiveCard
+              title="Trajectory"
+              value={trajectory.trajectory}
+              body={operatingPicture.trajectoryReading}
+            />
 
-        <section style={styles.gridFour}>
-          <ExecutiveCard
-            title="Reliability"
-            value="ELEVATED"
-            body={operatingPicture.reliabilityReading}
-          />
+            <ExecutiveCard
+              title="Dominant Concern"
+              value={briefing.dominantConcern}
+              body={operatingPicture.coordinationReading}
+            />
 
-          <ExecutiveCard
-            title="Command"
-            value="ELEVATED"
-            body={operatingPicture.commandReading}
-          />
-
-          <ExecutiveCard
-            title="Coordination"
-            value="REQUIRED"
-            body={operatingPicture.coordinationReading}
-          />
-
-          <ExecutiveCard
-            title="Cross-Site"
-            value="VISIBLE"
-            body={operatingPicture.crossSiteReading}
-          />
+            <ExecutiveCard
+              title="Required Action"
+              value={operatingPicture.requiredAction}
+              body={operatingPicture.crossSiteReading}
+            />
+          </div>
         </section>
 
         <section style={styles.memoryPanel}>
           <p style={styles.sectionKicker}>Executive Meaning</p>
 
           <h2 style={styles.panelTitle}>
-            What does this continuity condition mean?
+            What must leadership understand now?
           </h2>
 
           <div style={styles.memoryGrid}>
@@ -356,10 +322,7 @@ function SituationRoomContent() {
 
             <MiniStat label="Watch Next" value={operatingPicture.watchNext} />
 
-            <MiniStat
-              label="Dominant Concern"
-              value={briefing.dominantConcern}
-            />
+            <MiniStat label="Evidence" value={evidenceLanguage} />
 
             <MiniStat
               label="Executive Posture"
@@ -368,89 +331,51 @@ function SituationRoomContent() {
           </div>
         </section>
 
-        <section style={styles.gridTwo}>
-          <Panel title="Continuity Evidence Standard">
-            <Info label="Evidence" value={evidenceLanguage} />
-            <Info label="Survivability" value={survivabilityLanguage} />
-            <Info label="Governance" value={governanceLanguage} />
-            <Info
-              label="Reconstruction"
-              value={operatingPicture.evidenceStandard}
-            />
-          </Panel>
-
-          <Panel title="Operating Picture Movement">
-            <Info label="Momentum" value={trajectory.momentum} />
-            <Info label="History Direction" value={historyReview.direction} />
-            <Info
-              label="Continuity Drift"
-              value={historyReview.continuityDriftDetected ? 'YES' : 'NO'}
-            />
-            <Info
-              label="Next Destination"
-              value={operatingPicture.nextDestination}
-            />
-          </Panel>
-        </section>
-
         <section style={styles.actionPanel}>
           <div>
             <p style={styles.sectionKicker}>Situation Memory</p>
 
             <h2 style={styles.actionTitle}>
-              Preserve this operating picture as enterprise continuity memory.
+              Preserve and retrieve the operating picture.
             </h2>
 
             <p style={styles.actionText}>
-              Saving the situation review preserves posture, movement,
-              convergence, evidence standard, executive meaning, required action,
-              and audit reconstruction memory.
+              CGI preserves posture, movement, convergence, evidence standard,
+              executive meaning, required action, and reconstruction memory.
             </p>
 
-            {saveMessage && <p style={styles.saveMessage}>{saveMessage}</p>}
+            {(saveMessage || reviewMessage) && (
+              <p style={styles.saveMessage}>
+                {[saveMessage, reviewMessage].filter(Boolean).join(' ')}
+              </p>
+            )}
           </div>
 
-          <button
-            type="button"
-            onClick={handleSaveSituationReview}
-            disabled={saving}
-            style={{
-              ...styles.primaryButton,
-              ...(saving ? styles.disabledButton : {}),
-            }}
-          >
-            {saving ? 'Saving...' : 'Save Situation Review'}
-          </button>
-        </section>
+          <div style={styles.buttonRow}>
+            <button
+              type="button"
+              onClick={handleSaveSituationReview}
+              disabled={saving}
+              style={{
+                ...styles.primaryButton,
+                ...(saving ? styles.disabledButton : {}),
+              }}
+            >
+              {saving ? 'Saving...' : 'Save Review'}
+            </button>
 
-        <section style={styles.actionPanel}>
-          <div>
-            <p style={styles.sectionKicker}>Situation Memory Retrieval</p>
-
-            <h2 style={styles.actionTitle}>
-              Retrieve persisted enterprise situation reviews.
-            </h2>
-
-            <p style={styles.actionText}>
-              CGI can reconstruct operating pictures, continuity drift,
-              trajectory direction, required actions, and executive meaning
-              across time.
-            </p>
-
-            {reviewMessage && <p style={styles.saveMessage}>{reviewMessage}</p>}
+            <button
+              type="button"
+              onClick={loadSituationReviews}
+              disabled={loadingReviews}
+              style={{
+                ...styles.secondaryButton,
+                ...(loadingReviews ? styles.disabledButton : {}),
+              }}
+            >
+              {loadingReviews ? 'Refreshing...' : 'Refresh'}
+            </button>
           </div>
-
-          <button
-            type="button"
-            onClick={loadSituationReviews}
-            disabled={loadingReviews}
-            style={{
-              ...styles.secondaryButton,
-              ...(loadingReviews ? styles.disabledButton : {}),
-            }}
-          >
-            {loadingReviews ? 'Refreshing...' : 'Refresh Reviews'}
-          </button>
         </section>
 
         <section style={styles.panel}>
@@ -461,8 +386,9 @@ function SituationRoomContent() {
               <h2 style={styles.panelTitle}>Persisted operating pictures</h2>
 
               <p style={styles.bodyText}>
-                Situation memory preserves prior enterprise operating conditions
-                so continuity decisions remain reconstructable.
+                Situation memory keeps prior operating conditions
+                reconstructable without turning the Situation Room into an
+                archive.
               </p>
             </div>
           </div>
@@ -473,7 +399,7 @@ function SituationRoomContent() {
                 No persisted situation reviews are currently available.
               </p>
             ) : (
-              reviews.map((item, index) => (
+              reviews.slice(0, 3).map((item, index) => (
                 <article
                   key={item.id ?? `${getReviewValue(item, 'createdAt')}-${index}`}
                   style={styles.archiveItem}
@@ -498,7 +424,7 @@ function SituationRoomContent() {
 
                   <div style={styles.archiveGrid}>
                     <Info
-                      label="Situation Posture"
+                      label="Posture"
                       value={
                         getReviewValue(item, 'situationPosture') ??
                         'Not recorded'
@@ -506,7 +432,7 @@ function SituationRoomContent() {
                     />
 
                     <Info
-                      label="History Direction"
+                      label="Direction"
                       value={
                         getReviewValue(item, 'historyDirection') ??
                         'Not recorded'
@@ -521,11 +447,6 @@ function SituationRoomContent() {
                       }
                     />
                   </div>
-
-                  <p style={styles.archiveSummary}>
-                    {getReviewValue(item, 'executiveSummary') ??
-                      'No executive summary was recorded for this review.'}
-                  </p>
                 </article>
               ))
             )}
@@ -581,8 +502,11 @@ function getReviewValue(
 
 function formatDate(value: string | null) {
   if (!value) return 'Date not recorded'
+
   const date = new Date(value)
+
   if (Number.isNaN(date.getTime())) return value
+
   return date.toLocaleString()
 }
 
@@ -622,15 +546,6 @@ function ExecutiveCard({
   )
 }
 
-function Panel({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section style={styles.panel}>
-      <p style={styles.sectionKicker}>{title}</p>
-      <div style={styles.infoList}>{children}</div>
-    </section>
-  )
-}
-
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div style={styles.infoRow}>
@@ -652,12 +567,12 @@ const styles: Record<string, CSSProperties> = {
     width: 'min(1440px, 100%)',
     margin: '0 auto',
     display: 'grid',
-    gap: 24,
+    gap: 22,
   },
   hero: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.45fr) minmax(320px, 0.75fr)',
-    gap: 24,
+    gridTemplateColumns: 'minmax(0, 1.45fr) minmax(300px, 0.72fr)',
+    gap: 22,
     padding: 32,
     border: '1px solid rgba(201, 162, 39, 0.34)',
     borderRadius: 28,
@@ -681,11 +596,11 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 950,
   },
   subtitle: {
-    maxWidth: 880,
+    maxWidth: 900,
     margin: '18px 0 0',
     color: '#C8CDD4',
-    fontSize: 17,
-    lineHeight: 1.8,
+    fontSize: 16,
+    lineHeight: 1.75,
   },
   statusBox: {
     border: '1px solid rgba(201, 162, 39, 0.5)',
@@ -700,6 +615,7 @@ const styles: Record<string, CSSProperties> = {
     fontSize: 11,
     fontWeight: 950,
     letterSpacing: '0.2em',
+    textTransform: 'uppercase',
   },
   statusValue: {
     margin: '16px 0 0',
@@ -716,15 +632,15 @@ const styles: Record<string, CSSProperties> = {
   },
   commandDeck: {
     display: 'grid',
-    gridTemplateColumns: '1.4fr 0.8fr',
-    gap: 24,
+    gridTemplateColumns: '1.35fr 0.85fr',
+    gap: 22,
   },
   primaryCard: {
     padding: 30,
     borderRadius: 28,
-    background: '#FFFFFF',
-    color: '#0B0B0B',
-    border: '1px solid rgba(255,255,255,0.12)',
+    background:
+      'linear-gradient(135deg, rgba(255,255,255,0.07), rgba(255,255,255,0.025))',
+    border: '1px solid rgba(201,162,39,0.26)',
   },
   consequenceCard: {
     padding: 30,
@@ -742,16 +658,10 @@ const styles: Record<string, CSSProperties> = {
   },
   commandTitle: {
     margin: '14px 0',
-    fontSize: 'clamp(1.8rem, 3vw, 3.2rem)',
+    fontSize: 'clamp(1.8rem, 3vw, 3rem)',
     lineHeight: 1.05,
     letterSpacing: '-0.05em',
     fontWeight: 950,
-  },
-  primaryText: {
-    margin: 0,
-    color: '#4A4A4A',
-    lineHeight: 1.7,
-    fontSize: 14,
   },
   consequenceTitle: {
     margin: '14px 0',
@@ -769,7 +679,7 @@ const styles: Record<string, CSSProperties> = {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
     gap: 12,
-    marginTop: 24,
+    marginTop: 22,
   },
   metricsGrid: {
     display: 'grid',
@@ -812,21 +722,23 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.45,
     overflowWrap: 'anywhere',
   },
-  gridFour: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: 16,
-  },
-  gridTwo: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: 16,
-  },
   panel: {
     padding: 28,
     borderRadius: 28,
     background: 'rgba(255,255,255,0.045)',
     border: '1px solid rgba(255,255,255,0.1)',
+  },
+  panelTitle: {
+    margin: '12px 0 0',
+    fontSize: 26,
+    lineHeight: 1.15,
+    letterSpacing: '-0.045em',
+  },
+  summaryGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 16,
+    marginTop: 22,
   },
   panelCard: {
     padding: 22,
@@ -834,12 +746,6 @@ const styles: Record<string, CSSProperties> = {
     background: 'rgba(255,255,255,0.045)',
     border: '1px solid rgba(255,255,255,0.09)',
     minHeight: 150,
-  },
-  panelTitle: {
-    margin: '12px 0 0',
-    fontSize: 26,
-    lineHeight: 1.15,
-    letterSpacing: '-0.045em',
   },
   cardValue: {
     margin: '12px 0 0',
@@ -866,32 +772,6 @@ const styles: Record<string, CSSProperties> = {
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
     gap: 12,
     marginTop: 20,
-  },
-  infoList: {
-    display: 'grid',
-    gap: 10,
-    marginTop: 18,
-  },
-  infoRow: {
-    display: 'grid',
-    gridTemplateColumns: '170px minmax(0, 1fr)',
-    gap: 12,
-    padding: 14,
-    borderRadius: 16,
-    background: 'rgba(0,0,0,0.22)',
-    border: '1px solid rgba(255,255,255,0.08)',
-  },
-  infoLabel: {
-    color: '#858D98',
-    fontWeight: 900,
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: '0.1em',
-  },
-  infoValue: {
-    color: '#FFFFFF',
-    lineHeight: 1.5,
-    overflowWrap: 'anywhere',
   },
   actionPanel: {
     display: 'grid',
@@ -920,6 +800,13 @@ const styles: Record<string, CSSProperties> = {
     color: '#D7B84C',
     fontWeight: 900,
     margin: '12px 0 0',
+  },
+  buttonRow: {
+    display: 'flex',
+    gap: 10,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    flexWrap: 'wrap',
   },
   primaryButton: {
     border: 'none',
@@ -989,15 +876,31 @@ const styles: Record<string, CSSProperties> = {
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
     gap: 12,
   },
-  archiveSummary: {
-    color: '#AEB6C2',
-    lineHeight: 1.65,
-    margin: '14px 0 0',
-  },
   emptyText: {
     color: '#AEB6C2',
     lineHeight: 1.6,
     margin: 0,
+  },
+  infoRow: {
+    display: 'grid',
+    gridTemplateColumns: '140px minmax(0, 1fr)',
+    gap: 12,
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(0,0,0,0.22)',
+    border: '1px solid rgba(255,255,255,0.08)',
+  },
+  infoLabel: {
+    color: '#858D98',
+    fontWeight: 900,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+  },
+  infoValue: {
+    color: '#FFFFFF',
+    lineHeight: 1.5,
+    overflowWrap: 'anywhere',
   },
   orderPanel: {
     padding: 28,
