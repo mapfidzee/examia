@@ -173,15 +173,12 @@ function ExecutiveCenterContent() {
         <section style={styles.header}>
           <p style={styles.kicker}>TSINAXA CGI • EXECUTIVE CENTER</p>
 
-          <h1 style={styles.title}>
-            Enterprise Continuity Intelligence Center
-          </h1>
+          <h1 style={styles.title}>Enterprise Continuity Intelligence Center</h1>
 
           <p style={styles.subtitle}>
-            Institutional interpretation layer for converting recovery,
-            command, coordination, cross-site exposure, evidence, audit meaning,
-            survivability posture, and institutional memory into one executive
-            continuity thesis.
+            Executive Center interprets recovery, command, coordination,
+            cross-site exposure, evidence, audit meaning, survivability, and
+            institutional memory into one continuity thesis.
           </p>
         </section>
 
@@ -202,107 +199,29 @@ function ExecutiveCenterContent() {
           </div>
         </section>
 
-        <section style={styles.apexCard}>
-          <div>
-            <p style={styles.sectionKicker}>Executive Decision Layer</p>
-            <h2 style={styles.cardTitle}>
-              {enterpriseReading.stabilityThesis}
-            </h2>
-            <p style={styles.bodyText}>
-              {enterpriseReading.finalInterpretation}
-            </p>
-          </div>
-
-          <div style={styles.apexStack}>
-            <MemoryMetric
-              label="Executive Decision"
-              value={enterpriseReading.executiveDecision}
-            />
-            <MemoryMetric
-              label="Trust Level"
-              value={enterpriseReading.trustLevel}
-            />
-            <MemoryMetric
-              label="Primary Vulnerability"
-              value={enterpriseReading.primaryVulnerability}
-            />
-            <MemoryMetric
-              label="Secondary Vulnerability"
-              value={enterpriseReading.secondaryVulnerability}
-            />
-          </div>
-        </section>
-
-        <section style={styles.postureCard}>
-          <p style={styles.sectionKicker}>Executive Action Posture</p>
-
-          <h2 style={styles.cardTitle}>{synthesis.posture}</h2>
-
-          <p style={styles.bodyText}>{enterpriseReading.executiveDecision}</p>
-
-          <div style={styles.priorityGrid}>
-            <PriorityItem
-              title="Dominant Concern"
-              body={deriveDominantConcern(synthesis)}
-            />
-            <PriorityItem
-              title="Evidence Meaning"
-              body={synthesis.evidenceStatus}
-            />
-            <PriorityItem
-              title="Governance Meaning"
-              body="Leadership visibility must remain proportional, non-punitive, evidence-aware, chain-aware, and memory-preserving."
-            />
-          </div>
-        </section>
-
-        <section style={styles.trustPanel}>
-          <div>
-            <p style={styles.sectionKicker}>Trust Question</p>
-            <h2 style={styles.cardTitle}>{enterpriseReading.trustReading}</h2>
-            <p style={styles.bodyText}>{enterpriseReading.trustMeaning}</p>
-          </div>
-
-          <div style={styles.questionBox}>
-            <p style={styles.metricLabel}>Board-Level Warning</p>
-            <p style={styles.questionText}>
-              {enterpriseReading.boardLevelWarning}
-            </p>
-          </div>
-        </section>
-
         <section style={styles.card}>
-          <p style={styles.sectionKicker}>Required Movement</p>
+          <p style={styles.sectionKicker}>Executive Interpretation</p>
 
           <h2 style={styles.cardTitle}>
-            Executive Center derives institutional meaning through the CGI
-            doctrine layer.
+            What does the institution currently mean?
           </h2>
 
           <div style={styles.priorityGrid}>
             <PriorityItem
-              title="What Is Visible"
-              body={enterpriseReading.whatIsVisible}
-            />
-            <PriorityItem
-              title="Why It Matters"
-              body={enterpriseReading.whyItMatters}
-            />
-            <PriorityItem
-              title="Continuity Risk"
-              body={enterpriseReading.continuityRisk}
-            />
-            <PriorityItem
-              title="Required Movement"
-              body={enterpriseReading.requiredMovement}
+              title="Executive Decision"
+              body={enterpriseReading.executiveDecision}
             />
             <PriorityItem
               title="Trust Level"
               body={enterpriseReading.trustLevel}
             />
             <PriorityItem
-              title="Institutional Meaning"
-              body={enterpriseReading.institutionalMeaning}
+              title="Dominant Concern"
+              body={deriveDominantConcern(synthesis)}
+            />
+            <PriorityItem
+              title="Required Movement"
+              body={enterpriseReading.requiredMovement}
             />
           </div>
         </section>
@@ -370,32 +289,9 @@ function ExecutiveCenterContent() {
             body="Records requiring command watch or escalation."
           />
           <MetricCard
-            label="Memory Records"
-            value={synthesis.historicalMemory}
-            body="Continuity memory preserved for institutional learning."
-          />
-        </section>
-
-        <section style={styles.summaryGrid}>
-          <MetricCard
-            label="Coordination Pressure"
-            value={synthesis.coordinationPressure}
-            body="Ownership, routing, responder, or institutional synchronization pressure."
-          />
-          <MetricCard
             label="Cross-Site Pressure"
             value={synthesis.crossSitePressure}
-            body="Signals that may no longer be isolated to one operational lane."
-          />
-          <MetricCard
-            label="Audit Pressure"
-            value={synthesis.auditPressure}
-            body="Records requiring reconstructable executive interpretation."
-          />
-          <MetricCard
-            label="Safeguarding"
-            value={synthesis.safeguardingVisible}
-            body="Safeguarding-visible records requiring careful executive visibility."
+            body="Signals no longer isolated to one operational lane."
           />
         </section>
 
@@ -421,64 +317,31 @@ function ExecutiveCenterContent() {
           </div>
         </section>
 
-        <section style={styles.briefCard}>
-          <p style={styles.sectionKicker}>Copy-Ready CEO Brief</p>
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Executive Meaning</p>
 
           <h2 style={styles.cardTitle}>
-            One institutional interpretation across pressure, recovery,
-            evidence, command, coordination, cross-site exposure, audit, memory,
-            and survivability meaning.
+            What must leadership understand before the posture moves?
           </h2>
 
-          <pre style={styles.summaryBox}>{copyReadyExecutiveBrief}</pre>
-        </section>
-
-        <section style={styles.gridTwo}>
-          <Panel title="What Is Happening?">{synthesis.whatIsHappening}</Panel>
-          <Panel title="Why It Matters">{enterpriseReading.whyItMatters}</Panel>
-        </section>
-
-        <section style={styles.gridTwo}>
-          <Panel title="Lifecycle Movement">{synthesis.nextMovement}</Panel>
-          <Panel title="Leadership Understanding">
-            {enterpriseReading.executiveDecision}
-          </Panel>
-        </section>
-
-        <section style={styles.signalStrip}>
-          <SignalCard
-            title="Pressure"
-            value={synthesis.activeInstability > 0 ? 'Visible' : 'Clear'}
-            body={
-              synthesis.activeInstability > 0
-                ? 'Active lifecycle pressure remains visible.'
-                : 'No active lifecycle pressure is currently visible.'
-            }
-          />
-
-          <SignalCard
-            title="Recovery"
-            value={
-              synthesis.recoveryRecords > 0
-                ? 'Memory Active'
-                : 'No Active Review'
-            }
-            body={
-              synthesis.recoveryRecords > 0
-                ? 'Recovery evidence is available for executive interpretation.'
-                : 'No recovery durability records currently require executive interpretation.'
-            }
-          />
-
-          <SignalCard
-            title="Command"
-            value={synthesis.commandPressure > 0 ? 'Required' : 'Clear'}
-            body={
-              synthesis.commandPressure > 0
-                ? 'Command attention remains necessary before stability can be absorbed.'
-                : 'No current command pressure is visible from lifecycle records.'
-            }
-          />
+          <div style={styles.priorityGrid}>
+            <PriorityItem
+              title="What Is Visible"
+              body={enterpriseReading.whatIsVisible}
+            />
+            <PriorityItem
+              title="Why It Matters"
+              body={enterpriseReading.whyItMatters}
+            />
+            <PriorityItem
+              title="Continuity Risk"
+              body={enterpriseReading.continuityRisk}
+            />
+            <PriorityItem
+              title="Leadership Understanding"
+              body={enterpriseReading.executiveDecision}
+            />
+          </div>
         </section>
 
         {recoveryMemory.length > 0 && (
@@ -494,32 +357,22 @@ function ExecutiveCenterContent() {
               <table style={styles.table}>
                 <thead>
                   <tr>
-                    <th style={styles.th}>Case</th>
                     <th style={styles.th}>Disposition</th>
-                    <th style={styles.th}>Command Posture</th>
                     <th style={styles.th}>Durability</th>
                     <th style={styles.th}>Memory Impact</th>
-                    <th style={styles.th}>Reason</th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {recoveryMemory.slice(0, 12).map((record) => (
+                  {recoveryMemory.slice(0, 8).map((record) => (
                     <tr
                       key={`${record.caseItem.id}-${
                         record.latestRecoveryReview?.id || 'case'
                       }`}
                     >
-                      <td style={styles.td}>
-                        <strong>{record.caseItem.beneficiary_name}</strong>
-                        <br />
-                        {record.caseItem.support_domain}
-                      </td>
                       <td style={styles.td}>{record.disposition}</td>
-                      <td style={styles.td}>{record.commandPosture}</td>
                       <td style={styles.td}>{record.durabilityResult}</td>
                       <td style={styles.td}>{record.memoryImpact}</td>
-                      <td style={styles.td}>{record.movementReason}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -527,6 +380,18 @@ function ExecutiveCenterContent() {
             </div>
           </section>
         )}
+
+        <section style={styles.briefCard}>
+          <p style={styles.sectionKicker}>Copy-Ready CEO Brief</p>
+
+          <h2 style={styles.cardTitle}>
+            One institutional interpretation across pressure, recovery,
+            evidence, command, coordination, cross-site exposure, audit, memory,
+            and survivability meaning.
+          </h2>
+
+          <pre style={styles.summaryBox}>{copyReadyExecutiveBrief}</pre>
+        </section>
 
         <section style={styles.card}>
           <p style={styles.sectionKicker}>Historical Memory Trail</p>
@@ -536,49 +401,32 @@ function ExecutiveCenterContent() {
             current posture.
           </h2>
 
-          {metrics.length === 0 && (
+          {metrics.length === 0 ? (
             <div style={styles.emptyState}>
               No historical continuity metric records are currently available.
             </div>
-          )}
+          ) : (
+            <div style={styles.metricMemoryList}>
+              {metrics.slice(0, 4).map((item) => (
+                <article key={item.id} style={styles.memoryTrailItem}>
+                  <div>
+                    <p style={styles.metricLabel}>
+                      {formatDate(item.created_at)}
+                    </p>
+                    <h3 style={styles.memoryTrailTitle}>
+                      {item.executive_summary ||
+                        'No executive memory summary recorded'}
+                    </h3>
+                  </div>
 
-          {metrics.length > 0 && (
-            <div style={styles.tableWrap}>
-              <table style={styles.table}>
-                <thead>
-                  <tr>
-                    <th style={styles.th}>Created</th>
-                    <th style={styles.th}>Pressure Memory</th>
-                    <th style={styles.th}>Trajectory Memory</th>
-                    <th style={styles.th}>Structural Memory</th>
-                    <th style={styles.th}>Executive Memory</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {metrics.slice(0, 10).map((item) => (
-                    <tr key={item.id}>
-                      <td style={styles.td}>{formatDate(item.created_at)}</td>
-                      <td style={styles.td}>
-                        {item.dominant_pressure_source ||
-                          'No pressure memory recorded'}
-                      </td>
-                      <td style={styles.td}>
-                        {item.dominant_trajectory_signal ||
-                          'No trajectory memory recorded'}
-                      </td>
-                      <td style={styles.td}>
-                        {item.dominant_memory_pattern ||
-                          'No structural memory recorded'}
-                      </td>
-                      <td style={styles.td}>
-                        {item.executive_summary ||
-                          'No executive memory summary recorded'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                  <p style={styles.panelBody}>
+                    {item.dominant_memory_pattern ||
+                      item.dominant_trajectory_signal ||
+                      item.dominant_pressure_source ||
+                      'No dominant memory pattern recorded.'}
+                  </p>
+                </article>
+              ))}
             </div>
           )}
 
@@ -644,24 +492,6 @@ function ChainPanel({
   )
 }
 
-function SignalCard({
-  title,
-  value,
-  body,
-}: {
-  title: string
-  value: string
-  body: string
-}) {
-  return (
-    <article style={styles.signalCard}>
-      <p style={styles.panelKicker}>{title}</p>
-      <h3 style={styles.signalValue}>{value}</h3>
-      <p style={styles.panelBody}>{body}</p>
-    </article>
-  )
-}
-
 function MetricCard({
   label,
   value,
@@ -698,15 +528,6 @@ function PriorityItem({ title, body }: { title: string; body: string }) {
   )
 }
 
-function Panel({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section style={styles.panel}>
-      <p style={styles.panelKicker}>{title}</p>
-      <div style={styles.panelBody}>{children}</div>
-    </section>
-  )
-}
-
 const styles: Record<string, CSSProperties> = {
   page: v.page,
   container: v.executivePageStack,
@@ -732,15 +553,21 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 900,
   },
 
-  apexCard: v.decisionPanel,
-  apexStack: {
-    display: 'grid',
-    gridTemplateColumns: '1fr',
-    gap: 14,
-  },
+  card: v.darkPanel,
+  briefCard: v.briefPanel,
+  cardTitle: v.executivePanelTitle,
+  bodyText: v.executiveBodyText,
 
-  postureCard: v.briefPanel,
-  trustPanel: v.warningPanel,
+  sectionKicker: v.sectionKicker,
+  priorityGrid: v.gridFour,
+  priorityItem: v.goldCard,
+  priorityBody: {
+    color: '#fff8e7',
+    lineHeight: 1.5,
+    fontSize: 12,
+    margin: '8px 0 0',
+    fontWeight: 700,
+  },
 
   chainHero: v.executiveHeroSplit,
   chainConfidenceBox: v.executiveQuestionCard,
@@ -759,7 +586,14 @@ const styles: Record<string, CSSProperties> = {
   chainGrid: v.gridFour,
   chainPanelCard: v.quietCard,
 
-  sectionKicker: v.sectionKicker,
+  panelKicker: v.sectionKicker,
+  panelBody: {
+    color: '#cfc7b5',
+    fontSize: 13,
+    lineHeight: 1.6,
+    marginTop: 10,
+  },
+
   summaryGrid: v.executiveMetricStrip,
   metricCard: v.executiveMetricCard,
   metricLabel: v.metricLabel,
@@ -780,40 +614,40 @@ const styles: Record<string, CSSProperties> = {
     margin: '8px 0 0',
   },
 
-  gridTwo: v.gridTwo,
-  signalStrip: v.executiveSignalStrip,
-  signalCard: v.executiveMetricCard,
-  signalValue: {
-    color: '#d6b25e',
-    fontSize: 20,
-    lineHeight: 1.15,
-    margin: '10px 0',
-    fontWeight: 900,
-    textTransform: 'capitalize',
-  },
+  tableWrap: v.tableWrap,
+  table: v.table,
+  th: v.th,
+  td: v.td,
 
-  card: v.darkPanel,
-  briefCard: v.briefPanel,
-  cardTitle: v.executivePanelTitle,
-  bodyText: v.executiveBodyText,
-  priorityGrid: v.gridThree,
-  priorityItem: v.goldCard,
-  priorityBody: {
+  summaryBox: v.executiveSummaryBox,
+
+  emptyState: v.emptyState,
+  metricMemoryList: {
+    display: 'grid',
+    gap: 12,
+    marginTop: 18,
+  },
+  memoryTrailItem: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 0.9fr) minmax(0, 1.1fr)',
+    gap: 16,
+    padding: 18,
+    borderRadius: 18,
+    background: 'rgba(0,0,0,0.28)',
+    border: '1px solid rgba(214,178,94,0.16)',
+  },
+  memoryTrailTitle: {
     color: '#fff8e7',
-    lineHeight: 1.5,
-    fontSize: 12,
+    fontSize: 15,
+    lineHeight: 1.4,
     margin: '8px 0 0',
-    fontWeight: 700,
   },
 
-  panel: v.quietCard,
-  panelKicker: v.sectionKicker,
-  panelBody: {
-    color: '#cfc7b5',
-    fontSize: 13,
-    lineHeight: 1.6,
-    marginTop: 10,
-  },
+  primaryButton: mergeCGIStyles(v.primaryButton, {
+    width: '100%',
+    borderRadius: 14,
+    marginTop: 18,
+  }),
 
   doctrinePanel: v.doctrinePanel,
   doctrineTitle: v.sectionKicker,
@@ -823,16 +657,5 @@ const styles: Record<string, CSSProperties> = {
     fontSize: 12,
     lineHeight: 1.45,
     fontWeight: 800,
-  }),
-
-  emptyState: v.emptyState,
-  tableWrap: v.tableWrap,
-  table: v.table,
-  th: v.th,
-  td: v.td,
-  summaryBox: v.executiveSummaryBox,
-  primaryButton: mergeCGIStyles(v.primaryButton, {
-    width: '100%',
-    borderRadius: 14,
   }),
 }
