@@ -289,11 +289,7 @@ function GovernanceEvidenceLedger() {
         <section style={styles.card}>
           <p style={styles.sectionKicker}>Reconstruction Gaps</p>
 
-          <h2 style={styles.cardTitle}>
-            {evidenceUnavailable
-              ? 'RECONSTRUCTION CANNOT YET BE VERIFIED'
-              : chainReconstruction.chainTrust}
-          </h2>
+          <h2 style={styles.cardTitle}>RECONSTRUCTION STATUS</h2>
 
           <p style={styles.bodyText}>
             Weakest link:{' '}
@@ -448,7 +444,7 @@ function GovernanceEvidenceLedger() {
 
             <h2 style={styles.cardTitle}>
               {evidenceUnavailable
-                ? 'AUDIT CREDIBILITY NOT YET ESTABLISHED'
+                ? 'GENERATE RECONSTRUCTION EVIDENCE'
                 : summary.doctrine.auditCredibility}
             </h2>
 
@@ -486,8 +482,8 @@ function GovernanceEvidenceLedger() {
             />
           ) : sortedLogs.length === 0 ? (
             <EmptyPanel
-              title="Immutable ledger activates when audit evidence exists."
-              body="No live evidence records match the current view. The interface remains ready without displaying empty archives."
+              title="Audit records remain dormant until evidence exists."
+              body="No live evidence records match the current view. Audit does not manufacture evidence; it preserves evidence once continuity movement creates it."
             />
           ) : (
             <div style={styles.ledgerList}>
@@ -627,9 +623,9 @@ function buildIntegrityGroups(
 ): ReconstructionGroup[] {
   if (totalEvidence === 0) {
     return [
-      { label: 'Evidence Coverage', count: 0, status: 'Evidence unavailable' },
-      { label: 'Ownership Coverage', count: 0, status: 'Evidence unavailable' },
-      { label: 'Memory Coverage', count: 0, status: 'Evidence unavailable' },
+      { label: 'Evidence Coverage', count: 0, status: 'Not verified' },
+      { label: 'Ownership Coverage', count: 0, status: 'Not verified' },
+      { label: 'Memory Coverage', count: 0, status: 'Not verified' },
     ]
   }
 
@@ -709,8 +705,7 @@ function GroupCard({ group }: { group: ReconstructionGroup }) {
     <article
       style={{
         ...styles.groupCard,
-        ...(group.status === 'NOT VERIFIED' ||
-        group.status === 'Evidence unavailable'
+        ...(group.status === 'NOT VERIFIED' || group.status === 'Not verified'
           ? styles.groupCardUnverified
           : {}),
       }}
