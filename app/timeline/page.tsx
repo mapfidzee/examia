@@ -66,9 +66,7 @@ export default function TimelinePage() {
 function TimelineContent() {
   const [events, setEvents] = useState<TimelineEvent[]>([])
   const [loading, setLoading] = useState(true)
-  const [message, setMessage] = useState(
-    'Loading institutional continuity memory timeline...',
-  )
+  const [message, setMessage] = useState('Loading continuity memory timeline...')
 
   useEffect(() => {
     loadTimeline()
@@ -76,7 +74,7 @@ function TimelineContent() {
 
   async function loadTimeline() {
     setLoading(true)
-    setMessage('Loading institutional continuity memory timeline...')
+    setMessage('Loading continuity memory timeline...')
 
     const { data, error } = await supabase
       .from('case_timeline')
@@ -85,23 +83,23 @@ function TimelineContent() {
 
     if (error) {
       console.error(error)
-      setMessage('Institutional continuity memory timeline could not be loaded.')
+      setMessage('Continuity memory timeline could not be loaded.')
       setLoading(false)
       return
     }
 
     setEvents(data || [])
-    setMessage('Institutional continuity memory timeline loaded.')
+    setMessage('Continuity memory timeline loaded.')
     setLoading(false)
   }
 
   const intelligence = useMemo(() => buildTimelineIntelligence(events), [events])
 
   const totalEvents = events.length
-
-  const uniqueCases = useMemo(() => {
-    return new Set(events.map((event) => event.case_id)).size
-  }, [events])
+  const uniqueCases = useMemo(
+    () => new Set(events.map((event) => event.case_id)).size,
+    [events],
+  )
 
   const pressureEvents = useMemo(
     () => countEventsByMemory(events, EVENT_MEMORY_TYPES.pressure),
@@ -132,14 +130,12 @@ function TimelineContent() {
               TSINAXA CGI • INSTITUTIONAL MEMORY TIMELINE
             </p>
 
-            <h1 style={styles.title}>
-              Institutional Continuity Memory Timeline
-            </h1>
+            <h1 style={styles.title}>Timeline</h1>
 
             <p style={styles.subtitle}>
-              Timeline preserves how continuity became what it is today. CGI
-              does not treat history as archive; it treats institutional memory
-              as evidence against repeated forgetting.
+              Institutional continuity memory preserves movement across time.
+              Timeline is not archive; it is the evidence chain explaining how
+              continuity evolved.
             </p>
           </div>
 
@@ -158,13 +154,13 @@ function TimelineContent() {
 
             <h2 style={styles.commandTitle}>{intelligence.question}</h2>
 
-            <p style={styles.primaryText}>{intelligence.continuityMeaning}</p>
+            <p style={styles.bodyText}>{intelligence.continuityMeaning}</p>
 
             <div style={styles.commandMetaGrid}>
               <MiniStat label="Events" value={String(totalEvents)} />
-              <MiniStat label="Cases With Memory" value={String(uniqueCases)} />
-              <MiniStat label="Pressure Memory" value={String(pressureEvents)} />
-              <MiniStat label="Recovery Memory" value={String(recoveryEvents)} />
+              <MiniStat label="Cases" value={String(uniqueCases)} />
+              <MiniStat label="Pressure" value={String(pressureEvents)} />
+              <MiniStat label="Recovery" value={String(recoveryEvents)} />
             </div>
           </div>
 
@@ -178,54 +174,6 @@ function TimelineContent() {
             <p style={styles.bodyText}>{intelligence.boardWarning}</p>
           </div>
         </section>
-                <section style={styles.metricsGrid}>
-          <Metric label="Timeline Events" value={String(totalEvents)} />
-          <Metric label="Cases With Memory" value={String(uniqueCases)} />
-          <Metric label="Constraint Memory" value={String(constraintEvents)} />
-          <Metric label="Command Memory" value={String(commandEvents)} />
-          <Metric label="Recovery Memory" value={String(recoveryEvents)} />
-          <Metric label="Pressure Memory" value={String(pressureEvents)} />
-        </section>
-
-        <section style={styles.gridThree}>
-          <ExecutiveCard
-            title="Pressure Memory"
-            value={intelligence.pressureMemory}
-            body="Whether the timeline preserves where instability first accumulated."
-          />
-
-          <ExecutiveCard
-            title="Trajectory Memory"
-            value={intelligence.trajectoryMemory}
-            body="Whether the timeline explains how continuity direction changed."
-          />
-
-          <ExecutiveCard
-            title="Recovery Memory"
-            value={intelligence.recoveryMemory}
-            body="Whether the timeline preserves evidence of stabilization and recovery."
-          />
-        </section>
-
-        <section style={styles.gridThree}>
-          <ExecutiveCard
-            title="Reliability Memory"
-            value={intelligence.reliabilityMemory}
-            body="Whether repeated stabilization can be reconstructed."
-          />
-
-          <ExecutiveCard
-            title="Constraint Memory"
-            value={intelligence.constraintMemory}
-            body="Whether blocked movement and ownership pressure remain visible."
-          />
-
-          <ExecutiveCard
-            title="Command Memory"
-            value={intelligence.commandMemory}
-            body="Whether leadership action and governance decisions remain attached."
-          />
-        </section>
 
         <section style={styles.memoryPanel}>
           <p style={styles.sectionKicker}>Institutional Memory Requirements</p>
@@ -238,86 +186,159 @@ function TimelineContent() {
           <div style={styles.memoryGrid}>
             <MiniStat label="Evidence" value={intelligence.evidenceRequirement} />
             <MiniStat label="Memory" value={intelligence.memoryRequirement} />
-            <MiniStat label="Executive Action" value={intelligence.executiveAction} />
+            <MiniStat
+              label="Executive Action"
+              value={intelligence.executiveAction}
+            />
             <MiniStat label="Audit" value={intelligence.auditImplication} />
           </div>
         </section>
 
-        <section style={styles.panel}>
-          <div style={styles.cardHeader}>
-            <div>
-              <p style={styles.sectionKicker}>
-                Continuity Memory Records
-              </p>
+        <section style={styles.actionPanel}>
+          <div>
+            <p style={styles.sectionKicker}>Continuity Memory Records</p>
 
-              <h2 style={styles.panelTitle}>
-                Institutional continuity timeline
-              </h2>
+            <h2 style={styles.panelTitle}>Refresh institutional timeline</h2>
 
-              <p style={styles.bodyText}>
-                Each event is preserved as institutional memory. The purpose is
-                not simply to show what happened, but to reconstruct how
-                continuity changed.
-              </p>
-            </div>
-
-            <button onClick={loadTimeline} style={styles.primaryButton}>
-              Refresh Timeline
-            </button>
+            <p style={styles.bodyText}>
+              Each event is preserved as institutional memory so leadership can
+              reconstruct how continuity changed.
+            </p>
           </div>
 
-          {loading ? (
-            <p style={styles.emptyBox}>Loading continuity memory...</p>
-          ) : events.length === 0 ? (
-            <p style={styles.emptyBox}>
-              No institutional continuity memory events found yet.
-            </p>
-          ) : (
-            <div style={styles.timelineList}>
-              {events.map((event) => (
-                <article style={styles.timelineCard} key={event.id}>
-                  <div style={styles.timelineTop}>
-                    <div>
-                      <p style={styles.metricLabel}>
-                        Case {shortCaseId(event.case_id)}
-                      </p>
+          <button onClick={loadTimeline} style={styles.primaryButton}>
+            {loading ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </section>
 
-                      <h3 style={styles.eventTitle}>
-                        {event.event_type}
-                      </h3>
+        <details style={styles.evidencePanel}>
+          <summary style={styles.evidenceSummary}>
+            <span>
+              <span style={styles.sectionKicker}>Supporting Timeline Evidence</span>
+              <strong style={styles.evidenceTitle}>
+                Memory signals, timeline records, and copy-ready brief
+              </strong>
+            </span>
+
+            <span style={styles.evidenceToggle}>Expand Timeline</span>
+          </summary>
+
+          <section style={styles.gridThree}>
+            <ExecutiveCard
+              title="Pressure Memory"
+              value={intelligence.pressureMemory}
+              body="Whether the timeline preserves where instability first accumulated."
+            />
+
+            <ExecutiveCard
+              title="Trajectory Memory"
+              value={intelligence.trajectoryMemory}
+              body="Whether the timeline explains how continuity direction changed."
+            />
+
+            <ExecutiveCard
+              title="Recovery Memory"
+              value={intelligence.recoveryMemory}
+              body="Whether the timeline preserves stabilization and recovery evidence."
+            />
+          </section>
+
+          <section style={styles.gridThree}>
+            <ExecutiveCard
+              title="Reliability Memory"
+              value={intelligence.reliabilityMemory}
+              body="Whether repeated stabilization can be reconstructed."
+            />
+
+            <ExecutiveCard
+              title="Constraint Memory"
+              value={intelligence.constraintMemory}
+              body="Whether blocked movement and ownership pressure remain visible."
+            />
+
+            <ExecutiveCard
+              title="Command Memory"
+              value={intelligence.commandMemory}
+              body="Whether leadership action and governance decisions remain attached."
+            />
+          </section>
+
+          <section style={styles.metricsGrid}>
+            <Metric label="Constraint" value={String(constraintEvents)} />
+            <Metric label="Command" value={String(commandEvents)} />
+            <Metric label="Recovery" value={String(recoveryEvents)} />
+            <Metric label="Pressure" value={String(pressureEvents)} />
+          </section>
+
+          <section style={styles.panel}>
+            <div style={styles.cardHeader}>
+              <div>
+                <p style={styles.sectionKicker}>Timeline Records</p>
+
+                <h2 style={styles.panelTitle}>
+                  Institutional continuity timeline
+                </h2>
+
+                <p style={styles.bodyText}>
+                  Records reconstruct how instability entered, moved, stalled,
+                  recovered, repeated, escalated, or stabilized.
+                </p>
+              </div>
+            </div>
+
+            {loading ? (
+              <p style={styles.emptyBox}>Loading continuity memory...</p>
+            ) : events.length === 0 ? (
+              <p style={styles.emptyBox}>
+                No institutional continuity memory events found yet.
+              </p>
+            ) : (
+              <div style={styles.timelineList}>
+                {events.map((event) => (
+                  <article style={styles.timelineCard} key={event.id}>
+                    <div style={styles.timelineTop}>
+                      <div>
+                        <p style={styles.metricLabel}>
+                          Case {shortCaseId(event.case_id)}
+                        </p>
+
+                        <h3 style={styles.eventTitle}>{event.event_type}</h3>
+                      </div>
+
+                      <span style={styles.timeBadge}>
+                        {formatDateTime(event.created_at)}
+                      </span>
                     </div>
 
-                    <span style={styles.timeBadge}>
-                      {formatDateTime(event.created_at)}
-                    </span>
-                  </div>
+                    <p style={styles.eventSummary}>{event.event_summary}</p>
 
-                  <p style={styles.eventSummary}>
-                    {event.event_summary}
-                  </p>
+                    <div style={styles.detailGrid}>
+                      <Detail
+                        label="Memory Type"
+                        value={deriveMemoryType(event)}
+                      />
+                      <Detail
+                        label="Actor"
+                        value={event.actor || 'Not recorded'}
+                      />
+                      <Detail label="Event ID" value={event.id} />
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
 
-                  <div style={styles.detailGrid}>
-                    <Detail label="Memory Type" value={deriveMemoryType(event)} />
-                    <Detail label="Actor" value={event.actor || 'Not recorded'} />
-                    <Detail label="Event ID" value={event.id} />
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
+          <section style={styles.orderPanel}>
+            <p style={styles.sectionKicker}>Copy-Ready Timeline Brief</p>
 
-        <section style={styles.orderPanel}>
-          <p style={styles.sectionKicker}>Copy-Ready Memory Timeline Brief</p>
+            <h2 style={styles.panelTitle}>
+              How did continuity become what it is today?
+            </h2>
 
-          <h2 style={styles.panelTitle}>
-            How did continuity become what it is today?
-          </h2>
-
-          <pre style={styles.summaryBox}>
-            {intelligence.generatedBrief}
-          </pre>
-        </section>
+            <pre style={styles.summaryBox}>{intelligence.generatedBrief}</pre>
+          </section>
+        </details>
 
         <section style={styles.doctrineCard}>
           <strong>INSTITUTIONAL CONTINUITY MEMORY DOCTRINE</strong>
@@ -332,15 +353,25 @@ function TimelineContent() {
     </main>
   )
 }
+
 function buildTimelineIntelligence(events: TimelineEvent[]): TimelineIntelligence {
   const totalEvents = events.length
   const uniqueCases = new Set(events.map((event) => event.case_id)).size
 
   const pressureEvents = countEventsByMemory(events, EVENT_MEMORY_TYPES.pressure)
-  const trajectoryEvents = countEventsByMemory(events, EVENT_MEMORY_TYPES.trajectory)
+  const trajectoryEvents = countEventsByMemory(
+    events,
+    EVENT_MEMORY_TYPES.trajectory,
+  )
   const recoveryEvents = countEventsByMemory(events, EVENT_MEMORY_TYPES.recovery)
-  const reliabilityEvents = countEventsByMemory(events, EVENT_MEMORY_TYPES.reliability)
-  const constraintEvents = countEventsByMemory(events, EVENT_MEMORY_TYPES.constraint)
+  const reliabilityEvents = countEventsByMemory(
+    events,
+    EVENT_MEMORY_TYPES.reliability,
+  )
+  const constraintEvents = countEventsByMemory(
+    events,
+    EVENT_MEMORY_TYPES.constraint,
+  )
   const commandEvents = countEventsByMemory(events, EVENT_MEMORY_TYPES.command)
 
   const posture = deriveMemoryPosture({
@@ -579,6 +610,7 @@ function shortCaseId(caseId: string) {
   if (!caseId) return 'Unknown case'
   return caseId.slice(0, 8)
 }
+
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <article style={styles.metricCard}>
@@ -624,12 +656,20 @@ function Detail({ label, value }: { label: string; value: string }) {
   )
 }
 
+const gold = '#d6b25e'
+const mutedGold = '#9f8142'
+const deepBlack = '#030303'
+const panelBlack = '#090807'
+const cardBlack = '#11100d'
+const softLine = 'rgba(214,178,94,0.24)'
+const strongLine = 'rgba(214,178,94,0.42)'
+
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
     background:
-      'radial-gradient(circle at top left, rgba(201, 162, 39, 0.14), transparent 34%), linear-gradient(135deg, #050505 0%, #0B0B0B 45%, #111111 100%)',
-    color: '#FFFFFF',
+      'radial-gradient(circle at top left, rgba(214,178,94,0.12), transparent 34%), linear-gradient(135deg, #030303 0%, #090807 48%, #11100d 100%)',
+    color: '#fff8e7',
     padding: '40px 24px 72px',
   },
   container: {
@@ -643,15 +683,15 @@ const styles: Record<string, CSSProperties> = {
     gridTemplateColumns: 'minmax(0, 1.45fr) minmax(320px, 0.75fr)',
     gap: 24,
     padding: 32,
-    border: '1px solid rgba(201, 162, 39, 0.34)',
+    border: `1px solid ${strongLine}`,
     borderRadius: 28,
     background:
-      'linear-gradient(135deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018))',
+      'linear-gradient(135deg, rgba(214,178,94,0.08), rgba(255,255,255,0.018))',
     boxShadow: '0 28px 80px rgba(0,0,0,0.38)',
   },
   kicker: {
     margin: 0,
-    color: '#C9A227',
+    color: gold,
     fontSize: 12,
     fontWeight: 900,
     letterSpacing: '0.22em',
@@ -667,20 +707,20 @@ const styles: Record<string, CSSProperties> = {
   subtitle: {
     maxWidth: 880,
     margin: '18px 0 0',
-    color: '#C8CDD4',
+    color: '#cfc7b5',
     fontSize: 17,
     lineHeight: 1.8,
   },
   statusBox: {
-    border: '1px solid rgba(201, 162, 39, 0.5)',
+    border: `1px solid ${strongLine}`,
     borderRadius: 24,
     padding: 24,
     background:
-      'linear-gradient(180deg, rgba(201,162,39,0.18), rgba(0,0,0,0.38))',
+      'linear-gradient(180deg, rgba(214,178,94,0.18), rgba(0,0,0,0.38))',
   },
   statusLabel: {
     margin: 0,
-    color: '#D7B84C',
+    color: gold,
     fontSize: 11,
     fontWeight: 950,
     letterSpacing: '0.2em',
@@ -694,16 +734,16 @@ const styles: Record<string, CSSProperties> = {
   },
   statusMeaning: {
     margin: '12px 0 0',
-    color: '#ECE7D7',
+    color: '#f5f0e6',
     fontSize: 14,
     lineHeight: 1.7,
   },
   message: {
     padding: '14px 18px',
     borderRadius: 16,
-    color: '#D7B84C',
-    background: 'rgba(201,162,39,0.1)',
-    border: '1px solid rgba(201,162,39,0.22)',
+    color: gold,
+    background: 'rgba(214,178,94,0.1)',
+    border: `1px solid ${softLine}`,
     fontWeight: 800,
   },
   commandDeck: {
@@ -714,19 +754,19 @@ const styles: Record<string, CSSProperties> = {
   primaryCard: {
     padding: 30,
     borderRadius: 28,
-    background: '#FFFFFF',
-    color: '#0B0B0B',
-    border: '1px solid rgba(255,255,255,0.12)',
+    background: cardBlack,
+    color: '#fff8e7',
+    border: `1px solid ${softLine}`,
   },
   consequenceCard: {
     padding: 30,
     borderRadius: 28,
-    background: 'rgba(0,0,0,0.38)',
-    border: '1px solid rgba(201,162,39,0.28)',
+    background: deepBlack,
+    border: `1px solid ${softLine}`,
   },
   sectionKicker: {
     margin: 0,
-    color: '#C9A227',
+    color: mutedGold,
     fontSize: 11,
     fontWeight: 950,
     letterSpacing: '0.18em',
@@ -739,12 +779,6 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: '-0.05em',
     fontWeight: 950,
   },
-  primaryText: {
-    margin: 0,
-    color: '#4A4A4A',
-    lineHeight: 1.7,
-    fontSize: 14,
-  },
   consequenceTitle: {
     margin: '14px 0',
     fontSize: 28,
@@ -753,7 +787,7 @@ const styles: Record<string, CSSProperties> = {
   },
   bodyText: {
     margin: '8px 0 0',
-    color: '#AEB6C2',
+    color: '#cfc7b5',
     lineHeight: 1.7,
     fontSize: 14,
   },
@@ -765,18 +799,19 @@ const styles: Record<string, CSSProperties> = {
   },
   metricsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
     gap: 14,
+    marginBottom: 18,
   },
   metricCard: {
     padding: 18,
     borderRadius: 20,
-    background: 'rgba(255,255,255,0.055)',
-    border: '1px solid rgba(255,255,255,0.1)',
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
   },
   metricLabel: {
     margin: 0,
-    color: '#858D98',
+    color: '#9ca3af',
     fontSize: 10,
     fontWeight: 950,
     letterSpacing: '0.14em',
@@ -784,7 +819,7 @@ const styles: Record<string, CSSProperties> = {
   },
   metricValue: {
     margin: '10px 0 0',
-    color: '#FFFFFF',
+    color: '#fff8e7',
     fontSize: 26,
     fontWeight: 950,
     lineHeight: 1.15,
@@ -793,12 +828,12 @@ const styles: Record<string, CSSProperties> = {
   miniStat: {
     padding: 14,
     borderRadius: 16,
-    background: 'rgba(255,255,255,0.055)',
-    border: '1px solid rgba(255,255,255,0.09)',
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.08)',
   },
   miniValue: {
     margin: '8px 0 0',
-    color: '#FFFFFF',
+    color: '#fff8e7',
     fontSize: 13,
     fontWeight: 850,
     lineHeight: 1.45,
@@ -808,24 +843,25 @@ const styles: Record<string, CSSProperties> = {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
     gap: 16,
+    marginBottom: 18,
   },
   panelCard: {
     padding: 22,
     borderRadius: 22,
-    background: 'rgba(255,255,255,0.045)',
-    border: '1px solid rgba(255,255,255,0.09)',
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
     minHeight: 150,
   },
   cardValue: {
     margin: '12px 0 0',
-    color: '#FFFFFF',
+    color: '#fff8e7',
     fontSize: 19,
     lineHeight: 1.25,
     overflowWrap: 'anywhere',
   },
   panelBody: {
     marginTop: 10,
-    color: '#AEB6C2',
+    color: '#cfc7b5',
     fontSize: 14,
     lineHeight: 1.65,
   },
@@ -833,8 +869,8 @@ const styles: Record<string, CSSProperties> = {
     padding: 28,
     borderRadius: 28,
     background:
-      'linear-gradient(135deg, rgba(201,162,39,0.13), rgba(255,255,255,0.035))',
-    border: '1px solid rgba(201,162,39,0.32)',
+      'linear-gradient(135deg, rgba(214,178,94,0.13), rgba(255,255,255,0.035))',
+    border: `1px solid ${strongLine}`,
   },
   panelTitle: {
     margin: '12px 0 0',
@@ -848,11 +884,66 @@ const styles: Record<string, CSSProperties> = {
     gap: 12,
     marginTop: 20,
   },
+  actionPanel: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: 18,
+    alignItems: 'flex-start',
+    padding: 28,
+    borderRadius: 28,
+    background: panelBlack,
+    border: `1px solid ${softLine}`,
+  },
+  primaryButton: {
+    border: 'none',
+    borderRadius: 999,
+    padding: '14px 22px',
+    background: gold,
+    color: '#090909',
+    fontWeight: 950,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  },
+  evidencePanel: {
+    padding: 24,
+    borderRadius: 28,
+    background: panelBlack,
+    border: `1px solid ${softLine}`,
+  },
+  evidenceSummary: {
+    cursor: 'pointer',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 18,
+    listStyle: 'none',
+  },
+  evidenceTitle: {
+    display: 'block',
+    color: '#fff8e7',
+    fontSize: 22,
+    lineHeight: 1.2,
+    marginTop: 8,
+    letterSpacing: '-0.035em',
+  },
+  evidenceToggle: {
+    flex: '0 0 auto',
+    borderRadius: 999,
+    padding: '10px 14px',
+    background: 'rgba(214,178,94,0.12)',
+    border: `1px solid ${softLine}`,
+    color: gold,
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+  },
   panel: {
     padding: 28,
     borderRadius: 28,
-    background: 'rgba(255,255,255,0.045)',
-    border: '1px solid rgba(255,255,255,0.1)',
+    background: deepBlack,
+    border: `1px solid ${softLine}`,
+    marginTop: 18,
   },
   cardHeader: {
     display: 'flex',
@@ -860,19 +951,9 @@ const styles: Record<string, CSSProperties> = {
     gap: 16,
     alignItems: 'flex-start',
   },
-  primaryButton: {
-    border: 'none',
-    borderRadius: 999,
-    padding: '14px 22px',
-    background: '#C9A227',
-    color: '#090909',
-    fontWeight: 950,
-    cursor: 'pointer',
-    whiteSpace: 'nowrap',
-  },
   emptyBox: {
-    margin: 0,
-    color: '#DCE1E8',
+    margin: '18px 0 0',
+    color: '#cfc7b5',
     padding: 18,
     borderRadius: 18,
     border: '1px dashed rgba(255,255,255,0.18)',
@@ -886,8 +967,8 @@ const styles: Record<string, CSSProperties> = {
   timelineCard: {
     padding: 20,
     borderRadius: 22,
-    background: 'rgba(0,0,0,0.24)',
-    border: '1px solid rgba(255,255,255,0.09)',
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
   },
   timelineTop: {
     display: 'flex',
@@ -900,7 +981,7 @@ const styles: Record<string, CSSProperties> = {
   },
   eventTitle: {
     margin: '8px 0 0',
-    color: '#FFFFFF',
+    color: '#fff8e7',
     fontSize: 22,
     lineHeight: 1.15,
     overflowWrap: 'anywhere',
@@ -908,16 +989,16 @@ const styles: Record<string, CSSProperties> = {
   timeBadge: {
     borderRadius: 999,
     padding: '8px 13px',
-    background: 'rgba(201,162,39,0.12)',
-    color: '#D7B84C',
-    border: '1px solid rgba(201,162,39,0.28)',
+    background: 'rgba(214,178,94,0.12)',
+    color: gold,
+    border: `1px solid ${softLine}`,
     fontSize: 12,
     fontWeight: 900,
     whiteSpace: 'nowrap',
   },
   eventSummary: {
     margin: '0 0 14px',
-    color: '#FFFFFF',
+    color: '#fff8e7',
     fontSize: 15,
     lineHeight: 1.65,
   },
@@ -935,7 +1016,7 @@ const styles: Record<string, CSSProperties> = {
   },
   detailLabel: {
     display: 'block',
-    color: '#858D98',
+    color: '#9ca3af',
     fontSize: 11,
     fontWeight: 900,
     marginBottom: 6,
@@ -944,35 +1025,39 @@ const styles: Record<string, CSSProperties> = {
   },
   detailValue: {
     margin: 0,
-    color: '#FFFFFF',
+    color: '#fff8e7',
     lineHeight: 1.45,
     overflowWrap: 'anywhere',
   },
   orderPanel: {
     padding: 28,
     borderRadius: 28,
-    background: '#FFFFFF',
-    color: '#0B0B0B',
+    background: deepBlack,
+    color: '#fff8e7',
+    border: `1px solid ${softLine}`,
+    marginTop: 18,
   },
   summaryBox: {
     marginTop: 20,
+    maxHeight: 520,
     padding: 22,
     borderRadius: 20,
-    background: '#0A0A0A',
-    color: '#F8F6F1',
+    background: cardBlack,
+    color: '#f5f0e6',
+    border: `1px solid ${softLine}`,
     whiteSpace: 'pre-wrap',
     fontSize: 13,
     lineHeight: 1.7,
-    overflowX: 'auto',
+    overflow: 'auto',
   },
   doctrineCard: {
     display: 'grid',
     gap: 10,
     padding: 24,
     borderRadius: 24,
-    background: '#050505',
-    border: '1px solid rgba(201,162,39,0.42)',
-    color: '#FFFFFF',
+    background: deepBlack,
+    border: `1px solid ${strongLine}`,
+    color: '#fff8e7',
     lineHeight: 1.7,
   },
 }
