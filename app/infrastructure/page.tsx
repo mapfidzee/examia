@@ -1,249 +1,521 @@
 import Link from 'next/link'
-import InfrastructureNav from '@/components/InfrastructureNav'
+
+import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { buildCGIInfrastructureDoctrine } from '@/lib/cgiInfrastructureDoctrineEngine'
 
 export default function InfrastructurePage() {
   const infrastructure = buildCGIInfrastructureDoctrine()
 
   return (
-    <main className="min-h-screen bg-[#07111F] text-slate-100">
-      <section className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-5 py-8 sm:px-8 lg:px-10">
-        <InfrastructureNav />
+    <CGIGovernanceShell>
+      <main style={styles.page}>
+        <section style={styles.container}>
+          <header style={styles.hero}>
+            <div>
+              <p style={styles.kicker}>TSINAXA CGI • INFRASTRUCTURE</p>
+              <h1 style={styles.title}>{infrastructure.title}</h1>
+              <p style={styles.subtitle}>{infrastructure.subtitle}</p>
+              <p style={styles.bodyText}>{infrastructure.thesis}</p>
+            </div>
 
-        <header className="rounded-3xl border border-blue-900/60 bg-[#0B1B30] p-6 shadow-2xl shadow-black/30 sm:p-8">
-          <div className="mb-4 inline-flex rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200">
-            TSINAXA CGI
-          </div>
-
-          <h1 className="max-w-5xl text-3xl font-bold tracking-tight text-white sm:text-5xl">
-            {infrastructure.title}
-          </h1>
-
-          <p className="mt-3 text-xl font-black text-emerald-200 sm:text-2xl">
-            {infrastructure.subtitle}
-          </p>
-
-          <p className="mt-5 max-w-4xl text-base leading-8 text-slate-300 sm:text-lg">
-            {infrastructure.thesis}
-          </p>
-        </header>
-
-        <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {infrastructure.commandSignals.map((signal) => (
-            <div
-              key={signal.label}
-              className="rounded-3xl border border-blue-900/60 bg-[#0B1B30] p-5"
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                {signal.label}
-              </p>
-              <p className="mt-3 text-2xl font-bold text-cyan-300">
-                {signal.value}
-              </p>
-              <p className="mt-3 text-sm leading-6 text-slate-300">
-                {signal.cue}
+            <div style={styles.statusBox}>
+              <p style={styles.statusLabel}>INFRASTRUCTURE POSTURE</p>
+              <p style={styles.statusValue}>LOCKED</p>
+              <p style={styles.statusMeaning}>
+                Continuity governance is defined, bounded, and ready for
+                disciplined institutional use.
               </p>
             </div>
-          ))}
-        </section>
+          </header>
 
-        <section className="rounded-3xl border border-cyan-400/25 bg-cyan-400/10 p-6 sm:p-8">
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-200">
-            Locked Doctrine
-          </p>
-
-          <h2 className="mt-2 text-2xl font-bold text-white">
-            Continuity Must Be Governed Until Stabilization Is Credible
-          </h2>
-
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {infrastructure.doctrine.map((item) => (
-              <div
-                key={item}
-                className="rounded-2xl border border-cyan-400/20 bg-[#07111F]/70 p-4 text-sm font-bold leading-6 text-cyan-100"
-              >
-                {item}
-              </div>
+          <section style={styles.signalGrid}>
+            {infrastructure.commandSignals.map((signal) => (
+              <article key={signal.label} style={styles.signalCard}>
+                <p style={styles.metricLabel}>{signal.label}</p>
+                <h2 style={styles.signalValue}>{signal.value}</h2>
+                <p style={styles.panelBody}>{signal.cue}</p>
+              </article>
             ))}
-          </div>
-        </section>
+          </section>
 
-        <section className="grid gap-5 lg:grid-cols-3">
-          <div className="rounded-3xl border border-blue-900/60 bg-[#0B1B30] p-6 sm:p-8 lg:col-span-2">
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-300/80">
-              Institutional Adoption Pathway
-            </p>
-
-            <h2 className="mt-2 text-2xl font-bold text-white">
-              From First Review to Governed Continuity Intelligence
+          <section style={styles.doctrinePanel}>
+            <p style={styles.sectionKicker}>Locked Doctrine</p>
+            <h2 style={styles.panelTitle}>
+              Continuity must be governed until stabilization is credible.
             </h2>
 
-            <p className="mt-4 leading-8 text-slate-300">
-              {infrastructure.adoptionPathwayMeaning}
-            </p>
-          </div>
-
-          <div className="rounded-3xl border border-cyan-400/25 bg-cyan-400/10 p-6 sm:p-8">
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-200">
-              Category Lock
-            </p>
-
-            <h2 className="mt-2 text-xl font-bold text-white">
-              {infrastructure.categoryLock}
-            </h2>
-
-            <p className="mt-4 leading-7 text-slate-200">
-              {infrastructure.categoryMeaning}
-            </p>
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-blue-900/60 bg-[#0B1B30] p-6 sm:p-8">
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-300/80">
-            Adoption Lifecycle
-          </p>
-
-          <h2 className="mt-2 text-2xl font-bold text-white">
-            Institutional Activation Stages
-          </h2>
-
-          <div className="mt-6 grid gap-4 lg:grid-cols-5">
-            {infrastructure.adoptionStages.map((item) => (
-              <div
-                key={item.status}
-                className="rounded-3xl border border-blue-900/60 bg-[#07111F] p-5"
-              >
-                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full border border-cyan-400/40 bg-cyan-400/10 text-sm font-black text-cyan-200">
-                  {item.stage}
-                </div>
-
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/80">
-                  {item.status}
-                </p>
-
-                <h3 className="mt-2 text-lg font-bold text-white">
-                  {item.title}
-                </h3>
-
-                <p className="mt-3 text-sm leading-6 text-slate-300">
-                  {item.meaning}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="grid gap-5 lg:grid-cols-2">
-          <div className="rounded-3xl border border-blue-900/60 bg-[#0B1B30] p-6 sm:p-8">
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-300/80">
-              Deployment Readiness
-            </p>
-
-            <h2 className="mt-2 text-2xl font-bold text-white">
-              Readiness Checklist Before Activation
-            </h2>
-
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              {infrastructure.readinessChecks.map((item) => (
-                <div
-                  key={item}
-                  className="rounded-2xl border border-blue-900/60 bg-[#07111F] p-4 text-sm font-semibold text-slate-200"
-                >
+            <div style={styles.doctrineGrid}>
+              {infrastructure.doctrine.map((item) => (
+                <div key={item} style={styles.doctrineItem}>
                   {item}
                 </div>
               ))}
             </div>
-          </div>
+          </section>
 
-          <div className="rounded-3xl border border-cyan-400/25 bg-cyan-400/10 p-6 sm:p-8">
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-200">
-              Deployment Guardrails
-            </p>
-
-            <h2 className="mt-2 text-2xl font-bold text-white">
-              Governance Rules That Protect Trust
-            </h2>
-
-            <div className="mt-6 grid gap-4">
-              {infrastructure.deploymentLocks.map((item) => (
-                <div
-                  key={item.title}
-                  className="rounded-2xl border border-cyan-400/20 bg-[#07111F]/70 p-4"
-                >
-                  <h3 className="text-base font-bold text-white">
-                    {item.title}
-                  </h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-300">
-                    {item.text}
-                  </p>
-                </div>
-              ))}
+          <section style={styles.commandDeck}>
+            <div style={styles.primaryCard}>
+              <p style={styles.sectionKicker}>Infrastructure Question</p>
+              <h2 style={styles.commandTitle}>
+                Can this continuity system be safely adopted without founder
+                explanation?
+              </h2>
+              <p style={styles.bodyText}>
+                {infrastructure.adoptionPathwayMeaning}
+              </p>
             </div>
-          </div>
+
+            <div style={styles.warningCard}>
+              <p style={styles.sectionKicker}>Category Lock</p>
+              <h2 style={styles.warningTitle}>{infrastructure.categoryLock}</h2>
+              <p style={styles.bodyText}>{infrastructure.categoryMeaning}</p>
+            </div>
+          </section>
+
+          <section style={styles.commandDeck}>
+            <div style={styles.primaryCard}>
+              <p style={styles.sectionKicker}>Next Hardening Layer</p>
+              <h2 style={styles.panelTitle}>
+                {infrastructure.nextHardeningTitle}
+              </h2>
+              <p style={styles.bodyText}>
+                {infrastructure.nextHardeningMeaning}
+              </p>
+            </div>
+
+            <div style={styles.warningCard}>
+              <p style={styles.sectionKicker}>System Boundary</p>
+              <h2 style={styles.panelTitle}>
+                {infrastructure.systemBoundaryTitle}
+              </h2>
+              <p style={styles.bodyText}>
+                {infrastructure.systemBoundaryMeaning}
+              </p>
+            </div>
+          </section>
+
+          <details style={styles.evidencePanel}>
+            <summary style={styles.evidenceSummary}>
+              <span>
+                <span style={styles.sectionKicker}>
+                  Supporting Infrastructure Evidence
+                </span>
+                <strong style={styles.evidenceTitle}>
+                  Adoption stages, readiness checks, guardrails, and route access
+                </strong>
+              </span>
+
+              <span style={styles.evidenceToggle}>Expand Infrastructure</span>
+            </summary>
+
+            <section style={styles.cardNested}>
+              <p style={styles.sectionKicker}>Adoption Lifecycle</p>
+              <h2 style={styles.panelTitle}>Institutional activation stages</h2>
+
+              <div style={styles.stageGrid}>
+                {infrastructure.adoptionStages.map((item) => (
+                  <article key={item.status} style={styles.stageCard}>
+                    <div style={styles.stageNumber}>{item.stage}</div>
+                    <p style={styles.metricLabel}>{item.status}</p>
+                    <h3 style={styles.cardValue}>{item.title}</h3>
+                    <p style={styles.panelBody}>{item.meaning}</p>
+                  </article>
+                ))}
+              </div>
+            </section>
+
+            <section style={styles.gridTwo}>
+              <div style={styles.cardNested}>
+                <p style={styles.sectionKicker}>Deployment Readiness</p>
+                <h2 style={styles.panelTitle}>
+                  Readiness checklist before activation
+                </h2>
+
+                <div style={styles.checkGrid}>
+                  {infrastructure.readinessChecks.map((item) => (
+                    <div key={item} style={styles.checkItem}>
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={styles.cardNested}>
+                <p style={styles.sectionKicker}>Deployment Guardrails</p>
+                <h2 style={styles.panelTitle}>
+                  Governance rules that protect trust
+                </h2>
+
+                <div style={styles.guardrailList}>
+                  {infrastructure.deploymentLocks.map((item) => (
+                    <article key={item.title} style={styles.guardrailItem}>
+                      <h3 style={styles.cardValue}>{item.title}</h3>
+                      <p style={styles.panelBody}>{item.text}</p>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            <section style={styles.cardNested}>
+              <p style={styles.sectionKicker}>Core Intelligence Routes</p>
+              <h2 style={styles.panelTitle}>Continuity governance access</h2>
+
+              <div style={styles.routeGrid}>
+                {infrastructure.accessRoutes.map((route) => (
+                  <GatewayLink
+                    key={route.href}
+                    label={route.label}
+                    href={route.href}
+                  />
+                ))}
+              </div>
+            </section>
+          </details>
+
+          <section style={styles.doctrineCard}>
+            <strong>INFRASTRUCTURE DOCTRINE</strong>
+            <span>
+              TSINAXA CGI is not a page collection. It is continuity governance
+              infrastructure: visible instability remains governed until
+              stabilization credibility, survivability meaning, executive
+              accountability, and institutional memory are preserved.
+            </span>
+          </section>
         </section>
-
-        <section className="rounded-3xl border border-blue-900/60 bg-[#0B1B30] p-6 sm:p-8">
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-300/80">
-            Core Intelligence Routes
-          </p>
-
-          <h2 className="mt-2 text-2xl font-bold text-white">
-            Continuity Governance Access
-          </h2>
-
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {infrastructure.accessRoutes.map((route) => (
-              <GatewayLink
-                key={route.href}
-                label={route.label}
-                href={route.href}
-              />
-            ))}
-          </div>
-        </section>
-
-        <section className="grid gap-5 lg:grid-cols-2">
-          <div className="rounded-3xl border border-blue-900/60 bg-[#0B1B30] p-6 sm:p-8">
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-300/80">
-              Next Hardening Layer
-            </p>
-
-            <h2 className="mt-2 text-2xl font-bold text-white">
-              {infrastructure.nextHardeningTitle}
-            </h2>
-
-            <p className="mt-4 leading-8 text-slate-300">
-              {infrastructure.nextHardeningMeaning}
-            </p>
-          </div>
-
-          <div className="rounded-3xl border border-cyan-400/25 bg-cyan-400/10 p-6 sm:p-8">
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-200">
-              System Boundary
-            </p>
-
-            <h2 className="mt-2 text-2xl font-bold text-white">
-              {infrastructure.systemBoundaryTitle}
-            </h2>
-
-            <p className="mt-4 leading-8 text-slate-200">
-              {infrastructure.systemBoundaryMeaning}
-            </p>
-          </div>
-        </section>
-      </section>
-    </main>
+      </main>
+    </CGIGovernanceShell>
   )
 }
 
 function GatewayLink({ label, href }: { label: string; href: string }) {
   return (
-    <Link
-      href={href}
-      className="rounded-2xl border border-blue-900/60 bg-[#07111F] p-4 text-sm font-semibold text-slate-200 transition hover:border-cyan-300 hover:bg-[#102744] hover:text-cyan-100"
-    >
-      {label}
-      <div className="mt-1 text-xs font-normal text-slate-500">{href}</div>
+    <Link href={href} style={styles.routeLink}>
+      <strong>{label}</strong>
+      <span>{href}</span>
     </Link>
   )
 }
+
+const gold = '#d6b25e'
+const mutedGold = '#9f8142'
+const deepBlack = '#030303'
+const panelBlack = '#090807'
+const cardBlack = '#11100d'
+const softLine = 'rgba(214,178,94,0.24)'
+const strongLine = 'rgba(214,178,94,0.42)'
+
+const styles = {
+  page: {
+    minHeight: '100vh',
+    background:
+      'radial-gradient(circle at top left, rgba(214,178,94,0.12), transparent 34%), linear-gradient(135deg, #030303 0%, #090807 48%, #11100d 100%)',
+    color: '#fff8e7',
+    padding: '40px 24px 72px',
+  },
+  container: {
+    width: 'min(1440px, 100%)',
+    margin: '0 auto',
+    display: 'grid',
+    gap: 22,
+  },
+  hero: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.45fr) minmax(320px, 0.75fr)',
+    gap: 24,
+    padding: 30,
+    border: `1px solid ${strongLine}`,
+    borderRadius: 28,
+    background:
+      'linear-gradient(135deg, rgba(214,178,94,0.08), rgba(255,255,255,0.018))',
+  },
+  kicker: {
+    margin: 0,
+    color: gold,
+    fontSize: 12,
+    fontWeight: 900,
+    letterSpacing: '0.22em',
+    textTransform: 'uppercase',
+  },
+  title: {
+    margin: '14px 0 0',
+    fontSize: 'clamp(2.4rem, 5vw, 5rem)',
+    lineHeight: 0.95,
+    letterSpacing: '-0.07em',
+    fontWeight: 950,
+  },
+  subtitle: {
+    margin: '16px 0 0',
+    color: gold,
+    fontSize: 19,
+    fontWeight: 900,
+    lineHeight: 1.35,
+  },
+  bodyText: {
+    margin: '14px 0 0',
+    color: '#cfc7b5',
+    fontSize: 14,
+    lineHeight: 1.75,
+    maxWidth: 900,
+  },
+  statusBox: {
+    border: `1px solid ${strongLine}`,
+    borderRadius: 24,
+    padding: 24,
+    background:
+      'linear-gradient(180deg, rgba(214,178,94,0.18), rgba(0,0,0,0.38))',
+  },
+  statusLabel: {
+    margin: 0,
+    color: gold,
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.2em',
+  },
+  statusValue: {
+    margin: '16px 0 0',
+    fontSize: 30,
+    fontWeight: 950,
+    lineHeight: 1.05,
+  },
+  statusMeaning: {
+    margin: '12px 0 0',
+    color: '#f5f0e6',
+    fontSize: 14,
+    lineHeight: 1.7,
+  },
+  signalGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 14,
+  },
+  signalCard: {
+    padding: 18,
+    borderRadius: 20,
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
+    minHeight: 132,
+  },
+  metricLabel: {
+    margin: 0,
+    color: '#9ca3af',
+    fontSize: 10,
+    fontWeight: 950,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+  },
+  signalValue: {
+    margin: '10px 0 0',
+    color: gold,
+    fontSize: 24,
+    fontWeight: 950,
+    lineHeight: 1.1,
+    overflowWrap: 'anywhere',
+  },
+  panelBody: {
+    marginTop: 10,
+    color: '#cfc7b5',
+    fontSize: 13,
+    lineHeight: 1.6,
+  },
+  doctrinePanel: {
+    padding: 26,
+    borderRadius: 28,
+    background:
+      'linear-gradient(135deg, rgba(214,178,94,0.13), rgba(255,255,255,0.035))',
+    border: `1px solid ${strongLine}`,
+  },
+  sectionKicker: {
+    margin: 0,
+    color: mutedGold,
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.18em',
+    textTransform: 'uppercase',
+  },
+  panelTitle: {
+    margin: '12px 0 0',
+    color: '#fff8e7',
+    fontSize: 26,
+    lineHeight: 1.15,
+    letterSpacing: '-0.045em',
+  },
+  doctrineGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 20,
+  },
+  doctrineItem: {
+    padding: 14,
+    borderRadius: 16,
+    background: cardBlack,
+    border: '1px solid rgba(255,255,255,0.08)',
+    color: '#fff8e7',
+    fontSize: 13,
+    lineHeight: 1.45,
+    fontWeight: 850,
+  },
+  commandDeck: {
+    display: 'grid',
+    gridTemplateColumns: '1.35fr 0.8fr',
+    gap: 22,
+  },
+  primaryCard: {
+    padding: 28,
+    borderRadius: 28,
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
+  },
+  warningCard: {
+    padding: 28,
+    borderRadius: 28,
+    background: deepBlack,
+    border: `1px solid ${softLine}`,
+  },
+  commandTitle: {
+    margin: '14px 0 0',
+    fontSize: 'clamp(1.8rem, 3vw, 3rem)',
+    lineHeight: 1.05,
+    letterSpacing: '-0.05em',
+    fontWeight: 950,
+  },
+  warningTitle: {
+    margin: '14px 0 0',
+    fontSize: 28,
+    lineHeight: 1.1,
+    letterSpacing: '-0.04em',
+  },
+  evidencePanel: {
+    padding: 24,
+    borderRadius: 28,
+    background: panelBlack,
+    border: `1px solid ${softLine}`,
+  },
+  evidenceSummary: {
+    cursor: 'pointer',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 18,
+    listStyle: 'none',
+  },
+  evidenceTitle: {
+    display: 'block',
+    color: '#fff8e7',
+    fontSize: 22,
+    lineHeight: 1.2,
+    marginTop: 8,
+    letterSpacing: '-0.035em',
+  },
+  evidenceToggle: {
+    flex: '0 0 auto',
+    borderRadius: 999,
+    padding: '10px 14px',
+    background: 'rgba(214,178,94,0.12)',
+    border: `1px solid ${softLine}`,
+    color: gold,
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+  },
+  cardNested: {
+    background: deepBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: 22,
+    padding: 22,
+    marginTop: 18,
+  },
+  stageGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+    gap: 14,
+    marginTop: 20,
+  },
+  stageCard: {
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: 18,
+    padding: 16,
+    minHeight: 190,
+  },
+  stageNumber: {
+    width: 34,
+    height: 34,
+    borderRadius: 999,
+    display: 'grid',
+    placeItems: 'center',
+    background: 'rgba(214,178,94,0.12)',
+    border: `1px solid ${softLine}`,
+    color: gold,
+    fontWeight: 950,
+    marginBottom: 14,
+  },
+  cardValue: {
+    margin: '10px 0 0',
+    color: '#fff8e7',
+    fontSize: 17,
+    lineHeight: 1.25,
+    overflowWrap: 'anywhere',
+  },
+  gridTwo: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 18,
+  },
+  checkGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 10,
+    marginTop: 18,
+  },
+  checkItem: {
+    padding: 14,
+    borderRadius: 16,
+    background: cardBlack,
+    border: '1px solid rgba(255,255,255,0.08)',
+    color: '#f5f0e6',
+    fontWeight: 800,
+    fontSize: 13,
+    lineHeight: 1.45,
+  },
+  guardrailList: {
+    display: 'grid',
+    gap: 12,
+    marginTop: 18,
+  },
+  guardrailItem: {
+    padding: 16,
+    borderRadius: 18,
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
+  },
+  routeGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 18,
+  },
+  routeLink: {
+    display: 'grid',
+    gap: 6,
+    padding: 14,
+    borderRadius: 16,
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
+    color: '#fff8e7',
+    textDecoration: 'none',
+    fontSize: 13,
+  },
+  doctrineCard: {
+    display: 'grid',
+    gap: 10,
+    padding: 24,
+    borderRadius: 24,
+    background: deepBlack,
+    border: `1px solid ${strongLine}`,
+    color: '#fff8e7',
+    lineHeight: 1.7,
+  },
+} satisfies Record<string, React.CSSProperties>
