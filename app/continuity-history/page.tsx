@@ -5,9 +5,7 @@ import type { CSSProperties, ReactNode } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
-import {
-  reviewCGIHistoricalContinuity,
-} from '@/lib/cgiHistoricalContinuityEngine'
+import { reviewCGIHistoricalContinuity } from '@/lib/cgiHistoricalContinuityEngine'
 import {
   buildHistoryIntelligence,
   continuityHistoryDoctrine,
@@ -21,6 +19,8 @@ import {
 import { loadCGIContinuitySnapshots } from '@/lib/cgiPersistenceEngine'
 
 type PersistedContinuitySnapshot = PersistedContinuitySnapshotForHistory
+
+const EMPTY_HISTORY = 'Historical memory not yet established.'
 
 export default function ContinuityHistoryPage() {
   return (
@@ -51,11 +51,7 @@ function ContinuityHistoryContent() {
       const records = await loadCGIContinuitySnapshots(50)
 
       setSnapshots(records as PersistedContinuitySnapshot[])
-      setMessage(
-        records.length === 0
-          ? 'No persisted continuity snapshots found yet.'
-          : 'Continuity memory loaded.',
-      )
+      setMessage(records.length === 0 ? EMPTY_HISTORY : 'Continuity memory loaded.')
     } catch (error) {
       console.error(error)
       setMessage('Continuity memory could not be loaded.')
@@ -77,25 +73,22 @@ function ContinuityHistoryContent() {
 
   const historicalMeaning = history.hasHistory
     ? intelligence.executiveMeaning
-    : 'CGI has not yet accumulated persisted continuity snapshots for historical review.'
+    : EMPTY_HISTORY
 
   return (
     <main style={styles.page}>
       <div style={styles.container}>
         <section style={styles.header}>
           <p style={styles.kicker}>TSINAXA CGI • CONTINUITY HISTORY</p>
-
           <h1 style={styles.title}>Continuity History</h1>
-
           <p style={styles.subtitle}>
-            Institutional memory ledger for preserved continuity posture,
-            recurrence, survivability exposure, recovery credibility, evidence,
-            and executive movement across time.
+            Institutional memory ledger for continuity posture, recurrence,
+            survivability exposure, recovery credibility, evidence, and
+            executive movement across time.
           </p>
 
           <section style={styles.doctrinePanel}>
             <p style={styles.doctrineTitle}>CONTINUITY HISTORY DOCTRINE</p>
-
             <div style={styles.doctrineGrid}>
               {continuityHistoryDoctrine.map((item) => (
                 <div key={item} style={styles.doctrineCard}>
@@ -116,9 +109,8 @@ function ContinuityHistoryContent() {
           </div>
 
           <div style={styles.questionBox}>
-            <p style={styles.metricLabel}>History Questions</p>
+            <p style={styles.metricLabel}>History Question</p>
             <p style={styles.questionText}>
-              Has this happened before? What keeps returning? Are we improving?
               What must leadership never forget?
             </p>
           </div>
@@ -129,8 +121,8 @@ function ContinuityHistoryContent() {
             <p style={styles.sectionKicker}>Memory Direction</p>
             <h2 style={styles.cardTitle}>{history.memoryDirection}</h2>
             <p style={styles.bodyText}>
-              Continuity History preserves prior continuity readings without
-              allowing old records to override the current lifecycle truth.
+              Continuity History preserves prior readings without allowing old
+              records to override current lifecycle truth.
             </p>
           </div>
 
@@ -143,7 +135,7 @@ function ContinuityHistoryContent() {
               ...(loading ? styles.disabledButton : {}),
             }}
           >
-            {loading ? 'Refreshing...' : 'Refresh History'}
+            {loading ? 'Refreshing...' : 'Refresh'}
           </button>
         </section>
 
@@ -153,8 +145,8 @@ function ContinuityHistoryContent() {
             value={String(intelligence.snapshotCount)}
             body={
               history.hasHistory
-                ? 'Persisted continuity records available for history review.'
-                : 'No persisted continuity records available yet.'
+                ? 'Persisted continuity records available.'
+                : EMPTY_HISTORY
             }
           />
 
@@ -165,7 +157,7 @@ function ContinuityHistoryContent() {
                 ? yesNoMeaning(intelligence.continuityDriftDetected)
                 : 'AWAITING HISTORY'
             }
-            body="Shows whether historical memory indicates worsening or persistent exposure."
+            body="Whether historical memory shows worsening or persistent exposure."
           />
 
           <MetricCard
@@ -175,88 +167,68 @@ function ContinuityHistoryContent() {
                 ? yesNoMeaning(intelligence.continuityImproving)
                 : 'AWAITING HISTORY'
             }
-            body="Shows whether latest posture is lighter than the oldest compared posture."
+            body="Whether the latest posture is lighter than the oldest compared posture."
           />
 
           <MetricCard
             label="Confidence"
             value={history.historicalConfidence.memoryConfidence}
-            body="Shows whether the historical pattern is strong enough to trust."
+            body="Whether the historical pattern is strong enough to trust."
           />
         </section>
 
-        <section style={styles.gridTwo}>
-          <Panel title="What Changed Over Time">
-            {history.hasHistory ? (
-              <div style={styles.infoList}>
-                <Info
-                  label="Direction"
-                  value={executiveLabel(intelligence.directionLabel)}
-                />
-                <Info
-                  label="Historical Trend"
-                  value={executiveLabel(intelligence.historicalTrendLabel)}
-                />
-                <Info
-                  label="Current Posture"
-                  value={executiveLabel(intelligence.currentPosture)}
-                />
-                <Info
-                  label="Continuity Drift"
-                  value={yesNoMeaning(intelligence.continuityDriftDetected)}
-                />
-                <Info
-                  label="Improving Movement"
-                  value={yesNoMeaning(intelligence.continuityImproving)}
-                />
-              </div>
-            ) : (
-              <EmptyPanel
-                title="No historical movement to display."
-                body="Once snapshots exist, trend, drift, and movement analysis will appear here."
-              />
-            )}
-          </Panel>
+        <section style={styles.card}>
+          <p style={styles.sectionKicker}>Historical Movement Summary</p>
+          <h2 style={styles.cardTitle}>
+            What changed, and what must not be forgotten?
+          </h2>
 
-          <Panel title="What Must Not Be Forgotten">
-            {history.hasHistory ? (
-              <div style={styles.infoList}>
-                <Info
-                  label="Recurrence"
-                  value={executiveLabel(intelligence.recurrenceMeaning)}
-                />
-                <Info
-                  label="Survivability"
-                  value={executiveLabel(intelligence.survivabilityMeaning)}
-                />
-                <Info
-                  label="Evidence"
-                  value={executiveLabel(intelligence.evidenceMeaning)}
-                />
-                <Info
-                  label="History Action"
-                  value={executiveLabel(intelligence.requiredHistoryAction)}
-                />
-              </div>
-            ) : (
-              <EmptyPanel
-                title="No memory references to display."
-                body="Recurrence, survivability, evidence, and required actions will appear here once continuity history accumulates."
+          {history.hasHistory ? (
+            <div style={styles.movementGrid}>
+              <Info
+                label="Direction"
+                value={executiveLabel(intelligence.directionLabel)}
               />
-            )}
-          </Panel>
+              <Info
+                label="Trend"
+                value={executiveLabel(intelligence.historicalTrendLabel)}
+              />
+              <Info
+                label="Current Posture"
+                value={executiveLabel(intelligence.currentPosture)}
+              />
+              <Info
+                label="Drift"
+                value={yesNoMeaning(intelligence.continuityDriftDetected)}
+              />
+              <Info
+                label="Recurrence"
+                value={executiveLabel(intelligence.recurrenceMeaning)}
+              />
+              <Info
+                label="Survivability"
+                value={executiveLabel(intelligence.survivabilityMeaning)}
+              />
+              <Info
+                label="Evidence"
+                value={executiveLabel(intelligence.evidenceMeaning)}
+              />
+              <Info
+                label="Required Action"
+                value={executiveLabel(intelligence.requiredHistoryAction)}
+              />
+            </div>
+          ) : (
+            <EmptyPanel title={EMPTY_HISTORY} body={EMPTY_HISTORY} />
+          )}
         </section>
 
         <section style={styles.card}>
           <p style={styles.sectionKicker}>Recurrence Intelligence</p>
-
           <h2 style={styles.cardTitle}>What keeps returning?</h2>
 
           {history.recurrencePatterns.length === 0 ? (
-            <EmptyPanel
-              title="No recurrence pattern established."
-              body="Recurring pressure, evidence gaps, recovery fragility, command escalation, and survivability exposure will appear here after history accumulates."
-            />
+            <EmptyPanel title={EMPTY_HISTORY} body={EMPTY_HISTORY} />
           ) : (
             <div style={styles.patternGrid}>
               {history.recurrencePatterns.map((pattern) => (
@@ -268,7 +240,6 @@ function ContinuityHistoryContent() {
 
         <section style={styles.card}>
           <p style={styles.sectionKicker}>Institutional Learning</p>
-
           <h2 style={styles.cardTitle}>
             What has the institution learned from continuity memory?
           </h2>
@@ -295,7 +266,6 @@ function ContinuityHistoryContent() {
 
         <section style={styles.card}>
           <p style={styles.sectionKicker}>Historical Confidence</p>
-
           <h2 style={styles.cardTitle}>
             Can leadership trust the historical pattern?
           </h2>
@@ -320,189 +290,178 @@ function ContinuityHistoryContent() {
           </div>
         </section>
 
-        <section style={styles.gridTwo}>
-          <Panel title="Recovery and Stabilization Memory">
-            {history.hasHistory ? (
-              <div style={styles.infoList}>
-                <Info
-                  label="Recovery"
-                  value={executiveLabel(intelligence.recoveryTrajectoryLabel)}
-                />
-                <Info
-                  label="Stabilization"
-                  value={executiveLabel(
-                    intelligence.stabilizationCredibilityLabel,
-                  )}
-                />
-                <Info
-                  label="Memory Pressure"
-                  value={executiveLabel(
-                    intelligence.institutionalMemoryPressureLabel,
-                  )}
-                />
-                <Info
-                  label="Persistence Severity"
-                  value={executiveLabel(
-                    intelligence.continuityPersistenceSeverityLabel,
-                  )}
-                />
-              </div>
-            ) : (
-              <EmptyPanel
-                title="Recovery history is awaiting evidence."
-                body="Recovery credibility, stabilization confidence, memory pressure, and persistence severity will activate after snapshots exist."
-              />
-            )}
-          </Panel>
-
-          <Panel title="Memory Compression">
-            <p style={styles.panelText}>
-              {history.hasHistory
-                ? intelligence.memoryCompressionSummary
-                : 'Memory compression becomes available after continuity snapshots exist. CGI will then summarize trend, drift, recurrence, recovery credibility, evidence maturity, and executive meaning.'}
-            </p>
-          </Panel>
-        </section>
-
         <section style={styles.card}>
           <p style={styles.sectionKicker}>Historical Interpretation</p>
-
           <h2 style={styles.cardTitle}>
             {history.hasHistory
               ? executiveLabel(intelligence.requiredHistoryAction)
               : 'Begin preserving continuity snapshots.'}
           </h2>
-
           <p style={styles.bodyText}>
-            {history.hasHistory
-              ? intelligence.trajectoryMeaning
-              : 'Trajectory meaning becomes available after persisted snapshots exist. CGI will compare posture movement, recurrence, recovery credibility, evidence maturity, and survivability pressure across time.'}
+            {history.hasHistory ? intelligence.trajectoryMeaning : EMPTY_HISTORY}
           </p>
         </section>
 
-        <section style={styles.gridTwo}>
-          <Panel title="Latest Persisted Snapshot">
-            {intelligence.latest ? (
-              <div style={styles.infoList}>
-                <Info
-                  label="Label"
-                  value={
-                    intelligence.latest.snapshot_label || 'Unlabeled snapshot'
-                  }
-                />
-                <Info
-                  label="Posture"
-                  value={executiveLabel(
-                    intelligence.latest.continuity_posture,
-                  )}
-                />
-                <Info
-                  label="Source"
-                  value={intelligence.latest.source_route || 'Not recorded'}
-                />
-                <Info
-                  label="Dominant Concern"
-                  value={
-                    intelligence.latest.dominant_concern || 'Not recorded'
-                  }
-                />
-                <Info
-                  label="Required Evidence"
-                  value={
-                    intelligence.latest.required_evidence || 'Not recorded'
-                  }
-                />
-              </div>
-            ) : (
-              <EmptyPanel
-                title="No latest snapshot available."
-                body="The most recent continuity snapshot will appear here once saved."
-              />
-            )}
-          </Panel>
+        <details style={styles.evidencePanel}>
+          <summary style={styles.evidenceSummary}>
+            <span>
+              <span style={styles.sectionKicker}>Historical Evidence</span>
+              <strong style={styles.evidenceTitle}>
+                Recovery, snapshots, compression, and movement timeline
+              </strong>
+            </span>
+            <span style={styles.evidenceToggle}>Expand Memory</span>
+          </summary>
 
-          <Panel title="Oldest Compared Snapshot">
-            {intelligence.oldest ? (
-              <div style={styles.infoList}>
-                <Info
-                  label="Label"
-                  value={
-                    intelligence.oldest.snapshot_label || 'Unlabeled snapshot'
-                  }
-                />
-                <Info
-                  label="Posture"
-                  value={executiveLabel(
-                    intelligence.oldest.continuity_posture,
-                  )}
-                />
-                <Info
-                  label="Source"
-                  value={intelligence.oldest.source_route || 'Not recorded'}
-                />
-                <Info
-                  label="Recorded"
-                  value={formatHistoryDate(intelligence.oldest.created_at || '')}
-                />
-              </div>
-            ) : (
-              <EmptyPanel
-                title="No comparison snapshot available."
-                body="The oldest available snapshot for comparison will appear here."
-              />
-            )}
-          </Panel>
-        </section>
-
-        <section style={styles.card}>
-          <p style={styles.sectionKicker}>Historical Movement Timeline</p>
-
-          <h2 style={styles.cardTitle}>
-            History should explain movement, not only list records.
-          </h2>
-
-          <div style={styles.timeline}>
-            {history.movementTimeline.length === 0 && (
-              <EmptyPanel
-                title="No movement timeline available."
-                body="Persisted continuity snapshots will appear here as historical movement events, preserving posture movement, recurrence signals, recovery credibility, evidence maturity, and survivability exposure."
-              />
-            )}
-
-            {history.movementTimeline.map((event, index) => (
-              <article key={`${event.date}-${index}`} style={styles.timelineItem}>
-                <p style={styles.timelineDate}>{event.date}</p>
-
-                <h3 style={styles.timelineTitle}>{event.title}</h3>
-
-                <p style={styles.timelineBody}>{event.body}</p>
-
-                <div style={styles.timelineMetaGrid}>
-                  <TimelineMeta label="Posture" value={event.posture} />
-                  <TimelineMeta
-                    label="Movement"
-                    value={deriveMovementMeaning(event.posture)}
+          <div style={styles.evidenceGrid}>
+            <Panel title="Recovery and Stabilization Memory">
+              {history.hasHistory ? (
+                <div style={styles.infoList}>
+                  <Info
+                    label="Recovery"
+                    value={executiveLabel(intelligence.recoveryTrajectoryLabel)}
                   />
-                  <TimelineMeta
-                    label="Memory"
-                    value="Preserved for institutional review"
+                  <Info
+                    label="Stabilization"
+                    value={executiveLabel(
+                      intelligence.stabilizationCredibilityLabel,
+                    )}
+                  />
+                  <Info
+                    label="Memory Pressure"
+                    value={executiveLabel(
+                      intelligence.institutionalMemoryPressureLabel,
+                    )}
+                  />
+                  <Info
+                    label="Persistence"
+                    value={executiveLabel(
+                      intelligence.continuityPersistenceSeverityLabel,
+                    )}
                   />
                 </div>
-              </article>
-            ))}
+              ) : (
+                <EmptyPanel title={EMPTY_HISTORY} body={EMPTY_HISTORY} />
+              )}
+            </Panel>
+
+            <Panel title="Memory Compression">
+              <p style={styles.panelText}>
+                {history.hasHistory
+                  ? intelligence.memoryCompressionSummary
+                  : EMPTY_HISTORY}
+              </p>
+            </Panel>
+
+            <Panel title="Latest Persisted Snapshot">
+              {intelligence.latest ? (
+                <div style={styles.infoList}>
+                  <Info
+                    label="Label"
+                    value={
+                      intelligence.latest.snapshot_label || 'Unlabeled snapshot'
+                    }
+                  />
+                  <Info
+                    label="Posture"
+                    value={executiveLabel(
+                      intelligence.latest.continuity_posture,
+                    )}
+                  />
+                  <Info
+                    label="Source"
+                    value={intelligence.latest.source_route || 'Not recorded'}
+                  />
+                  <Info
+                    label="Concern"
+                    value={
+                      intelligence.latest.dominant_concern || 'Not recorded'
+                    }
+                  />
+                </div>
+              ) : (
+                <EmptyPanel title={EMPTY_HISTORY} body={EMPTY_HISTORY} />
+              )}
+            </Panel>
+
+            <Panel title="Oldest Compared Snapshot">
+              {intelligence.oldest ? (
+                <div style={styles.infoList}>
+                  <Info
+                    label="Label"
+                    value={
+                      intelligence.oldest.snapshot_label || 'Unlabeled snapshot'
+                    }
+                  />
+                  <Info
+                    label="Posture"
+                    value={executiveLabel(
+                      intelligence.oldest.continuity_posture,
+                    )}
+                  />
+                  <Info
+                    label="Source"
+                    value={intelligence.oldest.source_route || 'Not recorded'}
+                  />
+                  <Info
+                    label="Recorded"
+                    value={formatHistoryDate(
+                      intelligence.oldest.created_at || '',
+                    )}
+                  />
+                </div>
+              ) : (
+                <EmptyPanel title={EMPTY_HISTORY} body={EMPTY_HISTORY} />
+              )}
+            </Panel>
           </div>
-        </section>
+
+          <section style={styles.timelinePanel}>
+            <p style={styles.sectionKicker}>Historical Movement Timeline</p>
+            <h2 style={styles.cardTitle}>
+              History should explain movement, not only list records.
+            </h2>
+
+            <div style={styles.timeline}>
+              {history.movementTimeline.length === 0 && (
+                <EmptyPanel title={EMPTY_HISTORY} body={EMPTY_HISTORY} />
+              )}
+
+              {history.movementTimeline.map((event, index) => (
+                <article
+                  key={`${event.date}-${index}`}
+                  style={styles.timelineItem}
+                >
+                  <p style={styles.timelineDate}>{event.date}</p>
+                  <h3 style={styles.timelineTitle}>{event.title}</h3>
+                  <p style={styles.timelineBody}>{event.body}</p>
+
+                  <div style={styles.timelineMetaGrid}>
+                    <TimelineMeta label="Posture" value={event.posture} />
+                    <TimelineMeta
+                      label="Movement"
+                      value={deriveMovementMeaning(event.posture)}
+                    />
+                    <TimelineMeta
+                      label="Memory"
+                      value="Preserved for institutional review"
+                    />
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        </details>
 
         <section style={styles.principleCard}>
           <div style={styles.principleIcon}>⚖</div>
 
           <div>
             <p style={styles.sectionKicker}>Continuity History Principle</p>
-
             <p style={styles.principleText}>
               Continuity history explains movement. It preserves memory without
-              overriding current truth. It is the institutional record that
-              ensures leadership never forgets what mattered.
+              overriding current truth. It ensures leadership never forgets what
+              mattered.
             </p>
           </div>
         </section>
@@ -548,13 +507,7 @@ function InfoCard({ label, value }: { label: string; value: string }) {
   )
 }
 
-function Panel({
-  title,
-  children,
-}: {
-  title: string
-  children: ReactNode
-}) {
+function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section style={styles.panel}>
       <p style={styles.panelKicker}>{title}</p>
@@ -612,7 +565,7 @@ const styles: Record<string, CSSProperties> = {
     padding: '16px 28px 72px',
     boxSizing: 'border-box',
   },
-  header: { marginBottom: '28px' },
+  header: { marginBottom: '24px' },
   kicker: {
     color: gold,
     fontSize: '11px',
@@ -664,9 +617,9 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 800,
   },
   message: {
-    background: 'rgba(16, 185, 129, 0.14)',
-    color: '#bbf7d0',
-    border: '1px solid rgba(16, 185, 129, 0.28)',
+    background: 'rgba(214,178,94,0.12)',
+    color: gold,
+    border: `1px solid ${softLine}`,
     padding: '13px 16px',
     borderRadius: '14px',
     fontWeight: 800,
@@ -675,7 +628,7 @@ const styles: Record<string, CSSProperties> = {
   },
   heroCard: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.35fr) minmax(280px, 0.65fr)',
+    gridTemplateColumns: 'minmax(0, 1.35fr) minmax(260px, 0.65fr)',
     gap: '24px',
     background: deepBlack,
     border: `1px solid ${softLine}`,
@@ -712,10 +665,10 @@ const styles: Record<string, CSSProperties> = {
   },
   questionText: {
     color: '#fff8e7',
-    fontSize: '22px',
-    lineHeight: 1.25,
+    fontSize: '24px',
+    lineHeight: 1.16,
     margin: '10px 0 0',
-    fontWeight: 900,
+    fontWeight: 950,
   },
   memoryDirectionPanel: {
     display: 'grid',
@@ -752,7 +705,7 @@ const styles: Record<string, CSSProperties> = {
     border: `1px solid ${softLine}`,
     borderRadius: '16px',
     padding: '16px',
-    minHeight: '144px',
+    minHeight: '140px',
   },
   metricLabel: {
     color: mutedGold,
@@ -769,64 +722,32 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.05,
     margin: '10px 0',
   },
-  gridTwo: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '24px',
+  card: {
+    background: deepBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '22px',
+    padding: '24px',
     marginBottom: '24px',
+    overflow: 'hidden',
   },
-  panel: {
-    background: cardBlack,
-    border: `1px solid ${softLine}`,
-    borderRadius: '18px',
-    padding: '20px',
-    minHeight: '190px',
-  },
-  panelKicker: {
-    color: mutedGold,
-    fontSize: '10px',
-    fontWeight: 900,
-    letterSpacing: '0.14em',
-    textTransform: 'uppercase',
-    margin: 0,
-  },
-  panelBody: {
-    color: '#cfc7b5',
-    fontSize: '13px',
-    lineHeight: 1.6,
-    marginTop: '10px',
-  },
-  panelText: {
-    color: '#cfc7b5',
-    lineHeight: 1.65,
-    margin: 0,
-  },
-  infoList: {
-    display: 'grid',
-    gap: '10px',
-    marginTop: '14px',
-  },
-  infoRow: {
-    display: 'grid',
-    gridTemplateColumns: '150px minmax(0, 1fr)',
-    gap: '12px',
-    background: '#15110a',
-    border: `1px solid ${softLine}`,
-    borderRadius: '14px',
-    padding: '12px',
-    alignItems: 'start',
-  },
-  infoLabel: {
-    color: mutedGold,
-    fontWeight: 900,
-    fontSize: '11px',
-    letterSpacing: '0.08em',
-    textTransform: 'uppercase',
-  },
-  infoValue: {
+  cardTitle: {
     color: '#fff8e7',
-    lineHeight: 1.45,
-    overflowWrap: 'anywhere',
+    fontSize: 'clamp(22px, 3vw, 30px)',
+    lineHeight: 1.15,
+    margin: '10px 0',
+    letterSpacing: '-0.04em',
+  },
+  bodyText: {
+    color: '#cfc7b5',
+    lineHeight: 1.6,
+    fontSize: '13px',
+    margin: 0,
+  },
+  movementGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: '12px',
+    marginTop: '18px',
   },
   patternGrid: {
     display: 'grid',
@@ -868,10 +789,36 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.35,
     margin: '10px 0 0',
   },
+  infoList: {
+    display: 'grid',
+    gap: '10px',
+    marginTop: '14px',
+  },
+  infoRow: {
+    display: 'grid',
+    gap: '8px',
+    background: '#15110a',
+    border: `1px solid ${softLine}`,
+    borderRadius: '14px',
+    padding: '12px',
+    alignItems: 'start',
+  },
+  infoLabel: {
+    color: mutedGold,
+    fontWeight: 900,
+    fontSize: '10px',
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+  },
+  infoValue: {
+    color: '#fff8e7',
+    lineHeight: 1.45,
+    overflowWrap: 'anywhere',
+  },
   emptyPanel: {
     display: 'grid',
     placeItems: 'center',
-    minHeight: '130px',
+    minHeight: '112px',
     textAlign: 'center',
     padding: '12px',
   },
@@ -887,26 +834,79 @@ const styles: Record<string, CSSProperties> = {
     margin: 0,
     fontWeight: 700,
   },
-  card: {
-    background: deepBlack,
+  evidencePanel: {
+    background: panelBlack,
     border: `1px solid ${softLine}`,
     borderRadius: '22px',
-    padding: '24px',
+    padding: '22px',
     marginBottom: '24px',
-    overflow: 'hidden',
   },
-  cardTitle: {
+  evidenceSummary: {
+    cursor: 'pointer',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '18px',
+    listStyle: 'none',
+  },
+  evidenceTitle: {
+    display: 'block',
     color: '#fff8e7',
-    fontSize: 'clamp(22px, 3vw, 30px)',
-    lineHeight: 1.15,
-    margin: '10px 0',
-    letterSpacing: '-0.04em',
+    fontSize: '22px',
+    lineHeight: 1.2,
+    marginTop: '8px',
+    letterSpacing: '-0.035em',
   },
-  bodyText: {
-    color: '#cfc7b5',
-    lineHeight: 1.6,
-    fontSize: '13px',
+  evidenceToggle: {
+    flex: '0 0 auto',
+    borderRadius: '999px',
+    padding: '10px 14px',
+    background: 'rgba(214,178,94,0.12)',
+    border: `1px solid ${softLine}`,
+    color: gold,
+    fontSize: '11px',
+    fontWeight: 950,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+  },
+  evidenceGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: '18px',
+    marginTop: '20px',
+  },
+  panel: {
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '18px',
+    padding: '20px',
+    minHeight: '180px',
+  },
+  panelKicker: {
+    color: mutedGold,
+    fontSize: '10px',
+    fontWeight: 900,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
     margin: 0,
+  },
+  panelBody: {
+    color: '#cfc7b5',
+    fontSize: '13px',
+    lineHeight: 1.6,
+    marginTop: '10px',
+  },
+  panelText: {
+    color: '#cfc7b5',
+    lineHeight: 1.65,
+    margin: 0,
+  },
+  timelinePanel: {
+    background: deepBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '20px',
+    padding: '22px',
+    marginTop: '18px',
   },
   timeline: {
     display: 'grid',
@@ -964,8 +964,8 @@ const styles: Record<string, CSSProperties> = {
   },
   principleCard: {
     display: 'grid',
-    gridTemplateColumns: '90px minmax(0, 1fr)',
-    gap: '24px',
+    gridTemplateColumns: '76px minmax(0, 1fr)',
+    gap: '20px',
     alignItems: 'center',
     background: panelBlack,
     border: `1px solid ${softLine}`,
@@ -973,14 +973,14 @@ const styles: Record<string, CSSProperties> = {
     padding: '24px',
   },
   principleIcon: {
-    width: '76px',
-    height: '76px',
+    width: '64px',
+    height: '64px',
     borderRadius: '999px',
     border: `1px solid ${softLine}`,
     display: 'grid',
     placeItems: 'center',
     color: gold,
-    fontSize: '34px',
+    fontSize: '30px',
   },
   principleText: {
     color: '#cfc7b5',
