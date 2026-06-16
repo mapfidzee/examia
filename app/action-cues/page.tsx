@@ -1,341 +1,719 @@
-import Link from "next/link";
+'use client'
+
+import Link from 'next/link'
+import type { CSSProperties } from 'react'
+
+import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
+import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 
 type ActionCue = {
-  code: string;
-  category: string;
-  severity: string;
-  meaning: string;
-  risk: string;
-  actionCue: string;
-  escalation: string;
-  governanceNote: string;
-};
+  code: string
+  category: string
+  severity: string
+  meaning: string
+  risk: string
+  actionCue: string
+  escalation: string
+  governanceNote: string
+}
 
 const actionCues: ActionCue[] = [
   {
-    code: "HIGH_ROUTING_PRESSURE",
-    category: "Routing",
-    severity: "High",
+    code: 'HIGH_ROUTING_PRESSURE',
+    category: 'Routing',
+    severity: 'High',
     meaning:
-      "Visible needs are entering the system faster than the current routing pathway can smoothly absorb.",
+      'Visible needs are entering the system faster than the current routing pathway can smoothly absorb.',
     risk:
-      "Delayed coordination, unresolved cases, responder overload, and rising stabilization backlog.",
+      'Delayed coordination, unresolved cases, responder overload, and rising stabilization backlog.',
     actionCue:
-      "Review routing load, rebalance response pathways, and prioritize cases with continuity risk.",
+      'Review routing load, rebalance response pathways, and prioritize cases with continuity risk.',
     escalation:
-      "Escalate when high routing pressure repeats across more than one monitoring window or affects critical continuity pathways.",
+      'Escalate when high routing pressure repeats across more than one monitoring window or affects critical continuity pathways.',
     governanceNote:
-      "Interpret as system pressure, not individual delay or responder failure.",
+      'Interpret as system pressure, not individual delay or responder failure.',
   },
   {
-    code: "HIGH_BOTTLENECK_PRESSURE",
-    category: "Bottlenecks",
-    severity: "High",
+    code: 'HIGH_BOTTLENECK_PRESSURE',
+    category: 'Bottlenecks',
+    severity: 'High',
     meaning:
-      "Coordination points are repeatedly slowing or blocking stabilization response.",
+      'Coordination points are repeatedly slowing or blocking stabilization response.',
     risk:
-      "Cases may remain stuck between intake, routing, intervention, outcome review, or recovery monitoring.",
+      'Cases may remain stuck between intake, routing, intervention, outcome review, or recovery monitoring.',
     actionCue:
-      "Identify the blocked pathway, inspect handoff friction, and assign a coordination repair action.",
+      'Identify the blocked pathway, inspect handoff friction, and assign a coordination repair action.',
     escalation:
-      "Escalate when bottlenecks affect urgent cases, repeated handoffs, or cross-department coordination.",
+      'Escalate when bottlenecks affect urgent cases, repeated handoffs, or cross-department coordination.',
     governanceNote:
-      "Focus on blocked process points rather than blaming specific people or departments.",
+      'Focus on blocked process points rather than blaming specific people or departments.',
   },
   {
-    code: "FRAGMENTED_CONTINUITY",
-    category: "Trajectory",
-    severity: "Moderate-High",
+    code: 'FRAGMENTED_CONTINUITY',
+    category: 'Trajectory',
+    severity: 'Moderate-High',
     meaning:
-      "The stabilization pathway is moving unevenly, with weak continuity between response stages.",
+      'The stabilization pathway is moving unevenly, with weak continuity between response stages.',
     risk:
-      "Cases may appear active but fail to progress toward stable recovery or resolution.",
+      'Cases may appear active but fail to progress toward stable recovery or resolution.',
     actionCue:
-      "Review handoff quality, follow-up visibility, unresolved outcomes, and recovery ownership.",
+      'Review handoff quality, follow-up visibility, unresolved outcomes, and recovery ownership.',
     escalation:
-      "Escalate when fragmented continuity appears across multiple cases or high-risk pathways.",
+      'Escalate when fragmented continuity appears across multiple cases or high-risk pathways.',
     governanceNote:
-      "Treat fragmentation as a continuity design issue, not a person-level performance label.",
+      'Treat fragmentation as a continuity design issue, not a person-level performance label.',
   },
   {
-    code: "RECOVERY_PRESSURE_VISIBLE",
-    category: "Recovery",
-    severity: "Moderate",
+    code: 'RECOVERY_PRESSURE_VISIBLE',
+    category: 'Recovery',
+    severity: 'Moderate',
     meaning:
-      "The system is carrying unresolved recovery burden after intervention activity.",
+      'The system is carrying unresolved recovery burden after intervention activity.',
     risk:
-      "Interventions may be occurring without enough recovery confirmation, continuity repair, or closure discipline.",
+      'Interventions may be occurring without enough recovery confirmation, continuity repair, or closure discipline.',
     actionCue:
-      "Review unresolved recovery signals and confirm whether cases require follow-up, escalation, or closure.",
+      'Review unresolved recovery signals and confirm whether cases require follow-up, escalation, or closure.',
     escalation:
-      "Escalate when recovery pressure increases while outcomes remain unresolved or delayed.",
+      'Escalate when recovery pressure increases while outcomes remain unresolved or delayed.',
     governanceNote:
-      "Recovery pressure should guide support and continuity review, not punishment.",
+      'Recovery pressure should guide support and continuity review, not punishment.',
   },
   {
-    code: "MODERATE_FORECAST_PRESSURE",
-    category: "Predictive",
-    severity: "Moderate",
+    code: 'MODERATE_FORECAST_PRESSURE',
+    category: 'Predictive',
+    severity: 'Moderate',
     meaning:
-      "Current stabilization patterns suggest pressure may increase if capacity, routing, or coordination does not adjust.",
+      'Current stabilization patterns suggest pressure may increase if capacity, routing, or coordination does not adjust.',
     risk:
-      "A manageable pressure pattern may become a high-pressure stabilization burden.",
+      'A manageable pressure pattern may become a high-pressure stabilization burden.',
     actionCue:
-      "Prepare response capacity, review likely bottlenecks, and watch early continuity signals.",
+      'Prepare response capacity, review likely bottlenecks, and watch early continuity signals.',
     escalation:
-      "Escalate when forecast pressure combines with high routing pressure or visible bottlenecks.",
+      'Escalate when forecast pressure combines with high routing pressure or visible bottlenecks.',
     governanceNote:
-      "Predictive cues are early warnings for preparation, not certainty claims.",
+      'Predictive cues are early warnings for preparation, not certainty claims.',
   },
   {
-    code: "CRITICAL_COMMAND_STATUS",
-    category: "Command",
-    severity: "Critical",
+    code: 'CRITICAL_COMMAND_STATUS',
+    category: 'Command',
+    severity: 'Critical',
     meaning:
-      "Multiple stabilization signals indicate serious pressure requiring leadership-level review.",
+      'Multiple stabilization signals indicate serious pressure requiring leadership-level review.',
     risk:
-      "The system may lose coordination reliability if leadership does not prioritize stabilization response.",
+      'The system may lose coordination reliability if leadership does not prioritize stabilization response.',
     actionCue:
-      "Activate command review, prioritize urgent pathways, inspect bottlenecks, and assign response ownership.",
+      'Activate command review, prioritize urgent pathways, inspect bottlenecks, and assign response ownership.',
     escalation:
-      "Escalate immediately when critical command status aligns with high pressure, recovery burden, and audit-confirmed traceability.",
+      'Escalate immediately when critical command status aligns with high pressure, recovery burden, and audit-confirmed traceability.',
     governanceNote:
-      "Command status supports leadership response; it must not be used for blame, surveillance, or individual punishment.",
+      'Command status supports leadership response; it must not be used for blame, surveillance, or individual punishment.',
   },
   {
-    code: "STRONG_AUDIT_INTEGRITY",
-    category: "Audit",
-    severity: "Positive",
+    code: 'STRONG_AUDIT_INTEGRITY',
+    category: 'Audit',
+    severity: 'Positive',
     meaning:
-      "The system has enough traceability to support trusted interpretation of stabilization signals.",
+      'The system has enough traceability to support trusted interpretation of stabilization signals.',
     risk:
-      "Low immediate governance risk, but pressure signals must still be interpreted carefully.",
+      'Low immediate governance risk, but pressure signals must still be interpreted carefully.',
     actionCue:
-      "Use audit strength to support structured response decisions while preserving safe interpretation rules.",
+      'Use audit strength to support structured response decisions while preserving safe interpretation rules.',
     escalation:
-      "Escalate only if audit strength declines, records become incomplete, or signal traceability weakens.",
+      'Escalate only if audit strength declines, records become incomplete, or signal traceability weakens.',
     governanceNote:
-      "Strong audit integrity makes signals usable; it does not make them punitive.",
+      'Strong audit integrity makes signals usable; it does not make them punitive.',
   },
   {
-    code: "GOVERNANCE_ACTIVE",
-    category: "Governance",
-    severity: "Stable",
+    code: 'GOVERNANCE_ACTIVE',
+    category: 'Governance',
+    severity: 'Stable',
     meaning:
-      "Safeguards, interpretation rules, and ethical boundaries are active within the stabilization system.",
+      'Safeguards, interpretation rules, and ethical boundaries are active within the stabilization system.',
     risk:
-      "Governance drift may occur if new domains or routes introduce unclear meanings or unsafe language.",
+      'Governance drift may occur if new domains or routes introduce unclear meanings or unsafe language.',
     actionCue:
-      "Keep interpretation structural, traceable, non-punitive, and aligned with stabilization response.",
+      'Keep interpretation structural, traceable, non-punitive, and aligned with stabilization response.',
     escalation:
-      "Escalate when new pages, domains, or workflows weaken governance boundaries.",
+      'Escalate when new pages, domains, or workflows weaken governance boundaries.',
     governanceNote:
-      "Governance is the protection layer that keeps EXAMIA safe for institutional use.",
+      'Governance is the protection layer that keeps CGI safe for institutional use.',
   },
-];
+]
 
 const registryRules = [
-  "Every status must map to a meaning, risk, action cue, escalation threshold, and governance note.",
-  "Action cues must support stabilization response, not blame assignment.",
-  "Predictive cues must be treated as preparation signals, not certainty claims.",
-  "Critical status requires leadership review, not person-level punishment.",
-  "Audit strength supports trust in signals, but does not authorize punitive interpretation.",
-  "Healthcare-first use must remain operational and coordination-focused, not clinical decision-making.",
-];
-
-const severityStyles: Record<string, string> = {
-  High: "border-amber-400/40 bg-amber-400/10 text-amber-200",
-  "Moderate-High": "border-orange-400/40 bg-orange-400/10 text-orange-200",
-  Moderate: "border-cyan-400/40 bg-cyan-400/10 text-cyan-200",
-  Critical: "border-red-400/40 bg-red-400/10 text-red-200",
-  Positive: "border-emerald-400/40 bg-emerald-400/10 text-emerald-200",
-  Stable: "border-blue-400/40 bg-blue-400/10 text-blue-200",
-};
+  'Every status must map to meaning, risk, action cue, escalation threshold, and governance note.',
+  'Action cues must support stabilization response, not blame assignment.',
+  'Predictive cues must be treated as preparation signals, not certainty claims.',
+  'Critical status requires leadership review, not person-level punishment.',
+  'Audit strength supports trust in signals, but does not authorize punitive interpretation.',
+  'Healthcare use must remain operational and coordination-focused, not clinical decision-making.',
+]
 
 export default function ActionCuesPage() {
   return (
-    <main className="min-h-screen bg-[#07111F] text-slate-100">
-      <section className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-5 py-8 sm:px-8 lg:px-10">
-        <header className="rounded-3xl border border-blue-900/60 bg-[#0B1B30] p-6 shadow-2xl shadow-black/30 sm:p-8">
-          <div className="mb-4 inline-flex rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200">
-            EXAMIA Action Cue Registry
-          </div>
+    <GovernanceRouteGuard
+      allowedRoles={['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']}
+    >
+      <CGIGovernanceShell>
+        <main style={styles.page}>
+          <div style={styles.container}>
+            <section style={styles.hero}>
+              <div>
+                <p style={styles.kicker}>TSINAXA CGI • ACTION CUES</p>
+                <h1 style={styles.title}>Action Cues</h1>
+                <p style={styles.subtitle}>
+                  Govern how pressure, bottlenecks, continuity, recovery,
+                  command, audit, and governance signals become safe response
+                  guidance.
+                </p>
+              </div>
 
-          <h1 className="max-w-5xl text-3xl font-bold tracking-tight text-white sm:text-5xl">
-            Controlled Stabilization Interpretation Engine
-          </h1>
+              <div style={styles.statusBox}>
+                <p style={styles.statusLabel}>INTERPRETATION POSTURE</p>
+                <p style={styles.statusValue}>CONTROLLED</p>
+                <p style={styles.statusMeaning}>
+                  Action cues guide coordination response. They do not diagnose,
+                  blame, rank, punish, or replace leadership judgment.
+                </p>
+              </div>
+            </section>
 
-          <p className="mt-5 max-w-4xl text-base leading-8 text-slate-300 sm:text-lg">
-            The action cue registry standardizes how EXAMIA interprets pressure,
-            bottlenecks, continuity, recovery, command, audit, and governance
-            signals. Each status connects to meaning, risk, response guidance,
-            escalation threshold, and governance-safe interpretation.
-          </p>
+            <section style={styles.commandDeck}>
+              <div style={styles.primaryCard}>
+                <p style={styles.sectionKicker}>Executive Action Cue Question</p>
+                <h2 style={styles.commandTitle}>
+                  What should leadership do when a continuity signal becomes
+                  visible?
+                </h2>
+                <p style={styles.bodyText}>
+                  Action cues convert visible instability into governed response
+                  guidance: what the signal means, what risk it points toward,
+                  what action is appropriate, when escalation is justified, and
+                  how interpretation remains safe.
+                </p>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <SignalCard label="Registry Type" value="CONTROLLED" />
-            <SignalCard label="Primary Use" value="RESPONSE CUES" />
-            <SignalCard label="Healthcare Role" value="OPERATIONAL" />
-            <SignalCard label="Interpretation" value="NON-PUNITIVE" />
-          </div>
-        </header>
+                <div style={styles.metaGrid}>
+                  <MiniStat label="Registry" value="CONTROLLED" />
+                  <MiniStat label="Use" value="RESPONSE GUIDANCE" />
+                  <MiniStat label="Boundary" value="NON-PUNITIVE" />
+                  <MiniStat label="Role" value="OPERATIONAL" />
+                </div>
+              </div>
 
-        <section className="grid gap-5 lg:grid-cols-3">
-          <div className="rounded-3xl border border-blue-900/60 bg-[#0B1B30] p-6 sm:p-8 lg:col-span-2">
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-300/80">
-              Strategic Function
-            </p>
-            <h2 className="mt-2 text-2xl font-bold text-white">
-              From Signal to Governed Response
-            </h2>
-            <p className="mt-4 leading-8 text-slate-300">
-              EXAMIA should not merely display system pressure. It must help
-              leadership understand what the signal means, what risk it points
-              toward, what action cue is appropriate, when escalation is
-              justified, and how the signal must be interpreted safely.
-            </p>
-          </div>
+              <div style={styles.warningCard}>
+                <p style={styles.sectionKicker}>Governance Boundary</p>
+                <h2 style={styles.warningTitle}>Coordination, not diagnosis.</h2>
+                <p style={styles.bodyText}>
+                  Action cues support routing repair, recovery monitoring,
+                  continuity review, and executive oversight. They must never
+                  become surveillance, punishment, or person-level performance
+                  labels.
+                </p>
+              </div>
+            </section>
 
-          <div className="rounded-3xl border border-cyan-400/25 bg-cyan-400/10 p-6 sm:p-8">
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-200">
-              Healthcare Boundary
-            </p>
-            <h2 className="mt-2 text-xl font-bold text-white">
-              Coordination, Not Diagnosis
-            </h2>
-            <p className="mt-4 leading-7 text-slate-200">
-              Action cues support operational coordination, continuity review,
-              routing repair, recovery monitoring, and governance oversight.
-              They do not diagnose, prescribe, replace clinical judgment, or
-              rank individuals.
-            </p>
-          </div>
-        </section>
+            <section style={styles.memoryPanel}>
+              <p style={styles.sectionKicker}>Strategic Function</p>
+              <h2 style={styles.panelTitle}>
+                From signal visibility to governed response.
+              </h2>
+              <p style={styles.bodyText}>
+                CGI should not merely display pressure. It must preserve safe
+                interpretation so leaders know what to review, what to repair,
+                when to escalate, and what evidence must remain attached.
+              </p>
+            </section>
 
-        <section>
-          <div className="mb-6">
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-300/80">
-              Signal Registry
-            </p>
-            <h2 className="mt-2 text-2xl font-bold text-white">
-              Stabilization Statuses and Leadership Action Cues
-            </h2>
-          </div>
-
-          <div className="grid gap-5 lg:grid-cols-2">
-            {actionCues.map((cue) => (
-              <article
-                key={cue.code}
-                className="rounded-3xl border border-blue-900/60 bg-[#0B1B30] p-6"
-              >
-                <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
-                      {cue.category}
-                    </p>
-                    <h3 className="mt-2 break-words text-xl font-bold text-white">
-                      {cue.code}
-                    </h3>
+            <section style={styles.summaryGrid}>
+              {actionCues.map((cue) => (
+                <article key={cue.code} style={styles.summaryCard}>
+                  <div style={styles.cardTop}>
+                    <div>
+                      <p style={styles.metricLabel}>{cue.category}</p>
+                      <h3 style={styles.cardValue}>{cue.code}</h3>
+                    </div>
+                    <span style={severityBadge(cue.severity)}>
+                      {cue.severity}
+                    </span>
                   </div>
-
-                  <div
-                    className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wider ${
-                      severityStyles[cue.severity] ??
-                      "border-blue-400/40 bg-blue-400/10 text-blue-200"
-                    }`}
-                  >
-                    {cue.severity}
-                  </div>
-                </div>
-
-                <div className="mt-6 grid gap-3">
-                  <CueRow label="Meaning" value={cue.meaning} />
-                  <CueRow label="Risk" value={cue.risk} />
-                  <CueRow label="Action Cue" value={cue.actionCue} />
-                  <CueRow label="Escalation Threshold" value={cue.escalation} />
-                  <CueRow label="Governance Note" value={cue.governanceNote} />
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="grid gap-5 lg:grid-cols-2">
-          <div className="rounded-3xl border border-blue-900/60 bg-[#0B1B30] p-6 sm:p-8">
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-300/80">
-              Registry Control Rules
-            </p>
-            <h2 className="mt-2 text-2xl font-bold text-white">
-              Prevent Interpretation Drift
-            </h2>
-
-            <div className="mt-6 space-y-3">
-              {registryRules.map((rule) => (
-                <div
-                  key={rule}
-                  className="rounded-2xl border border-blue-900/60 bg-[#07111F] p-4 text-sm leading-6 text-slate-200"
-                >
-                  {rule}
-                </div>
+                  <p style={styles.panelBody}>{cue.actionCue}</p>
+                </article>
               ))}
-            </div>
+            </section>
+
+            <details style={styles.evidencePanel}>
+              <summary style={styles.evidenceSummary}>
+                <span>
+                  <span style={styles.sectionKicker}>Signal Registry</span>
+                  <strong style={styles.evidenceTitle}>
+                    Meaning, risk, action cue, escalation, and governance note
+                  </strong>
+                </span>
+                <span style={styles.evidenceToggle}>Expand Cues</span>
+              </summary>
+
+              <div style={styles.registryGrid}>
+                {actionCues.map((cue) => (
+                  <article key={cue.code} style={styles.cueCard}>
+                    <div style={styles.cardTop}>
+                      <div>
+                        <p style={styles.metricLabel}>{cue.category}</p>
+                        <h3 style={styles.cardValue}>{cue.code}</h3>
+                      </div>
+                      <span style={severityBadge(cue.severity)}>
+                        {cue.severity}
+                      </span>
+                    </div>
+
+                    <div style={styles.cueRows}>
+                      <CueRow label="Meaning" value={cue.meaning} />
+                      <CueRow label="Risk" value={cue.risk} />
+                      <CueRow label="Action Cue" value={cue.actionCue} />
+                      <CueRow label="Escalation" value={cue.escalation} />
+                      <CueRow
+                        label="Governance Note"
+                        value={cue.governanceNote}
+                      />
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </details>
+
+            <section style={styles.rulesPanel}>
+              <div>
+                <p style={styles.sectionKicker}>Registry Control Rules</p>
+                <h2 style={styles.panelTitle}>Prevent interpretation drift.</h2>
+              </div>
+
+              <div style={styles.rulesGrid}>
+                {registryRules.map((rule) => (
+                  <div key={rule} style={styles.ruleItem}>
+                    {rule}
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section style={styles.reminderPanel}>
+              <div>
+                <p style={styles.sectionKicker}>Governance Reminder</p>
+                <h2 style={styles.panelTitle}>
+                  Structural visibility without blame.
+                </h2>
+                <p style={styles.bodyText}>
+                  Action cues exist to preserve safe response movement. They
+                  support stabilization, continuity review, and governance
+                  oversight without assigning blame or creating surveillance.
+                </p>
+              </div>
+
+              <div style={styles.linkRow}>
+                <Link href="/case-flow" style={styles.linkButton}>
+                  View Case Flow
+                </Link>
+                <Link href="/command" style={styles.secondaryButton}>
+                  View Command
+                </Link>
+              </div>
+            </section>
+
+            <section style={styles.doctrineCard}>
+              <strong>ACTION CUE DOCTRINE</strong>
+              <span>
+                Action cues are not diagnosis, blame, prediction certainty, or
+                punishment. They are governed response guidance that preserves
+                structural visibility, safe escalation, continuity repair, and
+                executive accountability.
+              </span>
+            </section>
           </div>
-
-          <div className="rounded-3xl border border-cyan-400/25 bg-cyan-400/10 p-6 sm:p-8">
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-200">
-              Governance Reminder
-            </p>
-
-            <h2 className="mt-2 text-2xl font-bold text-white">
-              Structural Visibility Without Blame
-            </h2>
-
-            <p className="mt-4 leading-8 text-slate-200">
-              Action cues support stabilization response, continuity review,
-              routing repair, recovery monitoring, and governance oversight.
-              They must never become tools for surveillance, punishment, or
-              person-level performance labeling.
-            </p>
-
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Link
-                href="/case-flow"
-                className="rounded-2xl border border-cyan-400/40 bg-[#07111F] px-5 py-3 text-center text-sm font-semibold text-cyan-100 transition hover:border-cyan-300 hover:bg-[#102744]"
-              >
-                View Case Flow
-              </Link>
-              <Link
-                href="/command"
-                className="rounded-2xl border border-blue-900/60 bg-[#07111F] px-5 py-3 text-center text-sm font-semibold text-slate-200 transition hover:border-cyan-300 hover:text-cyan-100"
-              >
-                View Command Center
-              </Link>
-            </div>
-          </div>
-        </section>
-      </section>
-    </main>
-  );
+        </main>
+      </CGIGovernanceShell>
+    </GovernanceRouteGuard>
+  )
 }
 
-function SignalCard({ label, value }: { label: string; value: string }) {
+function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-blue-900/60 bg-[#07111F] p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-        {label}
-      </p>
-      <p className="mt-2 text-sm font-bold text-cyan-300">{value}</p>
-    </div>
-  );
+    <article style={styles.miniStat}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.miniValue}>{value}</p>
+    </article>
+  )
 }
 
 function CueRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-blue-900/60 bg-[#07111F] p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-        {label}
-      </p>
-      <p className="mt-2 text-sm leading-6 text-slate-200">{value}</p>
+    <div style={styles.cueRow}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.cueText}>{value}</p>
     </div>
-  );
+  )
+}
+
+function severityBadge(severity: string): CSSProperties {
+  const base: CSSProperties = {
+    borderRadius: 999,
+    padding: '7px 10px',
+    fontSize: 10,
+    fontWeight: 950,
+    letterSpacing: '0.11em',
+    textTransform: 'uppercase',
+    border: `1px solid ${softLine}`,
+    background: 'rgba(214,178,94,0.1)',
+    color: gold,
+    whiteSpace: 'nowrap',
+  }
+
+  if (severity === 'Critical') {
+    return {
+      ...base,
+      border: '1px solid rgba(214,178,94,0.44)',
+      background: 'rgba(214,178,94,0.18)',
+      color: '#fff8e7',
+    }
+  }
+
+  if (severity === 'Positive' || severity === 'Stable') {
+    return {
+      ...base,
+      background: 'rgba(255,255,255,0.07)',
+      color: '#f5f0e6',
+    }
+  }
+
+  return base
+}
+
+const gold = '#d6b25e'
+const mutedGold = '#9f8142'
+const deepBlack = '#030303'
+const panelBlack = '#090807'
+const cardBlack = '#11100d'
+const softLine = 'rgba(214,178,94,0.24)'
+const strongLine = 'rgba(214,178,94,0.42)'
+
+const styles: Record<string, CSSProperties> = {
+  page: {
+    minHeight: '100vh',
+    background:
+      'radial-gradient(circle at top left, rgba(214,178,94,0.12), transparent 34%), linear-gradient(135deg, #030303 0%, #090807 48%, #11100d 100%)',
+    color: '#fff8e7',
+    padding: '40px 24px 72px',
+  },
+  container: {
+    width: 'min(1440px, 100%)',
+    margin: '0 auto',
+    display: 'grid',
+    gap: 24,
+  },
+  hero: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.45fr) minmax(320px, 0.75fr)',
+    gap: 24,
+    padding: 32,
+    border: `1px solid ${strongLine}`,
+    borderRadius: 28,
+    background:
+      'linear-gradient(135deg, rgba(214,178,94,0.08), rgba(255,255,255,0.018))',
+  },
+  kicker: {
+    margin: 0,
+    color: gold,
+    fontSize: 12,
+    fontWeight: 900,
+    letterSpacing: '0.22em',
+    textTransform: 'uppercase',
+  },
+  title: {
+    margin: '14px 0 0',
+    fontSize: 'clamp(2.4rem, 5vw, 5rem)',
+    lineHeight: 0.95,
+    letterSpacing: '-0.07em',
+    fontWeight: 950,
+  },
+  subtitle: {
+    maxWidth: 880,
+    margin: '18px 0 0',
+    color: '#cfc7b5',
+    fontSize: 17,
+    lineHeight: 1.8,
+  },
+  statusBox: {
+    border: `1px solid ${strongLine}`,
+    borderRadius: 24,
+    padding: 24,
+    background:
+      'linear-gradient(180deg, rgba(214,178,94,0.18), rgba(0,0,0,0.38))',
+  },
+  statusLabel: {
+    margin: 0,
+    color: gold,
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.2em',
+  },
+  statusValue: {
+    margin: '16px 0 0',
+    fontSize: 30,
+    fontWeight: 950,
+    lineHeight: 1.05,
+  },
+  statusMeaning: {
+    margin: '12px 0 0',
+    color: '#f5f0e6',
+    fontSize: 14,
+    lineHeight: 1.7,
+  },
+  commandDeck: {
+    display: 'grid',
+    gridTemplateColumns: '1.35fr 0.8fr',
+    gap: 24,
+  },
+  primaryCard: {
+    padding: 30,
+    borderRadius: 28,
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
+  },
+  warningCard: {
+    padding: 30,
+    borderRadius: 28,
+    background: deepBlack,
+    border: `1px solid ${softLine}`,
+  },
+  sectionKicker: {
+    margin: 0,
+    color: mutedGold,
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.18em',
+    textTransform: 'uppercase',
+  },
+  commandTitle: {
+    margin: '14px 0',
+    fontSize: 'clamp(1.8rem, 3vw, 3.2rem)',
+    lineHeight: 1.05,
+    letterSpacing: '-0.05em',
+    fontWeight: 950,
+  },
+  warningTitle: {
+    margin: '14px 0',
+    fontSize: 28,
+    lineHeight: 1.1,
+    letterSpacing: '-0.04em',
+  },
+  bodyText: {
+    margin: '8px 0 0',
+    color: '#cfc7b5',
+    lineHeight: 1.7,
+    fontSize: 14,
+  },
+  metaGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 24,
+  },
+  miniStat: {
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(255,255,255,0.045)',
+    border: '1px solid rgba(255,255,255,0.08)',
+  },
+  metricLabel: {
+    margin: 0,
+    color: '#9ca3af',
+    fontSize: 10,
+    fontWeight: 950,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+  },
+  miniValue: {
+    margin: '8px 0 0',
+    color: '#fff8e7',
+    fontSize: 13,
+    fontWeight: 850,
+    lineHeight: 1.45,
+    overflowWrap: 'anywhere',
+  },
+  memoryPanel: {
+    padding: 28,
+    borderRadius: 28,
+    background:
+      'linear-gradient(135deg, rgba(214,178,94,0.13), rgba(255,255,255,0.035))',
+    border: `1px solid ${strongLine}`,
+  },
+  panelTitle: {
+    margin: '12px 0 0',
+    fontSize: 26,
+    lineHeight: 1.15,
+    letterSpacing: '-0.045em',
+  },
+  summaryGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 14,
+  },
+  summaryCard: {
+    padding: 18,
+    borderRadius: 20,
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
+    minHeight: 158,
+  },
+  cardTop: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: 12,
+    alignItems: 'flex-start',
+  },
+  cardValue: {
+    margin: '10px 0 0',
+    color: '#fff8e7',
+    fontSize: 18,
+    lineHeight: 1.2,
+    overflowWrap: 'anywhere',
+  },
+  panelBody: {
+    marginTop: 12,
+    color: '#cfc7b5',
+    fontSize: 13,
+    lineHeight: 1.6,
+  },
+  evidencePanel: {
+    padding: 24,
+    borderRadius: 28,
+    background: panelBlack,
+    border: `1px solid ${softLine}`,
+  },
+  evidenceSummary: {
+    cursor: 'pointer',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 18,
+    listStyle: 'none',
+  },
+  evidenceTitle: {
+    display: 'block',
+    color: '#fff8e7',
+    fontSize: 22,
+    lineHeight: 1.2,
+    marginTop: 8,
+    letterSpacing: '-0.035em',
+  },
+  evidenceToggle: {
+    flex: '0 0 auto',
+    borderRadius: 999,
+    padding: '10px 14px',
+    background: 'rgba(214,178,94,0.12)',
+    border: `1px solid ${softLine}`,
+    color: gold,
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+  },
+  registryGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 16,
+    marginTop: 22,
+  },
+  cueCard: {
+    background: deepBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: 22,
+    padding: 20,
+  },
+  cueRows: {
+    display: 'grid',
+    gap: 10,
+    marginTop: 16,
+  },
+  cueRow: {
+    padding: 14,
+    borderRadius: 16,
+    background: cardBlack,
+    border: '1px solid rgba(255,255,255,0.08)',
+  },
+  cueText: {
+    margin: '8px 0 0',
+    color: '#cfc7b5',
+    lineHeight: 1.55,
+    fontSize: 13,
+  },
+  rulesPanel: {
+    padding: 28,
+    borderRadius: 28,
+    background: deepBlack,
+    border: `1px solid ${softLine}`,
+  },
+  rulesGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 18,
+  },
+  ruleItem: {
+    padding: 14,
+    borderRadius: 16,
+    background: cardBlack,
+    border: '1px solid rgba(255,255,255,0.08)',
+    color: '#cfc7b5',
+    lineHeight: 1.6,
+    fontSize: 13,
+  },
+  reminderPanel: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1fr) auto',
+    gap: 24,
+    alignItems: 'center',
+    padding: 28,
+    borderRadius: 28,
+    background: panelBlack,
+    border: `1px solid ${strongLine}`,
+  },
+  linkRow: {
+    display: 'flex',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  linkButton: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 999,
+    padding: '12px 16px',
+    background: gold,
+    color: '#090909',
+    fontWeight: 950,
+    textDecoration: 'none',
+    fontSize: 13,
+  },
+  secondaryButton: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 999,
+    padding: '12px 16px',
+    background: 'rgba(214,178,94,0.12)',
+    border: `1px solid ${softLine}`,
+    color: '#fff8e7',
+    fontWeight: 950,
+    textDecoration: 'none',
+    fontSize: 13,
+  },
+  doctrineCard: {
+    display: 'grid',
+    gap: 10,
+    padding: 24,
+    borderRadius: 24,
+    background: deepBlack,
+    border: `1px solid ${strongLine}`,
+    color: '#fff8e7',
+    lineHeight: 1.7,
+  },
 }
