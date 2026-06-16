@@ -5,15 +5,6 @@ import type { CSSProperties } from 'react'
 
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import {
-  buildInterpretiveBoard,
-  explainMemory,
-  explainPressure,
-  explainRecovery,
-  explainSurvivability,
-  formatSystemDate,
-  type CgiOperationalMetric,
-} from '@/lib/cgiSystemExecutiveInterpretationEngine'
-import {
   buildStabilityBoardRecords,
   buildStabilityBoardSummary,
   STABILITY_BOARD_DOCTRINE,
@@ -22,7 +13,6 @@ import {
 } from '@/lib/cgiSystemStabilityDoctrineEngine'
 import { supabase } from '../../lib/supabase'
 
-const SAMPLE_LIMIT = 80
 const CASE_SAMPLE_LIMIT = 120
 
 export default function SystemPage() {
@@ -34,7 +24,6 @@ export default function SystemPage() {
 }
 
 function ExecutiveStabilityBoard() {
-  const [metrics, setMetrics] = useState<CgiOperationalMetric[]>([])
   const [cases, setCases] = useState<StabilityCase[]>([])
   const [outcomes, setOutcomes] = useState<OutcomeRecord[]>([])
   const [message, setMessage] = useState('')
@@ -46,12 +35,7 @@ function ExecutiveStabilityBoard() {
   async function loadStabilityBoard() {
     setMessage('Loading Stability Board continuity posture...')
 
-    const [metricsResult, casesResult, outcomesResult] = await Promise.all([
-      supabase
-        .from('cgi_operational_metrics')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(SAMPLE_LIMIT),
+    const [casesResult, outcomesResult] = await Promise.all([
       supabase
         .from('beneficiary_cases')
         .select('*')
@@ -64,26 +48,18 @@ function ExecutiveStabilityBoard() {
         .limit(CASE_SAMPLE_LIMIT),
     ])
 
-    if (metricsResult.error) console.error(metricsResult.error)
     if (casesResult.error) console.error(casesResult.error)
     if (outcomesResult.error) console.error(outcomesResult.error)
 
-    if (metricsResult.error || casesResult.error || outcomesResult.error) {
+    if (casesResult.error || outcomesResult.error) {
       setMessage('Some Stability Board intelligence failed to load.')
       return
     }
 
-    setMetrics(metricsResult.data || [])
     setCases(casesResult.data || [])
     setOutcomes(outcomesResult.data || [])
     setMessage('Stability Board continuity posture loaded.')
   }
-
-  const historicalBoard = useMemo(() => {
-    const latest = metrics[0]
-    if (!latest) return null
-    return buildInterpretiveBoard(latest)
-  }, [metrics])
 
   const stabilityRecords = useMemo(
     () => buildStabilityBoardRecords(cases, outcomes),
@@ -94,9 +70,6 @@ function ExecutiveStabilityBoard() {
     () => buildStabilityBoardSummary(cases, stabilityRecords),
     [cases, stabilityRecords],
   )
-
-  const shouldShowCurrentExecutiveReading =
-    Boolean(historicalBoard) && !stabilitySummary.currentLifecycleClear
 
   return (
     <main style={styles.page}>
@@ -140,9 +113,9 @@ function ExecutiveStabilityBoard() {
           <div style={styles.implicationBox}>
             <p style={styles.panelEyebrow}>Board Function</p>
             <p style={styles.implicationText}>
-              /system is the current Stability Board. Historical metrics remain
-              visible as memory, but they do not create current command pressure
-              when active lifecycle records are clear.
+              /system is the current Stability Board. Current lifecycle truth
+              overrides historical memory when active lifecycle records are
+              clear.
             </p>
           </div>
         </section>
@@ -175,9 +148,10 @@ function ExecutiveStabilityBoard() {
             <p style={styles.panelEyebrow}>Institutional Memory Status</p>
             <h2 style={styles.memoryOnlyTitle}>MEMORY PRESERVED</h2>
             <p style={styles.bodyText}>
-              Current lifecycle posture is clear. Historical operational metrics
-              remain preserved for institutional learning, but they are not
-              allowed to override the current Stability Board posture.
+              Current lifecycle truth overrides historical memory. Recovery is
+              absorbed into institutional posture only when durability is
+              credible. Historical memory remains visible but does not create
+              current command pressure.
             </p>
           </section>
         )}
@@ -186,9 +160,8 @@ function ExecutiveStabilityBoard() {
           <h2 style={styles.sectionTitle}>Stability Absorption Summary</h2>
           <p style={styles.bodyText}>
             The Stability Board answers whether recovery can be institutionally
-            absorbed, whether it remains fragile, whether command pressure is
-            unresolved, whether evidence must return to Outcomes or
-            Interventions, and what memory must not be forgotten.
+            absorbed, whether it remains fragile, what remains unresolved, and
+            what memory must not be forgotten.
           </p>
 
           <div style={styles.absorptionGrid}>
@@ -225,226 +198,93 @@ function ExecutiveStabilityBoard() {
           </div>
         </section>
 
-        <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Recovery-to-Stability Board</h2>
-          <p style={styles.bodyText}>
-            These records are inherited from recovery durability evidence. The
-            Stability Board preserves disposition, reason, command posture,
-            recurrence signal, and memory impact.
-          </p>
+        <details style={styles.evidencePanel}>
+          <summary style={styles.evidenceSummary}>
+            <span>
+              <span style={styles.panelEyebrow}>
+                Supporting Stability Evidence
+              </span>
+              <strong style={styles.evidenceTitle}>
+                Recovery records, stability absorption, and audit reconstruction
+              </strong>
+            </span>
 
-          {stabilityRecords.length === 0 && (
-            <div style={styles.emptyState}>
-              No recovery durability records are currently available for
-              Stability Board absorption. Current lifecycle posture remains clean.
-            </div>
-          )}
+            <span style={styles.evidenceToggle}>Expand Evidence</span>
+          </summary>
 
-          {stabilityRecords.length > 0 && (
-            <div style={styles.tableWrap}>
-              <table style={styles.table}>
-                <thead>
-                  <tr>
-                    <th style={styles.th}>Case</th>
-                    <th style={styles.th}>Disposition</th>
-                    <th style={styles.th}>Absorption Class</th>
-                    <th style={styles.th}>Command Posture</th>
-                    <th style={styles.th}>Durability</th>
-                    <th style={styles.th}>Board Meaning</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {stabilityRecords.slice(0, 18).map((record) => (
-                    <tr
-                      key={`${record.caseItem.id}-${
-                        record.latestRecoveryReview?.id || 'case'
-                      }`}
-                    >
-                      <td style={styles.td}>
-                        <strong>{record.caseItem.beneficiary_name}</strong>
-                        <br />
-                        {record.caseItem.support_domain}
-                      </td>
-                      <td style={styles.td}>{record.recoveryDisposition}</td>
-                      <td style={styles.td}>{record.absorptionClass}</td>
-                      <td style={styles.td}>{record.commandPosture}</td>
-                      <td style={styles.td}>
-                        {record.durabilityResult}
-                        <br />
-                        {record.reburnSignal}
-                      </td>
-                      <td style={styles.td}>{record.stabilityMeaning}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-
-        {shouldShowCurrentExecutiveReading && historicalBoard && (
-          <>
-            <section style={styles.commandPanel}>
-              <div>
-                <p style={styles.panelEyebrow}>
-                  Current Executive Continuity Reading
-                </p>
-                <h2 style={styles.commandPosture}>
-                  {historicalBoard.commandPosture}
-                </h2>
-                <p style={styles.commandMeaning}>
-                  {historicalBoard.commandMeaning}
-                </p>
-              </div>
-
-              <div style={styles.implicationBox}>
-                <p style={styles.panelEyebrow}>Executive Implication</p>
-                <p style={styles.implicationText}>
-                  {historicalBoard.executiveImplication}
-                </p>
-              </div>
-            </section>
-
-            <section style={styles.interpretiveGrid}>
-              <InterpretivePanel
-                title="Pressure Meaning"
-                threshold={historicalBoard.pressureThreshold}
-                text={
-                  historicalBoard.latest.dominant_pressure_source ||
-                  'No dominant pressure source recorded.'
-                }
-              />
-              <InterpretivePanel
-                title="Trajectory Meaning"
-                threshold={historicalBoard.trajectoryThreshold}
-                text={
-                  historicalBoard.latest.dominant_trajectory_signal ||
-                  'No dominant trajectory signal recorded.'
-                }
-              />
-              <InterpretivePanel
-                title="Survivability Meaning"
-                threshold={historicalBoard.survivabilityThreshold}
-                text={historicalBoard.survivabilityInterpretation}
-              />
-              <InterpretivePanel
-                title="Structural Memory"
-                threshold={historicalBoard.memoryThreshold}
-                text={historicalBoard.structuralPattern}
-              />
-            </section>
-
-            <section style={styles.actionPanel}>
-              <div>
-                <p style={styles.panelEyebrow}>Executive Action Requirement</p>
-                <h2 style={styles.actionThreshold}>
-                  {historicalBoard.actionPosture}
-                </h2>
-                <p style={styles.bodyText}>{historicalBoard.actionCue}</p>
-              </div>
-
-              <div style={styles.deadlineBox}>
-                <p style={styles.panelEyebrow}>Action Window</p>
-                <strong>{historicalBoard.actionDeadline}</strong>
-              </div>
-            </section>
-
-            <section style={styles.card}>
-              <h2 style={styles.sectionTitle}>Why This Posture Was Reached</h2>
-              <div style={styles.reasonGrid}>
-                <ReasonBlock
-                  label="Pressure posture"
-                  value={historicalBoard.pressureThreshold}
-                  text={explainPressure(historicalBoard)}
-                />
-                <ReasonBlock
-                  label="Recovery posture"
-                  value={historicalBoard.recoveryThreshold}
-                  text={explainRecovery(historicalBoard)}
-                />
-                <ReasonBlock
-                  label="Survivability posture"
-                  value={historicalBoard.survivabilityThreshold}
-                  text={explainSurvivability(historicalBoard)}
-                />
-                <ReasonBlock
-                  label="Structural recurrence"
-                  value={historicalBoard.memoryThreshold}
-                  text={explainMemory(historicalBoard)}
-                />
-              </div>
-            </section>
-          </>
-        )}
-
-        {!historicalBoard && (
-          <section style={styles.card}>
-            <h2 style={styles.sectionTitle}>
-              No continuity metrics available yet.
-            </h2>
+          <section style={styles.cardNested}>
+            <h2 style={styles.sectionTitle}>Recovery-to-Stability Board</h2>
             <p style={styles.bodyText}>
-              Stability Board absorption can still read lifecycle records. The
-              historical metric layer will activate when governed snapshots are
-              available.
+              These records are inherited from recovery durability evidence. The
+              Stability Board preserves disposition, reason, command posture,
+              recurrence signal, and memory impact.
             </p>
-          </section>
-        )}
 
-        <section style={styles.card}>
-          <h2 style={styles.sectionTitle}>Historical Stability Memory Trail</h2>
-          <p style={styles.bodyText}>
-            These rows are historical memory. They preserve prior snapshots for
-            learning and audit, but they do not override current lifecycle truth
-            when the Stability Board is clear.
-          </p>
+            {stabilityRecords.length === 0 && (
+              <div style={styles.emptyState}>
+                No recovery durability records are currently available for
+                Stability Board absorption. Current lifecycle posture remains
+                clean.
+              </div>
+            )}
 
-          <div style={styles.tableWrap}>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Created</th>
-                  <th style={styles.th}>Historical Posture</th>
-                  <th style={styles.th}>Recovery Memory</th>
-                  <th style={styles.th}>Structural Memory</th>
-                  <th style={styles.th}>Historical Readiness</th>
-                  <th style={styles.th}>Memory Interpretation</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {metrics.slice(0, 12).map((item) => {
-                  const row = buildInterpretiveBoard(item)
-
-                  return (
-                    <tr key={item.id}>
-                      <td style={styles.td}>
-                        {formatSystemDate(item.created_at)}
-                      </td>
-                      <td style={styles.td}>{row.commandPosture}</td>
-                      <td style={styles.td}>{row.recoveryThreshold}</td>
-                      <td style={styles.td}>{row.memoryThreshold}</td>
-                      <td style={styles.td}>{row.actionPosture}</td>
-                      <td style={styles.td}>{row.commandMeaning}</td>
+            {stabilityRecords.length > 0 && (
+              <div style={styles.tableWrap}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr>
+                      <th style={styles.th}>Case</th>
+                      <th style={styles.th}>Disposition</th>
+                      <th style={styles.th}>Absorption Class</th>
+                      <th style={styles.th}>Command Posture</th>
+                      <th style={styles.th}>Durability</th>
+                      <th style={styles.th}>Board Meaning</th>
                     </tr>
-                  )
-                })}
+                  </thead>
 
-                {metrics.length === 0 && (
-                  <tr>
-                    <td style={styles.td} colSpan={6}>
-                      No historical metric memory trail currently available.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                  <tbody>
+                    {stabilityRecords.slice(0, 18).map((record) => (
+                      <tr
+                        key={`${record.caseItem.id}-${
+                          record.latestRecoveryReview?.id || 'case'
+                        }`}
+                      >
+                        <td style={styles.td}>
+                          <strong>{record.caseItem.beneficiary_name}</strong>
+                          <br />
+                          {record.caseItem.support_domain}
+                        </td>
+                        <td style={styles.td}>{record.recoveryDisposition}</td>
+                        <td style={styles.td}>{record.absorptionClass}</td>
+                        <td style={styles.td}>{record.commandPosture}</td>
+                        <td style={styles.td}>
+                          {record.durabilityResult}
+                          <br />
+                          {record.reburnSignal}
+                        </td>
+                        <td style={styles.td}>{record.stabilityMeaning}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        </details>
 
-          <button onClick={loadStabilityBoard} style={styles.primaryButton}>
-            Refresh Stability Board
-          </button>
+        <section style={styles.doctrineFooter}>
+          <strong>STABILITY BOARD DOCTRINE</strong>
+          <span>
+            Current lifecycle truth overrides historical memory. Recovery is
+            absorbed into institutional posture only when durability is credible.
+            Historical memory remains visible but does not create current
+            command pressure.
+          </span>
         </section>
+
+        <button onClick={loadStabilityBoard} style={styles.primaryButton}>
+          Refresh Stability Board
+        </button>
       </div>
     </main>
   )
@@ -478,338 +318,282 @@ function AbsorptionBlock({
   text: string
 }) {
   return (
-    <div style={styles.reasonBlock}>
+    <div style={styles.absorptionBlock}>
       <p style={styles.panelEyebrow}>{label}</p>
-      <strong style={styles.reasonValue}>{value}</strong>
+      <strong style={styles.absorptionValue}>{value}</strong>
       <p style={styles.bodyText}>{text}</p>
     </div>
   )
 }
 
-function InterpretivePanel({
-  title,
-  threshold,
-  text,
-}: {
-  title: string
-  threshold: string
-  text: string
-}) {
-  return (
-    <article style={styles.interpretivePanel}>
-      <p style={styles.panelEyebrow}>{title}</p>
-      <h3 style={styles.thresholdLabel}>{threshold}</h3>
-      <p style={styles.bodyText}>{text}</p>
-    </article>
-  )
-}
-
-function ReasonBlock({
-  label,
-  value,
-  text,
-}: {
-  label: string
-  value: string
-  text: string
-}) {
-  return (
-    <div style={styles.reasonBlock}>
-      <p style={styles.panelEyebrow}>{label}</p>
-      <strong style={styles.reasonValue}>{value}</strong>
-      <p style={styles.bodyText}>{text}</p>
-    </div>
-  )
-}
+const gold = '#d6b25e'
+const mutedGold = '#9f8142'
+const deepBlack = '#030303'
+const panelBlack = '#090807'
+const cardBlack = '#11100d'
+const softLine = 'rgba(214,178,94,0.24)'
+const strongLine = 'rgba(214,178,94,0.42)'
 
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    color: 'white',
+    color: '#fff8e7',
     overflowX: 'hidden',
+    background:
+      'radial-gradient(circle at top left, rgba(214,178,94,0.12), transparent 34%), linear-gradient(135deg, #030303 0%, #090807 48%, #11100d 100%)',
+    padding: '32px 24px 64px',
   },
   container: {
     width: '100%',
     maxWidth: '1120px',
     margin: '0 auto',
-    padding: '0 20px 48px',
+    display: 'grid',
+    gap: '14px',
     boxSizing: 'border-box',
   },
   hero: {
-    marginBottom: '20px',
-    paddingTop: '4px',
+    marginBottom: '0',
+    paddingTop: '0',
   },
   kicker: {
-    color: '#fbbf24',
-    fontSize: '12px',
+    color: gold,
+    fontSize: '11px',
     fontWeight: 900,
-    letterSpacing: '2px',
+    letterSpacing: '0.18em',
     margin: 0,
   },
   title: {
     fontSize: 'clamp(32px, 5vw, 48px)',
-    lineHeight: 1.05,
-    margin: '10px 0',
-    letterSpacing: '-0.04em',
+    lineHeight: 1.02,
+    margin: '8px 0',
+    letterSpacing: '-0.05em',
   },
   enterpriseSubtitle: {
-    color: '#fde68a',
-    fontSize: 'clamp(20px, 3vw, 28px)',
+    color: gold,
+    fontSize: 'clamp(20px, 3vw, 27px)',
     fontWeight: 900,
-    margin: '0 0 10px',
+    margin: '0 0 8px',
   },
   subtitle: {
-    color: '#d6d3d1',
+    color: '#cfc7b5',
     maxWidth: '820px',
-    lineHeight: 1.65,
-    fontSize: '16px',
+    lineHeight: 1.6,
+    fontSize: '15px',
     margin: 0,
   },
   doctrinePanel: {
-    background: '#111111',
-    border: '1px solid rgba(251, 191, 36, 0.28)',
+    background: panelBlack,
+    border: `1px solid ${softLine}`,
     borderRadius: '22px',
-    padding: '20px',
-    marginTop: '18px',
-    marginBottom: '16px',
+    padding: '18px',
+    marginTop: '14px',
+    marginBottom: '0',
   },
   doctrineTitle: {
-    color: '#fbbf24',
-    fontSize: '12px',
+    color: gold,
+    fontSize: '10px',
     fontWeight: 900,
     letterSpacing: '0.16em',
-    margin: '0 0 14px',
+    margin: '0 0 12px',
   },
   doctrineGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '12px',
+    gap: '10px',
   },
   doctrineCard: {
-    background: '#050505',
-    border: '1px solid rgba(251, 191, 36, 0.18)',
-    borderRadius: '16px',
-    padding: '14px',
-    color: '#fef3c7',
-    fontWeight: 800,
-    lineHeight: 1.5,
-    fontSize: '14px',
+    background: deepBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '14px',
+    padding: '13px',
+    color: '#fff8e7',
+    fontWeight: 850,
+    lineHeight: 1.45,
+    fontSize: '13px',
   },
   message: {
-    background: 'rgba(16, 185, 129, 0.14)',
-    color: '#bbf7d0',
-    border: '1px solid rgba(16, 185, 129, 0.28)',
+    background: 'rgba(214,178,94,0.12)',
+    color: gold,
+    border: `1px solid ${softLine}`,
     padding: '12px 14px',
     borderRadius: '14px',
-    fontWeight: 800,
-    marginBottom: '16px',
-    fontSize: '14px',
+    fontWeight: 850,
+    fontSize: '13px',
   },
   stabilityPanel: {
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1.4fr) minmax(260px, 0.6fr)',
     gap: '16px',
-    background: '#050505',
-    border: '1px solid rgba(251, 191, 36, 0.48)',
+    background: deepBlack,
+    border: `1px solid ${strongLine}`,
     borderRadius: '24px',
     padding: '22px',
-    marginBottom: '16px',
     boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
   },
   stabilityPosture: {
-    fontSize: 'clamp(34px, 6vw, 56px)',
+    fontSize: 'clamp(34px, 6vw, 54px)',
     lineHeight: 1,
-    margin: '8px 0 12px',
-    color: '#fbbf24',
-    letterSpacing: '-0.05em',
-  },
-  metricGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '14px',
-    marginBottom: '16px',
-  },
-  metricCard: {
-    background: '#111111',
-    border: '1px solid #262626',
-    borderRadius: '18px',
-    padding: '16px',
-    minHeight: '136px',
-    boxSizing: 'border-box',
-  },
-  metricValue: {
-    color: '#fbbf24',
-    fontSize: '34px',
-    lineHeight: 1,
-    margin: '8px 0 10px',
-  },
-  memoryOnlyPanel: {
-    background: 'rgba(251, 191, 36, 0.08)',
-    border: '1px solid rgba(251, 191, 36, 0.28)',
-    borderRadius: '22px',
-    padding: '20px',
-    marginBottom: '16px',
-  },
-  memoryOnlyTitle: {
-    color: '#fbbf24',
-    fontSize: 'clamp(28px, 4vw, 38px)',
-    lineHeight: 1,
-    margin: '8px 0 12px',
-    letterSpacing: '-0.04em',
-  },
-  panelEyebrow: {
-    color: '#a8a29e',
-    fontWeight: 900,
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
-    fontSize: '12px',
-    margin: '0 0 8px',
-  },
-  commandPanel: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.4fr) minmax(260px, 0.6fr)',
-    gap: '16px',
-    background: '#050505',
-    border: '1px solid #262626',
-    borderRadius: '24px',
-    padding: '22px',
-    marginBottom: '16px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
-  },
-  commandPosture: {
-    fontSize: 'clamp(34px, 6vw, 56px)',
-    lineHeight: 1,
-    margin: '8px 0 12px',
-    color: '#fbbf24',
-    letterSpacing: '-0.05em',
+    margin: '6px 0 10px',
+    color: gold,
+    letterSpacing: '-0.055em',
   },
   commandMeaning: {
-    color: '#e7e5e4',
-    fontSize: '16px',
-    lineHeight: 1.6,
+    color: '#f5f0e6',
+    fontSize: '15px',
+    lineHeight: 1.55,
     maxWidth: '720px',
     margin: 0,
   },
   implicationBox: {
-    background: 'rgba(251, 191, 36, 0.09)',
-    border: '1px solid rgba(251, 191, 36, 0.32)',
+    background: 'rgba(214,178,94,0.1)',
+    border: `1px solid ${softLine}`,
     borderRadius: '18px',
     padding: '16px',
     alignSelf: 'stretch',
   },
   implicationText: {
-    color: '#fef3c7',
-    fontSize: '14px',
+    color: '#f5f0e6',
+    fontSize: '13px',
     lineHeight: 1.55,
     margin: 0,
-    fontWeight: 700,
+    fontWeight: 750,
   },
-  interpretiveGrid: {
+  metricGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '14px',
-    marginBottom: '16px',
+    gap: '12px',
   },
-  interpretivePanel: {
-    background: '#111111',
-    border: '1px solid #262626',
+  metricCard: {
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
     borderRadius: '18px',
-    padding: '16px',
-    minHeight: '150px',
+    padding: '15px',
+    minHeight: '118px',
     boxSizing: 'border-box',
   },
-  thresholdLabel: {
-    color: '#fde68a',
-    fontSize: '22px',
-    lineHeight: 1.1,
-    margin: '8px 0 10px',
-    overflowWrap: 'anywhere',
+  panelEyebrow: {
+    color: '#9ca3af',
+    fontWeight: 900,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    fontSize: '10px',
+    margin: '0 0 7px',
   },
-  actionPanel: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1fr) minmax(220px, 0.45fr)',
-    gap: '16px',
-    background: '#050505',
-    border: '1px solid #262626',
+  metricValue: {
+    color: gold,
+    fontSize: '31px',
+    lineHeight: 1,
+    margin: '6px 0 8px',
+  },
+  bodyText: {
+    color: '#cfc7b5',
+    lineHeight: 1.55,
+    fontSize: '13px',
+    margin: 0,
+  },
+  memoryOnlyPanel: {
+    background:
+      'linear-gradient(135deg, rgba(214,178,94,0.13), rgba(255,255,255,0.035))',
+    border: `1px solid ${strongLine}`,
     borderRadius: '22px',
-    padding: '20px',
-    marginBottom: '16px',
+    padding: '18px',
   },
-  actionThreshold: {
-    color: '#fbbf24',
+  memoryOnlyTitle: {
+    color: gold,
     fontSize: 'clamp(28px, 4vw, 38px)',
-    lineHeight: 1.05,
-    margin: '8px 0 10px',
-  },
-  deadlineBox: {
-    background: '#111111',
-    border: '1px solid #262626',
-    borderRadius: '18px',
-    padding: '16px',
-    color: '#e7e5e4',
-    fontSize: '16px',
-    lineHeight: 1.5,
+    lineHeight: 1,
+    margin: '6px 0 10px',
+    letterSpacing: '-0.04em',
   },
   card: {
-    background: '#050505',
-    border: '1px solid #262626',
+    background: deepBlack,
+    border: `1px solid ${softLine}`,
     borderRadius: '22px',
-    padding: '20px',
-    marginBottom: '16px',
+    padding: '18px',
     boxSizing: 'border-box',
     overflow: 'hidden',
   },
   sectionTitle: {
     fontSize: '22px',
-    margin: '0 0 12px',
+    margin: '0 0 10px',
     lineHeight: 1.2,
-  },
-  bodyText: {
-    color: '#d6d3d1',
-    lineHeight: 1.6,
-    fontSize: '14px',
-    margin: 0,
+    color: '#fff8e7',
   },
   absorptionGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
-    gap: '14px',
-    marginTop: '16px',
+    gap: '10px',
+    marginTop: '14px',
   },
-  reasonGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '14px',
+  absorptionBlock: {
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '16px',
+    padding: '14px',
+    minHeight: '118px',
   },
-  reasonBlock: {
-    background: '#111111',
-    border: '1px solid #262626',
-    borderRadius: '18px',
-    padding: '16px',
-    minHeight: '140px',
-  },
-  reasonValue: {
+  absorptionValue: {
     display: 'block',
-    color: '#fde68a',
-    fontSize: '18px',
-    marginBottom: '10px',
+    color: gold,
+    fontSize: '22px',
+    marginBottom: '8px',
     overflowWrap: 'anywhere',
   },
-  emptyState: {
-    background: '#111111',
-    border: '1px solid #262626',
-    borderRadius: '18px',
-    padding: '16px',
-    color: '#d6d3d1',
-    lineHeight: 1.6,
+  evidencePanel: {
+    padding: '20px',
+    borderRadius: '24px',
+    background: panelBlack,
+    border: `1px solid ${softLine}`,
+  },
+  evidenceSummary: {
+    cursor: 'pointer',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '18px',
+    listStyle: 'none',
+  },
+  evidenceTitle: {
+    display: 'block',
+    color: '#fff8e7',
+    fontSize: '20px',
+    lineHeight: 1.2,
+    marginTop: '6px',
+    letterSpacing: '-0.035em',
+  },
+  evidenceToggle: {
+    flex: '0 0 auto',
+    borderRadius: '999px',
+    padding: '10px 14px',
+    background: 'rgba(214,178,94,0.12)',
+    border: `1px solid ${softLine}`,
+    color: gold,
+    fontSize: '11px',
+    fontWeight: 950,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+  },
+  cardNested: {
+    background: deepBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '20px',
+    padding: '18px',
     marginTop: '16px',
-    fontSize: '14px',
+  },
+  emptyState: {
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
+    borderRadius: '16px',
+    padding: '14px',
+    color: '#cfc7b5',
+    lineHeight: 1.55,
+    marginTop: '14px',
+    fontSize: '13px',
   },
   tableWrap: {
     width: '100%',
     overflowX: 'auto',
-    marginTop: '14px',
-    marginBottom: '16px',
+    marginTop: '12px',
   },
   table: {
     width: '100%',
@@ -818,30 +602,41 @@ const styles: Record<string, CSSProperties> = {
   },
   th: {
     textAlign: 'left',
-    color: '#a8a29e',
-    borderBottom: '1px solid #262626',
+    color: '#9ca3af',
+    borderBottom: '1px solid rgba(255,255,255,0.1)',
     padding: '10px',
-    fontSize: '11px',
+    fontSize: '10px',
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
   },
   td: {
-    borderBottom: '1px solid #1f1f1f',
+    borderBottom: '1px solid rgba(255,255,255,0.08)',
     padding: '10px',
-    color: '#e7e5e4',
+    color: '#f5f0e6',
     verticalAlign: 'top',
-    lineHeight: 1.55,
+    lineHeight: 1.5,
+    fontSize: '12px',
+  },
+  doctrineFooter: {
+    display: 'grid',
+    gap: '8px',
+    padding: '20px',
+    borderRadius: '22px',
+    background: deepBlack,
+    border: `1px solid ${strongLine}`,
+    color: '#fff8e7',
+    lineHeight: 1.65,
     fontSize: '13px',
   },
   primaryButton: {
     width: '100%',
-    padding: '14px',
+    padding: '13px',
     borderRadius: '14px',
     border: 'none',
-    background: '#fbbf24',
-    color: '#111111',
-    fontWeight: 900,
+    background: gold,
+    color: '#11100d',
+    fontWeight: 950,
     cursor: 'pointer',
-    fontSize: '15px',
+    fontSize: '14px',
   },
 }
