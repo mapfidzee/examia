@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import type { CSSProperties, ReactNode } from 'react'
+import type { CSSProperties } from 'react'
 
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
@@ -372,13 +372,20 @@ function GovernanceConsoleContent() {
           )}
         </section>
 
-        <section style={styles.orderPanel}>
-          <p style={styles.sectionKicker}>Governance Brief</p>
-          <h2 style={styles.panelTitle}>
-            Can continuity authority be trusted, controlled, and reconstructed?
-          </h2>
+        <details style={styles.briefPanel}>
+          <summary style={styles.briefSummary}>
+            <span>
+              <span style={styles.sectionKicker}>Governance Brief</span>
+              <strong style={styles.briefTitle}>
+                Can continuity authority be trusted, controlled, and
+                reconstructed?
+              </strong>
+            </span>
+            <span style={styles.briefToggle}>Open Brief</span>
+          </summary>
+
           <pre style={styles.summaryBox}>{governance.generatedBrief}</pre>
-        </section>
+        </details>
 
         <section style={styles.doctrineCard}>
           <strong>GOVERNANCE DOCTRINE</strong>
@@ -875,23 +882,52 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 950,
     cursor: 'pointer',
   },
-  orderPanel: {
-    padding: 28,
-    borderRadius: 28,
+  briefPanel: {
+    padding: 22,
+    borderRadius: 24,
     background: 'rgba(0,0,0,0.34)',
     border: '1px solid rgba(201,162,39,0.28)',
   },
+  briefSummary: {
+    cursor: 'pointer',
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: 18,
+    alignItems: 'center',
+    listStyle: 'none',
+  },
+  briefTitle: {
+    display: 'block',
+    marginTop: 8,
+    color: '#FFFFFF',
+    fontSize: 20,
+    lineHeight: 1.2,
+    letterSpacing: '-0.035em',
+  },
+  briefToggle: {
+    flex: '0 0 auto',
+    borderRadius: 999,
+    padding: '10px 14px',
+    background: 'rgba(201,162,39,0.13)',
+    border: '1px solid rgba(201,162,39,0.28)',
+    color: '#D7B84C',
+    fontSize: 11,
+    fontWeight: 950,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+  },
   summaryBox: {
-    marginTop: 20,
-    padding: 22,
-    borderRadius: 20,
+    marginTop: 18,
+    maxHeight: 520,
+    padding: 20,
+    borderRadius: 18,
     background: '#050505',
     color: '#F8F6F1',
     border: '1px solid rgba(255,255,255,0.08)',
     whiteSpace: 'pre-wrap',
-    fontSize: 13,
-    lineHeight: 1.7,
-    overflowX: 'auto',
+    fontSize: 12,
+    lineHeight: 1.65,
+    overflow: 'auto',
   },
   doctrineCard: {
     display: 'grid',
