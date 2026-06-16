@@ -7,8 +7,6 @@ import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import {
   buildGovernanceIntelligence,
-  deploymentHardening,
-  doctrineLocks,
   GOVERNANCE_REASONS,
   normalizedStatus,
   STATUS_FLOW,
@@ -50,7 +48,7 @@ function GovernanceConsoleContent() {
 
   async function loadProfiles() {
     setLoading(true)
-    setMessage('Loading enterprise governance authority memory...')
+    setMessage('Loading governance authority memory...')
 
     const { data, error } = await supabase
       .from('teacher_profiles')
@@ -59,13 +57,13 @@ function GovernanceConsoleContent() {
 
     if (error) {
       console.error(error)
-      setMessage('Enterprise governance authority memory could not be loaded.')
+      setMessage('Governance authority memory could not be loaded.')
       setLoading(false)
       return
     }
 
     setProfiles(data || [])
-    setMessage('Enterprise governance authority memory loaded.')
+    setMessage('Governance authority memory loaded.')
     setLoading(false)
   }
 
@@ -176,15 +174,12 @@ function GovernanceConsoleContent() {
       <div style={styles.container}>
         <section style={styles.hero}>
           <div>
-            <p style={styles.kicker}>TSINAXA CGI • ENTERPRISE GOVERNANCE</p>
-
-            <h1 style={styles.title}>Enterprise Governance Intelligence</h1>
-
+            <p style={styles.kicker}>TSINAXA CGI • GOVERNANCE</p>
+            <h1 style={styles.title}>Governance</h1>
             <p style={styles.subtitle}>
-              Governance controls continuity authority, access, trust, activation,
-              restriction, suspension, removal, doctrine, deployment discipline,
-              and auditability. CGI does not allow authority to drift beyond
-              evidence.
+              Control authority, access, trust, restriction, suspension,
+              removal, and audit memory before continuity authority can affect
+              institutional survivability.
             </p>
           </div>
 
@@ -200,17 +195,12 @@ function GovernanceConsoleContent() {
         <section style={styles.commandDeck}>
           <div style={styles.primaryCard}>
             <p style={styles.sectionKicker}>Executive Governance Question</p>
-
             <h2 style={styles.commandTitle}>{governance.question}</h2>
-
-            <p style={styles.primaryText}>{governance.authorityMeaning}</p>
+            <p style={styles.bodyText}>{governance.authorityMeaning}</p>
 
             <div style={styles.commandMetaGrid}>
-              <MiniStat label="Authority Decision" value={governance.decision} />
-              <MiniStat
-                label="Responder Trust"
-                value={governance.responderTrust}
-              />
+              <MiniStat label="Decision" value={governance.decision} />
+              <MiniStat label="Trust" value={governance.responderTrust} />
               <MiniStat label="Access Risk" value={governance.accessRisk} />
               <MiniStat label="Audit" value={governance.auditMeaning} />
             </div>
@@ -218,19 +208,17 @@ function GovernanceConsoleContent() {
 
           <div style={styles.consequenceCard}>
             <p style={styles.sectionKicker}>Board Warning</p>
-
             <h2 style={styles.consequenceTitle}>
               Authority without evidence becomes institutional risk.
             </h2>
-
             <p style={styles.bodyText}>{governance.boardWarning}</p>
           </div>
         </section>
 
         <section style={styles.metricsGrid}>
-          <Metric label="Total Profiles" value={governance.counts.total} />
-          <Metric label="Pending Review" value={governance.counts.pending} />
-          <Metric label="Under Review" value={governance.counts.underReview} />
+          <Metric label="Profiles" value={governance.counts.total} />
+          <Metric label="Pending" value={governance.counts.pending} />
+          <Metric label="Review" value={governance.counts.underReview} />
           <Metric label="Active" value={governance.counts.active} />
           <Metric label="Restricted" value={governance.counts.restricted} />
           <Metric label="Removed" value={governance.counts.removed} />
@@ -240,31 +228,27 @@ function GovernanceConsoleContent() {
           <ExecutiveCard
             title="Access Risk"
             value={governance.accessRisk}
-            body="Whether continuity authority may exceed evidence or role permission."
+            body="Whether authority may exceed evidence or permission."
           />
-
           <ExecutiveCard
             title="Responder Trust"
             value={governance.responderTrust}
-            body="Whether responders are sufficiently verified for operational authority."
+            body="Whether responders are verified for operational authority."
           />
-
           <ExecutiveCard
             title="Restriction Meaning"
             value={governance.restrictionMeaning}
-            body="Whether restrictions and suspensions are preserving continuity credibility."
+            body="Whether restriction is preserving continuity credibility."
           />
-
           <ExecutiveCard
             title="Doctrine Meaning"
             value={governance.doctrineMeaning}
-            body="Whether governance is preventing blame, drift, weak closure, and uncontrolled authority."
+            body="Whether governance prevents blame, drift, weak closure, and uncontrolled authority."
           />
         </section>
 
         <section style={styles.memoryPanel}>
           <p style={styles.sectionKicker}>Governance Memory</p>
-
           <h2 style={styles.panelTitle}>
             Authority must be evidence-bound, role-bound, time-bound, and
             reconstructable.
@@ -281,58 +265,21 @@ function GovernanceConsoleContent() {
           </div>
         </section>
 
-        <section style={styles.gridTwo}>
-          <Panel title="Governance Doctrine Locks">
-            <p style={styles.bodyText}>
-              These locks protect CGI from becoming surveillance, blame,
-              uncontrolled access, weak authority, or non-reconstructable
-              decisions.
-            </p>
-
-            <div style={styles.doctrineGrid}>
-              {doctrineLocks.map((item) => (
-                <article key={item.title} style={styles.doctrineItem}>
-                  <h3 style={styles.cardValue}>{item.title}</h3>
-                  <p style={styles.panelBody}>{item.text}</p>
-                </article>
-              ))}
-            </div>
-          </Panel>
-
-          <Panel title="Deployment Hardening">
-            <p style={styles.bodyText}>
-              These checks protect serious institutional demonstration and pilot
-              deployment.
-            </p>
-
-            <div style={styles.checkList}>
-              {deploymentHardening.map((item) => (
-                <div key={item} style={styles.checkItem}>
-                  {item}
-                </div>
-              ))}
-            </div>
-          </Panel>
-        </section>
-
         <section style={styles.panel}>
           <div style={styles.cardHeader}>
             <div>
               <p style={styles.sectionKicker}>Responder Authority Queue</p>
-
               <h2 style={styles.panelTitle}>
                 Govern activation, restriction, suspension, and removal
               </h2>
-
               <p style={styles.bodyText}>
-                These decisions affect route access, operational authority,
-                trust scoring, assignment eligibility, safeguarding visibility,
-                and audit memory.
+                Every authority movement updates responder access, trust,
+                safeguarding posture, and governance action memory.
               </p>
             </div>
 
             <button onClick={loadProfiles} style={styles.primaryButton}>
-              Refresh Governance
+              Refresh
             </button>
           </div>
 
@@ -362,7 +309,7 @@ function GovernanceConsoleContent() {
                     <div style={styles.infoGrid}>
                       <Info label="Domains" value={arrayText(profile.subjects)} />
                       <Info
-                        label="Operational Levels"
+                        label="Levels"
                         value={arrayText(profile.grade_levels)}
                       />
                       <Info
@@ -374,7 +321,7 @@ function GovernanceConsoleContent() {
                         value={profile.province || 'Not provided'}
                       />
                       <Info
-                        label="Expected Rate"
+                        label="Rate"
                         value={
                           profile.hourly_rate !== null &&
                           profile.hourly_rate !== undefined
@@ -383,7 +330,7 @@ function GovernanceConsoleContent() {
                         }
                       />
                       <Info
-                        label="Trust Score"
+                        label="Trust"
                         value={String(trustScoreForStatus(currentStatus))}
                       />
                     </div>
@@ -392,7 +339,6 @@ function GovernanceConsoleContent() {
                       <summary style={styles.summary}>
                         View verification evidence
                       </summary>
-
                       <pre style={styles.bio}>
                         {profile.bio || 'No verification evidence submitted.'}
                       </pre>
@@ -427,23 +373,19 @@ function GovernanceConsoleContent() {
         </section>
 
         <section style={styles.orderPanel}>
-          <p style={styles.sectionKicker}>Copy-Ready Governance Brief</p>
-
+          <p style={styles.sectionKicker}>Governance Brief</p>
           <h2 style={styles.panelTitle}>
             Can continuity authority be trusted, controlled, and reconstructed?
           </h2>
-
           <pre style={styles.summaryBox}>{governance.generatedBrief}</pre>
         </section>
 
         <section style={styles.doctrineCard}>
-          <strong>ENTERPRISE GOVERNANCE DOCTRINE</strong>
-
+          <strong>GOVERNANCE DOCTRINE</strong>
           <span>
-            Governance is not administration. Governance is the control of
-            authority, trust, access, restriction, activation, suspension,
-            removal, doctrine, and audit memory before continuity authority can
-            affect institutional survivability.
+            Governance is not administration. Governance controls authority,
+            trust, access, restriction, activation, suspension, removal, and
+            audit memory before continuity authority can affect survivability.
           </span>
         </section>
       </div>
@@ -452,23 +394,19 @@ function GovernanceConsoleContent() {
         <div style={styles.overlay}>
           <div style={styles.modal}>
             <p style={styles.sectionKicker}>Governance Action</p>
-
             <h2 style={styles.modalTitle}>Change authority state</h2>
-
             <p style={styles.modalText}>
               Move <strong>{selectedProfile.full_name}</strong> to{' '}
               <strong>{selectedStatus}</strong>
             </p>
 
             <label style={styles.label}>Governance Reason</label>
-
             <select
               value={selectedReason}
               onChange={(event) => setSelectedReason(event.target.value)}
               style={styles.select}
             >
               <option value="">Select governance reason</option>
-
               {(GOVERNANCE_REASONS[selectedStatus] || []).map((reason) => (
                 <option key={reason} value={reason}>
                   {reason}
@@ -477,7 +415,6 @@ function GovernanceConsoleContent() {
             </select>
 
             <label style={styles.label}>Governance Notes Optional</label>
-
             <textarea
               value={governanceNotes}
               onChange={(event) => setGovernanceNotes(event.target.value)}
@@ -553,15 +490,6 @@ function ExecutiveCard({
   )
 }
 
-function Panel({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section style={styles.panel}>
-      <p style={styles.sectionKicker}>{title}</p>
-      <div style={styles.infoList}>{children}</div>
-    </section>
-  )
-}
-
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div style={styles.infoRow}>
@@ -616,7 +544,7 @@ const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
     background:
-      'radial-gradient(circle at top left, rgba(201, 162, 39, 0.14), transparent 34%), linear-gradient(135deg, #050505 0%, #0B0B0B 45%, #111111 100%)',
+      'radial-gradient(circle at top left, rgba(201,162,39,0.14), transparent 34%), linear-gradient(135deg, #050505 0%, #0B0B0B 45%, #111111 100%)',
     color: '#FFFFFF',
     padding: '40px 24px 72px',
   },
@@ -624,14 +552,14 @@ const styles: Record<string, CSSProperties> = {
     width: 'min(1440px, 100%)',
     margin: '0 auto',
     display: 'grid',
-    gap: 24,
+    gap: 22,
   },
   hero: {
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1.45fr) minmax(320px, 0.75fr)',
     gap: 24,
     padding: 32,
-    border: '1px solid rgba(201, 162, 39, 0.34)',
+    border: '1px solid rgba(201,162,39,0.34)',
     borderRadius: 28,
     background:
       'linear-gradient(135deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018))',
@@ -647,20 +575,20 @@ const styles: Record<string, CSSProperties> = {
   },
   title: {
     margin: '14px 0 0',
-    fontSize: 'clamp(2.3rem, 5vw, 5rem)',
+    fontSize: 'clamp(2.4rem, 5vw, 5rem)',
     lineHeight: 0.95,
     letterSpacing: '-0.07em',
     fontWeight: 950,
   },
   subtitle: {
-    maxWidth: 880,
+    maxWidth: 860,
     margin: '18px 0 0',
     color: '#C8CDD4',
     fontSize: 17,
-    lineHeight: 1.8,
+    lineHeight: 1.75,
   },
   statusBox: {
-    border: '1px solid rgba(201, 162, 39, 0.5)',
+    border: '1px solid rgba(201,162,39,0.5)',
     borderRadius: 24,
     padding: 24,
     background:
@@ -697,14 +625,13 @@ const styles: Record<string, CSSProperties> = {
   commandDeck: {
     display: 'grid',
     gridTemplateColumns: '1.4fr 0.8fr',
-    gap: 24,
+    gap: 22,
   },
   primaryCard: {
     padding: 30,
     borderRadius: 28,
-    background: '#FFFFFF',
-    color: '#0B0B0B',
-    border: '1px solid rgba(255,255,255,0.12)',
+    background: 'rgba(0,0,0,0.34)',
+    border: '1px solid rgba(201,162,39,0.28)',
   },
   consequenceCard: {
     padding: 30,
@@ -722,16 +649,10 @@ const styles: Record<string, CSSProperties> = {
   },
   commandTitle: {
     margin: '14px 0',
-    fontSize: 'clamp(1.8rem, 3vw, 3.2rem)',
+    fontSize: 'clamp(1.8rem, 3vw, 3.1rem)',
     lineHeight: 1.05,
     letterSpacing: '-0.05em',
     fontWeight: 950,
-  },
-  primaryText: {
-    margin: 0,
-    color: '#4A4A4A',
-    lineHeight: 1.7,
-    fontSize: 14,
   },
   consequenceTitle: {
     margin: '14px 0',
@@ -797,11 +718,6 @@ const styles: Record<string, CSSProperties> = {
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
     gap: 16,
   },
-  gridTwo: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: 16,
-  },
   panel: {
     padding: 28,
     borderRadius: 28,
@@ -847,56 +763,6 @@ const styles: Record<string, CSSProperties> = {
     gap: 12,
     marginTop: 20,
   },
-  infoList: {
-    display: 'grid',
-    gap: 10,
-    marginTop: 18,
-  },
-  infoRow: {
-    display: 'grid',
-    gridTemplateColumns: '170px minmax(0, 1fr)',
-    gap: 12,
-    padding: 14,
-    borderRadius: 16,
-    background: 'rgba(0,0,0,0.22)',
-    border: '1px solid rgba(255,255,255,0.08)',
-  },
-  infoLabel: {
-    color: '#858D98',
-    fontWeight: 900,
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: '0.1em',
-  },
-  infoValue: {
-    color: '#FFFFFF',
-    lineHeight: 1.5,
-    overflowWrap: 'anywhere',
-  },
-  doctrineGrid: {
-    display: 'grid',
-    gap: 14,
-    marginTop: 18,
-  },
-  doctrineItem: {
-    padding: 18,
-    borderRadius: 18,
-    background: 'rgba(0,0,0,0.22)',
-    border: '1px solid rgba(255,255,255,0.08)',
-  },
-  checkList: {
-    display: 'grid',
-    gap: 10,
-    marginTop: 18,
-  },
-  checkItem: {
-    padding: 14,
-    borderRadius: 14,
-    background: 'rgba(0,0,0,0.22)',
-    border: '1px solid rgba(255,255,255,0.08)',
-    color: '#DCE1E8',
-    fontWeight: 800,
-  },
   cardHeader: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -914,7 +780,7 @@ const styles: Record<string, CSSProperties> = {
     whiteSpace: 'nowrap',
   },
   emptyBox: {
-    margin: 0,
+    margin: '20px 0 0',
     color: '#DCE1E8',
     padding: 18,
     borderRadius: 18,
@@ -955,6 +821,26 @@ const styles: Record<string, CSSProperties> = {
     gap: 12,
     marginTop: 16,
   },
+  infoRow: {
+    display: 'grid',
+    gap: 8,
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(0,0,0,0.22)',
+    border: '1px solid rgba(255,255,255,0.08)',
+  },
+  infoLabel: {
+    color: '#858D98',
+    fontWeight: 900,
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+  },
+  infoValue: {
+    color: '#FFFFFF',
+    lineHeight: 1.5,
+    overflowWrap: 'anywhere',
+  },
   details: {
     marginTop: 16,
     background: 'rgba(0,0,0,0.28)',
@@ -992,15 +878,16 @@ const styles: Record<string, CSSProperties> = {
   orderPanel: {
     padding: 28,
     borderRadius: 28,
-    background: '#FFFFFF',
-    color: '#0B0B0B',
+    background: 'rgba(0,0,0,0.34)',
+    border: '1px solid rgba(201,162,39,0.28)',
   },
   summaryBox: {
     marginTop: 20,
     padding: 22,
     borderRadius: 20,
-    background: '#0A0A0A',
+    background: '#050505',
     color: '#F8F6F1',
+    border: '1px solid rgba(255,255,255,0.08)',
     whiteSpace: 'pre-wrap',
     fontSize: 13,
     lineHeight: 1.7,
