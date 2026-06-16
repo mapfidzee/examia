@@ -1,7 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import type { CSSProperties } from 'react'
+
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
+import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { supabase } from '../../../lib/supabase'
 
 type SupportRequest = {
@@ -32,31 +35,69 @@ type ResponderProfile = {
 export default function AdminAssignPage() {
   return (
     <GovernanceRouteGuard allowedRoles={['SUPER_ADMIN', 'COMMAND_ADMIN']}>
-      <AdminAssignContent />
+      <CGIGovernanceShell>
+        <AdminAssignContent />
+      </CGIGovernanceShell>
     </GovernanceRouteGuard>
   )
 }
 
 function AdminAssignContent() {
-  const [mounted, setMounted] = useState(false)
   const [requests, setRequests] = useState<SupportRequest[]>([])
   const [responders, setResponders] = useState<ResponderProfile[]>([])
-  const [selectedResponderByRequest, setSelectedResponderByRequest] = useState<Record<string, string>>({})
+  const [selectedResponderByRequest, setSelectedResponderByRequest] = useState<
+    Record<string, string>
+  >({})
   const [loading, setLoading] = useState(true)
-  const [message, setMessage] = useState('')
+  const [message, setMessage] = useState('Loading assignment queue...')
 
   useEffect(() => {
-    setMounted(true)
+    loadData()
   }, [])
 
-  useEffect(() => {
-    if (mounted) loadData()
-  }, [mounted])
+  const assignmentQueue = useMemo(
+    () =>
+      requests.filter(
+        (request) =>
+          request.status !== 'COMPLETED' &&
+          request.teacher_status !== 'ACCEPTED',
+      ),
+    [requests],
+  )
 
-  if (!mounted) return null
+  const lockedEvidence = useMemo(
+    () =>
+      requests.filter(
+        (request) =>
+          request.status === 'COMPLETED' ||
+          request.teacher_status === 'ACCEPTED',
+      ),
+    [requests],
+  )
+
+  const unassignedRequests = useMemo(
+    () => requests.filter((request) => !request.teacher_id),
+    [requests],
+  )
+
+  const offeredRequests = useMemo(
+    () => requests.filter((request) => request.teacher_status === 'OFFERED'),
+    [requests],
+  )
+
+  const acceptedRequests = useMemo(
+    () => requests.filter((request) => request.teacher_status === 'ACCEPTED'),
+    [requests],
+  )
+
+  const declinedRequests = useMemo(
+    () => requests.filter((request) => request.teacher_status === 'DECLINED'),
+    [requests],
+  )
 
   async function loadData() {
     setLoading(true)
+    setMessage('Loading assignment queue...')
 
     const { data: requestData, error: requestError } = await supabase
       .from('lesson_requests')
@@ -65,7 +106,7 @@ function AdminAssignContent() {
 
     if (requestError) {
       console.error(requestError)
-      alert('Could not load support requests.')
+      setMessage('Assignment queue could not load support requests.')
       setLoading(false)
       return
     }
@@ -78,17 +119,23 @@ function AdminAssignContent() {
 
     if (responderError) {
       console.error(responderError)
-      alert('Could not load approved responders.')
+      setMessage('Assignment queue could not load approved responders.')
       setLoading(false)
       return
     }
 
     setRequests(requestData || [])
     setResponders(responderData || [])
+    setMessage('Assignment queue loaded.')
     setLoading(false)
   }
 
   async function routeResponder(request: SupportRequest) {
+    if (request.status === 'COMPLETED' || request.teacher_status === 'ACCEPTED') {
+      alert('This record is already locked or accepted.')
+      return
+    }
+
     const responderId = selectedResponderByRequest[request.id]
 
     if (!responderId) {
@@ -96,7 +143,9 @@ function AdminAssignContent() {
       return
     }
 
-    const selectedResponder = responders.find((responder) => responder.id === responderId)
+    const selectedResponder = responders.find(
+      (responder) => responder.id === responderId,
+    )
 
     if (!selectedResponder) {
       alert('Selected responder was not found.')
@@ -111,17 +160,17 @@ function AdminAssignContent() {
         teacher_id: selectedResponder.id,
         assigned_teacher: selectedResponder.full_name,
         teacher_status: 'OFFERED',
+        status: request.status === 'NEW' ? 'MATCHED' : request.status,
       })
       .eq('id', request.id)
 
     if (error) {
       console.error(error)
-      alert('Could not route responder.')
-      setMessage('')
+      setMessage('Responder routing failed.')
       return
     }
 
-    setMessage(`Support request routed to ${selectedResponder.full_name}.`)
+    setMessage(`Request routed to ${selectedResponder.full_name}.`)
     await loadData()
   }
 
@@ -132,390 +181,232 @@ function AdminAssignContent() {
     }))
   }
 
-  const unassignedRequests = requests.filter((request) => !request.teacher_id)
-  const offeredRequests = requests.filter((request) => request.teacher_status === 'OFFERED')
-  const acceptedRequests = requests.filter((request) => request.teacher_status === 'ACCEPTED')
-  const declinedRequests = requests.filter((request) => request.teacher_status === 'DECLINED')
-
   return (
-    <main className="assignPage">
-      <div className="pageWrap">
-        <header className="hero">
-          <p className="eyebrow">EXAMIA GOVERNED ROUTING</p>
-          <h1>Responder Routing</h1>
-          <p>
-            Route support requests to approved responders. This protected routing
-            surface supports ownership, continuity, recovery coordination, and
-            controlled operational follow-through.
-          </p>
+    <main style={styles.page}>
+      <section style={styles.container}>
+        <header style={styles.hero}>
+          <div>
+            <p style={styles.kicker}>TSINAXA CGI • ASSIGNMENT</p>
+            <h1 style={styles.title}>Assignment</h1>
+            <p style={styles.subtitle}>
+              Route governed requests to approved responders without changing
+              the command lifecycle.
+            </p>
+          </div>
+
+          <div style={styles.statusBox}>
+            <p style={styles.statusLabel}>ASSIGNMENT POSTURE</p>
+            <p style={styles.statusValue}>CONTROLLED</p>
+            <p style={styles.statusMeaning}>
+              Assignment supports responder ownership only. Accepted and
+              completed records remain protected evidence.
+            </p>
+          </div>
         </header>
 
-        <section className="statsGrid">
-          <Stat title="Unrouted" value={unassignedRequests.length} />
-          <Stat title="Offered" value={offeredRequests.length} />
-          <Stat title="Accepted" value={acceptedRequests.length} />
-          <Stat title="Declined" value={declinedRequests.length} />
+        <section style={styles.metricsGrid}>
+          <Metric label="Unassigned" value={unassignedRequests.length} />
+          <Metric label="Offered" value={offeredRequests.length} />
+          <Metric label="Accepted" value={acceptedRequests.length} />
+          <Metric label="Declined" value={declinedRequests.length} />
         </section>
 
-        {message && <p className="message">{message}</p>}
+        {message && <div style={styles.message}>{message}</div>}
 
-        {loading ? (
-          <section className="panel">
-            <p>Loading routing data...</p>
-          </section>
-        ) : (
-          <section className="panel">
-            <div className="sectionHeader">
-              <h2>Support Requests</h2>
-              <p>
-                Select an approved responder, then offer the support request for
-                governed response ownership.
-              </p>
+        <section style={styles.commandDeck}>
+          <div style={styles.primaryCard}>
+            <p style={styles.sectionKicker}>Assignment Question</p>
+            <h2 style={styles.commandTitle}>
+              Which requests still need responder ownership?
+            </h2>
+            <p style={styles.bodyText}>
+              This surface routes requests to approved responders. It does not
+              create new lifecycle stages, complete interventions, or override
+              command evidence.
+            </p>
+          </div>
+
+          <div style={styles.warningCard}>
+            <p style={styles.sectionKicker}>Boundary</p>
+            <h2 style={styles.warningTitle}>Assign, do not reopen.</h2>
+            <p style={styles.bodyText}>
+              Completed records and accepted ownership should remain visible as
+              locked evidence, not active routing work.
+            </p>
+          </div>
+        </section>
+
+        <section style={styles.panel}>
+          <div style={styles.panelHeader}>
+            <div>
+              <p style={styles.sectionKicker}>Responder Assignment Queue</p>
+              <h2 style={styles.panelTitle}>Requests awaiting assignment</h2>
             </div>
 
-            {requests.length === 0 ? (
-              <p className="empty">No support requests found.</p>
-            ) : (
-              <div className="requestList">
-                {requests.map((request) => (
-                  <article className="requestCard" key={request.id}>
-                    <div className="requestTop">
-                      <div>
-                        <h3>{request.subject}</h3>
-                        <p className="requestMeta">
-                          Request status: {request.status || 'Not set'} · Responder status:{' '}
-                          {request.teacher_status || 'Not offered'}
-                        </p>
-                      </div>
+            <button type="button" onClick={loadData} style={styles.secondaryButton}>
+              {loading ? 'Refreshing...' : 'Refresh'}
+            </button>
+          </div>
 
-                      <span className="badge">
-                        {request.teacher_status || 'UNROUTED'}
-                      </span>
-                    </div>
+          {loading ? (
+            <p style={styles.emptyBox}>Loading assignment records...</p>
+          ) : assignmentQueue.length === 0 ? (
+            <p style={styles.emptyBox}>No requests currently require routing.</p>
+          ) : (
+            <div style={styles.requestList}>
+              {assignmentQueue.map((request) => (
+                <AssignmentCard
+                  key={request.id}
+                  request={request}
+                  responders={responders}
+                  selectedResponderId={selectedResponderByRequest[request.id] || ''}
+                  onSelect={updateSelectedResponder}
+                  onRoute={routeResponder}
+                />
+              ))}
+            </div>
+          )}
+        </section>
 
-                    <div className="problemBox">
-                      <span>Support need</span>
-                      <p>{request.problem}</p>
-                    </div>
+        <details style={styles.evidencePanel}>
+          <summary style={styles.evidenceSummary}>
+            <span>
+              <span style={styles.sectionKicker}>Locked Assignment Evidence</span>
+              <strong style={styles.evidenceTitle}>
+                Accepted ownership and completed records
+              </strong>
+            </span>
 
-                    <div className="detailsGrid">
-                      <Detail label="Preferred Time" value={request.preferred_time || 'Not provided'} />
-                      <Detail label="Scheduled Time" value={request.scheduled_time || 'Not scheduled'} />
-                      <Detail label="Assigned Responder" value={request.assigned_teacher || 'None yet'} />
-                    </div>
+            <span style={styles.evidenceToggle}>Expand Evidence</span>
+          </summary>
 
-                    <div className="assignBox">
-                      <label>
-                        Select approved responder
-                        <select
-                          value={selectedResponderByRequest[request.id] || ''}
-                          onChange={(event) => updateSelectedResponder(request.id, event.target.value)}
-                        >
-                          <option value="">Choose responder...</option>
-                          {responders.map((responder) => (
-                            <option key={responder.id} value={responder.id}>
-                              {responder.full_name} — {formatList(responder.subjects)}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+          {lockedEvidence.length === 0 ? (
+            <p style={styles.emptyBox}>No accepted or completed records yet.</p>
+          ) : (
+            <div style={styles.requestList}>
+              {lockedEvidence.map((request) => (
+                <LockedCard key={request.id} request={request} />
+              ))}
+            </div>
+          )}
+        </details>
 
-                      <button onClick={() => routeResponder(request)}>
-                        Route Request to Responder
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
-      </div>
-
-      <style jsx>{`
-        .assignPage {
-          min-height: 100vh;
-          background: #07327a;
-          color: white;
-          padding: 70px 20px 120px;
-        }
-
-        .pageWrap {
-          width: min(100%, 1120px);
-          margin: 0 auto;
-        }
-
-        .hero {
-          margin-bottom: 34px;
-        }
-
-        .eyebrow {
-          margin: 0 0 10px;
-          color: #dbeafe;
-          font-size: 12px;
-          font-weight: 900;
-          letter-spacing: 0.14em;
-          text-transform: uppercase;
-        }
-
-        h1 {
-          margin: 0;
-          font-size: clamp(42px, 9vw, 72px);
-          line-height: 0.92;
-          letter-spacing: -0.06em;
-        }
-
-        .hero p:last-child {
-          max-width: 780px;
-          color: #dbeafe;
-          font-size: 18px;
-          line-height: 1.65;
-          margin-top: 18px;
-        }
-
-        .statsGrid {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 14px;
-          margin-bottom: 28px;
-        }
-
-        .statCard,
-        .panel,
-        .requestCard {
-          background: #0f172a;
-          border: 1px solid rgba(255, 255, 255, 0.14);
-          border-radius: 24px;
-          box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
-        }
-
-        .statCard {
-          padding: 22px;
-        }
-
-        .statCard p {
-          margin: 0;
-          color: #bfdbfe;
-          font-weight: 900;
-          font-size: 13px;
-          text-transform: uppercase;
-          letter-spacing: 0.12em;
-        }
-
-        .statCard strong {
-          display: block;
-          margin-top: 8px;
-          font-size: 42px;
-          line-height: 1;
-        }
-
-        .message {
-          background: rgba(34, 197, 94, 0.15);
-          color: #bbf7d0;
-          padding: 14px 16px;
-          border-radius: 16px;
-          font-weight: 900;
-          margin-bottom: 20px;
-        }
-
-        .panel {
-          padding: 24px;
-        }
-
-        .sectionHeader {
-          margin-bottom: 18px;
-        }
-
-        .sectionHeader h2 {
-          margin: 0;
-          font-size: 30px;
-          letter-spacing: -0.04em;
-        }
-
-        .sectionHeader p {
-          margin: 8px 0 0;
-          color: #dbeafe;
-          line-height: 1.55;
-        }
-
-        .requestList {
-          display: grid;
-          gap: 16px;
-        }
-
-        .requestCard {
-          padding: 22px;
-        }
-
-        .requestTop {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          margin-bottom: 16px;
-        }
-
-        .requestTop h3 {
-          margin: 0;
-          font-size: 26px;
-          letter-spacing: -0.04em;
-        }
-
-        .requestMeta {
-          margin: 8px 0 0;
-          color: #bfdbfe;
-          line-height: 1.45;
-        }
-
-        .badge {
-          width: fit-content;
-          border-radius: 999px;
-          padding: 7px 12px;
-          background: rgba(96, 165, 250, 0.16);
-          color: #dbeafe;
-          border: 1px solid rgba(147, 197, 253, 0.3);
-          font-size: 12px;
-          font-weight: 900;
-        }
-
-        .problemBox {
-          background: #1d4ed8;
-          border-radius: 16px;
-          padding: 16px;
-          margin-bottom: 16px;
-        }
-
-        .problemBox span {
-          display: block;
-          color: #dbeafe;
-          font-size: 12px;
-          font-weight: 900;
-          text-transform: uppercase;
-          letter-spacing: 0.1em;
-          margin-bottom: 8px;
-        }
-
-        .problemBox p {
-          margin: 0;
-          line-height: 1.6;
-        }
-
-        .detailsGrid {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 12px;
-          margin-bottom: 16px;
-        }
-
-        .detailBox {
-          background: #1e293b;
-          border-radius: 16px;
-          padding: 14px;
-        }
-
-        .detailBox span {
-          display: block;
-          color: #93c5fd;
-          font-size: 12px;
-          font-weight: 900;
-          margin-bottom: 6px;
-          text-transform: uppercase;
-          letter-spacing: 0.1em;
-        }
-
-        .detailBox p {
-          margin: 0;
-          color: #f8fafc;
-          line-height: 1.45;
-          word-break: break-word;
-        }
-
-        .assignBox {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 12px;
-          background: rgba(30, 41, 59, 0.75);
-          border-radius: 18px;
-          padding: 16px;
-        }
-
-        label {
-          color: #e2e8f0;
-          font-size: 14px;
-          font-weight: 900;
-        }
-
-        select {
-          width: 100%;
-          margin-top: 8px;
-          border: none;
-          border-radius: 14px;
-          padding: 14px;
-          font-size: 15px;
-          color: #0f172a;
-          background: white;
-        }
-
-        button {
-          border: none;
-          border-radius: 14px;
-          padding: 15px 16px;
-          font-size: 15px;
-          font-weight: 900;
-          cursor: pointer;
-          background: white;
-          color: #07327a;
-        }
-
-        .empty {
-          color: #cbd5e1;
-          background: rgba(15, 23, 42, 0.75);
-          padding: 18px;
-          border-radius: 18px;
-        }
-
-        @media (min-width: 760px) {
-          .assignPage {
-            padding: 80px 48px 140px;
-          }
-
-          .statsGrid {
-            grid-template-columns: repeat(4, 1fr);
-          }
-
-          .requestTop {
-            flex-direction: row;
-            align-items: flex-start;
-            justify-content: space-between;
-          }
-
-          .detailsGrid {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-          }
-
-          .assignBox {
-            grid-template-columns: minmax(0, 1.4fr) 240px;
-            align-items: end;
-          }
-        }
-      `}</style>
+        <section style={styles.doctrineCard}>
+          <strong>ASSIGNMENT DOCTRINE</strong>
+          <span>
+            Assignment is not command. Assignment routes ownership to an approved
+            responder while preserving request visibility, routing evidence, and
+            continuity accountability.
+          </span>
+        </section>
+      </section>
     </main>
   )
 }
 
-function Stat({ title, value }: { title: string; value: number }) {
+function AssignmentCard({
+  request,
+  responders,
+  selectedResponderId,
+  onSelect,
+  onRoute,
+}: {
+  request: SupportRequest
+  responders: ResponderProfile[]
+  selectedResponderId: string
+  onSelect: (requestId: string, responderId: string) => void
+  onRoute: (request: SupportRequest) => void
+}) {
   return (
-    <div className="statCard">
-      <p>{title}</p>
-      <strong>{value}</strong>
-    </div>
+    <article style={styles.requestCard}>
+      <div style={styles.requestTop}>
+        <div>
+          <p style={styles.metricLabel}>Operational request</p>
+          <h3 style={styles.cardTitle}>{request.subject}</h3>
+          <p style={styles.metaText}>
+            Request: {request.status || 'Not set'} · Responder:{' '}
+            {request.teacher_status || 'Not offered'}
+          </p>
+        </div>
+
+        <span style={styles.badge}>{request.teacher_status || 'UNROUTED'}</span>
+      </div>
+
+      <div style={styles.needBox}>
+        <p style={styles.metricLabel}>Support need</p>
+        <p style={styles.needText}>{request.problem || 'Not provided'}</p>
+      </div>
+
+      <div style={styles.detailGrid}>
+        <Detail label="Preferred" value={request.preferred_time || 'Not provided'} />
+        <Detail label="Scheduled" value={request.scheduled_time || 'Not scheduled'} />
+        <Detail label="Responder" value={request.assigned_teacher || 'None yet'} />
+      </div>
+
+      <div style={styles.assignBox}>
+        <label style={styles.label}>
+          Approved responder
+          <select
+            value={selectedResponderId}
+            onChange={(event) => onSelect(request.id, event.target.value)}
+            style={styles.select}
+          >
+            <option value="">Choose responder...</option>
+            {responders.map((responder) => (
+              <option key={responder.id} value={responder.id}>
+                {responder.full_name} — {formatList(responder.subjects)}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <button type="button" onClick={() => onRoute(request)} style={styles.primaryButton}>
+          Route Responder
+        </button>
+      </div>
+    </article>
+  )
+}
+
+function LockedCard({ request }: { request: SupportRequest }) {
+  return (
+    <article style={styles.requestCard}>
+      <div style={styles.requestTop}>
+        <div>
+          <p style={styles.metricLabel}>Locked assignment record</p>
+          <h3 style={styles.cardTitle}>{request.subject}</h3>
+          <p style={styles.metaText}>
+            Request: {request.status || 'Not set'} · Responder:{' '}
+            {request.teacher_status || 'Not offered'}
+          </p>
+        </div>
+
+        <span style={styles.badge}>{request.teacher_status || request.status}</span>
+      </div>
+
+      <div style={styles.detailGrid}>
+        <Detail label="Support Need" value={request.problem || 'Not provided'} />
+        <Detail label="Responder" value={request.assigned_teacher || 'None recorded'} />
+        <Detail label="Scheduled" value={request.scheduled_time || 'Not scheduled'} />
+      </div>
+    </article>
+  )
+}
+
+function Metric({ label, value }: { label: string; value: number }) {
+  return (
+    <article style={styles.metricCard}>
+      <p style={styles.metricLabel}>{label}</p>
+      <strong style={styles.metricValue}>{value}</strong>
+    </article>
   )
 }
 
 function Detail({ label, value }: { label: string; value: string }) {
   return (
-    <div className="detailBox">
-      <span>{label}</span>
-      <p>{value}</p>
+    <div style={styles.detailBox}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.detailValue}>{value}</p>
     </div>
   )
 }
@@ -523,4 +414,354 @@ function Detail({ label, value }: { label: string; value: string }) {
 function formatList(value: string[] | null) {
   if (!value || value.length === 0) return 'No domains listed'
   return value.join(', ')
+}
+
+const gold = '#d6b25e'
+const mutedGold = '#9f8142'
+const deepBlack = '#030303'
+const panelBlack = '#090807'
+const cardBlack = '#11100d'
+const softLine = 'rgba(214,178,94,0.24)'
+const strongLine = 'rgba(214,178,94,0.42)'
+
+const styles: Record<string, CSSProperties> = {
+  page: {
+    minHeight: '100vh',
+    background:
+      'radial-gradient(circle at top left, rgba(214,178,94,0.12), transparent 34%), linear-gradient(135deg, #030303 0%, #090807 48%, #11100d 100%)',
+    color: '#fff8e7',
+    padding: '32px 24px 64px',
+  },
+  container: {
+    width: 'min(1180px, 100%)',
+    margin: '0 auto',
+    display: 'grid',
+    gap: 16,
+  },
+  hero: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.45fr) minmax(280px, 0.65fr)',
+    gap: 20,
+    padding: 24,
+    border: `1px solid ${strongLine}`,
+    borderRadius: 24,
+    background:
+      'linear-gradient(135deg, rgba(214,178,94,0.08), rgba(255,255,255,0.018))',
+  },
+  kicker: {
+    margin: 0,
+    color: gold,
+    fontSize: 11,
+    fontWeight: 900,
+    letterSpacing: '0.2em',
+    textTransform: 'uppercase',
+  },
+  title: {
+    margin: '10px 0 0',
+    fontSize: 'clamp(2.2rem, 4.5vw, 4.6rem)',
+    lineHeight: 0.95,
+    letterSpacing: '-0.07em',
+    fontWeight: 950,
+  },
+  subtitle: {
+    margin: '14px 0 0',
+    color: '#cfc7b5',
+    fontSize: 14,
+    lineHeight: 1.65,
+    maxWidth: 780,
+  },
+  statusBox: {
+    border: `1px solid ${strongLine}`,
+    borderRadius: 20,
+    padding: 18,
+    background:
+      'linear-gradient(180deg, rgba(214,178,94,0.18), rgba(0,0,0,0.38))',
+  },
+  statusLabel: {
+    margin: 0,
+    color: gold,
+    fontSize: 10,
+    fontWeight: 950,
+    letterSpacing: '0.18em',
+  },
+  statusValue: {
+    margin: '10px 0',
+    fontSize: 26,
+    fontWeight: 950,
+    lineHeight: 1,
+  },
+  statusMeaning: {
+    margin: 0,
+    color: '#f5f0e6',
+    fontSize: 13,
+    lineHeight: 1.6,
+  },
+  metricsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 10,
+  },
+  metricCard: {
+    padding: 14,
+    borderRadius: 16,
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
+  },
+  metricLabel: {
+    margin: 0,
+    color: '#9ca3af',
+    fontSize: 10,
+    fontWeight: 950,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+  },
+  metricValue: {
+    display: 'block',
+    marginTop: 8,
+    color: gold,
+    fontSize: 28,
+    lineHeight: 1,
+  },
+  message: {
+    padding: '10px 12px',
+    borderRadius: 12,
+    background: 'rgba(214,178,94,0.1)',
+    border: `1px solid ${softLine}`,
+    color: gold,
+    fontWeight: 850,
+    fontSize: 12,
+  },
+  commandDeck: {
+    display: 'grid',
+    gridTemplateColumns: '1.35fr 0.8fr',
+    gap: 16,
+  },
+  primaryCard: {
+    padding: 20,
+    borderRadius: 20,
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
+  },
+  warningCard: {
+    padding: 20,
+    borderRadius: 20,
+    background: deepBlack,
+    border: `1px solid ${softLine}`,
+  },
+  sectionKicker: {
+    margin: 0,
+    color: mutedGold,
+    fontSize: 10,
+    fontWeight: 950,
+    letterSpacing: '0.16em',
+    textTransform: 'uppercase',
+  },
+  commandTitle: {
+    margin: '10px 0 0',
+    fontSize: 'clamp(1.5rem, 3vw, 2.4rem)',
+    lineHeight: 1.05,
+    letterSpacing: '-0.05em',
+    fontWeight: 950,
+  },
+  warningTitle: {
+    margin: '10px 0 0',
+    fontSize: 24,
+    lineHeight: 1.1,
+    letterSpacing: '-0.04em',
+  },
+  bodyText: {
+    margin: '10px 0 0',
+    color: '#cfc7b5',
+    fontSize: 13,
+    lineHeight: 1.6,
+  },
+  panel: {
+    padding: 18,
+    borderRadius: 22,
+    background: panelBlack,
+    border: `1px solid ${softLine}`,
+  },
+  panelHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: 16,
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  panelTitle: {
+    margin: '8px 0 0',
+    fontSize: 26,
+    lineHeight: 1.12,
+    letterSpacing: '-0.045em',
+  },
+  secondaryButton: {
+    border: `1px solid ${softLine}`,
+    borderRadius: 999,
+    padding: '10px 14px',
+    background: 'rgba(214,178,94,0.12)',
+    color: gold,
+    fontWeight: 950,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  },
+  requestList: {
+    display: 'grid',
+    gap: 12,
+  },
+  requestCard: {
+    padding: 14,
+    borderRadius: 18,
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
+  },
+  requestTop: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: 12,
+    alignItems: 'flex-start',
+    paddingBottom: 10,
+    marginBottom: 10,
+    borderBottom: '1px solid rgba(214,178,94,0.16)',
+  },
+  cardTitle: {
+    margin: '6px 0 0',
+    color: '#fff8e7',
+    fontSize: 22,
+    lineHeight: 1.1,
+  },
+  metaText: {
+    margin: '8px 0 0',
+    color: '#cfc7b5',
+    fontSize: 12,
+    lineHeight: 1.45,
+  },
+  badge: {
+    borderRadius: 999,
+    padding: '7px 10px',
+    background: 'rgba(214,178,94,0.12)',
+    border: `1px solid ${softLine}`,
+    color: gold,
+    fontSize: 10,
+    fontWeight: 950,
+    textTransform: 'uppercase',
+  },
+  needBox: {
+    padding: 13,
+    borderRadius: 14,
+    background: deepBlack,
+    border: `1px solid ${softLine}`,
+    marginBottom: 10,
+  },
+  needText: {
+    margin: '8px 0 0',
+    color: '#fff8e7',
+    lineHeight: 1.45,
+    fontSize: 13,
+  },
+  detailGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: 8,
+  },
+  detailBox: {
+    padding: 11,
+    borderRadius: 13,
+    background: deepBlack,
+    border: '1px solid rgba(214,178,94,0.16)',
+  },
+  detailValue: {
+    margin: '7px 0 0',
+    color: '#fff8e7',
+    fontSize: 12,
+    lineHeight: 1.4,
+    wordBreak: 'break-word',
+  },
+  assignBox: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1fr) 180px',
+    gap: 10,
+    alignItems: 'end',
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 14,
+    background: deepBlack,
+    border: `1px solid ${softLine}`,
+  },
+  label: {
+    color: '#cfc7b5',
+    fontSize: 12,
+    fontWeight: 900,
+  },
+  select: {
+    width: '100%',
+    marginTop: 7,
+    border: `1px solid ${softLine}`,
+    borderRadius: 12,
+    padding: 10,
+    background: panelBlack,
+    color: '#fff8e7',
+    fontSize: 13,
+  },
+  primaryButton: {
+    border: 'none',
+    borderRadius: 12,
+    padding: '11px 14px',
+    background: gold,
+    color: '#11100d',
+    fontWeight: 950,
+    cursor: 'pointer',
+  },
+  evidencePanel: {
+    padding: 18,
+    borderRadius: 22,
+    background: panelBlack,
+    border: `1px solid ${softLine}`,
+  },
+  evidenceSummary: {
+    cursor: 'pointer',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 16,
+    listStyle: 'none',
+  },
+  evidenceTitle: {
+    display: 'block',
+    color: '#fff8e7',
+    fontSize: 20,
+    lineHeight: 1.2,
+    marginTop: 6,
+  },
+  evidenceToggle: {
+    flex: '0 0 auto',
+    borderRadius: 999,
+    padding: '9px 12px',
+    background: 'rgba(214,178,94,0.12)',
+    border: `1px solid ${softLine}`,
+    color: gold,
+    fontSize: 10,
+    fontWeight: 950,
+    letterSpacing: '0.11em',
+    textTransform: 'uppercase',
+  },
+  emptyBox: {
+    margin: 0,
+    padding: 13,
+    borderRadius: 13,
+    border: '1px dashed rgba(214,178,94,0.24)',
+    color: '#cfc7b5',
+    background: deepBlack,
+    fontSize: 12,
+  },
+  doctrineCard: {
+    display: 'grid',
+    gap: 8,
+    padding: 18,
+    borderRadius: 20,
+    background: deepBlack,
+    border: `1px solid ${strongLine}`,
+    color: '#fff8e7',
+    lineHeight: 1.6,
+    fontSize: 13,
+  },
 }
