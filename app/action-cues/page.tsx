@@ -229,7 +229,9 @@ export default function ActionCuesPage() {
                   <div style={styles.cardTop}>
                     <div>
                       <p style={styles.metricLabel}>{cue.category}</p>
-                      <h3 style={styles.cardValue}>{cue.code}</h3>
+                      <h3 style={styles.cardValue}>
+                        {cue.code.replaceAll('_', ' ')}
+                      </h3>
                     </div>
                     <span style={severityBadge(cue.severity)}>
                       {cue.severity}
@@ -257,7 +259,9 @@ export default function ActionCuesPage() {
                     <div style={styles.cardTop}>
                       <div>
                         <p style={styles.metricLabel}>{cue.category}</p>
-                        <h3 style={styles.cardValue}>{cue.code}</h3>
+                        <h3 style={styles.cardValue}>
+                          {cue.code.replaceAll('_', ' ')}
+                        </h3>
                       </div>
                       <span style={severityBadge(cue.severity)}>
                         {cue.severity}
@@ -551,7 +555,7 @@ const styles: Record<string, CSSProperties> = {
   },
   summaryGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
     gap: 14,
   },
   summaryCard: {
@@ -559,7 +563,7 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: 20,
     background: cardBlack,
     border: `1px solid ${softLine}`,
-    minHeight: 150,
+    minHeight: 128,
   },
   cardTop: {
     display: 'flex',
