@@ -143,10 +143,10 @@ const actionCues: ActionCue[] = [
 const registryRules = [
   'Every status must map to meaning, risk, action cue, escalation threshold, and governance note.',
   'Action cues must support stabilization response, not blame assignment.',
-  'Predictive cues must be treated as preparation signals, not certainty claims.',
+  'Predictive cues must be preparation signals, not certainty claims.',
   'Critical status requires leadership review, not person-level punishment.',
-  'Audit strength supports trust in signals, but does not authorize punitive interpretation.',
-  'Healthcare use must remain operational and coordination-focused, not clinical decision-making.',
+  'Audit strength supports signal trust, not punitive interpretation.',
+  'Healthcare use remains operational, coordination-focused, and non-clinical.',
 ]
 
 export default function ActionCuesPage() {
@@ -187,9 +187,8 @@ export default function ActionCuesPage() {
                 </h2>
                 <p style={styles.bodyText}>
                   Action cues convert visible instability into governed response
-                  guidance: what the signal means, what risk it points toward,
-                  what action is appropriate, when escalation is justified, and
-                  how interpretation remains safe.
+                  guidance: meaning, risk, action, escalation, and safe
+                  interpretation.
                 </p>
 
                 <div style={styles.metaGrid}>
@@ -218,9 +217,9 @@ export default function ActionCuesPage() {
                 From signal visibility to governed response.
               </h2>
               <p style={styles.bodyText}>
-                CGI should not merely display pressure. It must preserve safe
-                interpretation so leaders know what to review, what to repair,
-                when to escalate, and what evidence must remain attached.
+                CGI preserves safe interpretation so leaders know what to
+                review, what to repair, when to escalate, and what evidence must
+                remain attached.
               </p>
             </section>
 
@@ -246,7 +245,7 @@ export default function ActionCuesPage() {
                 <span>
                   <span style={styles.sectionKicker}>Signal Registry</span>
                   <strong style={styles.evidenceTitle}>
-                    Meaning, risk, action cue, escalation, and governance note
+                    Full signal interpretation
                   </strong>
                 </span>
                 <span style={styles.evidenceToggle}>Expand Cues</span>
@@ -302,9 +301,8 @@ export default function ActionCuesPage() {
                   Structural visibility without blame.
                 </h2>
                 <p style={styles.bodyText}>
-                  Action cues exist to preserve safe response movement. They
-                  support stabilization, continuity review, and governance
-                  oversight without assigning blame or creating surveillance.
+                  Action cues preserve safe response movement without assigning
+                  blame or creating surveillance.
                 </p>
               </div>
 
@@ -561,7 +559,7 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: 20,
     background: cardBlack,
     border: `1px solid ${softLine}`,
-    minHeight: 158,
+    minHeight: 150,
   },
   cardTop: {
     display: 'flex',
@@ -573,8 +571,9 @@ const styles: Record<string, CSSProperties> = {
     margin: '10px 0 0',
     color: '#fff8e7',
     fontSize: 18,
-    lineHeight: 1.2,
+    lineHeight: 1.18,
     overflowWrap: 'anywhere',
+    wordBreak: 'break-word',
   },
   panelBody: {
     marginTop: 12,
