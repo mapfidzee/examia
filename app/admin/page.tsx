@@ -2,7 +2,9 @@
 
 import { Dispatch, SetStateAction, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
+import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { supabase } from '../../lib/supabase'
 
 const APP_URL = 'https://examia-ten.vercel.app'
@@ -39,7 +41,9 @@ type ResponderProfile = {
 export default function AdminPage() {
   return (
     <GovernanceRouteGuard allowedRoles={['SUPER_ADMIN']}>
-      <AdminContent />
+      <CGIGovernanceShell>
+        <AdminContent />
+      </CGIGovernanceShell>
     </GovernanceRouteGuard>
   )
 }
@@ -47,7 +51,7 @@ export default function AdminPage() {
 function AdminContent() {
   const [requests, setRequests] = useState<SupportRequest[]>([])
   const [responders, setResponders] = useState<ResponderProfile[]>([])
-  const [message, setMessage] = useState('Loading command center...')
+  const [message, setMessage] = useState('Loading command...')
   const [selectedResponders, setSelectedResponders] = useState<Record<string, string>>({})
   const [timeInputs, setTimeInputs] = useState<Record<string, string>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
@@ -59,22 +63,22 @@ function AdminContent() {
 
   const newRequests = useMemo(
     () => requests.filter((item) => item.status === 'NEW'),
-    [requests]
+    [requests],
   )
 
   const routedRequests = useMemo(
     () => requests.filter((item) => item.status === 'MATCHED'),
-    [requests]
+    [requests],
   )
 
   const readyActiveRequests = useMemo(
     () => requests.filter((item) => item.status === 'PAID' || item.status === 'ACTIVE'),
-    [requests]
+    [requests],
   )
 
   const completedRequests = useMemo(
     () => requests.filter((item) => item.status === 'COMPLETED'),
-    [requests]
+    [requests],
   )
 
   const summary = useMemo(
@@ -85,11 +89,11 @@ function AdminContent() {
       readyActive: readyActiveRequests.length,
       completed: completedRequests.length,
     }),
-    [requests, newRequests, routedRequests, readyActiveRequests, completedRequests]
+    [requests, newRequests, routedRequests, readyActiveRequests, completedRequests],
   )
 
   async function loadAdminData() {
-    setMessage('Loading command center...')
+    setMessage('Loading command...')
 
     const { data: requestData, error: requestError } = await supabase
       .from('lesson_requests')
@@ -97,7 +101,7 @@ function AdminContent() {
       .order('created_at', { ascending: false })
 
     if (requestError) {
-      setMessage('Could not load support needs.')
+      setMessage('Command could not load support requests.')
       console.error(requestError)
       return
     }
@@ -109,14 +113,14 @@ function AdminContent() {
       .order('full_name', { ascending: true })
 
     if (responderError) {
-      setMessage('Could not load approved responders.')
+      setMessage('Command could not load approved responders.')
       console.error(responderError)
       return
     }
 
     setRequests(requestData || [])
     setResponders(responderData || [])
-    setMessage('')
+    setMessage('Command lifecycle loaded.')
 
     const responderMap: Record<string, string> = {}
     const timeMap: Record<string, string> = {}
@@ -246,13 +250,8 @@ function AdminContent() {
     }
 
     if (newStatus === 'COMPLETED') {
-      if (!request.started_at) {
-        updateData.started_at = now
-      }
-
-      if (!request.completed_at) {
-        updateData.completed_at = now
-      }
+      if (!request.started_at) updateData.started_at = now
+      if (!request.completed_at) updateData.completed_at = now
     }
 
     const { error } = await supabase
@@ -271,70 +270,54 @@ function AdminContent() {
     setStatusSavingId(null)
   }
 
-  async function copyLink(link: string, label: string) {
-    await navigator.clipboard.writeText(link)
-    alert(`${label} copied.`)
-  }
-
   return (
     <main className="adminPage">
       <div className="pageShell">
-        <section className="frontDoorHero">
-          <div className="heroContent">
-            <p className="eyebrow">EXAMIA GOVERNED COMMAND CENTER</p>
-
-            <h1>Command Operations Center</h1>
-
+        <section className="hero">
+          <div>
+            <p className="eyebrow">TSINAXA CGI • COMMAND</p>
+            <h1>Command</h1>
             <p className="heroText">
-              Coordinate the full governed intervention lifecycle from one protected
-              authority surface: need intake, responder routing, controlled
-              intervention rooms, active interventions, completion evidence, and
-              institutional visibility.
+              Convert governed requests into coordinated intervention movement while
+              preserving responder ownership, active support, completion evidence,
+              and continuity visibility.
             </p>
           </div>
 
-          <div className="quickLinks">
-            <Link href="/admin/teachers" className="quickLink blueLink">
-              Responder Governance
-            </Link>
-
-            <Link href="/request" className="quickLink greenLink">
-              Need Intake
-            </Link>
-
-            <Link href="/student-dashboard" className="quickLink purpleLink">
-              Beneficiary Dashboard
-            </Link>
-
-            <Link href="/teacher-dashboard" className="quickLink orangeLink">
-              Responder Dashboard
-            </Link>
+          <div className="postureBox">
+            <p className="eyebrow">COMMAND POSTURE</p>
+            <strong>CONTROLLED</strong>
+            <span>Request movement remains governed through routing, readiness, action, and evidence.</span>
           </div>
         </section>
 
+        <section className="quickGrid">
+          <Link href="/admin/teachers" className="quickLink">Responder Governance</Link>
+          <Link href="/request" className="quickLink">Request Intake</Link>
+          <Link href="/cases" className="quickLink">Case Visibility</Link>
+          <Link href="/routing" className="quickLink">Routing</Link>
+        </section>
+
         <section className="commandTiles">
-          <CommandTile label="Total Needs" value={summary.total} tone="blue" />
-          <CommandTile label="New Needs" value={summary.new} tone="amber" />
-          <CommandTile label="Routed" value={summary.routed} tone="purple" />
-          <CommandTile label="Ready / Active" value={summary.readyActive} tone="green" />
-          <CommandTile label="Completed Evidence" value={summary.completed} tone="red" />
+          <CommandTile label="Total Requests" value={summary.total} />
+          <CommandTile label="New" value={summary.new} />
+          <CommandTile label="Routed" value={summary.routed} />
+          <CommandTile label="Ready / Active" value={summary.readyActive} />
+          <CommandTile label="Evidence Locked" value={summary.completed} />
         </section>
 
         {message && <p className="message">{message}</p>}
 
-        <div className="refreshRow">
-          <button className="refreshBtn" onClick={loadAdminData}>
-            Refresh Command Center
-          </button>
-        </div>
+        <button className="refreshBtn" onClick={loadAdminData}>
+          Refresh Command
+        </button>
 
         <OperationalSection
           kicker="Queue 1"
-          title="New Needs"
-          description="These support needs require triage, responder routing, and scheduling."
-          tone="amber"
+          title="New Requests"
+          description="Requests needing responder routing and scheduled coordination."
           requests={newRequests}
-          emptyText="No new support needs right now."
+          emptyText="No new requests right now."
           responders={responders}
           selectedResponders={selectedResponders}
           timeInputs={timeInputs}
@@ -347,14 +330,12 @@ function AdminContent() {
           setTimeInputs={setTimeInputs}
           saveAssignment={saveAssignment}
           updateStatus={updateStatus}
-          copyLink={copyLink}
         />
 
         <OperationalSection
           kicker="Queue 2"
-          title="Routed / Offered Interventions"
-          description="These needs have been routed or offered and may be waiting for responder confirmation, readiness, or activation."
-          tone="purple"
+          title="Routed Interventions"
+          description="Requests already routed and waiting for readiness or activation."
           requests={routedRequests}
           emptyText="No routed interventions waiting right now."
           responders={responders}
@@ -369,14 +350,12 @@ function AdminContent() {
           setTimeInputs={setTimeInputs}
           saveAssignment={saveAssignment}
           updateStatus={updateStatus}
-          copyLink={copyLink}
         />
 
         <OperationalSection
           kicker="Queue 3"
           title="Ready / Active Interventions"
-          description="These interventions are ready or active. Command can open the room, mark active, or complete the intervention after support is delivered."
-          tone="green"
+          description="Interventions ready for action or currently active."
           requests={readyActiveRequests}
           emptyText="No ready or active interventions right now."
           responders={responders}
@@ -391,7 +370,6 @@ function AdminContent() {
           setTimeInputs={setTimeInputs}
           saveAssignment={saveAssignment}
           updateStatus={updateStatus}
-          copyLink={copyLink}
         />
 
         <CompletionEvidenceSection
@@ -401,246 +379,180 @@ function AdminContent() {
           effectiveStartedAt={effectiveStartedAt}
           effectiveCompletedAt={effectiveCompletedAt}
           calculateDuration={calculateDuration}
-          copyLink={copyLink}
         />
+
+        <section className="doctrineCard">
+          <strong>COMMAND DOCTRINE</strong>
+          <span>
+            Command is not closure. Command governs movement from request to routed
+            ownership, active support, and completion evidence while preserving
+            continuity visibility.
+          </span>
+        </section>
       </div>
 
       <style jsx global>{`
         .adminPage {
           min-height: 100vh;
           background:
-            radial-gradient(circle at top left, rgba(37, 99, 235, 0.32), transparent 30%),
-            radial-gradient(circle at top right, rgba(20, 184, 166, 0.18), transparent 28%),
-            radial-gradient(circle at bottom, rgba(168, 85, 247, 0.14), transparent 34%),
-            linear-gradient(180deg, #020617 0%, #07111f 50%, #020617 100%);
-          color: #ffffff;
-          padding: 18px;
+            radial-gradient(circle at top left, rgba(214, 178, 94, 0.12), transparent 34%),
+            linear-gradient(135deg, #030303 0%, #090807 48%, #11100d 100%);
+          color: #fff8e7;
+          padding: 32px 24px 64px;
         }
 
         .pageShell {
-          max-width: 1220px;
+          width: min(1220px, 100%);
           margin: 0 auto;
-        }
-
-        .frontDoorHero {
           display: grid;
           gap: 18px;
-          margin-bottom: 18px;
-          padding-top: 8px;
         }
 
-        .heroContent,
-        .sectionShell,
-        .supportCard,
-        .evidenceCard,
-        .commandTile {
-          border: 1px solid rgba(148, 163, 184, 0.24);
+        .hero {
+          display: grid;
+          grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.65fr);
+          gap: 24px;
+          padding: 30px;
+          border: 1px solid rgba(214, 178, 94, 0.42);
           border-radius: 28px;
-          background: rgba(15, 23, 42, 0.92);
-          box-shadow: 0 22px 60px rgba(0, 0, 0, 0.28);
-        }
-
-        .heroContent {
-          padding: 22px;
-          background:
-            linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(15, 23, 42, 0.94)),
-            rgba(15, 23, 42, 0.92);
+          background: linear-gradient(135deg, rgba(214,178,94,0.08), rgba(255,255,255,0.018));
         }
 
         .eyebrow,
+        .miniLabel,
         .sectionKicker,
-        .miniLabel {
+        .tileLabel,
+        .infoLabel {
           margin: 0 0 8px;
-          color: #93c5fd;
-          font-size: 11px;
-          font-weight: 900;
+          color: #9f8142;
+          font-size: 10px;
+          font-weight: 950;
           letter-spacing: 0.14em;
           text-transform: uppercase;
         }
 
         h1 {
-          margin: 0;
-          font-size: clamp(42px, 10vw, 76px);
-          line-height: 0.9;
-          letter-spacing: -0.07em;
+          margin: 10px 0;
+          font-size: clamp(42px, 8vw, 72px);
+          line-height: 0.92;
+          letter-spacing: -0.075em;
         }
 
         h2 {
           margin: 0;
-          font-size: clamp(28px, 5vw, 42px);
-          line-height: 1;
+          font-size: clamp(26px, 4vw, 38px);
+          line-height: 1.05;
           letter-spacing: -0.05em;
         }
 
         h3 {
           margin: 0;
-          font-size: 24px;
-          letter-spacing: -0.03em;
+          font-size: 22px;
+          letter-spacing: -0.035em;
         }
 
-        .heroText {
-          max-width: 780px;
-          margin: 16px 0 0;
-          color: #dbeafe;
-          line-height: 1.6;
-          font-size: 16px;
+        .heroText,
+        .bodyText,
+        .sectionHeader p,
+        .postureBox span {
+          color: #cfc7b5;
+          line-height: 1.65;
+          font-size: 14px;
         }
 
-        .quickLinks {
+        .postureBox {
+          border: 1px solid rgba(214, 178, 94, 0.42);
+          border-radius: 24px;
+          padding: 22px;
+          background: linear-gradient(180deg, rgba(214,178,94,0.18), rgba(0,0,0,0.38));
+        }
+
+        .postureBox strong {
+          display: block;
+          color: #fff8e7;
+          font-size: 30px;
+          line-height: 1;
+          margin: 10px 0;
+        }
+
+        .quickGrid {
           display: grid;
-          grid-template-columns: 1fr;
-          gap: 10px;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 12px;
         }
 
         .quickLink {
+          color: #fff8e7;
           text-decoration: none;
-          color: #ffffff;
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          padding: 15px 16px;
-          border-radius: 18px;
-          font-weight: 900;
+          border: 1px solid rgba(214,178,94,0.24);
+          background: #11100d;
+          border-radius: 16px;
+          padding: 14px;
           text-align: center;
-          box-shadow: 0 14px 32px rgba(0, 0, 0, 0.24);
-        }
-
-        .blueLink {
-          background: linear-gradient(135deg, #2563eb, #1d4ed8);
-        }
-
-        .greenLink {
-          background: linear-gradient(135deg, #16a34a, #15803d);
-        }
-
-        .purpleLink {
-          background: linear-gradient(135deg, #7c3aed, #6d28d9);
-        }
-
-        .orangeLink {
-          background: linear-gradient(135deg, #f97316, #ea580c);
+          font-size: 13px;
+          font-weight: 950;
         }
 
         .commandTiles {
           display: grid;
-          grid-template-columns: 1fr;
+          grid-template-columns: repeat(5, minmax(0, 1fr));
           gap: 12px;
-          margin-bottom: 18px;
+        }
+
+        .commandTile,
+        .sectionShell,
+        .supportCard,
+        .evidenceCard,
+        .doctrineCard {
+          border: 1px solid rgba(214,178,94,0.24);
+          border-radius: 22px;
+          background: #090807;
         }
 
         .commandTile {
-          padding: 18px;
-          position: relative;
-          overflow: hidden;
-          min-height: 120px;
-        }
-
-        .commandTile::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          opacity: 0.3;
-          pointer-events: none;
-        }
-
-        .tile-blue::before {
-          background: linear-gradient(135deg, #2563eb, transparent);
-        }
-
-        .tile-amber::before {
-          background: linear-gradient(135deg, #f59e0b, transparent);
-        }
-
-        .tile-purple::before {
-          background: linear-gradient(135deg, #7c3aed, transparent);
-        }
-
-        .tile-green::before {
-          background: linear-gradient(135deg, #16a34a, transparent);
-        }
-
-        .tile-red::before {
-          background: linear-gradient(135deg, #dc2626, transparent);
-        }
-
-        .tileLabel,
-        .tileValue {
-          position: relative;
-          z-index: 1;
-        }
-
-        .tileLabel {
-          margin: 0;
-          color: #dbeafe;
-          font-size: 12px;
-          font-weight: 900;
-          text-transform: uppercase;
-          letter-spacing: 0.12em;
+          padding: 16px;
+          min-height: 108px;
         }
 
         .tileValue {
           display: block;
-          margin-top: 10px;
-          font-size: 44px;
+          margin-top: 8px;
+          color: #d6b25e;
+          font-size: 36px;
           line-height: 1;
-          font-weight: 900;
+          font-weight: 950;
         }
 
         .message {
-          background: rgba(37, 99, 235, 0.18);
-          color: #dbeafe;
-          padding: 14px;
-          border-radius: 18px;
-          border: 1px solid rgba(147, 197, 253, 0.28);
-          margin-bottom: 18px;
-        }
-
-        .refreshRow {
-          display: grid;
-          margin-bottom: 18px;
+          background: rgba(214,178,94,0.12);
+          color: #d6b25e;
+          padding: 12px 14px;
+          border-radius: 14px;
+          border: 1px solid rgba(214,178,94,0.24);
+          font-weight: 850;
+          margin: 0;
         }
 
         .refreshBtn {
           border: none;
-          border-radius: 18px;
-          padding: 15px 16px;
-          background: #ffffff;
-          color: #0f172a;
-          font-weight: 900;
+          border-radius: 14px;
+          padding: 13px;
+          background: #d6b25e;
+          color: #11100d;
+          font-weight: 950;
           cursor: pointer;
-          min-height: 52px;
         }
 
         .sectionShell {
-          padding: 16px;
-          margin-bottom: 20px;
+          padding: 18px;
         }
 
         .sectionHeader {
-          border-radius: 24px;
+          border-radius: 18px;
           padding: 18px;
-          margin-bottom: 16px;
-          border: 1px solid rgba(255, 255, 255, 0.18);
-        }
-
-        .sectionHeader p {
-          margin: 9px 0 0;
-          color: #ffffff;
-          line-height: 1.55;
-        }
-
-        .header-amber {
-          background: linear-gradient(135deg, #d97706, #92400e);
-        }
-
-        .header-purple {
-          background: linear-gradient(135deg, #7c3aed, #4c1d95);
-        }
-
-        .header-green {
-          background: linear-gradient(135deg, #16a34a, #065f46);
-        }
-
-        .header-red {
-          background: linear-gradient(135deg, #dc2626, #7f1d1d);
+          margin-bottom: 14px;
+          background: linear-gradient(135deg, rgba(214,178,94,0.13), rgba(255,255,255,0.035));
+          border: 1px solid rgba(214,178,94,0.42);
         }
 
         .supportList,
@@ -652,93 +564,64 @@ function AdminContent() {
         .supportCard,
         .evidenceCard {
           padding: 16px;
+          background: #11100d;
         }
 
         .requestTop {
           display: grid;
+          grid-template-columns: 1fr auto;
           gap: 12px;
-          padding-bottom: 14px;
-          margin-bottom: 14px;
-          border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+          padding-bottom: 12px;
+          margin-bottom: 12px;
+          border-bottom: 1px solid rgba(214,178,94,0.18);
         }
 
         .statusBadge {
           width: fit-content;
           border-radius: 999px;
-          padding: 8px 13px;
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          font-size: 12px;
-          font-weight: 900;
-        }
-
-        .status-NEW {
-          background: #f59e0b;
-          color: #111827;
-        }
-
-        .status-MATCHED {
-          background: #7c3aed;
-          color: #ffffff;
-        }
-
-        .status-PAID {
-          background: #22c55e;
-          color: #052e16;
-        }
-
-        .status-ACTIVE {
-          background: #14b8a6;
-          color: #042f2e;
-        }
-
-        .status-COMPLETED {
-          background: #ef4444;
-          color: #ffffff;
+          padding: 8px 12px;
+          border: 1px solid rgba(214,178,94,0.24);
+          background: rgba(214,178,94,0.12);
+          color: #d6b25e;
+          font-size: 11px;
+          font-weight: 950;
         }
 
         .infoGrid {
           display: grid;
-          grid-template-columns: 1fr;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 10px;
-          margin-bottom: 14px;
+          margin-bottom: 12px;
         }
 
-        .infoItem {
-          background: rgba(2, 6, 23, 0.72);
-          border: 1px solid rgba(148, 163, 184, 0.18);
-          border-radius: 18px;
-          padding: 13px;
+        .infoItem,
+        .assignmentBox {
+          background: #030303;
+          border: 1px solid rgba(214,178,94,0.18);
+          border-radius: 16px;
+          padding: 12px;
           min-width: 0;
-        }
-
-        .infoLabel {
-          margin: 0 0 6px;
-          color: #93c5fd;
-          font-size: 12px;
-          font-weight: 900;
         }
 
         .infoValue {
           margin: 0;
-          color: #ffffff;
+          color: #fff8e7;
           line-height: 1.45;
           word-break: break-word;
-          font-size: 14px;
+          font-size: 13px;
         }
 
         .assignmentBox {
           display: grid;
+          grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.8fr) 200px;
           gap: 10px;
-          margin-top: 14px;
-          padding: 14px;
-          border-radius: 20px;
-          background: rgba(30, 41, 59, 0.68);
-          border: 1px solid rgba(148, 163, 184, 0.18);
+          align-items: end;
+          margin-top: 12px;
         }
 
         label {
-          color: #e2e8f0;
-          font-size: 13px;
+          color: #cfc7b5;
+          font-size: 12px;
           font-weight: 900;
         }
 
@@ -747,28 +630,40 @@ function AdminContent() {
           width: 100%;
           box-sizing: border-box;
           margin-top: 7px;
-          border: 1px solid #475569;
-          border-radius: 15px;
+          border: 1px solid rgba(214,178,94,0.24);
+          border-radius: 14px;
+          padding: 12px;
+          background: #090807;
+          color: #fff8e7;
+          font-size: 14px;
+        }
+
+        .actionRow,
+        .evidenceActions {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+          margin-top: 12px;
+        }
+
+        .actionBtn,
+        .directLink {
+          border: 1px solid rgba(214,178,94,0.24);
+          border-radius: 14px;
           padding: 13px;
-          background: #ffffff;
-          color: #0f172a;
-          font-size: 15px;
-        }
-
-        .primaryBtn,
-        .actionBtn {
-          border: none;
-          border-radius: 16px;
-          padding: 15px 16px;
-          color: #ffffff;
-          font-weight: 900;
+          background: rgba(214,178,94,0.12);
+          color: #fff8e7;
+          font-weight: 950;
           cursor: pointer;
-          min-height: 52px;
-          width: 100%;
+          text-align: center;
+          text-decoration: none;
+          font-size: 13px;
         }
 
-        .primaryBtn {
-          background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        .primaryAction {
+          background: #d6b25e;
+          color: #11100d;
+          border: none;
         }
 
         button:disabled {
@@ -776,92 +671,51 @@ function AdminContent() {
           cursor: not-allowed;
         }
 
-        .actionsGrid,
-        .evidenceActions {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 10px;
-          margin-top: 14px;
-        }
-
-        .directLinks {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 10px;
-          margin-top: 12px;
-        }
-
-        .directLinks a,
-        .evidenceActions a {
-          color: #dbeafe;
-          text-decoration: none;
-          border: 1px solid rgba(147, 197, 253, 0.28);
-          background: rgba(37, 99, 235, 0.14);
-          border-radius: 16px;
-          padding: 13px;
-          text-align: center;
-          font-weight: 900;
-        }
-
         .completedNotice {
-          margin-top: 14px;
-          padding: 14px;
-          border-radius: 18px;
-          background: rgba(220, 38, 38, 0.16);
-          border: 1px solid rgba(248, 113, 113, 0.32);
-          color: #fecaca;
+          margin-top: 12px;
+          padding: 13px;
+          border-radius: 16px;
+          background: rgba(214,178,94,0.1);
+          border: 1px solid rgba(214,178,94,0.24);
+          color: #f5f0e6;
           font-weight: 800;
           line-height: 1.45;
         }
 
         .emptyBox {
-          color: #e2e8f0;
-          background: rgba(2, 6, 23, 0.65);
-          padding: 17px;
-          border-radius: 18px;
-          border: 1px dashed rgba(148, 163, 184, 0.34);
+          color: #cfc7b5;
+          background: #030303;
+          padding: 15px;
+          border-radius: 16px;
+          border: 1px dashed rgba(214,178,94,0.28);
           margin: 0;
         }
 
-        @media (min-width: 760px) {
-          .adminPage {
-            padding: 28px;
-          }
+        .doctrineCard {
+          display: grid;
+          gap: 8px;
+          padding: 20px;
+          line-height: 1.65;
+          font-size: 13px;
+        }
 
-          .frontDoorHero {
-            grid-template-columns: minmax(0, 1.5fr) 270px;
-            align-items: start;
-          }
+        .doctrineCard strong {
+          color: #fff8e7;
+        }
 
-          .heroContent {
-            padding: 26px;
-          }
-
-          .commandTiles {
-            grid-template-columns: repeat(5, minmax(0, 1fr));
-          }
-
+        @media (max-width: 900px) {
+          .hero,
+          .assignmentBox,
           .requestTop {
-            grid-template-columns: 1fr auto;
-            align-items: start;
+            grid-template-columns: 1fr;
           }
 
-          .infoGrid {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-          }
-
-          .assignmentBox {
-            grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.8fr) 220px;
-            align-items: end;
-          }
-
-          .actionsGrid {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-          }
-
-          .evidenceActions,
-          .directLinks {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+          .quickGrid,
+          .commandTiles,
+          .infoGrid,
+          .actionRow,
+          .evidenceActions {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>
@@ -869,17 +723,9 @@ function AdminContent() {
   )
 }
 
-function CommandTile({
-  label,
-  value,
-  tone,
-}: {
-  label: string
-  value: number
-  tone: 'blue' | 'amber' | 'purple' | 'green' | 'red'
-}) {
+function CommandTile({ label, value }: { label: string; value: number }) {
   return (
-    <article className={`commandTile tile-${tone}`}>
+    <article className="commandTile">
       <p className="tileLabel">{label}</p>
       <strong className="tileValue">{value}</strong>
     </article>
@@ -890,7 +736,6 @@ function OperationalSection({
   kicker,
   title,
   description,
-  tone,
   requests,
   emptyText,
   responders,
@@ -905,12 +750,10 @@ function OperationalSection({
   setTimeInputs,
   saveAssignment,
   updateStatus,
-  copyLink,
 }: {
   kicker: string
   title: string
   description: string
-  tone: 'amber' | 'purple' | 'green'
   requests: SupportRequest[]
   emptyText: string
   responders: ResponderProfile[]
@@ -925,11 +768,10 @@ function OperationalSection({
   setTimeInputs: Dispatch<SetStateAction<Record<string, string>>>
   saveAssignment: (request: SupportRequest) => void
   updateStatus: (request: SupportRequest, newStatus: RequestStatus) => void
-  copyLink: (link: string, label: string) => void
 }) {
   return (
     <section className="sectionShell">
-      <div className={`sectionHeader header-${tone}`}>
+      <div className="sectionHeader">
         <p className="sectionKicker">{kicker}</p>
         <h2>{title}</h2>
         <p>{description}</p>
@@ -939,141 +781,163 @@ function OperationalSection({
         <p className="emptyBox">{emptyText}</p>
       ) : (
         <div className="supportList">
-          {requests.map((request) => {
-            const interventionRoomLink = `${APP_URL}/lesson/${request.id}`
-            const beneficiaryDashboardLink = `${APP_URL}/student-dashboard?lessonId=${request.id}`
-
-            return (
-              <article className="supportCard" key={request.id}>
-                <div className="requestTop">
-                  <div>
-                    <p className="miniLabel">Operational support record</p>
-                    <h3>{displayCategory(request)}</h3>
-                  </div>
-
-                  <span className={`statusBadge status-${request.status}`}>
-                    {request.status || 'UNKNOWN'}
-                  </span>
-                </div>
-
-                <div className="infoGrid">
-                  <Info label="Support Domain" value={displayCategory(request)} />
-                  <Info label="Beneficiary Level" value={request.grade_level || 'Not provided'} />
-                  <Info label="Support Need" value={request.problem || 'Not provided'} />
-                  <Info label="Preferred Time" value={request.preferred_time || 'Not provided'} />
-                  <Info label="Scheduled Time" value={formatDateTime(request.scheduled_time, 'Not scheduled')} />
-                  <Info label="Assigned Responder" value={request.assigned_teacher || 'Not assigned'} />
-                  <Info label="Responder Status" value={request.teacher_status || 'Not offered yet'} />
-                  <Info label="Created At" value={formatDateTime(request.created_at)} />
-                  <Info label="Started At" value={formatDateTime(request.started_at)} />
-                  <Info label="Request ID" value={request.id} />
-                </div>
-
-                <div className="assignmentBox">
-                  <label>
-                    Select approved responder
-                    <select
-                      value={selectedResponders[request.id] || ''}
-                      onChange={(event) =>
-                        setSelectedResponders((prev) => ({
-                          ...prev,
-                          [request.id]: event.target.value,
-                        }))
-                      }
-                    >
-                      <option value="">Select approved responder</option>
-
-                      {responders.map((responder) => (
-                        <option key={responder.id} value={responder.id}>
-                          {responderLabel(responder)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label>
-                    Scheduled time
-                    <input
-                      type="text"
-                      placeholder="Example: Saturday 10am"
-                      value={timeInputs[request.id] || ''}
-                      onChange={(event) =>
-                        setTimeInputs((prev) => ({
-                          ...prev,
-                          [request.id]: event.target.value,
-                        }))
-                      }
-                    />
-                  </label>
-
-                  <button
-                    className="primaryBtn"
-                    onClick={() => saveAssignment(request)}
-                    disabled={savingId === request.id}
-                  >
-                    {savingId === request.id ? 'Saving...' : 'Route Responder'}
-                  </button>
-                </div>
-
-                <div className="actionsGrid">
-                  <ActionButton
-                    label="Mark ROUTED"
-                    color="#7c3aed"
-                    disabled={statusSavingId === request.id}
-                    onClick={() => updateStatus(request, 'MATCHED')}
-                  />
-
-                  <ActionButton
-                    label="Mark READY"
-                    color="#16a34a"
-                    disabled={statusSavingId === request.id}
-                    onClick={() => updateStatus(request, 'PAID')}
-                  />
-
-                  <ActionButton
-                    label="Mark ACTIVE / Start"
-                    color="#14b8a6"
-                    disabled={statusSavingId === request.id}
-                    onClick={() => updateStatus(request, 'ACTIVE')}
-                  />
-
-                  <ActionButton
-                    label="Mark COMPLETED"
-                    color="#dc2626"
-                    disabled={statusSavingId === request.id}
-                    onClick={() => updateStatus(request, 'COMPLETED')}
-                  />
-
-                  <ActionButton
-                    label="Copy Intervention Room"
-                    color="#2563eb"
-                    disabled={false}
-                    onClick={() => copyLink(interventionRoomLink, 'Controlled intervention room link')}
-                  />
-
-                  <ActionButton
-                    label="Copy Beneficiary Dashboard"
-                    color="#0891b2"
-                    disabled={false}
-                    onClick={() => copyLink(beneficiaryDashboardLink, 'Beneficiary dashboard link')}
-                  />
-                </div>
-
-                <div className="directLinks">
-                  <a href={interventionRoomLink} target="_blank" rel="noreferrer">
-                    Open Controlled Intervention Room
-                  </a>
-
-                  <a href={beneficiaryDashboardLink} target="_blank" rel="noreferrer">
-                    Open Beneficiary Dashboard
-                  </a>
-                </div>
-              </article>
-            )
-          })}
+          {requests.map((request) => (
+            <OperationalCard
+              key={request.id}
+              request={request}
+              responders={responders}
+              selectedResponders={selectedResponders}
+              timeInputs={timeInputs}
+              savingId={savingId}
+              statusSavingId={statusSavingId}
+              displayCategory={displayCategory}
+              responderLabel={responderLabel}
+              formatDateTime={formatDateTime}
+              setSelectedResponders={setSelectedResponders}
+              setTimeInputs={setTimeInputs}
+              saveAssignment={saveAssignment}
+              updateStatus={updateStatus}
+            />
+          ))}
         </div>
       )}
     </section>
+  )
+}
+
+function OperationalCard({
+  request,
+  responders,
+  selectedResponders,
+  timeInputs,
+  savingId,
+  statusSavingId,
+  displayCategory,
+  responderLabel,
+  formatDateTime,
+  setSelectedResponders,
+  setTimeInputs,
+  saveAssignment,
+  updateStatus,
+}: {
+  request: SupportRequest
+  responders: ResponderProfile[]
+  selectedResponders: Record<string, string>
+  timeInputs: Record<string, string>
+  savingId: string | null
+  statusSavingId: string | null
+  displayCategory: (request: SupportRequest) => string
+  responderLabel: (responder: ResponderProfile) => string
+  formatDateTime: (value: string | null | undefined, fallback?: string) => string
+  setSelectedResponders: Dispatch<SetStateAction<Record<string, string>>>
+  setTimeInputs: Dispatch<SetStateAction<Record<string, string>>>
+  saveAssignment: (request: SupportRequest) => void
+  updateStatus: (request: SupportRequest, newStatus: RequestStatus) => void
+}) {
+  const interventionRoomLink = `${APP_URL}/lesson/${request.id}`
+  const caseVisibilityLink = `${APP_URL}/student-dashboard?lessonId=${request.id}`
+
+  return (
+    <article className="supportCard">
+      <RecordHeader
+        label="Operational support record"
+        title={displayCategory(request)}
+        status={request.status || 'UNKNOWN'}
+      />
+
+      <RequestInfoGrid
+        request={request}
+        displayCategory={displayCategory}
+        formatDateTime={formatDateTime}
+      />
+
+      {request.status === 'NEW' && (
+        <div className="assignmentBox">
+          <label>
+            Select approved responder
+            <select
+              value={selectedResponders[request.id] || ''}
+              onChange={(event) =>
+                setSelectedResponders((prev) => ({
+                  ...prev,
+                  [request.id]: event.target.value,
+                }))
+              }
+            >
+              <option value="">Select approved responder</option>
+              {responders.map((responder) => (
+                <option key={responder.id} value={responder.id}>
+                  {responderLabel(responder)}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Scheduled time
+            <input
+              type="text"
+              placeholder="Example: Saturday 10am"
+              value={timeInputs[request.id] || ''}
+              onChange={(event) =>
+                setTimeInputs((prev) => ({
+                  ...prev,
+                  [request.id]: event.target.value,
+                }))
+              }
+            />
+          </label>
+
+          <button
+            className="actionBtn primaryAction"
+            onClick={() => saveAssignment(request)}
+            disabled={savingId === request.id}
+          >
+            {savingId === request.id ? 'Routing...' : 'Route Responder'}
+          </button>
+        </div>
+      )}
+
+      <div className="actionRow">
+        {request.status === 'MATCHED' && (
+          <ActionButton
+            label="Mark Ready"
+            primary
+            disabled={statusSavingId === request.id}
+            onClick={() => updateStatus(request, 'PAID')}
+          />
+        )}
+
+        {request.status === 'PAID' && (
+          <ActionButton
+            label="Start Intervention"
+            primary
+            disabled={statusSavingId === request.id}
+            onClick={() => updateStatus(request, 'ACTIVE')}
+          />
+        )}
+
+        {request.status === 'ACTIVE' && (
+          <ActionButton
+            label="Complete Intervention"
+            primary
+            disabled={statusSavingId === request.id}
+            onClick={() => updateStatus(request, 'COMPLETED')}
+          />
+        )}
+
+        {(request.status === 'PAID' || request.status === 'ACTIVE') && (
+          <>
+            <a className="directLink" href={interventionRoomLink} target="_blank" rel="noreferrer">
+              Open Intervention Room
+            </a>
+            <a className="directLink" href={caseVisibilityLink} target="_blank" rel="noreferrer">
+              Open Case Visibility
+            </a>
+          </>
+        )}
+      </div>
+    </article>
   )
 }
 
@@ -1084,7 +948,6 @@ function CompletionEvidenceSection({
   effectiveStartedAt,
   effectiveCompletedAt,
   calculateDuration,
-  copyLink,
 }: {
   requests: SupportRequest[]
   displayCategory: (request: SupportRequest) => string
@@ -1092,15 +955,14 @@ function CompletionEvidenceSection({
   effectiveStartedAt: (request: SupportRequest) => string | null
   effectiveCompletedAt: (request: SupportRequest) => string | null
   calculateDuration: (request: SupportRequest) => string
-  copyLink: (link: string, label: string) => void
 }) {
   return (
     <section className="sectionShell">
-      <div className="sectionHeader header-red">
-        <p className="sectionKicker">Locked evidence</p>
-        <h2>Completion Evidence Log</h2>
+      <div className="sectionHeader">
+        <p className="sectionKicker">Locked Evidence</p>
+        <h2>Completion Evidence</h2>
         <p>
-          These interventions are closed. They remain visible for history,
+          Completed interventions remain visible for continuity history,
           accountability, institutional reporting, and proof of completed work.
         </p>
       </div>
@@ -1111,18 +973,15 @@ function CompletionEvidenceSection({
         <div className="evidenceList">
           {requests.map((request) => {
             const interventionRoomLink = `${APP_URL}/lesson/${request.id}`
-            const beneficiaryDashboardLink = `${APP_URL}/student-dashboard?lessonId=${request.id}`
+            const caseVisibilityLink = `${APP_URL}/student-dashboard?lessonId=${request.id}`
 
             return (
               <article className="evidenceCard" key={request.id}>
-                <div className="requestTop">
-                  <div>
-                    <p className="miniLabel">Completed intervention record</p>
-                    <h3>{displayCategory(request)}</h3>
-                  </div>
-
-                  <span className="statusBadge status-COMPLETED">COMPLETED</span>
-                </div>
+                <RecordHeader
+                  label="Completed intervention record"
+                  title={displayCategory(request)}
+                  status="COMPLETED"
+                />
 
                 <div className="infoGrid">
                   <Info label="Support Domain" value={displayCategory(request)} />
@@ -1139,30 +998,15 @@ function CompletionEvidenceSection({
 
                 <div className="completedNotice">
                   This intervention is completed and locked. No assignment or
-                  status action is shown here because this is now an evidence record.
+                  status action is shown because this is now an evidence record.
                 </div>
 
                 <div className="evidenceActions">
-                  <ActionButton
-                    label="Copy Intervention Room"
-                    color="#2563eb"
-                    disabled={false}
-                    onClick={() => copyLink(interventionRoomLink, 'Controlled intervention room link')}
-                  />
-
-                  <ActionButton
-                    label="Copy Beneficiary Dashboard"
-                    color="#0891b2"
-                    disabled={false}
-                    onClick={() => copyLink(beneficiaryDashboardLink, 'Beneficiary dashboard link')}
-                  />
-
-                  <a href={interventionRoomLink} target="_blank" rel="noreferrer">
-                    Open Controlled Intervention Room
+                  <a className="directLink" href={interventionRoomLink} target="_blank" rel="noreferrer">
+                    Open Intervention Room
                   </a>
-
-                  <a href={beneficiaryDashboardLink} target="_blank" rel="noreferrer">
-                    Open Beneficiary Dashboard
+                  <a className="directLink" href={caseVisibilityLink} target="_blank" rel="noreferrer">
+                    Open Case Visibility
                   </a>
                 </div>
               </article>
@@ -1171,6 +1015,51 @@ function CompletionEvidenceSection({
         </div>
       )}
     </section>
+  )
+}
+
+function RequestInfoGrid({
+  request,
+  displayCategory,
+  formatDateTime,
+}: {
+  request: SupportRequest
+  displayCategory: (request: SupportRequest) => string
+  formatDateTime: (value: string | null | undefined, fallback?: string) => string
+}) {
+  return (
+    <div className="infoGrid">
+      <Info label="Support Domain" value={displayCategory(request)} />
+      <Info label="Beneficiary Level" value={request.grade_level || 'Not provided'} />
+      <Info label="Support Need" value={request.problem || 'Not provided'} />
+      <Info label="Preferred Time" value={request.preferred_time || 'Not provided'} />
+      <Info label="Scheduled Time" value={formatDateTime(request.scheduled_time, 'Not scheduled')} />
+      <Info label="Assigned Responder" value={request.assigned_teacher || 'Not assigned'} />
+      <Info label="Responder Status" value={request.teacher_status || 'Not offered yet'} />
+      <Info label="Created At" value={formatDateTime(request.created_at)} />
+      <Info label="Started At" value={formatDateTime(request.started_at)} />
+      <Info label="Request ID" value={request.id} />
+    </div>
+  )
+}
+
+function RecordHeader({
+  label,
+  title,
+  status,
+}: {
+  label: string
+  title: string
+  status: string
+}) {
+  return (
+    <div className="requestTop">
+      <div>
+        <p className="miniLabel">{label}</p>
+        <h3>{title}</h3>
+      </div>
+      <span className="statusBadge">{status}</span>
+    </div>
   )
 }
 
@@ -1185,21 +1074,20 @@ function Info({ label, value }: { label: string; value: string }) {
 
 function ActionButton({
   label,
-  color,
   disabled,
   onClick,
+  primary = false,
 }: {
   label: string
-  color: string
   disabled: boolean
   onClick: () => void
+  primary?: boolean
 }) {
   return (
     <button
-      className="actionBtn"
+      className={`actionBtn ${primary ? 'primaryAction' : ''}`}
       disabled={disabled}
       onClick={onClick}
-      style={{ background: color }}
     >
       {label}
     </button>
