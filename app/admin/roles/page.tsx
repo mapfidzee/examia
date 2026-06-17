@@ -1,11 +1,12 @@
 'use client'
 
+import { useEffect, useMemo, useState } from 'react'
+import type { CSSProperties } from 'react'
+
 import GovernanceRouteGuard from '@/components/GovernanceRouteGuard'
 import CGIGovernanceShell from '@/components/cgi-shell/CGIGovernanceShell'
 import { logAuditEvent } from '../../../lib/auditLogger'
 import { supabase } from '../../../lib/supabase'
-import { useEffect, useState } from 'react'
-import type { CSSProperties } from 'react'
 
 type AuditSeverity = 'LOW' | 'MODERATE' | 'HIGH'
 
@@ -57,18 +58,37 @@ export default function AdminRolesPage() {
 function AdminRolesContent() {
   const [roles, setRoles] = useState<UserRole[]>([])
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState('')
-  const [selectedRoleByUser, setSelectedRoleByUser] = useState<Record<string, string>>({})
-  const [selectedScopeByUser, setSelectedScopeByUser] = useState<Record<string, string>>({})
+  const [message, setMessage] = useState('Loading role registry...')
+  const [selectedRoleByUser, setSelectedRoleByUser] = useState<
+    Record<string, string>
+  >({})
+  const [selectedScopeByUser, setSelectedScopeByUser] = useState<
+    Record<string, string>
+  >({})
   const [reasonByUser, setReasonByUser] = useState<Record<string, string>>({})
 
   useEffect(() => {
     loadRoles()
   }, [])
 
+  const governanceAdmins = useMemo(
+    () =>
+      roles.filter((item) =>
+        ['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER'].includes(
+          item.role,
+        ),
+      ).length,
+    [roles],
+  )
+
+  const scopedUsers = useMemo(
+    () => roles.filter((item) => item.governance_scope).length,
+    [roles],
+  )
+
   async function loadRoles() {
     setLoading(true)
-    setMessage('')
+    setMessage('Loading role registry...')
 
     const { data, error } = await supabase
       .from('user_roles')
@@ -82,7 +102,6 @@ function AdminRolesContent() {
     }
 
     const records = data || []
-    setRoles(records)
 
     const roleDefaults: Record<string, string> = {}
     const scopeDefaults: Record<string, string> = {}
@@ -94,9 +113,11 @@ function AdminRolesContent() {
       reasonDefaults[item.user_id] = ''
     })
 
+    setRoles(records)
     setSelectedRoleByUser(roleDefaults)
     setSelectedScopeByUser(scopeDefaults)
     setReasonByUser(reasonDefaults)
+    setMessage('Role governance registry loaded.')
     setLoading(false)
   }
 
@@ -128,7 +149,10 @@ function AdminRolesContent() {
 
   async function updateGovernanceRole(target: UserRole) {
     const newRole = selectedRoleByUser[target.user_id] || target.role
-    const newScope = selectedScopeByUser[target.user_id] || target.governance_scope || 'GLOBAL'
+    const newScope =
+      selectedScopeByUser[target.user_id] ||
+      target.governance_scope ||
+      'GLOBAL'
     const reason = reasonByUser[target.user_id]?.trim()
 
     if (!reason) {
@@ -145,7 +169,7 @@ function AdminRolesContent() {
     }
 
     setLoading(true)
-    setMessage('')
+    setMessage('Saving governed role evidence...')
 
     const { error } = await supabase
       .from('user_roles')
@@ -199,165 +223,228 @@ function AdminRolesContent() {
     })
 
     setMessage(
-      `Governance role hardened for ${target.email}. Evidence is now executive-reconstructable.`
+      `Governance role hardened for ${target.email}. Evidence is now executive-reconstructable.`,
     )
 
     await loadRoles()
     setLoading(false)
   }
 
-  const governanceAdmins = roles.filter((item) =>
-    ['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER'].includes(item.role)
-  ).length
-
-  const scopedUsers = roles.filter((item) => item.governance_scope).length
-
   return (
     <main style={styles.page}>
-      <section style={styles.hero}>
-        <p style={styles.kicker}>TSINAXA CGI • ROLE GOVERNANCE EVIDENCE</p>
-        <h1 style={styles.title}>Governance Role Control</h1>
-        <p style={styles.subtitle}>
-          Role changes are no longer quiet permission edits. Each change preserves
-          actor identity, target user, previous role, new role, governance scope,
-          institution scope, reason, visibility level, immutability posture, and
-          non-punitive boundary.
-        </p>
-      </section>
-
-      <section style={styles.metrics}>
-        <Metric label="Governed Users" value={String(roles.length)} />
-        <Metric label="Governance Admins" value={String(governanceAdmins)} />
-        <Metric label="Scoped Records" value={String(scopedUsers)} />
-        <Metric label="Evidence Maturity" value="EXECUTIVE" />
-      </section>
-
-      {message && <div style={styles.message}>{message}</div>}
-
-      <section style={styles.panel}>
-        <div style={styles.panelHeader}>
+      <section style={styles.container}>
+        <header style={styles.hero}>
           <div>
-            <h2 style={styles.panelTitle}>Controlled Role Registry</h2>
-            <p style={styles.panelNote}>
-              Every saved change writes UPDATE_GOVERNANCE_ROLE evidence into the
-              Governance Evidence Ledger.
+            <p style={styles.kicker}>TSINAXA CGI • ROLES</p>
+            <h1 style={styles.title}>Roles</h1>
+            <p style={styles.subtitle}>
+              Govern role authorization boundaries without quiet permission
+              drift.
             </p>
           </div>
 
-          <button style={styles.secondaryButton} onClick={loadRoles} disabled={loading}>
-            Refresh
-          </button>
-        </div>
+          <div style={styles.statusBox}>
+            <p style={styles.statusLabel}>AUTHORIZATION POSTURE</p>
+            <p style={styles.statusValue}>CONTROLLED</p>
+            <p style={styles.statusMeaning}>
+              Every role change requires reason, scope, actor identity, and
+              audit evidence.
+            </p>
+          </div>
+        </header>
 
-        <div style={styles.roleList}>
-          {roles.map((item) => {
-            const selectedRole = selectedRoleByUser[item.user_id] || item.role
-            const selectedScope =
-              selectedScopeByUser[item.user_id] || item.governance_scope || 'GLOBAL'
+        <section style={styles.metricsGrid}>
+          <Metric label="Governed Users" value={String(roles.length)} />
+          <Metric label="Governance Admins" value={String(governanceAdmins)} />
+          <Metric label="Scoped Records" value={String(scopedUsers)} />
+          <Metric label="Evidence Maturity" value="EXECUTIVE" />
+        </section>
 
-            return (
-              <article key={item.user_id} style={styles.roleCard}>
-                <div style={styles.cardHeader}>
-                  <div>
-                    <h3 style={styles.cardTitle}>{item.email}</h3>
-                    <p style={styles.cardNote}>User ID: {item.user_id}</p>
-                  </div>
+        {message && <div style={styles.message}>{message}</div>}
 
-                  <span style={styles.badge}>{deriveVisibilityLevel(selectedRole, selectedScope)}</span>
-                </div>
+        <section style={styles.commandDeck}>
+          <div style={styles.primaryCard}>
+            <p style={styles.sectionKicker}>Role Governance Question</p>
+            <h2 style={styles.commandTitle}>
+              Who is allowed to govern continuity, and within what boundary?
+            </h2>
+            <p style={styles.bodyText}>
+              Role changes are not quiet permission edits. Each change preserves
+              actor identity, target user, previous role, new role, governance
+              scope, reason, visibility level, and non-punitive boundary.
+            </p>
+          </div>
 
-                <div style={styles.detailGrid}>
-                  <Detail label="Current Role" value={item.role} />
-                  <Detail label="Current Scope" value={item.governance_scope || 'GLOBAL'} />
-                  <Detail label="Institution Scope" value={deriveInstitutionScope(selectedScope)} />
-                  <Detail label="Evidence Maturity" value="EXECUTIVE_RECONSTRUCTABLE" />
-                </div>
+          <div style={styles.warningCard}>
+            <p style={styles.sectionKicker}>Boundary</p>
+            <h2 style={styles.warningTitle}>Authorize, do not rank.</h2>
+            <p style={styles.bodyText}>
+              Role governance controls access. It must not become surveillance,
+              worker ranking, blame logic, or clinical judgment.
+            </p>
+          </div>
+        </section>
 
-                <div style={styles.formGrid}>
-                  <label style={styles.label}>
-                    New Governance Role
-                    <select
-                      style={styles.input}
-                      value={selectedRole}
-                      onChange={(event) =>
-                        setSelectedRoleByUser((current) => ({
-                          ...current,
-                          [item.user_id]: event.target.value,
-                        }))
-                      }
+        <section style={styles.panel}>
+          <div style={styles.panelHeader}>
+            <div>
+              <p style={styles.sectionKicker}>Controlled Role Registry</p>
+              <h2 style={styles.panelTitle}>Governed authorization records</h2>
+            </div>
+
+            <button
+              type="button"
+              style={styles.secondaryButton}
+              onClick={loadRoles}
+              disabled={loading}
+            >
+              {loading ? 'Refreshing...' : 'Refresh'}
+            </button>
+          </div>
+
+          {roles.length === 0 ? (
+            <p style={styles.emptyBox}>No governed role records found.</p>
+          ) : (
+            <div style={styles.roleList}>
+              {roles.map((item) => {
+                const selectedRole = selectedRoleByUser[item.user_id] || item.role
+                const selectedScope =
+                  selectedScopeByUser[item.user_id] ||
+                  item.governance_scope ||
+                  'GLOBAL'
+
+                return (
+                  <article key={item.user_id} style={styles.roleCard}>
+                    <div style={styles.cardHeader}>
+                      <div>
+                        <p style={styles.metricLabel}>Governed user</p>
+                        <h3 style={styles.cardTitle}>{item.email}</h3>
+                        <p style={styles.cardNote}>User ID: {item.user_id}</p>
+                      </div>
+
+                      <span style={styles.badge}>
+                        {deriveVisibilityLevel(selectedRole, selectedScope)}
+                      </span>
+                    </div>
+
+                    <div style={styles.detailGrid}>
+                      <Detail label="Current Role" value={item.role} />
+                      <Detail
+                        label="Current Scope"
+                        value={item.governance_scope || 'GLOBAL'}
+                      />
+                      <Detail
+                        label="Institution Scope"
+                        value={deriveInstitutionScope(selectedScope)}
+                      />
+                      <Detail
+                        label="Evidence Maturity"
+                        value="EXECUTIVE_RECONSTRUCTABLE"
+                      />
+                    </div>
+
+                    <div style={styles.formGrid}>
+                      <label style={styles.label}>
+                        New Governance Role
+                        <select
+                          style={styles.input}
+                          value={selectedRole}
+                          onChange={(event) =>
+                            setSelectedRoleByUser((current) => ({
+                              ...current,
+                              [item.user_id]: event.target.value,
+                            }))
+                          }
+                        >
+                          {GOVERNANCE_ROLES.map((role) => (
+                            <option key={role} value={role}>
+                              {role}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label style={styles.label}>
+                        New Governance Scope
+                        <select
+                          style={styles.input}
+                          value={selectedScope}
+                          onChange={(event) =>
+                            setSelectedScopeByUser((current) => ({
+                              ...current,
+                              [item.user_id]: event.target.value,
+                            }))
+                          }
+                        >
+                          {GOVERNANCE_SCOPES.map((scope) => (
+                            <option key={scope} value={scope}>
+                              {scope}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+
+                    <label style={styles.label}>
+                      Governance Reason Required
+                      <textarea
+                        style={styles.textarea}
+                        value={reasonByUser[item.user_id] || ''}
+                        onChange={(event) =>
+                          setReasonByUser((current) => ({
+                            ...current,
+                            [item.user_id]: event.target.value,
+                          }))
+                        }
+                        placeholder="Example: Scope corrected after governance review. Access remains non-punitive and limited to continuity oversight."
+                      />
+                    </label>
+
+                    <div style={styles.boundaryBox}>
+                      <strong>Non-punitive boundary:</strong> this change
+                      controls governed access. It must not be interpreted as
+                      worker ranking, surveillance, blame, or clinical judgment.
+                    </div>
+
+                    <button
+                      type="button"
+                      style={styles.primaryButton}
+                      onClick={() => updateGovernanceRole(item)}
+                      disabled={loading}
                     >
-                      {GOVERNANCE_ROLES.map((role) => (
-                        <option key={role} value={role}>
-                          {role}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                      Save Governed Role Evidence
+                    </button>
+                  </article>
+                )
+              })}
+            </div>
+          )}
+        </section>
 
-                  <label style={styles.label}>
-                    New Governance Scope
-                    <select
-                      style={styles.input}
-                      value={selectedScope}
-                      onChange={(event) =>
-                        setSelectedScopeByUser((current) => ({
-                          ...current,
-                          [item.user_id]: event.target.value,
-                        }))
-                      }
-                    >
-                      {GOVERNANCE_SCOPES.map((scope) => (
-                        <option key={scope} value={scope}>
-                          {scope}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-
-                <label style={styles.label}>
-                  Governance Reason Required
-                  <textarea
-                    style={styles.textarea}
-                    value={reasonByUser[item.user_id] || ''}
-                    onChange={(event) =>
-                      setReasonByUser((current) => ({
-                        ...current,
-                        [item.user_id]: event.target.value,
-                      }))
-                    }
-                    placeholder="Example: Scope corrected after governance review. Access remains non-punitive and limited to continuity oversight."
-                  />
-                </label>
-
-                <div style={styles.boundaryBox}>
-                  <strong>Non-punitive boundary:</strong> this change controls governed access.
-                  It must not be interpreted as worker ranking, surveillance, blame, or clinical judgment.
-                </div>
-
-                <button
-                  style={styles.primaryButton}
-                  onClick={() => updateGovernanceRole(item)}
-                  disabled={loading}
-                >
-                  Save Governed Role Evidence
-                </button>
-              </article>
-            )
-          })}
-        </div>
+        <section style={styles.doctrineCard}>
+          <strong>ROLE GOVERNANCE DOCTRINE</strong>
+          <span>
+            Role control is not administration noise. Role changes define who
+            can govern continuity visibility, within what scope, and with what
+            reconstructable evidence.
+          </span>
+        </section>
       </section>
     </main>
   )
 }
 
 function deriveInstitutionScope(scope: string) {
-  if (scope === 'GLOBAL' || scope === 'GLOBAL-TEST') return 'TSINAXA CGI Enterprise Governance'
+  if (scope === 'GLOBAL' || scope === 'GLOBAL-TEST') {
+    return 'TSINAXA CGI Enterprise Governance'
+  }
+
   if (scope === 'INSTITUTION') return 'Institution-Level Continuity Governance'
   if (scope === 'REGIONAL') return 'Regional Continuity Governance'
   if (scope === 'DISTRICT') return 'District Continuity Governance'
   if (scope === 'OPERATIONS') return 'Operational Continuity Governance'
   if (scope === 'AUDIT_ONLY') return 'Audit and Evidence Review'
+
   return 'Governance Scope Recorded'
 }
 
@@ -371,241 +458,359 @@ function deriveVisibilityLevel(role: string, scope: string) {
 function deriveAuditSeverity(
   previousRole: string,
   newRole: string,
-  newScope: string
+  newScope: string,
 ): AuditSeverity {
   if (newRole === 'SUPER_ADMIN' || previousRole === 'SUPER_ADMIN') return 'HIGH'
-  if (newRole === 'COMMAND_ADMIN' || previousRole === 'COMMAND_ADMIN') return 'HIGH'
+  if (newRole === 'COMMAND_ADMIN' || previousRole === 'COMMAND_ADMIN') {
+    return 'HIGH'
+  }
+
   if (newScope === 'GLOBAL' || newScope === 'GLOBAL-TEST') return 'HIGH'
+
   return 'MODERATE'
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div style={styles.metric}>
-      <span style={styles.metricLabel}>{label}</span>
+    <article style={styles.metricCard}>
+      <p style={styles.metricLabel}>{label}</p>
       <strong style={styles.metricValue}>{value}</strong>
-    </div>
+    </article>
   )
 }
 
 function Detail({ label, value }: { label: string; value: string }) {
   return (
-    <div style={styles.detail}>
-      <span style={styles.detailLabel}>{label}</span>
-      <strong style={styles.detailValue}>{value}</strong>
+    <div style={styles.detailBox}>
+      <p style={styles.metricLabel}>{label}</p>
+      <p style={styles.detailValue}>{value}</p>
     </div>
   )
 }
 
+const gold = '#d6b25e'
+const mutedGold = '#9f8142'
+const deepBlack = '#030303'
+const panelBlack = '#090807'
+const cardBlack = '#11100d'
+const softLine = 'rgba(214,178,94,0.24)'
+const strongLine = 'rgba(214,178,94,0.42)'
+
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    background: '#0f1115',
-    color: '#f5f1e8',
-    padding: '32px',
+    background:
+      'radial-gradient(circle at top left, rgba(214,178,94,0.08), transparent 30%), linear-gradient(180deg, #030303 0%, #090807 100%)',
+    color: '#fff8e7',
+    padding: '32px 24px 48px',
+  },
+  container: {
+    width: 'min(1180px, 100%)',
+    margin: '0 auto',
+    display: 'grid',
+    gap: 16,
+    alignContent: 'start',
   },
   hero: {
-    maxWidth: '1180px',
-    margin: '0 auto 24px',
-    padding: '28px',
-    border: '1px solid rgba(245,241,232,0.14)',
-    borderRadius: '24px',
-    background: 'linear-gradient(135deg, rgba(119,93,58,0.24), rgba(23,45,38,0.22))',
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.45fr) minmax(280px, 0.65fr)',
+    gap: 20,
+    padding: 24,
+    border: `1px solid ${strongLine}`,
+    borderRadius: 24,
+    background:
+      'linear-gradient(135deg, rgba(214,178,94,0.08), rgba(255,255,255,0.018))',
   },
   kicker: {
     margin: 0,
-    fontSize: '12px',
-    letterSpacing: '0.16em',
+    color: gold,
+    fontSize: 11,
+    fontWeight: 900,
+    letterSpacing: '0.2em',
     textTransform: 'uppercase',
-    color: '#c9b58a',
-    fontWeight: 800,
   },
   title: {
-    margin: '10px 0',
-    fontSize: '42px',
-    lineHeight: 1.05,
+    margin: '10px 0 0',
+    fontSize: 'clamp(2.2rem, 4.5vw, 4.6rem)',
+    lineHeight: 0.95,
+    letterSpacing: '-0.07em',
+    fontWeight: 950,
   },
   subtitle: {
-    margin: 0,
-    maxWidth: '820px',
-    color: '#d8d0c2',
-    fontSize: '16px',
-    lineHeight: 1.7,
+    margin: '14px 0 0',
+    color: '#cfc7b5',
+    fontSize: 14,
+    lineHeight: 1.65,
+    maxWidth: 780,
   },
-  metrics: {
-    maxWidth: '1180px',
-    margin: '0 auto 24px',
+  statusBox: {
+    border: `1px solid ${strongLine}`,
+    borderRadius: 20,
+    padding: 18,
+    background:
+      'linear-gradient(180deg, rgba(214,178,94,0.18), rgba(0,0,0,0.38))',
+  },
+  statusLabel: {
+    margin: 0,
+    color: gold,
+    fontSize: 10,
+    fontWeight: 950,
+    letterSpacing: '0.18em',
+  },
+  statusValue: {
+    margin: '10px 0',
+    fontSize: 26,
+    fontWeight: 950,
+    lineHeight: 1,
+  },
+  statusMeaning: {
+    margin: 0,
+    color: '#f5f0e6',
+    fontSize: 13,
+    lineHeight: 1.6,
+  },
+  metricsGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '14px',
+    gap: 10,
   },
-  metric: {
-    padding: '18px',
-    borderRadius: '18px',
-    background: '#171b22',
-    border: '1px solid rgba(245,241,232,0.12)',
+  metricCard: {
+    padding: 14,
+    borderRadius: 16,
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
   },
   metricLabel: {
-    display: 'block',
-    color: '#a9a190',
-    fontSize: '12px',
+    margin: 0,
+    color: '#9ca3af',
+    fontSize: 10,
+    fontWeight: 950,
+    letterSpacing: '0.14em',
     textTransform: 'uppercase',
-    letterSpacing: '0.12em',
   },
   metricValue: {
     display: 'block',
-    marginTop: '8px',
-    fontSize: '24px',
+    marginTop: 8,
+    color: gold,
+    fontSize: 28,
+    lineHeight: 1,
   },
   message: {
-    maxWidth: '1180px',
-    margin: '0 auto 20px',
-    padding: '14px 16px',
-    borderRadius: '16px',
-    background: 'rgba(99, 128, 87, 0.18)',
-    border: '1px solid rgba(160, 190, 140, 0.28)',
-    color: '#e8f3dc',
+    padding: '10px 12px',
+    borderRadius: 12,
+    background: 'rgba(214,178,94,0.1)',
+    border: `1px solid ${softLine}`,
+    color: gold,
+    fontWeight: 850,
+    fontSize: 12,
+  },
+  commandDeck: {
+    display: 'grid',
+    gridTemplateColumns: '1.35fr 0.8fr',
+    gap: 16,
+  },
+  primaryCard: {
+    padding: 20,
+    borderRadius: 20,
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
+  },
+  warningCard: {
+    padding: 20,
+    borderRadius: 20,
+    background: deepBlack,
+    border: `1px solid ${softLine}`,
+  },
+  sectionKicker: {
+    margin: 0,
+    color: mutedGold,
+    fontSize: 10,
+    fontWeight: 950,
+    letterSpacing: '0.16em',
+    textTransform: 'uppercase',
+  },
+  commandTitle: {
+    margin: '10px 0 0',
+    fontSize: 'clamp(1.5rem, 3vw, 2.4rem)',
+    lineHeight: 1.05,
+    letterSpacing: '-0.05em',
+    fontWeight: 950,
+  },
+  warningTitle: {
+    margin: '10px 0 0',
+    fontSize: 24,
+    lineHeight: 1.1,
+    letterSpacing: '-0.04em',
+  },
+  bodyText: {
+    margin: '10px 0 0',
+    color: '#cfc7b5',
+    fontSize: 13,
+    lineHeight: 1.6,
   },
   panel: {
-    maxWidth: '1180px',
-    margin: '0 auto',
-    padding: '22px',
-    borderRadius: '24px',
-    background: '#141820',
-    border: '1px solid rgba(245,241,232,0.12)',
+    padding: 18,
+    borderRadius: 22,
+    background: panelBlack,
+    border: `1px solid ${softLine}`,
   },
   panelHeader: {
     display: 'flex',
     justifyContent: 'space-between',
-    gap: '16px',
+    gap: 16,
     alignItems: 'center',
-    marginBottom: '18px',
+    marginBottom: 14,
   },
   panelTitle: {
-    margin: 0,
-    fontSize: '24px',
+    margin: '8px 0 0',
+    fontSize: 26,
+    lineHeight: 1.12,
+    letterSpacing: '-0.045em',
   },
-  panelNote: {
-    margin: '6px 0 0',
-    color: '#b9b0a0',
+  secondaryButton: {
+    border: `1px solid ${softLine}`,
+    borderRadius: 999,
+    padding: '10px 14px',
+    background: 'rgba(214,178,94,0.12)',
+    color: gold,
+    fontWeight: 950,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
   },
   roleList: {
     display: 'grid',
-    gap: '16px',
+    gap: 12,
   },
   roleCard: {
-    padding: '20px',
-    borderRadius: '22px',
-    background: '#0f131a',
-    border: '1px solid rgba(245,241,232,0.12)',
+    padding: 14,
+    borderRadius: 18,
+    background: cardBlack,
+    border: `1px solid ${softLine}`,
   },
   cardHeader: {
     display: 'flex',
     justifyContent: 'space-between',
-    gap: '16px',
+    gap: 12,
     alignItems: 'flex-start',
-    marginBottom: '16px',
+    paddingBottom: 10,
+    marginBottom: 10,
+    borderBottom: '1px solid rgba(214,178,94,0.16)',
   },
   cardTitle: {
-    margin: 0,
-    fontSize: '18px',
+    margin: '6px 0 0',
+    color: '#fff8e7',
+    fontSize: 20,
+    lineHeight: 1.1,
+    wordBreak: 'break-word',
   },
   cardNote: {
-    margin: '6px 0 0',
-    color: '#9f9788',
-    fontSize: '13px',
+    margin: '8px 0 0',
+    color: '#cfc7b5',
+    fontSize: 12,
+    lineHeight: 1.45,
+    wordBreak: 'break-word',
   },
   badge: {
-    padding: '8px 10px',
-    borderRadius: '999px',
-    background: 'rgba(201,181,138,0.12)',
-    color: '#e6d4a7',
-    border: '1px solid rgba(201,181,138,0.26)',
-    fontSize: '12px',
-    fontWeight: 800,
+    borderRadius: 999,
+    padding: '7px 10px',
+    background: 'rgba(214,178,94,0.12)',
+    border: `1px solid ${softLine}`,
+    color: gold,
+    fontSize: 10,
+    fontWeight: 950,
+    textTransform: 'uppercase',
+    whiteSpace: 'nowrap',
   },
   detailGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: '10px',
-    marginBottom: '16px',
+    gap: 8,
+    marginBottom: 10,
   },
-  detail: {
-    padding: '12px',
-    borderRadius: '14px',
-    background: '#171b22',
-    border: '1px solid rgba(245,241,232,0.08)',
-  },
-  detailLabel: {
-    display: 'block',
-    color: '#a9a190',
-    fontSize: '11px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.1em',
+  detailBox: {
+    padding: 11,
+    borderRadius: 13,
+    background: deepBlack,
+    border: '1px solid rgba(214,178,94,0.16)',
   },
   detailValue: {
-    display: 'block',
-    marginTop: '6px',
-    fontSize: '13px',
+    margin: '7px 0 0',
+    color: '#fff8e7',
+    fontSize: 12,
+    lineHeight: 1.4,
+    wordBreak: 'break-word',
   },
   formGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '12px',
-    marginBottom: '12px',
+    gap: 10,
+    marginBottom: 10,
   },
   label: {
     display: 'grid',
-    gap: '8px',
-    color: '#dcd3c2',
-    fontSize: '13px',
-    fontWeight: 700,
+    gap: 7,
+    color: '#cfc7b5',
+    fontSize: 12,
+    fontWeight: 900,
   },
   input: {
     width: '100%',
-    padding: '12px',
-    borderRadius: '14px',
-    border: '1px solid rgba(245,241,232,0.16)',
-    background: '#0b0e13',
-    color: '#f5f1e8',
+    padding: 10,
+    borderRadius: 12,
+    border: `1px solid ${softLine}`,
+    background: panelBlack,
+    color: '#fff8e7',
+    fontSize: 13,
   },
   textarea: {
     width: '100%',
-    minHeight: '92px',
-    padding: '12px',
-    borderRadius: '14px',
-    border: '1px solid rgba(245,241,232,0.16)',
-    background: '#0b0e13',
-    color: '#f5f1e8',
+    minHeight: 80,
+    padding: 10,
+    borderRadius: 12,
+    border: `1px solid ${softLine}`,
+    background: panelBlack,
+    color: '#fff8e7',
     resize: 'vertical',
+    fontSize: 13,
   },
   boundaryBox: {
-    marginTop: '12px',
-    padding: '12px',
-    borderRadius: '14px',
-    background: 'rgba(119,93,58,0.14)',
-    border: '1px solid rgba(201,181,138,0.18)',
-    color: '#d9ccb2',
-    fontSize: '13px',
-    lineHeight: 1.6,
+    marginTop: 10,
+    padding: 11,
+    borderRadius: 13,
+    background: 'rgba(214,178,94,0.1)',
+    border: `1px solid ${softLine}`,
+    color: '#f5f0e6',
+    fontSize: 12,
+    lineHeight: 1.45,
   },
   primaryButton: {
-    marginTop: '14px',
-    padding: '12px 16px',
-    borderRadius: '14px',
+    marginTop: 12,
+    padding: '11px 14px',
+    borderRadius: 12,
     border: 'none',
-    background: '#c9b58a',
-    color: '#111',
-    fontWeight: 900,
+    background: gold,
+    color: '#11100d',
+    fontWeight: 950,
     cursor: 'pointer',
   },
-  secondaryButton: {
-    padding: '10px 14px',
-    borderRadius: '14px',
-    border: '1px solid rgba(245,241,232,0.18)',
-    background: 'transparent',
-    color: '#f5f1e8',
-    fontWeight: 800,
-    cursor: 'pointer',
+  emptyBox: {
+    margin: 0,
+    padding: 13,
+    borderRadius: 13,
+    border: '1px dashed rgba(214,178,94,0.24)',
+    color: '#cfc7b5',
+    background: deepBlack,
+    fontSize: 12,
+  },
+  doctrineCard: {
+    display: 'grid',
+    gap: 8,
+    padding: 18,
+    borderRadius: 20,
+    background: deepBlack,
+    border: `1px solid ${strongLine}`,
+    color: '#fff8e7',
+    lineHeight: 1.6,
+    fontSize: 13,
   },
 }
