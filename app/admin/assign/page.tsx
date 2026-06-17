@@ -428,15 +428,17 @@ const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
     background:
-      'radial-gradient(circle at top left, rgba(214,178,94,0.12), transparent 34%), linear-gradient(135deg, #030303 0%, #090807 48%, #11100d 100%)',
+      'radial-gradient(circle at top left, rgba(214,178,94,0.08), transparent 30%), linear-gradient(180deg, #030303 0%, #090807 100%)',
     color: '#fff8e7',
-    padding: '32px 24px 64px',
+    padding: '32px 24px 48px',
   },
   container: {
     width: 'min(1180px, 100%)',
     margin: '0 auto',
     display: 'grid',
     gap: 16,
+    alignContent: 'start',
+    minHeight: 'calc(100vh - 96px)',
   },
   hero: {
     display: 'grid',
