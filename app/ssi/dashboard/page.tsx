@@ -49,6 +49,13 @@ type TrendRow = {
   leadershipActionCue: string
 }
 
+const ssiFlow = [
+  { label: 'Assignments', href: '/ssi/assignments', note: 'Shift-start load capture', active: false },
+  { label: 'Events', href: '/ssi/events', note: 'Stability event capture', active: false },
+  { label: 'Trend Buffer', href: '/ssi/dashboard', note: 'Persisted buffer output', active: true },
+  { label: 'Executive Dashboard', href: '/ssi', note: 'Locked executive view', active: false },
+]
+
 const initialFilters = {
   unit: '',
   windowStart: '2026-03-01',
@@ -366,6 +373,37 @@ export default function SSITrendBufferPage() {
           </p>
         </header>
 
+        <nav aria-label="TSINAXA SSI flow navigation" style={styles.flowNav}>
+          <div style={styles.flowNavHeader}>
+            <span style={styles.flowNavTitle}>SSI Flow</span>
+            <span style={styles.flowNavRule} />
+            <span style={styles.flowNavCaption}>
+              Assignments → Events → Trend Buffer → Executive Dashboard
+            </span>
+          </div>
+
+          <div style={styles.flowSteps}>
+            {ssiFlow.map((item, index) => (
+              <div key={item.href} style={styles.flowStepWrap}>
+                <a
+                  href={item.href}
+                  style={{
+                    ...styles.flowStep,
+                    ...(item.active ? styles.flowStepActive : {}),
+                  }}
+                >
+                  <span style={styles.flowStepIndex}>{index + 1}</span>
+                  <span style={styles.flowStepText}>
+                    <strong>{item.label}</strong>
+                    <small>{item.note}</small>
+                  </span>
+                </a>
+                {index < ssiFlow.length - 1 ? <span style={styles.flowArrow}>→</span> : null}
+              </div>
+            ))}
+          </div>
+        </nav>
+
         <form onSubmit={loadTrend} style={styles.panel}>
           <h2 style={styles.panelTitle}>Window Controls</h2>
           <Input label="Unit" value={filters.unit} onChange={(value) => updateFilter('unit', value)} />
@@ -498,10 +536,24 @@ function TrendTable({ rows }: { rows: TrendRow[] }) {
 const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: '#050505', color: '#fff8e7', padding: '40px' },
   shell: { maxWidth: '1280px', margin: '0 auto' },
-  header: { border: '1px solid rgba(214,178,94,0.28)', background: '#090807', borderRadius: '24px', padding: '28px', marginBottom: '24px' },
+  header: { border: '1px solid rgba(214,178,94,0.28)', background: '#090807', borderRadius: '24px', padding: '28px', marginBottom: '16px' },
   eyebrow: { color: '#d6b25e', letterSpacing: '0.14em', textTransform: 'uppercase', fontSize: '12px', margin: 0 },
   title: { fontSize: '38px', margin: '12px 0' },
   subtitle: { color: '#cfc7b5', margin: 0, maxWidth: '900px' },
+
+  flowNav: { border: '1px solid rgba(214,178,94,0.28)', background: '#090807', borderRadius: '20px', padding: '16px', marginBottom: '18px' },
+  flowNavHeader: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' },
+  flowNavTitle: { color: '#d6b25e', fontWeight: 900, letterSpacing: '0.14em', textTransform: 'uppercase', fontSize: '12px' },
+  flowNavRule: { height: '1px', flex: 1, background: 'rgba(214,178,94,0.22)' },
+  flowNavCaption: { color: '#cfc7b5', fontSize: '12px', fontWeight: 700 },
+  flowSteps: { display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '10px' },
+  flowStepWrap: { display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 },
+  flowStep: { flex: 1, display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', color: '#cfc7b5', border: '1px solid rgba(214,178,94,0.18)', background: '#11100d', borderRadius: '14px', padding: '12px', minWidth: 0 },
+  flowStepActive: { border: '1px solid rgba(214,178,94,0.58)', background: 'rgba(214,178,94,0.14)', color: '#fff8e7', boxShadow: 'inset 3px 0 0 #d6b25e' },
+  flowStepIndex: { display: 'grid', placeItems: 'center', width: '26px', height: '26px', borderRadius: '999px', background: 'rgba(214,178,94,0.16)', color: '#d6b25e', fontWeight: 900, flexShrink: 0 },
+  flowStepText: { display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 },
+  flowArrow: { color: '#9f8142', fontWeight: 900, flexShrink: 0 },
+
   panel: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px', border: '1px solid rgba(214,178,94,0.28)', background: '#090807', borderRadius: '22px', padding: '22px', marginBottom: '18px' },
   panelWide: { border: '1px solid rgba(214,178,94,0.28)', background: '#090807', borderRadius: '22px', padding: '22px', marginBottom: '18px' },
   panelTitle: { gridColumn: '1 / -1', color: '#d6b25e', margin: '0 0 8px' },

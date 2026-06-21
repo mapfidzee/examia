@@ -27,6 +27,13 @@ type LayerTone = 'leadership' | 'evidence' | 'reference'
 
 const MISSING = 'Not persisted in current buffer.'
 
+const ssiFlow = [
+  { label: 'Assignments', href: '/ssi/assignments', note: 'Shift-start load capture', active: false },
+  { label: 'Events', href: '/ssi/events', note: 'Stability event capture', active: false },
+  { label: 'Trend Buffer', href: '/ssi/dashboard', note: 'Persisted buffer output', active: false },
+  { label: 'Executive Dashboard', href: '/ssi', note: 'Locked executive view', active: true },
+]
+
 const colors = {
   page: '#050505',
   shell: '#080807',
@@ -35,7 +42,6 @@ const colors = {
   slate: '#111827',
   slateSoft: 'rgba(17,24,39,0.58)',
   gold: '#d6b25e',
-  goldStrong: '#c9a227',
   goldMuted: '#9f8142',
   text: '#fff8e7',
   muted: '#cfc7b5',
@@ -53,10 +59,7 @@ const styles: Record<string, CSSProperties> = {
     color: colors.text,
     padding: '24px 24px 54px',
   },
-  shell: {
-    width: 'min(1240px, 100%)',
-    margin: '0 auto',
-  },
+  shell: { width: 'min(1240px, 100%)', margin: '0 auto' },
   hero: {
     display: 'grid',
     gridTemplateColumns: '1fr auto',
@@ -77,19 +80,8 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: '0.16em',
     textTransform: 'uppercase',
   },
-  title: {
-    margin: 0,
-    fontSize: 34,
-    lineHeight: 1.05,
-    letterSpacing: '-0.025em',
-  },
-  subtitle: {
-    maxWidth: 760,
-    margin: '8px 0 0',
-    color: colors.muted,
-    fontSize: 13,
-    lineHeight: 1.5,
-  },
+  title: { margin: 0, fontSize: 34, lineHeight: 1.05, letterSpacing: '-0.025em' },
+  subtitle: { maxWidth: 760, margin: '8px 0 0', color: colors.muted, fontSize: 13, lineHeight: 1.5 },
   updated: {
     minWidth: 220,
     paddingLeft: 20,
@@ -105,14 +97,75 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: '0.12em',
     textTransform: 'uppercase',
   },
-  updatedValue: {
-    color: colors.text,
-    fontSize: 13,
+  updatedValue: { color: colors.text, fontSize: 13 },
+
+  flowNav: {
+    border: `1px solid ${colors.line}`,
+    background: colors.shell,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 14,
   },
-  dashboard: {
-    display: 'grid',
+  flowNavHeader: {
+    display: 'flex',
+    alignItems: 'center',
     gap: 12,
+    marginBottom: 12,
   },
+  flowNavTitle: {
+    color: colors.gold,
+    fontWeight: 900,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+    fontSize: 11,
+  },
+  flowNavRule: { height: 1, flex: 1, background: colors.line },
+  flowNavCaption: { color: colors.muted, fontSize: 11, fontWeight: 800 },
+  flowSteps: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: 10,
+  },
+  flowStepWrap: { display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 },
+  flowStep: {
+    flex: 1,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    textDecoration: 'none',
+    color: colors.muted,
+    border: `1px solid ${colors.lineSoft}`,
+    background: '#11100d',
+    borderRadius: 14,
+    padding: 12,
+    minWidth: 0,
+  },
+  flowStepActive: {
+    border: `1px solid ${colors.lineStrong}`,
+    background: 'rgba(214,178,94,0.14)',
+    color: colors.text,
+    boxShadow: `inset 3px 0 0 ${colors.gold}`,
+  },
+  flowStepIndex: {
+    display: 'grid',
+    placeItems: 'center',
+    width: 26,
+    height: 26,
+    borderRadius: 999,
+    background: 'rgba(214,178,94,0.16)',
+    color: colors.gold,
+    fontWeight: 900,
+    flexShrink: 0,
+  },
+  flowStepText: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 3,
+    minWidth: 0,
+  },
+  flowArrow: { color: colors.goldMuted, fontWeight: 900, flexShrink: 0 },
+
+  dashboard: { display: 'grid', gap: 12 },
   layer: {
     display: 'grid',
     gap: 8,
@@ -136,11 +189,7 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: '0.17em',
     textTransform: 'uppercase',
   },
-  layerRule: {
-    flex: 1,
-    height: 1,
-    background: colors.lineSoft,
-  },
+  layerRule: { flex: 1, height: 1, background: colors.lineSoft },
   section: {
     overflow: 'hidden',
     border: `1px solid ${colors.line}`,
@@ -156,12 +205,7 @@ const styles: Record<string, CSSProperties> = {
     borderBottom: `1px solid ${colors.line}`,
     background: colors.section,
   },
-  sectionLine: {
-    width: 3,
-    height: 14,
-    borderRadius: 999,
-    background: colors.gold,
-  },
+  sectionLine: { width: 3, height: 14, borderRadius: 999, background: colors.gold },
   sectionTitle: {
     margin: 0,
     color: colors.gold,
@@ -170,23 +214,10 @@ const styles: Record<string, CSSProperties> = {
     letterSpacing: '0.14em',
     textTransform: 'uppercase',
   },
-  sectionContent: {
-    padding: 10,
-  },
-  compactGrid4: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: 6,
-  },
-  compactGrid3: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: 6,
-  },
-  dataTile: {
-    border: `1px solid ${colors.line}`,
-    background: '#090909',
-  },
+  sectionContent: { padding: 10 },
+  compactGrid4: { display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6 },
+  compactGrid3: { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 6 },
+  dataTile: { border: `1px solid ${colors.line}`, background: '#090909' },
   dataLabel: {
     minHeight: 29,
     display: 'flex',
@@ -206,18 +237,8 @@ const styles: Record<string, CSSProperties> = {
     fontSize: 12,
     fontWeight: 800,
   },
-  dataValueStrong: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: 950,
-  },
-  action: {
-    padding: '9px 2px',
-    color: colors.text,
-    fontSize: 20,
-    fontWeight: 900,
-    lineHeight: 1.35,
-  },
+  dataValueStrong: { color: '#ffffff', fontSize: 14, fontWeight: 950 },
+  action: { padding: '9px 2px', color: colors.text, fontSize: 20, fontWeight: 900, lineHeight: 1.35 },
   missingBand: {
     padding: '8px 12px',
     color: colors.quiet,
@@ -228,14 +249,8 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.45,
     textAlign: 'center',
   },
-  tableScroll: {
-    overflowX: 'auto',
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    tableLayout: 'fixed',
-  },
+  tableScroll: { overflowX: 'auto' },
+  table: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' },
   th: {
     padding: '8px 9px',
     border: `1px solid ${colors.line}`,
@@ -267,12 +282,7 @@ const styles: Record<string, CSSProperties> = {
     textAlign: 'left',
     verticalAlign: 'middle',
   },
-  doctrine: {
-    padding: '6px 2px',
-    color: colors.muted,
-    fontSize: 12,
-    lineHeight: 1.6,
-  },
+  doctrine: { padding: '6px 2px', color: colors.muted, fontSize: 12, lineHeight: 1.6 },
 }
 
 function display(value: unknown) {
@@ -293,15 +303,39 @@ function dominantForceAt(value: string[] | string, index: number) {
   return index === 0 ? display(value) : MISSING
 }
 
-function Layer({
-  title,
-  tone,
-  children,
-}: {
-  title: string
-  tone: LayerTone
-  children: ReactNode
-}) {
+function FlowNav() {
+  return (
+    <nav aria-label="TSINAXA SSI flow navigation" style={styles.flowNav}>
+      <div style={styles.flowNavHeader}>
+        <span style={styles.flowNavTitle}>SSI Flow</span>
+        <span style={styles.flowNavRule} />
+        <span style={styles.flowNavCaption}>
+          Assignments → Events → Trend Buffer → Executive Dashboard
+        </span>
+      </div>
+
+      <div style={styles.flowSteps}>
+        {ssiFlow.map((item, index) => (
+          <div key={item.href} style={styles.flowStepWrap}>
+            <a
+              href={item.href}
+              style={{ ...styles.flowStep, ...(item.active ? styles.flowStepActive : {}) }}
+            >
+              <span style={styles.flowStepIndex}>{index + 1}</span>
+              <span style={styles.flowStepText}>
+                <strong>{item.label}</strong>
+                <small>{item.note}</small>
+              </span>
+            </a>
+            {index < ssiFlow.length - 1 ? <span style={styles.flowArrow}>→</span> : null}
+          </div>
+        ))}
+      </div>
+    </nav>
+  )
+}
+
+function Layer({ title, tone, children }: { title: string; tone: LayerTone; children: ReactNode }) {
   const toneStyle: CSSProperties =
     tone === 'leadership'
       ? {
@@ -310,13 +344,8 @@ function Layer({
             'linear-gradient(180deg, rgba(214,178,94,0.045), rgba(255,255,255,0.01))',
         }
       : tone === 'evidence'
-        ? {
-            borderColor: colors.line,
-          }
-        : {
-            borderColor: colors.lineSoft,
-            background: 'rgba(255,255,255,0.008)',
-          }
+        ? { borderColor: colors.line }
+        : { borderColor: colors.lineSoft, background: 'rgba(255,255,255,0.008)' }
 
   return (
     <div style={{ ...styles.layer, ...toneStyle }}>
@@ -389,18 +418,8 @@ function Tile({
   quiet?: boolean
 }) {
   return (
-    <div
-      style={{
-        ...styles.dataTile,
-        borderColor: quiet ? colors.lineSoft : colors.line,
-      }}
-    >
-      <div
-        style={{
-          ...styles.dataLabel,
-          background: quiet ? colors.slateSoft : colors.slate,
-        }}
-      >
+    <div style={{ ...styles.dataTile, borderColor: quiet ? colors.lineSoft : colors.line }}>
+      <div style={{ ...styles.dataLabel, background: quiet ? colors.slateSoft : colors.slate }}>
         {label}
       </div>
       <div
@@ -476,6 +495,8 @@ export default function SSIExecutiveDashboardPage() {
             </strong>
           </div>
         </header>
+
+        <FlowNav />
 
         {loading ? (
           <Section title="Executive Stability Brief">
