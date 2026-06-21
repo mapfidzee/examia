@@ -6,6 +6,7 @@ import type { CSSProperties } from 'react'
 import { supabase } from '@/lib/supabase'
 
 type ShiftTypeFilter = 'ALL' | 'DAY' | 'NIGHT'
+type FragilityLevel = 'LOW' | 'MODERATE' | 'HIGH'
 
 type AssignmentRow = {
   unit: string
@@ -35,6 +36,7 @@ type TrendRow = {
   trendWindow: string
   unit: string
   rolePool: string
+  shiftType: string
   baselineDesign: string
   assignmentLoadSkew: number
   pctHigher: number
@@ -61,6 +63,14 @@ const initialFilters = {
   windowStart: '2026-03-01',
   windowEnd: '2026-03-07',
   shiftType: 'ALL' as ShiftTypeFilter,
+}
+
+function normalizeBaselineDesign(value: string) {
+  return String(value ?? '').trim()
+}
+
+function skewStatus(value: number) {
+  return value > 0 ? 'SKEWED' : 'NOT SKEWED'
 }
 
 function isLate(value: string | null) {
@@ -150,6 +160,127 @@ function leadershipCue(status: string, row: Omit<TrendRow, 'trendStatus' | 'tren
   return 'Maintain current operating posture and continue monitoring.'
 }
 
+function statusScore(status: string) {
+  if (status === 'STABLE') return 90
+  if (status === 'STRAINING') return 71
+  if (status === 'UNSTABLE') return 49
+  return null
+}
+
+function fragilityLevel(summary: {
+  trend_status: string
+  repeated_buffer_depletion_flag: boolean
+  high_intensity_event_count: number
+  buffer_use_profile: string
+}): FragilityLevel {
+  if (
+    summary.trend_status === 'UNSTABLE' ||
+    summary.repeated_buffer_depletion_flag ||
+    summary.high_intensity_event_count >= 2 ||
+    summary.buffer_use_profile === 'HIGH'
+  ) {
+    return 'HIGH'
+  }
+
+  if (
+    summary.trend_status === 'STRAINING' ||
+    summary.high_intensity_event_count === 1 ||
+    summary.buffer_use_profile === 'MODERATE'
+  ) {
+    return 'MODERATE'
+  }
+
+  return 'LOW'
+}
+
+function predictabilityInsight(summary: {
+  trend_status: string
+  total_stability_events: number
+  late_or_last_minute_event_count: number
+  assignment_load_skew: number
+}) {
+  if (summary.trend_status === 'UNSTABLE') {
+    return 'Leaders cannot reliably anticipate operational conditions because instability signals are already active within the reporting window.'
+  }
+
+  if (
+    summary.trend_status === 'STRAINING' ||
+    summary.late_or_last_minute_event_count > 0 ||
+    summary.assignment_load_skew > 0
+  ) {
+    return 'Leaders can anticipate some pressure, but predictability is weakened by late movement, event recurrence, or uneven assignment load.'
+  }
+
+  return 'Leaders can reasonably anticipate operational conditions based on the persisted structural signals for this window.'
+}
+
+function leadershipInterpretation(summary: {
+  trend_status: string
+  leadership_action_cue: string
+}) {
+  if (summary.trend_status === 'UNSTABLE') {
+    return 'Leadership should treat this window as structurally unstable. The concern is not individual performance, but whether recurring pressure is overwhelming predictable staffing design.'
+  }
+
+  if (summary.trend_status === 'STRAINING') {
+    return 'Leadership should treat this window as an early warning period. The system is still functioning, but recurring pressure may reduce reliability if not reviewed.'
+  }
+
+  if (summary.trend_status === 'STABLE') {
+    return 'Leadership should maintain the current posture while preserving visibility of structural signals before pressure becomes harder to detect.'
+  }
+
+  return summary.leadership_action_cue
+}
+
+function riskOutlook(summary: {
+  trend_status: string
+  buffer_use_profile: string
+  repeated_buffer_depletion_flag: boolean
+}) {
+  if (summary.trend_status === 'UNSTABLE' || summary.repeated_buffer_depletion_flag) {
+    return 'cost pressure, staff fatigue, turnover exposure, and instability recurrence may increase.'
+  }
+
+  if (summary.trend_status === 'STRAINING' || summary.buffer_use_profile === 'MODERATE') {
+    return 'fatigue and instability recurrence may increase if structural pressure is not reviewed.'
+  }
+
+  return 'cost, fatigue, turnover, and instability recurrence risk are expected to remain contained.'
+}
+
+function actionSet(summary: {
+  trend_status: string
+  buffer_use_profile: string
+  repeated_buffer_depletion_flag: boolean
+  leadership_action_cue: string
+}) {
+  if (summary.trend_status === 'UNSTABLE') {
+    return {
+      immediate1: 'Review current coverage design for the affected unit.',
+      immediate2: 'Escalate recurring instability signals to leadership review.',
+      short1: 'Compare the next reporting window against this persisted buffer.',
+      short2: 'Stabilize staffing patterns before recurrence becomes normalized.',
+    }
+  }
+
+  if (summary.trend_status === 'STRAINING' || summary.buffer_use_profile === 'MODERATE') {
+    return {
+      immediate1: summary.leadership_action_cue,
+      immediate2: 'Review late or last-minute movement within the reporting window.',
+      short1: 'Monitor whether the same pressure pattern repeats next week.',
+      short2: 'Protect role-pool reliability before the strain becomes structural.',
+    }
+  }
+
+  return {
+    immediate1: 'Maintain current staffing posture.',
+    immediate2: 'Continue weekly structural signal monitoring.',
+    short1: 'Preserve the trend-buffer record for comparison.',
+    short2: 'Review only if recurrence appears in the next window.',
+  }
+}
+
 function buildTrendRows(
   assignments: AssignmentRow[],
   events: EventRow[],
@@ -159,13 +290,22 @@ function buildTrendRows(
   const groups = new Map<string, AssignmentRow[]>()
 
   assignments.forEach((row) => {
-    const key = `${row.unit}::${row.role_pool}::${row.baseline_design}`
+    const normalizedBaselineDesign = normalizeBaselineDesign(row.baseline_design)
+    const key = `${row.unit}::${row.role_pool}::${row.shift_type}::${normalizedBaselineDesign}`
     groups.set(key, [...(groups.get(key) ?? []), row])
   })
 
   return Array.from(groups.entries()).map(([key, group]) => {
-    const [unit, rolePool, baselineDesign] = key.split('::')
-    const matchedEvents = events.filter((event) => event.unit === unit && event.role_pool === rolePool)
+    const [unit, rolePool, shiftType, baselineDesign] = key.split('::')
+    const matchedEvents = events.filter(
+      (event) =>
+        event.unit === unit &&
+        event.role_pool === rolePool &&
+        event.shift_type === shiftType &&
+        event.event_date >= windowStart &&
+        event.event_date <= windowEnd,
+    )
+
     const higherCount = group.filter((row) => Number(row.load_modifier ?? 0) > 0).length
     const assignmentLoadSkew = group.reduce((sum, row) => sum + Number(row.load_modifier ?? 0), 0)
     const highIntensityEventCount = matchedEvents.filter((row) => row.event_intensity === 'HIGH').length
@@ -179,6 +319,7 @@ function buildTrendRows(
       trendWindow: `${windowStart} → ${windowEnd}`,
       unit,
       rolePool,
+      shiftType,
       baselineDesign,
       assignmentLoadSkew,
       pctHigher: group.length ? Math.round((higherCount / group.length) * 100) : 0,
@@ -208,6 +349,7 @@ function summarizeForPersistence(rows: TrendRow[], unit: string, windowStart: st
   const highIntensityEventCount = rows.reduce((sum, row) => sum + row.highIntensityEventCount, 0)
   const lateOrLastMinuteEventCount = rows.reduce((sum, row) => sum + row.lateOrLastMinuteEventCount, 0)
   const repeatedBufferDepletionFlag = rows.some((row) => row.repeatedBufferDepletionFlag)
+
   const dominantForces = rows
     .map((row) => row.dominantStabilityForces)
     .filter((force) => force && force !== 'NONE')
@@ -236,7 +378,15 @@ function summarizeForPersistence(rows: TrendRow[], unit: string, windowStart: st
     rows[0]?.leadershipActionCue ??
     'No trend-buffer output available.'
 
-  return {
+  const rolePressure = rows
+    .slice()
+    .sort((a, b) => {
+      const bScore = b.totalStabilityEvents + b.highIntensityEventCount + b.assignmentLoadSkew
+      const aScore = a.totalStabilityEvents + a.highIntensityEventCount + a.assignmentLoadSkew
+      return bScore - aScore
+    })[0]
+
+  const baseSummary = {
     unit,
     window_start: windowStart,
     window_end: windowEnd,
@@ -249,6 +399,26 @@ function summarizeForPersistence(rows: TrendRow[], unit: string, windowStart: st
     dominant_stability_forces: dominantForces.length ? Array.from(new Set(dominantForces)) : ['NONE'],
     trend_status: trendStatus,
     leadership_action_cue: leadershipActionCue,
+  }
+
+  const actions = actionSet(baseSummary)
+
+  return {
+    ...baseSummary,
+    stability_score: statusScore(trendStatus),
+    predictability_insight: predictabilityInsight(baseSummary),
+    most_affected_role_pool: rolePressure?.rolePool ?? 'Not persisted in current buffer.',
+    most_affected_shift: rolePressure?.shiftType ?? 'Not persisted in current buffer.',
+    fragility_level: fragilityLevel(baseSummary),
+    cost_pressure_signal: bufferUseProfile,
+    leadership_interpretation: leadershipInterpretation(baseSummary),
+    immediate_action_1: actions.immediate1,
+    immediate_action_2: actions.immediate2,
+    short_term_action_1: actions.short1,
+    short_term_action_2: actions.short2,
+    risk_outlook: riskOutlook(baseSummary),
+    last_action_taken: null,
+    observed_outcome: null,
   }
 }
 
@@ -359,7 +529,7 @@ export default function SSITrendBufferPage() {
       return
     }
 
-    setMessage('Saved STABILITY_TREND_BUFFER output into ssi_trend_buffer.')
+    setMessage('Saved Phase 10 executive interpretation fields into ssi_trend_buffer.')
   }
 
   return (
@@ -369,7 +539,7 @@ export default function SSITrendBufferPage() {
           <p style={styles.eyebrow}>TSINAXA SSI • STABILITY_TREND_BUFFER</p>
           <h1 style={styles.title}>Stability Trend Buffer</h1>
           <p style={styles.subtitle}>
-            Read-only calculation view. Calculate the window, verify the trend rows, then save the controlled trend-buffer output for the Executive Dashboard.
+            Calculate the window, verify the trend rows, then save the controlled trend-buffer output and Phase 10 executive interpretation fields into ssi_trend_buffer.
           </p>
         </header>
 
@@ -385,13 +555,7 @@ export default function SSITrendBufferPage() {
           <div style={styles.flowSteps}>
             {ssiFlow.map((item, index) => (
               <div key={item.href} style={styles.flowStepWrap}>
-                <a
-                  href={item.href}
-                  style={{
-                    ...styles.flowStep,
-                    ...(item.active ? styles.flowStepActive : {}),
-                  }}
-                >
+                <a href={item.href} style={{ ...styles.flowStep, ...(item.active ? styles.flowStepActive : {}) }}>
                   <span style={styles.flowStepIndex}>{index + 1}</span>
                   <span style={styles.flowStepText}>
                     <strong>{item.label}</strong>
@@ -409,6 +573,7 @@ export default function SSITrendBufferPage() {
           <Input label="Unit" value={filters.unit} onChange={(value) => updateFilter('unit', value)} />
           <Input label="Window_Start" value={filters.windowStart} onChange={(value) => updateFilter('windowStart', value)} />
           <Input label="Window_End" value={filters.windowEnd} onChange={(value) => updateFilter('windowEnd', value)} />
+
           <label style={styles.label}>
             <span>Shift_Type</span>
             <select value={filters.shiftType} onChange={(event) => updateFilter('shiftType', event.target.value)} style={styles.input}>
@@ -417,12 +582,15 @@ export default function SSITrendBufferPage() {
               <option value="NIGHT">NIGHT</option>
             </select>
           </label>
+
           <button type="submit" disabled={loading} style={styles.button}>
             {loading ? 'Calculating...' : 'Calculate Trend Buffer'}
           </button>
+
           <button type="button" disabled={saving || !trendRows.length} style={styles.secondaryButton} onClick={saveTrendBufferOutput}>
-            {saving ? 'Saving...' : 'Save Trend Buffer Output'}
+            {saving ? 'Saving...' : 'Save Phase 10 Output'}
           </button>
+
           <p style={styles.message}>{message}</p>
         </form>
 
@@ -437,11 +605,16 @@ export default function SSITrendBufferPage() {
         <section style={styles.panelWide}>
           <h2 style={styles.panelTitle}>Persisted Executive Summary Preview</h2>
           <div style={styles.previewGrid}>
-            <Metric label="Assignment_Load_Skew" value={String(persistedSummary.assignment_load_skew)} />
+            <Metric label="Assignment_Load_Skew" value={skewStatus(persistedSummary.assignment_load_skew)} />
             <Metric label="Total_Stability_Events" value={String(persistedSummary.total_stability_events)} />
             <Metric label="High_Intensity_Event_Count" value={String(persistedSummary.high_intensity_event_count)} />
             <Metric label="Buffer_Use_Profile" value={persistedSummary.buffer_use_profile} />
             <Metric label="Trend_Status" value={persistedSummary.trend_status} />
+            <Metric label="Stability_Score" value={String(persistedSummary.stability_score ?? 'Not persisted')} />
+            <Metric label="Fragility_Level" value={persistedSummary.fragility_level} />
+            <Metric label="Cost_Pressure" value={persistedSummary.cost_pressure_signal} />
+            <Metric label="Affected_Role" value={persistedSummary.most_affected_role_pool} />
+            <Metric label="Affected_Shift" value={persistedSummary.most_affected_shift} />
           </div>
         </section>
 
@@ -453,8 +626,7 @@ export default function SSITrendBufferPage() {
         <section style={styles.footerPanel}>
           <h2 style={styles.panelTitle}>Doctrine Boundary</h2>
           <p style={styles.footerText}>
-            This page calculates trend-buffer output from assignments and events, then stores one controlled window summary in ssi_trend_buffer.
-            Executive Dashboard reads from that stored output. CGI handoff happens later.
+            This page calculates and persists the controlled SSI trend-buffer output. Weekly Brief remains read-only and reads only from ssi_trend_buffer.
           </p>
         </section>
       </section>
@@ -487,6 +659,7 @@ function TrendTable({ rows }: { rows: TrendRow[] }) {
     'Trend_Window',
     'Unit',
     'Role_Pool',
+    'Shift_Type',
     'Baseline_Design',
     'Assignment_Load_Skew',
     'Pct_Higher',
@@ -509,12 +682,13 @@ function TrendTable({ rows }: { rows: TrendRow[] }) {
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={`${row.unit}-${row.rolePool}-${row.baselineDesign}`}>
+            <tr key={`${row.unit}-${row.rolePool}-${row.shiftType}-${row.baselineDesign}`}>
               <td style={styles.td}>{row.trendWindow}</td>
               <td style={styles.td}>{row.unit}</td>
               <td style={styles.td}>{row.rolePool}</td>
+              <td style={styles.td}>{row.shiftType}</td>
               <td style={styles.td}>{row.baselineDesign}</td>
-              <td style={styles.td}>{row.assignmentLoadSkew}</td>
+              <td style={styles.td}>{skewStatus(row.assignmentLoadSkew)}</td>
               <td style={styles.td}>{row.pctHigher}%</td>
               <td style={styles.td}>{row.totalStabilityEvents}</td>
               <td style={styles.td}>{row.highIntensityEventCount}</td>
@@ -540,7 +714,6 @@ const styles: Record<string, CSSProperties> = {
   eyebrow: { color: '#d6b25e', letterSpacing: '0.14em', textTransform: 'uppercase', fontSize: '12px', margin: 0 },
   title: { fontSize: '38px', margin: '12px 0' },
   subtitle: { color: '#cfc7b5', margin: 0, maxWidth: '900px' },
-
   flowNav: { border: '1px solid rgba(214,178,94,0.28)', background: '#090807', borderRadius: '20px', padding: '16px', marginBottom: '18px' },
   flowNavHeader: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' },
   flowNavTitle: { color: '#d6b25e', fontWeight: 900, letterSpacing: '0.14em', textTransform: 'uppercase', fontSize: '12px' },
@@ -553,7 +726,6 @@ const styles: Record<string, CSSProperties> = {
   flowStepIndex: { display: 'grid', placeItems: 'center', width: '26px', height: '26px', borderRadius: '999px', background: 'rgba(214,178,94,0.16)', color: '#d6b25e', fontWeight: 900, flexShrink: 0 },
   flowStepText: { display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 },
   flowArrow: { color: '#9f8142', fontWeight: 900, flexShrink: 0 },
-
   panel: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px', border: '1px solid rgba(214,178,94,0.28)', background: '#090807', borderRadius: '22px', padding: '22px', marginBottom: '18px' },
   panelWide: { border: '1px solid rgba(214,178,94,0.28)', background: '#090807', borderRadius: '22px', padding: '22px', marginBottom: '18px' },
   panelTitle: { gridColumn: '1 / -1', color: '#d6b25e', margin: '0 0 8px' },
@@ -566,7 +738,7 @@ const styles: Record<string, CSSProperties> = {
   previewGrid: { gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: '12px' },
   metric: { border: '1px solid rgba(214,178,94,0.22)', background: '#11100d', borderRadius: '16px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px', color: '#cfc7b5' },
   tableWrap: { overflowX: 'auto' },
-  table: { width: '100%', borderCollapse: 'collapse', minWidth: '1700px' },
+  table: { width: '100%', borderCollapse: 'collapse', minWidth: '1800px' },
   th: { textAlign: 'left', color: '#d6b25e', borderBottom: '1px solid rgba(214,178,94,0.28)', padding: '10px', whiteSpace: 'nowrap' },
   td: { color: '#fff8e7', borderBottom: '1px solid rgba(214,178,94,0.12)', padding: '10px', verticalAlign: 'top' },
   footerPanel: { border: '1px solid rgba(214,178,94,0.28)', background: '#090807', borderRadius: '22px', padding: '22px' },

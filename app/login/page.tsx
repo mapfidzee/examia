@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import type { CSSProperties, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import type { CSSProperties } from 'react'
+
 import { supabase } from '../../lib/supabase'
 
 export default function LoginPage() {
@@ -12,11 +13,11 @@ export default function LoginPage() {
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
 
-  async function signIn(event: React.FormEvent<HTMLFormElement>) {
+  async function signIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     if (!email.trim() || !password.trim()) {
-      alert('Enter email and password.')
+      setMessage('Enter email and password.')
       return
     }
 
@@ -41,8 +42,8 @@ export default function LoginPage() {
   return (
     <main style={styles.page}>
       <section style={styles.card}>
-        <p style={styles.kicker}>EXAMIA LIS • GOVERNED ACCESS</p>
-        <h1 style={styles.title}>Sign in to EXAMIA</h1>
+        <p style={styles.kicker}>TSINAXA CGI • GOVERNED ACCESS</p>
+        <h1 style={styles.title}>Sign in to TSINAXA</h1>
         <p style={styles.subtitle}>
           Access is governed by role, status, and operational authorization.
         </p>
@@ -75,7 +76,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {message && <p style={styles.message}>{message}</p>}
+        {message ? <p style={styles.message}>{message}</p> : null}
       </section>
     </main>
   )
@@ -84,8 +85,9 @@ export default function LoginPage() {
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    background: 'linear-gradient(180deg, #020617 0%, #0f172a 100%)',
-    color: 'white',
+    background:
+      'radial-gradient(circle at 50% -140px, rgba(214,178,94,0.12), transparent 430px), #050505',
+    color: '#fff8e7',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -94,17 +96,19 @@ const styles: Record<string, CSSProperties> = {
   card: {
     width: '100%',
     maxWidth: '520px',
-    background: '#020617',
-    border: '1px solid #1e293b',
+    background: '#090807',
+    border: '1px solid rgba(214,178,94,0.28)',
     borderRadius: '28px',
     padding: '32px',
-    boxShadow: '0 24px 70px rgba(0,0,0,0.45)',
+    boxShadow: '0 24px 70px rgba(0,0,0,0.50)',
   },
   kicker: {
-    color: '#67e8f9',
+    color: '#d6b25e',
     fontSize: '12px',
     fontWeight: 900,
     letterSpacing: '2px',
+    textTransform: 'uppercase',
+    margin: 0,
   },
   title: {
     fontSize: '42px',
@@ -112,7 +116,7 @@ const styles: Record<string, CSSProperties> = {
     margin: '12px 0',
   },
   subtitle: {
-    color: '#cbd5e1',
+    color: '#cfc7b5',
     lineHeight: 1.6,
     marginBottom: '24px',
   },
@@ -124,32 +128,34 @@ const styles: Record<string, CSSProperties> = {
     display: 'grid',
     gap: '8px',
     fontWeight: 800,
+    color: '#cfc7b5',
   },
   input: {
     width: '100%',
     padding: '16px',
     borderRadius: '14px',
-    border: '1px solid #334155',
-    background: '#111827',
-    color: 'white',
+    border: '1px solid rgba(214,178,94,0.28)',
+    background: '#11100d',
+    color: '#fff8e7',
     fontSize: '16px',
+    outline: 'none',
   },
   button: {
     width: '100%',
     padding: '16px',
     borderRadius: '14px',
     border: 'none',
-    background: '#67e8f9',
-    color: '#082f49',
+    background: '#d6b25e',
+    color: '#050505',
     fontWeight: 900,
     cursor: 'pointer',
     fontSize: '16px',
   },
   message: {
     marginTop: '18px',
-    background: '#0f172a',
-    border: '1px solid #334155',
-    color: '#dbeafe',
+    background: '#11100d',
+    border: '1px solid rgba(214,178,94,0.28)',
+    color: '#fff8e7',
     padding: '14px',
     borderRadius: '14px',
     lineHeight: 1.5,
