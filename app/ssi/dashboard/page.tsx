@@ -1,0 +1,522 @@
+'use client'
+
+import { FormEvent, useMemo, useState } from 'react'
+import type { CSSProperties } from 'react'
+
+import { supabase } from '@/lib/supabase'
+
+type ShiftTypeFilter = 'ALL' | 'DAY' | 'NIGHT'
+
+type AssignmentRow = {
+  unit: string
+  role_pool: string
+  shift_type: string
+  assignment_date: string
+  baseline_design: string
+  load_modifier: number | null
+  complexity_flag: boolean | null
+  starting_strain_signal: string | null
+}
+
+type EventRow = {
+  unit: string
+  role_pool: string
+  shift_type: string
+  event_date: string
+  timing_category: string
+  event_type: string
+  buffer_response: string | null
+  stability_force: string | null
+  event_intensity: string | null
+  buffer_cost_band: string | null
+}
+
+type TrendRow = {
+  trendWindow: string
+  unit: string
+  rolePool: string
+  baselineDesign: string
+  assignmentLoadSkew: number
+  pctHigher: number
+  totalStabilityEvents: number
+  highIntensityEventCount: number
+  lateOrLastMinuteEventCount: number
+  bufferUseProfile: string
+  repeatedBufferDepletionFlag: boolean
+  dominantStabilityForces: string
+  trendStatus: string
+  trendStatusRule: string
+  leadershipActionCue: string
+}
+
+const initialFilters = {
+  unit: '',
+  windowStart: '2026-03-01',
+  windowEnd: '2026-03-07',
+  shiftType: 'ALL' as ShiftTypeFilter,
+}
+
+function isLate(value: string | null) {
+  const text = String(value ?? '').toUpperCase()
+  return text.includes('LATE') || text.includes('LAST_MINUTE')
+}
+
+function bufferUsed(value: string | null) {
+  return String(value ?? '').trim() !== ''
+}
+
+function dominant(values: string[]) {
+  const counts = values.filter(Boolean).reduce<Record<string, number>>((acc, value) => {
+    acc[value] = (acc[value] ?? 0) + 1
+    return acc
+  }, {})
+
+  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'NONE'
+}
+
+function bufferProfile(bufferCount: number, highCostCount: number) {
+  if (highCostCount >= 2 || bufferCount >= 4) return 'HIGH'
+  if (highCostCount >= 1 || bufferCount >= 2) return 'MODERATE'
+  if (bufferCount >= 1) return 'LOW'
+  return 'NONE'
+}
+
+function trendStatus(row: Omit<TrendRow, 'trendStatus' | 'trendStatusRule' | 'leadershipActionCue'>) {
+  if (
+    row.highIntensityEventCount >= 2 ||
+    row.bufferUseProfile === 'HIGH' ||
+    row.repeatedBufferDepletionFlag
+  ) {
+    return 'UNSTABLE'
+  }
+
+  if (
+    row.totalStabilityEvents >= 2 ||
+    row.highIntensityEventCount === 1 ||
+    row.bufferUseProfile === 'MODERATE' ||
+    row.assignmentLoadSkew >= 2 ||
+    row.pctHigher >= 50
+  ) {
+    return 'STRAINING'
+  }
+
+  return 'STABLE'
+}
+
+function trendRule(row: Omit<TrendRow, 'trendStatus' | 'trendStatusRule' | 'leadershipActionCue'>, status: string) {
+  if (row.bufferUseProfile === 'HIGH' && row.totalStabilityEvents <= 1) {
+    return 'Hidden strain rule: high buffer use with low visible event count.'
+  }
+
+  if (row.repeatedBufferDepletionFlag) {
+    return 'Repeated buffer depletion rule.'
+  }
+
+  if (status === 'UNSTABLE') {
+    return 'Unstable rule: high intensity events, high buffer use, or repeated depletion.'
+  }
+
+  if (status === 'STRAINING') {
+    return 'Straining rule: moderate events, one high-intensity event, or repeated above-baseline starts.'
+  }
+
+  return 'Stable rule: low events and low buffer use.'
+}
+
+function leadershipCue(status: string, row: Omit<TrendRow, 'trendStatus' | 'trendStatusRule' | 'leadershipActionCue'>) {
+  if (row.bufferUseProfile === 'HIGH' && row.totalStabilityEvents <= 1) {
+    return 'Investigate hidden strain: buffers are being consumed before visible instability is fully surfacing.'
+  }
+
+  if (row.repeatedBufferDepletionFlag) {
+    return 'Review staffing design and recurring buffer dependence.'
+  }
+
+  if (status === 'UNSTABLE') {
+    return 'Immediate leadership intervention required.'
+  }
+
+  if (status === 'STRAINING') {
+    return 'Review recurring pressure before instability escalates.'
+  }
+
+  return 'Maintain current operating posture and continue monitoring.'
+}
+
+function buildTrendRows(
+  assignments: AssignmentRow[],
+  events: EventRow[],
+  windowStart: string,
+  windowEnd: string,
+): TrendRow[] {
+  const groups = new Map<string, AssignmentRow[]>()
+
+  assignments.forEach((row) => {
+    const key = `${row.unit}::${row.role_pool}::${row.baseline_design}`
+    groups.set(key, [...(groups.get(key) ?? []), row])
+  })
+
+  return Array.from(groups.entries()).map(([key, group]) => {
+    const [unit, rolePool, baselineDesign] = key.split('::')
+    const matchedEvents = events.filter((event) => event.unit === unit && event.role_pool === rolePool)
+    const higherCount = group.filter((row) => Number(row.load_modifier ?? 0) > 0).length
+    const assignmentLoadSkew = group.reduce((sum, row) => sum + Number(row.load_modifier ?? 0), 0)
+    const highIntensityEventCount = matchedEvents.filter((row) => row.event_intensity === 'HIGH').length
+    const lateOrLastMinuteEventCount = matchedEvents.filter((row) => isLate(row.timing_category)).length
+    const bufferCount = matchedEvents.filter((row) => bufferUsed(row.buffer_response)).length
+    const highCostCount = matchedEvents.filter((row) => row.buffer_cost_band === 'HIGH_BUFFER_COST').length
+    const profile = bufferProfile(bufferCount, highCostCount)
+    const repeatedFlag = bufferCount >= 3 || highCostCount >= 2
+
+    const base = {
+      trendWindow: `${windowStart} → ${windowEnd}`,
+      unit,
+      rolePool,
+      baselineDesign,
+      assignmentLoadSkew,
+      pctHigher: group.length ? Math.round((higherCount / group.length) * 100) : 0,
+      totalStabilityEvents: matchedEvents.length,
+      highIntensityEventCount,
+      lateOrLastMinuteEventCount,
+      bufferUseProfile: profile,
+      repeatedBufferDepletionFlag: repeatedFlag,
+      dominantStabilityForces: dominant(matchedEvents.map((row) => row.stability_force ?? '')),
+    }
+
+    const status = trendStatus(base)
+    const rule = trendRule(base, status)
+
+    return {
+      ...base,
+      trendStatus: status,
+      trendStatusRule: rule,
+      leadershipActionCue: leadershipCue(status, base),
+    }
+  })
+}
+
+function summarizeForPersistence(rows: TrendRow[], unit: string, windowStart: string, windowEnd: string) {
+  const assignmentLoadSkew = rows.reduce((sum, row) => sum + row.assignmentLoadSkew, 0)
+  const totalStabilityEvents = rows.reduce((sum, row) => sum + row.totalStabilityEvents, 0)
+  const highIntensityEventCount = rows.reduce((sum, row) => sum + row.highIntensityEventCount, 0)
+  const lateOrLastMinuteEventCount = rows.reduce((sum, row) => sum + row.lateOrLastMinuteEventCount, 0)
+  const repeatedBufferDepletionFlag = rows.some((row) => row.repeatedBufferDepletionFlag)
+  const dominantForces = rows
+    .map((row) => row.dominantStabilityForces)
+    .filter((force) => force && force !== 'NONE')
+
+  const bufferRank = ['NONE', 'LOW', 'MODERATE', 'HIGH']
+  const bufferUseProfile = rows.reduce(
+    (highest, row) =>
+      bufferRank.indexOf(row.bufferUseProfile) > bufferRank.indexOf(highest)
+        ? row.bufferUseProfile
+        : highest,
+    'NONE',
+  )
+
+  const trendStatus =
+    rows.some((row) => row.trendStatus === 'UNSTABLE')
+      ? 'UNSTABLE'
+      : rows.some((row) => row.trendStatus === 'STRAINING')
+        ? 'STRAINING'
+        : rows.length
+          ? 'STABLE'
+          : 'NO DATA'
+
+  const leadershipActionCue =
+    rows.find((row) => row.trendStatus === 'UNSTABLE')?.leadershipActionCue ??
+    rows.find((row) => row.trendStatus === 'STRAINING')?.leadershipActionCue ??
+    rows[0]?.leadershipActionCue ??
+    'No trend-buffer output available.'
+
+  return {
+    unit,
+    window_start: windowStart,
+    window_end: windowEnd,
+    assignment_load_skew: assignmentLoadSkew,
+    total_stability_events: totalStabilityEvents,
+    high_intensity_event_count: highIntensityEventCount,
+    late_or_last_minute_event_count: lateOrLastMinuteEventCount,
+    buffer_use_profile: bufferUseProfile,
+    repeated_buffer_depletion_flag: repeatedBufferDepletionFlag,
+    dominant_stability_forces: dominantForces.length ? Array.from(new Set(dominantForces)) : ['NONE'],
+    trend_status: trendStatus,
+    leadership_action_cue: leadershipActionCue,
+  }
+}
+
+export default function SSITrendBufferPage() {
+  const [filters, setFilters] = useState(initialFilters)
+  const [assignments, setAssignments] = useState<AssignmentRow[]>([])
+  const [events, setEvents] = useState<EventRow[]>([])
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState('Load a window to calculate STABILITY_TREND_BUFFER.')
+
+  const trendRows = useMemo(
+    () => buildTrendRows(assignments, events, filters.windowStart, filters.windowEnd),
+    [assignments, events, filters.windowStart, filters.windowEnd],
+  )
+
+  const persistedSummary = useMemo(
+    () => summarizeForPersistence(trendRows, filters.unit, filters.windowStart, filters.windowEnd),
+    [trendRows, filters.unit, filters.windowStart, filters.windowEnd],
+  )
+
+  const topSummary = useMemo(() => {
+    const unstable = trendRows.filter((row) => row.trendStatus === 'UNSTABLE').length
+    const straining = trendRows.filter((row) => row.trendStatus === 'STRAINING').length
+
+    return {
+      rows: trendRows.length,
+      unstable,
+      straining,
+      stable: trendRows.filter((row) => row.trendStatus === 'STABLE').length,
+      posture: unstable > 0 ? 'UNSTABLE' : straining > 0 ? 'STRAINING' : trendRows.length ? 'STABLE' : 'NO DATA',
+    }
+  }, [trendRows])
+
+  function updateFilter(field: keyof typeof initialFilters, value: string) {
+    setFilters((current) => ({ ...current, [field]: value }))
+  }
+
+  async function loadTrend(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (!filters.unit || !filters.windowStart || !filters.windowEnd) {
+      setMessage('Enter Unit, Window_Start, and Window_End.')
+      return
+    }
+
+    setLoading(true)
+
+    let assignmentQuery = supabase
+      .from('ssi_assignment_instances')
+      .select('unit, role_pool, shift_type, assignment_date, baseline_design, load_modifier, complexity_flag, starting_strain_signal')
+      .eq('unit', filters.unit)
+      .gte('assignment_date', filters.windowStart)
+      .lte('assignment_date', filters.windowEnd)
+
+    let eventQuery = supabase
+      .from('ssi_stability_events')
+      .select('unit, role_pool, shift_type, event_date, timing_category, event_type, buffer_response, stability_force, event_intensity, buffer_cost_band')
+      .eq('unit', filters.unit)
+      .gte('event_date', filters.windowStart)
+      .lte('event_date', filters.windowEnd)
+
+    if (filters.shiftType !== 'ALL') {
+      assignmentQuery = assignmentQuery.eq('shift_type', filters.shiftType)
+      eventQuery = eventQuery.eq('shift_type', filters.shiftType)
+    }
+
+    const [assignmentResult, eventResult] = await Promise.all([assignmentQuery, eventQuery])
+
+    setLoading(false)
+
+    if (assignmentResult.error) {
+      setMessage(assignmentResult.error.message)
+      return
+    }
+
+    if (eventResult.error) {
+      setMessage(eventResult.error.message)
+      return
+    }
+
+    setAssignments((assignmentResult.data ?? []) as AssignmentRow[])
+    setEvents((eventResult.data ?? []) as EventRow[])
+    setMessage('STABILITY_TREND_BUFFER calculated. Review output, then save if correct.')
+  }
+
+  async function saveTrendBufferOutput() {
+    if (!filters.unit || !filters.windowStart || !filters.windowEnd) {
+      setMessage('Enter Unit, Window_Start, and Window_End before saving.')
+      return
+    }
+
+    if (!trendRows.length) {
+      setMessage('No trend-buffer rows calculated. Calculate first, then save.')
+      return
+    }
+
+    setSaving(true)
+
+    const { error } = await supabase
+      .from('ssi_trend_buffer')
+      .upsert(persistedSummary, { onConflict: 'unit,window_start,window_end' })
+
+    setSaving(false)
+
+    if (error) {
+      setMessage(error.message)
+      return
+    }
+
+    setMessage('Saved STABILITY_TREND_BUFFER output into ssi_trend_buffer.')
+  }
+
+  return (
+    <main style={styles.page}>
+      <section style={styles.shell}>
+        <header style={styles.header}>
+          <p style={styles.eyebrow}>TSINAXA SSI • STABILITY_TREND_BUFFER</p>
+          <h1 style={styles.title}>Stability Trend Buffer</h1>
+          <p style={styles.subtitle}>
+            Read-only calculation view. Calculate the window, verify the trend rows, then save the controlled trend-buffer output for the Executive Dashboard.
+          </p>
+        </header>
+
+        <form onSubmit={loadTrend} style={styles.panel}>
+          <h2 style={styles.panelTitle}>Window Controls</h2>
+          <Input label="Unit" value={filters.unit} onChange={(value) => updateFilter('unit', value)} />
+          <Input label="Window_Start" value={filters.windowStart} onChange={(value) => updateFilter('windowStart', value)} />
+          <Input label="Window_End" value={filters.windowEnd} onChange={(value) => updateFilter('windowEnd', value)} />
+          <label style={styles.label}>
+            <span>Shift_Type</span>
+            <select value={filters.shiftType} onChange={(event) => updateFilter('shiftType', event.target.value)} style={styles.input}>
+              <option value="ALL">ALL</option>
+              <option value="DAY">DAY</option>
+              <option value="NIGHT">NIGHT</option>
+            </select>
+          </label>
+          <button type="submit" disabled={loading} style={styles.button}>
+            {loading ? 'Calculating...' : 'Calculate Trend Buffer'}
+          </button>
+          <button type="button" disabled={saving || !trendRows.length} style={styles.secondaryButton} onClick={saveTrendBufferOutput}>
+            {saving ? 'Saving...' : 'Save Trend Buffer Output'}
+          </button>
+          <p style={styles.message}>{message}</p>
+        </form>
+
+        <section style={styles.summaryGrid}>
+          <Metric label="Trend_Rows" value={String(topSummary.rows)} />
+          <Metric label="Stable" value={String(topSummary.stable)} />
+          <Metric label="Straining" value={String(topSummary.straining)} />
+          <Metric label="Unstable" value={String(topSummary.unstable)} />
+          <Metric label="Overall_Posture" value={topSummary.posture} />
+        </section>
+
+        <section style={styles.panelWide}>
+          <h2 style={styles.panelTitle}>Persisted Executive Summary Preview</h2>
+          <div style={styles.previewGrid}>
+            <Metric label="Assignment_Load_Skew" value={String(persistedSummary.assignment_load_skew)} />
+            <Metric label="Total_Stability_Events" value={String(persistedSummary.total_stability_events)} />
+            <Metric label="High_Intensity_Event_Count" value={String(persistedSummary.high_intensity_event_count)} />
+            <Metric label="Buffer_Use_Profile" value={persistedSummary.buffer_use_profile} />
+            <Metric label="Trend_Status" value={persistedSummary.trend_status} />
+          </div>
+        </section>
+
+        <section style={styles.panelWide}>
+          <h2 style={styles.panelTitle}>STABILITY_TREND_BUFFER Rows</h2>
+          <TrendTable rows={trendRows} />
+        </section>
+
+        <section style={styles.footerPanel}>
+          <h2 style={styles.panelTitle}>Doctrine Boundary</h2>
+          <p style={styles.footerText}>
+            This page calculates trend-buffer output from assignments and events, then stores one controlled window summary in ssi_trend_buffer.
+            Executive Dashboard reads from that stored output. CGI handoff happens later.
+          </p>
+        </section>
+      </section>
+    </main>
+  )
+}
+
+function Input({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <label style={styles.label}>
+      <span>{label}</span>
+      <input value={value} onChange={(event) => onChange(event.target.value)} style={styles.input} />
+    </label>
+  )
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={styles.metric}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  )
+}
+
+function TrendTable({ rows }: { rows: TrendRow[] }) {
+  if (!rows.length) return <p style={styles.message}>No trend rows calculated for this window.</p>
+
+  const headers = [
+    'Trend_Window',
+    'Unit',
+    'Role_Pool',
+    'Baseline_Design',
+    'Assignment_Load_Skew',
+    'Pct_Higher',
+    'Total_Stability_Events',
+    'High_Intensity_Event_Count',
+    'Late_or_Last_Minute_Event_Count',
+    'Buffer_Use_Profile',
+    'Repeated_Buffer_Depletion_Flag',
+    'Dominant_Stability_Forces',
+    'Trend_Status',
+    'Trend_Status_Rule',
+    'Leadership_Action_Cue',
+  ]
+
+  return (
+    <div style={styles.tableWrap}>
+      <table style={styles.table}>
+        <thead>
+          <tr>{headers.map((header) => <th key={header} style={styles.th}>{header}</th>)}</tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={`${row.unit}-${row.rolePool}-${row.baselineDesign}`}>
+              <td style={styles.td}>{row.trendWindow}</td>
+              <td style={styles.td}>{row.unit}</td>
+              <td style={styles.td}>{row.rolePool}</td>
+              <td style={styles.td}>{row.baselineDesign}</td>
+              <td style={styles.td}>{row.assignmentLoadSkew}</td>
+              <td style={styles.td}>{row.pctHigher}%</td>
+              <td style={styles.td}>{row.totalStabilityEvents}</td>
+              <td style={styles.td}>{row.highIntensityEventCount}</td>
+              <td style={styles.td}>{row.lateOrLastMinuteEventCount}</td>
+              <td style={styles.td}>{row.bufferUseProfile}</td>
+              <td style={styles.td}>{row.repeatedBufferDepletionFlag ? 'TRUE' : 'FALSE'}</td>
+              <td style={styles.td}>{row.dominantStabilityForces}</td>
+              <td style={styles.td}>{row.trendStatus}</td>
+              <td style={styles.td}>{row.trendStatusRule}</td>
+              <td style={styles.td}>{row.leadershipActionCue}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+const styles: Record<string, CSSProperties> = {
+  page: { minHeight: '100vh', background: '#050505', color: '#fff8e7', padding: '40px' },
+  shell: { maxWidth: '1280px', margin: '0 auto' },
+  header: { border: '1px solid rgba(214,178,94,0.28)', background: '#090807', borderRadius: '24px', padding: '28px', marginBottom: '24px' },
+  eyebrow: { color: '#d6b25e', letterSpacing: '0.14em', textTransform: 'uppercase', fontSize: '12px', margin: 0 },
+  title: { fontSize: '38px', margin: '12px 0' },
+  subtitle: { color: '#cfc7b5', margin: 0, maxWidth: '900px' },
+  panel: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px', border: '1px solid rgba(214,178,94,0.28)', background: '#090807', borderRadius: '22px', padding: '22px', marginBottom: '18px' },
+  panelWide: { border: '1px solid rgba(214,178,94,0.28)', background: '#090807', borderRadius: '22px', padding: '22px', marginBottom: '18px' },
+  panelTitle: { gridColumn: '1 / -1', color: '#d6b25e', margin: '0 0 8px' },
+  label: { display: 'flex', flexDirection: 'column', gap: '8px', color: '#cfc7b5', fontSize: '13px' },
+  input: { background: '#11100d', border: '1px solid rgba(214,178,94,0.28)', borderRadius: '14px', color: '#fff8e7', padding: '12px 14px', outline: 'none' },
+  button: { background: '#d6b25e', color: '#050505', border: 'none', borderRadius: '14px', padding: '13px 18px', fontWeight: 800, cursor: 'pointer', alignSelf: 'end' },
+  secondaryButton: { background: '#11100d', color: '#d6b25e', border: '1px solid rgba(214,178,94,0.38)', borderRadius: '14px', padding: '13px 18px', fontWeight: 800, cursor: 'pointer', alignSelf: 'end' },
+  message: { color: '#cfc7b5', margin: 0 },
+  summaryGrid: { display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: '12px', marginBottom: '18px' },
+  previewGrid: { gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: '12px' },
+  metric: { border: '1px solid rgba(214,178,94,0.22)', background: '#11100d', borderRadius: '16px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px', color: '#cfc7b5' },
+  tableWrap: { overflowX: 'auto' },
+  table: { width: '100%', borderCollapse: 'collapse', minWidth: '1700px' },
+  th: { textAlign: 'left', color: '#d6b25e', borderBottom: '1px solid rgba(214,178,94,0.28)', padding: '10px', whiteSpace: 'nowrap' },
+  td: { color: '#fff8e7', borderBottom: '1px solid rgba(214,178,94,0.12)', padding: '10px', verticalAlign: 'top' },
+  footerPanel: { border: '1px solid rgba(214,178,94,0.28)', background: '#090807', borderRadius: '22px', padding: '22px' },
+  footerText: { color: '#cfc7b5', lineHeight: 1.6, margin: 0 },
+}
