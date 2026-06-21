@@ -1,7 +1,8 @@
 'use client'
 
-import { FormEvent, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+import { useRouter } from 'next/navigation'
 
 import {
   SSI_COMMON_SHIFT_BLOCK_OPTIONS,
@@ -35,6 +36,9 @@ type RoleRow = {
   loadComplexity: string
 }
 
+const allowedRoles = ['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']
+const allowedStatuses = ['ACTIVE']
+
 const roleSections: { rolePool: RolePool; count: number }[] = [
   { rolePool: 'RN', count: 6 },
   { rolePool: 'LPN', count: 6 },
@@ -44,8 +48,9 @@ const roleSections: { rolePool: RolePool; count: number }[] = [
 const ssiFlow = [
   { label: 'Assignments', href: '/ssi/assignments', note: 'Shift-start load capture', active: true },
   { label: 'Events', href: '/ssi/events', note: 'Stability event capture', active: false },
-  { label: 'Trend Buffer', href: '/ssi/dashboard', note: 'Persisted buffer output', active: false },
-  { label: 'Executive Dashboard', href: '/ssi', note: 'Locked executive view', active: false },
+  { label: 'Trend Buffer', href: '/ssi/dashboard', note: 'Persisted structural signals', active: false },
+  { label: 'Executive Dashboard', href: '/ssi', note: 'Leadership interpretation', active: false },
+  { label: 'Weekly Brief', href: '/ssi/weekly-brief', note: 'Printable executive summary', active: false },
 ]
 
 const initialHeader: ShiftHeader = {
@@ -85,6 +90,10 @@ function deriveBaselineCount(baselineDesign: string, manualBaselineCount: string
 }
 
 export default function SSIAssignmentsPage() {
+  const router = useRouter()
+
+  const [authorized, setAuthorized] = useState(false)
+  const [checkingAccess, setCheckingAccess] = useState(true)
   const [header, setHeader] = useState<ShiftHeader>(initialHeader)
   const [rows, setRows] = useState<RoleRow[]>(makeInitialRows)
   const [saving, setSaving] = useState(false)
@@ -96,6 +105,49 @@ export default function SSIAssignmentsPage() {
     CNA: false,
   })
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    async function verifyAccess() {
+      setCheckingAccess(true)
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session?.user) {
+        router.replace('/ssi/login')
+        return
+      }
+
+      if (!session.user.email_confirmed_at) {
+        await supabase.auth.signOut()
+        router.replace('/ssi/login')
+        return
+      }
+
+      const { data: roleRecord, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role,status')
+        .eq('user_id', session.user.id)
+        .single()
+
+      if (
+        roleError ||
+        !roleRecord ||
+        !allowedRoles.includes(roleRecord.role) ||
+        !allowedStatuses.includes(roleRecord.status)
+      ) {
+        await supabase.auth.signOut()
+        router.replace('/ssi/login')
+        return
+      }
+
+      setAuthorized(true)
+      setCheckingAccess(false)
+    }
+
+    verifyAccess()
+  }, [router])
 
   const activeRows = rows.filter((row) => row.active)
 
@@ -167,6 +219,11 @@ export default function SSIAssignmentsPage() {
     setExpandedRows((current) => ({ ...current, [id]: !current[id] }))
   }
 
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    router.replace('/ssi/login')
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setMessage('')
@@ -191,7 +248,9 @@ export default function SSIAssignmentsPage() {
         (item) => !item.row.baselineDesign || !item.canCalculate || !item.output,
       )
     ) {
-      setMessage('Every active row needs Baseline_Design, Starting_Assignment_Count, and derived or manual Baseline_Count.')
+      setMessage(
+        'Every active row needs Baseline_Design, Starting_Assignment_Count, and derived or manual Baseline_Count.',
+      )
       return
     }
 
@@ -232,16 +291,38 @@ export default function SSIAssignmentsPage() {
     setExpandedRows({})
   }
 
+  if (checkingAccess || !authorized) {
+    return (
+      <main style={styles.page}>
+        <section style={styles.shell}>
+          <div style={styles.header}>
+            <p style={styles.eyebrow}>TSINAXA SSI • SECURE ACCESS</p>
+            <h1 style={styles.title}>Verifying SSI Access</h1>
+            <p style={styles.subtitle}>Checking authorized structural stability access...</p>
+          </div>
+        </section>
+      </main>
+    )
+  }
+
   return (
     <main style={styles.page}>
       <section style={styles.shell}>
         <div style={styles.header}>
-          <p style={styles.eyebrow}>TSINAXA SSI • ASSIGNMENT_INSTANCES</p>
-          <h1 style={styles.title}>Hospital Shift-Start Assignment Set</h1>
-          <p style={styles.subtitle}>
-            Capture individual assignment entries inside each role pool. Save only active completed rows.
-            Hidden strain is detected at shift start before events are reported.
-          </p>
+          <div style={styles.headerTop}>
+            <div>
+              <p style={styles.eyebrow}>TSINAXA SSI • ASSIGNMENT_INSTANCES</p>
+              <h1 style={styles.title}>Hospital Shift-Start Assignment Set</h1>
+              <p style={styles.subtitle}>
+                Capture individual assignment entries inside each role pool. Save only active completed rows.
+                Hidden strain is detected at shift start before events are reported.
+              </p>
+            </div>
+
+            <button type="button" style={styles.logoutButton} onClick={handleLogout}>
+              Logout
+            </button>
+          </div>
         </div>
 
         <nav aria-label="TSINAXA SSI flow navigation" style={styles.flowNav}>
@@ -249,7 +330,7 @@ export default function SSIAssignmentsPage() {
             <span style={styles.flowNavTitle}>SSI Flow</span>
             <span style={styles.flowNavRule} />
             <span style={styles.flowNavCaption}>
-              Assignments → Events → Trend Buffer → Executive Dashboard
+              Assignments → Events → Trend Buffer → Executive Dashboard → Weekly Brief
             </span>
           </div>
 
@@ -286,8 +367,18 @@ export default function SSIAssignmentsPage() {
               value={header.date}
               onChange={(v) => updateHeader('date', v)}
             />
-            <Select label="Shift_Type" value={header.shiftType} options={SSI_SHIFT_TYPE_OPTIONS} onChange={(v) => updateHeader('shiftType', v)} />
-            <Select label="Shift_Block" value={header.shiftBlock} options={SSI_COMMON_SHIFT_BLOCK_OPTIONS} onChange={(v) => updateHeader('shiftBlock', v)} />
+            <Select
+              label="Shift_Type"
+              value={header.shiftType}
+              options={SSI_SHIFT_TYPE_OPTIONS}
+              onChange={(v) => updateHeader('shiftType', v)}
+            />
+            <Select
+              label="Shift_Block"
+              value={header.shiftBlock}
+              options={SSI_COMMON_SHIFT_BLOCK_OPTIONS}
+              onChange={(v) => updateHeader('shiftBlock', v)}
+            />
           </section>
 
           <section style={styles.stickySnapshot}>
@@ -308,7 +399,11 @@ export default function SSIAssignmentsPage() {
 
               return (
                 <section key={rolePool} style={styles.roleSection}>
-                  <button type="button" style={styles.sectionToggle} onClick={() => toggleSection(rolePool)}>
+                  <button
+                    type="button"
+                    style={styles.sectionToggle}
+                    onClick={() => toggleSection(rolePool)}
+                  >
                     {expanded ? 'Hide' : 'Show'} {rolePool} entries • {sectionActive}/{count} active
                   </button>
 
@@ -320,9 +415,16 @@ export default function SSIAssignmentsPage() {
                         return (
                           <div key={row.id} style={styles.rowCard}>
                             <div style={styles.assignmentIdBox}>
-                              <span style={styles.roleEntry}>{rolePool} Entry {row.entryNumber}</span>
+                              <span style={styles.roleEntry}>
+                                {rolePool} Entry {row.entryNumber}
+                              </span>
                               <code style={styles.assignmentIdCode}>
-                                {buildSSIShiftAssignmentId(header.date, header.shiftType, rolePool, row.entryNumber)}
+                                {buildSSIShiftAssignmentId(
+                                  header.date,
+                                  header.shiftType,
+                                  rolePool,
+                                  row.entryNumber,
+                                )}
                               </code>
                             </div>
 
@@ -337,28 +439,88 @@ export default function SSIAssignmentsPage() {
 
                             {row.active ? (
                               <>
-                                <Input label="Baseline_Design" placeholder="1:4" value={row.baselineDesign} onChange={(v) => updateRow(row.id, 'baselineDesign', v)} />
-                                <Input label="Starting_Assignment_Count" type="number" value={row.startingAssignmentCount} onChange={(v) => updateRow(row.id, 'startingAssignmentCount', v)} />
-                                <Input label="Baseline_Count" helper="Optional. If blank, derived from Baseline_Design." type="number" value={row.baselineCount} onChange={(v) => updateRow(row.id, 'baselineCount', v)} />
-                                <Select label="Load_Reason" value={row.loadReason} options={SSI_LOAD_REASON_OPTIONS} onChange={(v) => updateRow(row.id, 'loadReason', v)} />
-                                <Select label="Load_Complexity" value={row.loadComplexity} options={SSI_LOAD_COMPLEXITY_OPTIONS} onChange={(v) => updateRow(row.id, 'loadComplexity', v)} />
+                                <Input
+                                  label="Baseline_Design"
+                                  placeholder="1:4"
+                                  value={row.baselineDesign}
+                                  onChange={(v) => updateRow(row.id, 'baselineDesign', v)}
+                                />
+                                <Input
+                                  label="Starting_Assignment_Count"
+                                  type="number"
+                                  value={row.startingAssignmentCount}
+                                  onChange={(v) => updateRow(row.id, 'startingAssignmentCount', v)}
+                                />
+                                <Input
+                                  label="Baseline_Count"
+                                  helper="Optional. If blank, derived from Baseline_Design."
+                                  type="number"
+                                  value={row.baselineCount}
+                                  onChange={(v) => updateRow(row.id, 'baselineCount', v)}
+                                />
+                                <Select
+                                  label="Load_Reason"
+                                  value={row.loadReason}
+                                  options={SSI_LOAD_REASON_OPTIONS}
+                                  onChange={(v) => updateRow(row.id, 'loadReason', v)}
+                                />
+                                <Select
+                                  label="Load_Complexity"
+                                  value={row.loadComplexity}
+                                  options={SSI_LOAD_COMPLEXITY_OPTIONS}
+                                  onChange={(v) => updateRow(row.id, 'loadComplexity', v)}
+                                />
 
                                 <div style={styles.primarySignalGrid}>
-                                  <ReadOnly label="Starting_Strain_Signal" value={item?.output?.starting_strain_signal ?? 'Not calculated yet'} />
-                                  <ReadOnly label="Structural_Strain_Summary" value={item?.output?.structural_strain_summary ?? 'Not calculated yet'} wrap />
+                                  <ReadOnly
+                                    label="Starting_Strain_Signal"
+                                    value={item?.output?.starting_strain_signal ?? 'Not calculated yet'}
+                                  />
+                                  <ReadOnly
+                                    label="Structural_Strain_Summary"
+                                    value={item?.output?.structural_strain_summary ?? 'Not calculated yet'}
+                                    wrap
+                                  />
                                 </div>
 
-                                <button type="button" style={styles.detailToggle} onClick={() => toggleRowDetails(row.id)}>
+                                <button
+                                  type="button"
+                                  style={styles.detailToggle}
+                                  onClick={() => toggleRowDetails(row.id)}
+                                >
                                   {rowExpanded ? 'Hide calculation details' : 'Show calculation details'}
                                 </button>
 
                                 {rowExpanded ? (
                                   <div style={styles.calculatedGrid}>
-                                    <ReadOnly label="Load_Modifier" value={item?.output?.load_modifier ?? 'Not calculated yet'} />
-                                    <ReadOnly label="Load_Delta" value={item?.output ? String(item.output.load_modifier_delta) : 'Not calculated yet'} />
-                                    <ReadOnly label="Complexity_Flag" value={item?.output?.complexity_flag ?? 'Not calculated yet'} />
-                                    <ReadOnly label="Complexity_Status" value={item?.output?.complexity_status ?? 'Not calculated yet'} />
-                                    <ReadOnly label="Complexity_Weight" value={item?.output ? String(item.output.complexity_weight) : 'Not calculated yet'} />
+                                    <ReadOnly
+                                      label="Load_Modifier"
+                                      value={item?.output?.load_modifier ?? 'Not calculated yet'}
+                                    />
+                                    <ReadOnly
+                                      label="Load_Delta"
+                                      value={
+                                        item?.output
+                                          ? String(item.output.load_modifier_delta)
+                                          : 'Not calculated yet'
+                                      }
+                                    />
+                                    <ReadOnly
+                                      label="Complexity_Flag"
+                                      value={item?.output?.complexity_flag ?? 'Not calculated yet'}
+                                    />
+                                    <ReadOnly
+                                      label="Complexity_Status"
+                                      value={item?.output?.complexity_status ?? 'Not calculated yet'}
+                                    />
+                                    <ReadOnly
+                                      label="Complexity_Weight"
+                                      value={
+                                        item?.output
+                                          ? String(item.output.complexity_weight)
+                                          : 'Not calculated yet'
+                                      }
+                                    />
                                   </div>
                                 ) : null}
                               </>
@@ -380,7 +542,11 @@ export default function SSIAssignmentsPage() {
           </div>
 
           <section style={styles.snapshot}>
-            <button type="button" style={styles.snapshotToggle} onClick={() => setSnapshotOpen((v) => !v)}>
+            <button
+              type="button"
+              style={styles.snapshotToggle}
+              onClick={() => setSnapshotOpen((v) => !v)}
+            >
               {snapshotOpen ? 'Hide' : 'Show'} Assignment Strain Snapshot
             </button>
 
@@ -393,7 +559,11 @@ export default function SSIAssignmentsPage() {
                 <ReadOnly label="Dominant_Load_Reason" value={snapshot.dominant_load_reason} wrap />
                 <ReadOnly label="Dominant_Load_Complexity" value={snapshot.dominant_load_complexity} wrap />
                 <ReadOnly label="Structural_Strain_Reading" value={snapshot.structural_strain_reading} wrap />
-                <ReadOnly label="Snapshot_Boundary" value="Current shift set only. 7-day trend belongs to /ssi/dashboard." wrap />
+                <ReadOnly
+                  label="Snapshot_Boundary"
+                  value="Current shift set only. 7-day trend belongs to /ssi/dashboard."
+                  wrap
+                />
               </div>
             ) : null}
           </section>
@@ -403,7 +573,14 @@ export default function SSIAssignmentsPage() {
   )
 }
 
-function Input({ label, value, onChange, type = 'text', placeholder, helper }: {
+function Input({
+  label,
+  value,
+  onChange,
+  type = 'text',
+  placeholder,
+  helper,
+}: {
   label: string
   value: string
   onChange: (value: string) => void
@@ -414,13 +591,24 @@ function Input({ label, value, onChange, type = 'text', placeholder, helper }: {
   return (
     <label style={styles.label}>
       <span>{label}</span>
-      <input type={type} placeholder={placeholder} value={value} onChange={(event) => onChange(event.target.value)} style={styles.input} />
+      <input
+        type={type}
+        placeholder={placeholder}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        style={styles.input}
+      />
       {helper ? <small style={styles.helper}>{helper}</small> : null}
     </label>
   )
 }
 
-function Select({ label, value, options, onChange }: {
+function Select({
+  label,
+  value,
+  options,
+  onChange,
+}: {
   label: string
   value: string
   options: readonly string[]
@@ -430,7 +618,11 @@ function Select({ label, value, options, onChange }: {
     <label style={styles.label}>
       <span>{label}</span>
       <select value={value} onChange={(event) => onChange(event.target.value)} style={styles.input}>
-        {options.map((option) => <option key={option} value={option}>{option}</option>)}
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
       </select>
     </label>
   )
@@ -457,51 +649,266 @@ function MiniMetric({ label, value }: { label: string; value: string }) {
 const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: '#050505', color: '#fff8e7', padding: '40px' },
   shell: { maxWidth: '1280px', margin: '0 auto' },
-  header: { border: '1px solid rgba(214,178,94,0.28)', background: '#090807', borderRadius: '24px', padding: '28px', marginBottom: '16px' },
-  eyebrow: { color: '#d6b25e', letterSpacing: '0.14em', textTransform: 'uppercase', fontSize: '12px', margin: 0 },
+  header: {
+    border: '1px solid rgba(214,178,94,0.28)',
+    background: '#090807',
+    borderRadius: '24px',
+    padding: '28px',
+    marginBottom: '16px',
+  },
+  headerTop: { display: 'grid', gridTemplateColumns: '1fr auto', gap: '24px', alignItems: 'start' },
+  logoutButton: {
+    border: '1px solid rgba(214,178,94,0.42)',
+    background: '#11100d',
+    color: '#d6b25e',
+    borderRadius: '999px',
+    padding: '10px 18px',
+    fontWeight: 900,
+    cursor: 'pointer',
+  },
+  eyebrow: {
+    color: '#d6b25e',
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+    fontSize: '12px',
+    margin: 0,
+  },
   title: { fontSize: '38px', margin: '12px 0' },
   subtitle: { color: '#cfc7b5', margin: 0, maxWidth: '920px' },
 
-  flowNav: { border: '1px solid rgba(214,178,94,0.28)', background: '#090807', borderRadius: '20px', padding: '16px', marginBottom: '18px' },
+  flowNav: {
+    border: '1px solid rgba(214,178,94,0.28)',
+    background: '#090807',
+    borderRadius: '20px',
+    padding: '16px',
+    marginBottom: '18px',
+  },
   flowNavHeader: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' },
-  flowNavTitle: { color: '#d6b25e', fontWeight: 900, letterSpacing: '0.14em', textTransform: 'uppercase', fontSize: '12px' },
+  flowNavTitle: {
+    color: '#d6b25e',
+    fontWeight: 900,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+    fontSize: '12px',
+  },
   flowNavRule: { height: '1px', flex: 1, background: 'rgba(214,178,94,0.22)' },
   flowNavCaption: { color: '#cfc7b5', fontSize: '12px', fontWeight: 700 },
-  flowSteps: { display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '10px' },
+  flowSteps: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+    gap: '10px',
+  },
   flowStepWrap: { display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 },
-  flowStep: { flex: 1, display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', color: '#cfc7b5', border: '1px solid rgba(214,178,94,0.18)', background: '#11100d', borderRadius: '14px', padding: '12px', minWidth: 0 },
-  flowStepActive: { border: '1px solid rgba(214,178,94,0.58)', background: 'rgba(214,178,94,0.14)', color: '#fff8e7', boxShadow: 'inset 3px 0 0 #d6b25e' },
-  flowStepIndex: { display: 'grid', placeItems: 'center', width: '26px', height: '26px', borderRadius: '999px', background: 'rgba(214,178,94,0.16)', color: '#d6b25e', fontWeight: 900, flexShrink: 0 },
+  flowStep: {
+    flex: 1,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    textDecoration: 'none',
+    color: '#cfc7b5',
+    border: '1px solid rgba(214,178,94,0.18)',
+    background: '#11100d',
+    borderRadius: '14px',
+    padding: '12px',
+    minWidth: 0,
+  },
+  flowStepActive: {
+    border: '1px solid rgba(214,178,94,0.58)',
+    background: 'rgba(214,178,94,0.14)',
+    color: '#fff8e7',
+    boxShadow: 'inset 3px 0 0 #d6b25e',
+  },
+  flowStepIndex: {
+    display: 'grid',
+    placeItems: 'center',
+    width: '26px',
+    height: '26px',
+    borderRadius: '999px',
+    background: 'rgba(214,178,94,0.16)',
+    color: '#d6b25e',
+    fontWeight: 900,
+    flexShrink: 0,
+  },
   flowStepText: { display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 },
   flowArrow: { color: '#9f8142', fontWeight: 900, flexShrink: 0 },
 
-  panel: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px', border: '1px solid rgba(214,178,94,0.28)', background: '#090807', borderRadius: '22px', padding: '22px', marginBottom: '14px' },
-  stickySnapshot: { position: 'sticky', top: 0, zIndex: 5, display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '10px', border: '1px solid rgba(214,178,94,0.28)', background: '#090807', borderRadius: '18px', padding: '12px', marginBottom: '18px' },
-  stickyTitle: { gridColumn: '1 / -1', color: '#d6b25e', fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: '12px' },
-  miniMetric: { background: '#11100d', border: '1px solid rgba(214,178,94,0.18)', borderRadius: '12px', padding: '10px 12px', display: 'flex', justifyContent: 'space-between', color: '#cfc7b5' },
-  tablePanel: { border: '1px solid rgba(214,178,94,0.28)', background: '#090807', borderRadius: '22px', padding: '22px', marginBottom: '18px' },
+  panel: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: '16px',
+    border: '1px solid rgba(214,178,94,0.28)',
+    background: '#090807',
+    borderRadius: '22px',
+    padding: '22px',
+    marginBottom: '14px',
+  },
+  stickySnapshot: {
+    position: 'sticky',
+    top: 0,
+    zIndex: 5,
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+    gap: '10px',
+    border: '1px solid rgba(214,178,94,0.28)',
+    background: '#090807',
+    borderRadius: '18px',
+    padding: '12px',
+    marginBottom: '18px',
+  },
+  stickyTitle: {
+    gridColumn: '1 / -1',
+    color: '#d6b25e',
+    fontWeight: 900,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    fontSize: '12px',
+  },
+  miniMetric: {
+    background: '#11100d',
+    border: '1px solid rgba(214,178,94,0.18)',
+    borderRadius: '12px',
+    padding: '10px 12px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    color: '#cfc7b5',
+  },
+  tablePanel: {
+    border: '1px solid rgba(214,178,94,0.28)',
+    background: '#090807',
+    borderRadius: '22px',
+    padding: '22px',
+    marginBottom: '18px',
+  },
   panelTitle: { gridColumn: '1 / -1', color: '#d6b25e', margin: '0 0 8px' },
-  roleSection: { borderTop: '1px solid rgba(214,178,94,0.18)', paddingTop: '14px', marginTop: '14px' },
-  sectionToggle: { width: '100%', background: '#11100d', color: '#d6b25e', border: '1px solid rgba(214,178,94,0.22)', borderRadius: '12px', padding: '12px', textAlign: 'left', fontWeight: 900, cursor: 'pointer' },
-  rowCard: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px', border: '1px solid rgba(214,178,94,0.16)', borderRadius: '16px', padding: '14px', marginTop: '12px' },
-  assignmentIdBox: { border: '1px solid rgba(214,178,94,0.22)', background: 'rgba(214,178,94,0.08)', borderRadius: '14px', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 },
+  roleSection: {
+    borderTop: '1px solid rgba(214,178,94,0.18)',
+    paddingTop: '14px',
+    marginTop: '14px',
+  },
+  sectionToggle: {
+    width: '100%',
+    background: '#11100d',
+    color: '#d6b25e',
+    border: '1px solid rgba(214,178,94,0.22)',
+    borderRadius: '12px',
+    padding: '12px',
+    textAlign: 'left',
+    fontWeight: 900,
+    cursor: 'pointer',
+  },
+  rowCard: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: '12px',
+    border: '1px solid rgba(214,178,94,0.16)',
+    borderRadius: '16px',
+    padding: '14px',
+    marginTop: '12px',
+  },
+  assignmentIdBox: {
+    border: '1px solid rgba(214,178,94,0.22)',
+    background: 'rgba(214,178,94,0.08)',
+    borderRadius: '14px',
+    padding: '12px 14px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+    minWidth: 0,
+  },
   roleEntry: { color: '#d6b25e', fontWeight: 900, fontSize: '16px' },
-  assignmentIdCode: { color: '#cfc7b5', fontWeight: 700, fontSize: '12px', whiteSpace: 'normal', overflowWrap: 'anywhere', lineHeight: 1.35 },
+  assignmentIdCode: {
+    color: '#cfc7b5',
+    fontWeight: 700,
+    fontSize: '12px',
+    whiteSpace: 'normal',
+    overflowWrap: 'anywhere',
+    lineHeight: 1.35,
+  },
   checkLabel: { display: 'flex', alignItems: 'center', gap: '10px', color: '#cfc7b5', fontWeight: 700 },
-  primarySignalGrid: { gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px' },
-  calculatedGrid: { gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px' },
-  detailToggle: { gridColumn: '1 / -1', background: 'transparent', color: '#d6b25e', border: '1px solid rgba(214,178,94,0.22)', borderRadius: '12px', padding: '10px 12px', cursor: 'pointer', textAlign: 'left', fontWeight: 800 },
+  primarySignalGrid: {
+    gridColumn: '1 / -1',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: '10px',
+  },
+  calculatedGrid: {
+    gridColumn: '1 / -1',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: '10px',
+  },
+  detailToggle: {
+    gridColumn: '1 / -1',
+    background: 'transparent',
+    color: '#d6b25e',
+    border: '1px solid rgba(214,178,94,0.22)',
+    borderRadius: '12px',
+    padding: '10px 12px',
+    cursor: 'pointer',
+    textAlign: 'left',
+    fontWeight: 800,
+  },
   label: { display: 'flex', flexDirection: 'column', gap: '8px', color: '#cfc7b5', fontSize: '13px' },
   helper: { color: '#9f8142', fontSize: '12px' },
-  input: { background: '#11100d', border: '1px solid rgba(214,178,94,0.28)', borderRadius: '14px', color: '#fff8e7', padding: '12px 14px', outline: 'none' },
-  readOnlyBox: { border: '1px solid rgba(214,178,94,0.18)', background: '#11100d', borderRadius: '14px', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', gap: '16px', minWidth: 0 },
+  input: {
+    background: '#11100d',
+    border: '1px solid rgba(214,178,94,0.28)',
+    borderRadius: '14px',
+    color: '#fff8e7',
+    padding: '12px 14px',
+    outline: 'none',
+  },
+  readOnlyBox: {
+    border: '1px solid rgba(214,178,94,0.18)',
+    background: '#11100d',
+    borderRadius: '14px',
+    padding: '12px 14px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: '16px',
+    minWidth: 0,
+  },
   readOnlyLabel: { color: '#cfc7b5', flexShrink: 0 },
   readOnlyValue: { color: '#fff8e7', textAlign: 'right' },
-  readOnlyValueWrap: { color: '#fff8e7', textAlign: 'right', whiteSpace: 'normal', overflowWrap: 'anywhere', lineHeight: 1.45 },
+  readOnlyValueWrap: {
+    color: '#fff8e7',
+    textAlign: 'right',
+    whiteSpace: 'normal',
+    overflowWrap: 'anywhere',
+    lineHeight: 1.45,
+  },
   actions: { display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '18px' },
-  button: { background: '#d6b25e', color: '#050505', border: 'none', borderRadius: '14px', padding: '13px 18px', fontWeight: 800, cursor: 'pointer' },
+  button: {
+    background: '#d6b25e',
+    color: '#050505',
+    border: 'none',
+    borderRadius: '14px',
+    padding: '13px 18px',
+    fontWeight: 800,
+    cursor: 'pointer',
+  },
   message: { color: '#cfc7b5', margin: 0 },
-  snapshot: { border: '1px solid rgba(214,178,94,0.28)', background: '#090807', borderRadius: '22px', padding: '18px' },
-  snapshotToggle: { width: '100%', background: '#11100d', color: '#d6b25e', border: '1px solid rgba(214,178,94,0.28)', borderRadius: '14px', padding: '12px 14px', textAlign: 'left', fontWeight: 800, cursor: 'pointer' },
-  snapshotGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px', marginTop: '14px' },
+  snapshot: {
+    border: '1px solid rgba(214,178,94,0.28)',
+    background: '#090807',
+    borderRadius: '22px',
+    padding: '18px',
+  },
+  snapshotToggle: {
+    width: '100%',
+    background: '#11100d',
+    color: '#d6b25e',
+    border: '1px solid rgba(214,178,94,0.28)',
+    borderRadius: '14px',
+    padding: '12px 14px',
+    textAlign: 'left',
+    fontWeight: 800,
+    cursor: 'pointer',
+  },
+  snapshotGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: '12px',
+    marginTop: '14px',
+  },
 }
