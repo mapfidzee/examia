@@ -1,7 +1,8 @@
 'use client'
 
-import { FormEvent, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+import { useRouter } from 'next/navigation'
 
 import {
   SSI_BUFFER_RESPONSE_OPTIONS,
@@ -31,11 +32,15 @@ type EventRow = {
   bufferResponse: string
 }
 
+const allowedRoles = ['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']
+const allowedStatuses = ['ACTIVE']
+
 const ssiFlow = [
   { label: 'Assignments', href: '/ssi/assignments', note: 'Shift-start load capture', active: false },
   { label: 'Events', href: '/ssi/events', note: 'Stability event capture', active: true },
-  { label: 'Trend Buffer', href: '/ssi/dashboard', note: 'Persisted buffer output', active: false },
-  { label: 'Executive Dashboard', href: '/ssi', note: 'Locked executive view', active: false },
+  { label: 'Trend Buffer', href: '/ssi/dashboard', note: 'Persisted structural signals', active: false },
+  { label: 'Executive Dashboard', href: '/ssi', note: 'Leadership interpretation', active: false },
+  { label: 'Weekly Brief', href: '/ssi/weekly-brief', note: 'Printable executive summary', active: false },
 ]
 
 const initialHeader: Header = {
@@ -65,11 +70,58 @@ function sequenceLabel(index: number) {
 }
 
 export default function SSIEventsPage() {
+  const router = useRouter()
+
+  const [authorized, setAuthorized] = useState(false)
+  const [checkingAccess, setCheckingAccess] = useState(true)
   const [header, setHeader] = useState<Header>(initialHeader)
   const [rows, setRows] = useState<EventRow[]>(makeRows)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [boundaryOpen, setBoundaryOpen] = useState(true)
+
+  useEffect(() => {
+    async function verifyAccess() {
+      setCheckingAccess(true)
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session?.user) {
+        router.replace('/ssi/login')
+        return
+      }
+
+      if (!session.user.email_confirmed_at) {
+        await supabase.auth.signOut()
+        router.replace('/ssi/login')
+        return
+      }
+
+      const { data: roleRecord, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role,status')
+        .eq('user_id', session.user.id)
+        .single()
+
+      if (
+        roleError ||
+        !roleRecord ||
+        !allowedRoles.includes(roleRecord.role) ||
+        !allowedStatuses.includes(roleRecord.status)
+      ) {
+        await supabase.auth.signOut()
+        router.replace('/ssi/login')
+        return
+      }
+
+      setAuthorized(true)
+      setCheckingAccess(false)
+    }
+
+    verifyAccess()
+  }, [router])
 
   const calculatedRows = useMemo(() => {
     return rows.map((row, index) => {
@@ -117,6 +169,11 @@ export default function SSIEventsPage() {
     setRows((current) =>
       current.map((row) => (row.id === id ? { ...row, [field]: value } : row)),
     )
+  }
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    router.replace('/ssi/login')
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -177,16 +234,38 @@ export default function SSIEventsPage() {
     setRows(makeRows())
   }
 
+  if (checkingAccess || !authorized) {
+    return (
+      <main style={styles.page}>
+        <section style={styles.shell}>
+          <div style={styles.header}>
+            <p style={styles.eyebrow}>TSINAXA SSI • SECURE ACCESS</p>
+            <h1 style={styles.title}>Verifying SSI Access</h1>
+            <p style={styles.subtitle}>Checking authorized structural stability access...</p>
+          </div>
+        </section>
+      </main>
+    )
+  }
+
   return (
     <main style={styles.page}>
       <section style={styles.shell}>
         <div style={styles.header}>
-          <p style={styles.eyebrow}>TSINAXA SSI • STABILITY_EVENTS</p>
-          <h1 style={styles.title}>Visible Stability Events</h1>
-          <p style={styles.subtitle}>
-            Events are per shift, not per day. Activate only real events that happened. One row equals
-            one disruption or one buffer response.
-          </p>
+          <div style={styles.headerTop}>
+            <div>
+              <p style={styles.eyebrow}>TSINAXA SSI • STABILITY_EVENTS</p>
+              <h1 style={styles.title}>Visible Stability Events</h1>
+              <p style={styles.subtitle}>
+                Events are per shift, not per day. Activate only real events that happened. One row equals
+                one disruption or one buffer response.
+              </p>
+            </div>
+
+            <button type="button" style={styles.logoutButton} onClick={handleLogout}>
+              Logout
+            </button>
+          </div>
         </div>
 
         <nav aria-label="TSINAXA SSI flow navigation" style={styles.flowNav}>
@@ -194,7 +273,7 @@ export default function SSIEventsPage() {
             <span style={styles.flowNavTitle}>SSI Flow</span>
             <span style={styles.flowNavRule} />
             <span style={styles.flowNavCaption}>
-              Assignments → Events → Trend Buffer → Executive Dashboard
+              Assignments → Events → Trend Buffer → Executive Dashboard → Weekly Brief
             </span>
           </div>
 
@@ -295,8 +374,8 @@ export default function SSIEventsPage() {
             {boundaryOpen ? (
               <p style={styles.footerText}>
                 Assignment strain exists before events occur. Events record real disruptions or
-                buffer responses during the shift. CGI handoff happens later only if visible instability
-                requires governed review.
+                buffer responses during the shift. Executive interpretation happens later after
+                the trend buffer is reviewed.
               </p>
             ) : null}
           </section>
@@ -375,6 +454,16 @@ const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: '#050505', color: '#fff8e7', padding: '40px' },
   shell: { maxWidth: '1280px', margin: '0 auto' },
   header: { border: '1px solid rgba(214,178,94,0.28)', background: '#090807', borderRadius: '24px', padding: '28px', marginBottom: '16px' },
+  headerTop: { display: 'grid', gridTemplateColumns: '1fr auto', gap: '24px', alignItems: 'start' },
+  logoutButton: {
+    border: '1px solid rgba(214,178,94,0.42)',
+    background: '#11100d',
+    color: '#d6b25e',
+    borderRadius: '999px',
+    padding: '10px 18px',
+    fontWeight: 900,
+    cursor: 'pointer',
+  },
   eyebrow: { color: '#d6b25e', letterSpacing: '0.14em', textTransform: 'uppercase', fontSize: '12px', margin: 0 },
   title: { fontSize: '38px', margin: '12px 0' },
   subtitle: { color: '#cfc7b5', margin: 0, maxWidth: '900px' },
@@ -384,7 +473,7 @@ const styles: Record<string, CSSProperties> = {
   flowNavTitle: { color: '#d6b25e', fontWeight: 900, letterSpacing: '0.14em', textTransform: 'uppercase', fontSize: '12px' },
   flowNavRule: { height: '1px', flex: 1, background: 'rgba(214,178,94,0.22)' },
   flowNavCaption: { color: '#cfc7b5', fontSize: '12px', fontWeight: 700 },
-  flowSteps: { display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '10px' },
+  flowSteps: { display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: '10px' },
   flowStepWrap: { display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 },
   flowStep: { flex: 1, display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', color: '#cfc7b5', border: '1px solid rgba(214,178,94,0.18)', background: '#11100d', borderRadius: '14px', padding: '12px', minWidth: 0 },
   flowStepActive: { border: '1px solid rgba(214,178,94,0.58)', background: 'rgba(214,178,94,0.14)', color: '#fff8e7', boxShadow: 'inset 3px 0 0 #d6b25e' },

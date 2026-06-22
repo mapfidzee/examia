@@ -1,7 +1,8 @@
 'use client'
 
-import { FormEvent, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+import { useRouter } from 'next/navigation'
 
 import { supabase } from '@/lib/supabase'
 
@@ -65,6 +66,9 @@ type HistoricalTrendRecord = {
   updated_at: string | null
 }
 
+const allowedRoles = ['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']
+const allowedStatuses = ['ACTIVE']
+
 const DEFAULT_ACTION = 'No leadership action persisted.'
 const DEFAULT_OUTCOME = 'No observed outcome persisted.'
 
@@ -98,8 +102,9 @@ const observedOutcomeOptions = [
 const ssiFlow = [
   { label: 'Assignments', href: '/ssi/assignments', note: 'Shift-start load capture', active: false },
   { label: 'Events', href: '/ssi/events', note: 'Stability event capture', active: false },
-  { label: 'Trend Buffer', href: '/ssi/dashboard', note: 'Persisted buffer output', active: true },
-  { label: 'Executive Dashboard', href: '/ssi', note: 'Locked executive view', active: false },
+  { label: 'Trend Buffer', href: '/ssi/dashboard', note: 'Persisted structural signals', active: true },
+  { label: 'Executive Dashboard', href: '/ssi', note: 'Leadership interpretation', active: false },
+  { label: 'Weekly Brief', href: '/ssi/weekly-brief', note: 'Printable executive summary', active: false },
 ]
 
 const initialFilters = {
@@ -164,7 +169,10 @@ function trendStatus(row: Omit<TrendRow, 'trendStatus' | 'trendStatusRule' | 'le
   return 'STABLE'
 }
 
-function trendRule(row: Omit<TrendRow, 'trendStatus' | 'trendStatusRule' | 'leadershipActionCue'>, status: string) {
+function trendRule(
+  row: Omit<TrendRow, 'trendStatus' | 'trendStatusRule' | 'leadershipActionCue'>,
+  status: string,
+) {
   if (row.bufferUseProfile === 'HIGH' && row.totalStabilityEvents <= 1) {
     return 'Hidden strain rule: high buffer use with low visible event count.'
   }
@@ -184,7 +192,10 @@ function trendRule(row: Omit<TrendRow, 'trendStatus' | 'trendStatusRule' | 'lead
   return 'Stable rule: low events and low buffer use.'
 }
 
-function leadershipCue(status: string, row: Omit<TrendRow, 'trendStatus' | 'trendStatusRule' | 'leadershipActionCue'>) {
+function leadershipCue(
+  status: string,
+  row: Omit<TrendRow, 'trendStatus' | 'trendStatusRule' | 'leadershipActionCue'>,
+) {
   if (row.bufferUseProfile === 'HIGH' && row.totalStabilityEvents <= 1) {
     return 'Investigate hidden strain: buffers are being consumed before visible instability is fully surfacing.'
   }
@@ -480,6 +491,10 @@ function summarizeForPersistence(
 }
 
 export default function SSITrendBufferPage() {
+  const router = useRouter()
+
+  const [authorized, setAuthorized] = useState(false)
+  const [checkingAccess, setCheckingAccess] = useState(true)
   const [filters, setFilters] = useState(initialFilters)
   const [assignments, setAssignments] = useState<AssignmentRow[]>([])
   const [events, setEvents] = useState<EventRow[]>([])
@@ -489,6 +504,49 @@ export default function SSITrendBufferPage() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('Load a window to calculate the stability trend buffer.')
+
+  useEffect(() => {
+    async function verifyAccess() {
+      setCheckingAccess(true)
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session?.user) {
+        router.replace('/ssi/login')
+        return
+      }
+
+      if (!session.user.email_confirmed_at) {
+        await supabase.auth.signOut()
+        router.replace('/ssi/login')
+        return
+      }
+
+      const { data: roleRecord, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role,status')
+        .eq('user_id', session.user.id)
+        .single()
+
+      if (
+        roleError ||
+        !roleRecord ||
+        !allowedRoles.includes(roleRecord.role) ||
+        !allowedStatuses.includes(roleRecord.status)
+      ) {
+        await supabase.auth.signOut()
+        router.replace('/ssi/login')
+        return
+      }
+
+      setAuthorized(true)
+      setCheckingAccess(false)
+    }
+
+    verifyAccess()
+  }, [router])
 
   const trendRows = useMemo(
     () => buildTrendRows(assignments, events, filters.windowStart, filters.windowEnd),
@@ -523,6 +581,11 @@ export default function SSITrendBufferPage() {
 
   function updateFilter(field: keyof typeof initialFilters, value: string) {
     setFilters((current) => ({ ...current, [field]: value }))
+  }
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    router.replace('/ssi/login')
   }
 
   async function loadTrend(event: FormEvent<HTMLFormElement>) {
@@ -624,15 +687,37 @@ export default function SSITrendBufferPage() {
     setMessage('Saved leadership action memory into ssi_trend_buffer.')
   }
 
+  if (checkingAccess || !authorized) {
+    return (
+      <main style={styles.page}>
+        <section style={styles.shell}>
+          <div style={styles.header}>
+            <p style={styles.eyebrow}>TSINAXA SSI • SECURE ACCESS</p>
+            <h1 style={styles.title}>Verifying SSI Access</h1>
+            <p style={styles.subtitle}>Checking authorized structural stability access...</p>
+          </div>
+        </section>
+      </main>
+    )
+  }
+
   return (
     <main style={styles.page}>
       <section style={styles.shell}>
         <header style={styles.header}>
-          <p style={styles.eyebrow}>TSINAXA SSI • STABILITY_TREND_BUFFER</p>
-          <h1 style={styles.title}>Stability Trend Buffer</h1>
-          <p style={styles.subtitle}>
-            Calculate the window, verify the trend rows, then save the controlled trend-buffer output and leadership action memory into ssi_trend_buffer.
-          </p>
+          <div style={styles.headerTop}>
+            <div>
+              <p style={styles.eyebrow}>TSINAXA SSI • STABILITY_TREND_BUFFER</p>
+              <h1 style={styles.title}>Stability Trend Buffer</h1>
+              <p style={styles.subtitle}>
+                Calculate the window, verify the trend rows, then save the controlled trend-buffer output and leadership action memory into ssi_trend_buffer.
+              </p>
+            </div>
+
+            <button type="button" style={styles.logoutButton} onClick={handleLogout}>
+              Logout
+            </button>
+          </div>
         </header>
 
         <nav aria-label="TSINAXA SSI flow navigation" style={styles.flowNav}>
@@ -640,7 +725,7 @@ export default function SSITrendBufferPage() {
             <span style={styles.flowNavTitle}>SSI Flow</span>
             <span style={styles.flowNavRule} />
             <span style={styles.flowNavCaption}>
-              Assignments → Events → Trend Buffer → Executive Dashboard
+              Assignments → Events → Trend Buffer → Executive Dashboard → Weekly Brief
             </span>
           </div>
 
@@ -903,6 +988,16 @@ const styles: Record<string, CSSProperties> = {
   page: { minHeight: '100vh', background: '#050505', color: '#fff8e7', padding: '40px' },
   shell: { maxWidth: '1280px', margin: '0 auto' },
   header: { border: '1px solid rgba(214,178,94,0.28)', background: '#090807', borderRadius: '24px', padding: '28px', marginBottom: '16px' },
+  headerTop: { display: 'grid', gridTemplateColumns: '1fr auto', gap: '24px', alignItems: 'start' },
+  logoutButton: {
+    border: '1px solid rgba(214,178,94,0.42)',
+    background: '#11100d',
+    color: '#d6b25e',
+    borderRadius: '999px',
+    padding: '10px 18px',
+    fontWeight: 900,
+    cursor: 'pointer',
+  },
   eyebrow: { color: '#d6b25e', letterSpacing: '0.14em', textTransform: 'uppercase', fontSize: '12px', margin: 0 },
   title: { fontSize: '38px', margin: '12px 0' },
   subtitle: { color: '#cfc7b5', margin: 0, maxWidth: '900px' },
@@ -911,7 +1006,7 @@ const styles: Record<string, CSSProperties> = {
   flowNavTitle: { color: '#d6b25e', fontWeight: 900, letterSpacing: '0.14em', textTransform: 'uppercase', fontSize: '12px' },
   flowNavRule: { height: '1px', flex: 1, background: 'rgba(214,178,94,0.22)' },
   flowNavCaption: { color: '#cfc7b5', fontSize: '12px', fontWeight: 700 },
-  flowSteps: { display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '10px' },
+  flowSteps: { display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: '10px' },
   flowStepWrap: { display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 },
   flowStep: { flex: 1, display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', color: '#cfc7b5', border: '1px solid rgba(214,178,94,0.18)', background: '#11100d', borderRadius: '14px', padding: '12px', minWidth: 0 },
   flowStepActive: { border: '1px solid rgba(214,178,94,0.58)', background: 'rgba(214,178,94,0.14)', color: '#fff8e7', boxShadow: 'inset 3px 0 0 #d6b25e' },

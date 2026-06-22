@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useState }
-from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
+import { useRouter } from 'next/navigation'
 
 import { supabase } from '../../lib/supabase'
 
@@ -31,9 +31,13 @@ const MISSING = 'Not persisted in current buffer.'
 const ssiFlow = [
   { label: 'Assignments', href: '/ssi/assignments', note: 'Shift-start load capture', active: false },
   { label: 'Events', href: '/ssi/events', note: 'Stability event capture', active: false },
-  { label: 'Trend Buffer', href: '/ssi/dashboard', note: 'Persisted buffer output', active: false },
-  { label: 'Executive Dashboard', href: '/ssi', note: 'Locked executive view', active: true },
+  { label: 'Trend Buffer', href: '/ssi/dashboard', note: 'Persisted structural signals', active: false },
+  { label: 'Executive Dashboard', href: '/ssi', note: 'Leadership interpretation', active: true },
+  { label: 'Weekly Brief', href: '/ssi/weekly-brief', note: 'Printable executive summary', active: false },
 ]
+
+const allowedRoles = ['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']
+const allowedStatuses = ['ACTIVE']
 
 const colors = {
   page: '#050505',
@@ -43,7 +47,6 @@ const colors = {
   slate: '#111827',
   slateSoft: 'rgba(17,24,39,0.58)',
   gold: '#d6b25e',
-  goldStrong: '#c9a227',
   goldMuted: '#9f8142',
   text: '#fff8e7',
   muted: '#cfc7b5',
@@ -75,28 +78,16 @@ function dominantForceAt(value: string[] | string, index: number) {
   return index === 0 ? display(value) : MISSING
 }
 
-function Layer({
-  title,
-  tone,
-  children,
-}: {
-  title: string
-  tone: LayerTone
-  children: ReactNode
-}) {
+function Layer({ title, tone, children }: { title: string; tone: LayerTone; children: ReactNode }) {
   const toneStyle: CSSProperties =
     tone === 'leadership'
       ? {
           borderColor: colors.lineStrong,
-          background:
-            'linear-gradient(180deg, rgba(214,178,94,0.045), rgba(255,255,255,0.01))',
+          background: 'linear-gradient(180deg, rgba(214,178,94,0.045), rgba(255,255,255,0.01))',
         }
       : tone === 'evidence'
         ? { borderColor: colors.line }
-        : {
-            borderColor: colors.lineSoft,
-            background: 'rgba(255,255,255,0.008)',
-          }
+        : { borderColor: colors.lineSoft, background: 'rgba(255,255,255,0.008)' }
 
   return (
     <div style={{ ...styles.layer, ...toneStyle }}>
@@ -136,18 +127,8 @@ function Section({
           background: quiet ? '#0a0a09' : colors.section,
         }}
       >
-        <span
-          style={{
-            ...styles.sectionLine,
-            background: quiet ? colors.goldMuted : colors.gold,
-          }}
-        />
-        <h2
-          style={{
-            ...styles.sectionTitle,
-            color: quiet ? colors.goldMuted : colors.gold,
-          }}
-        >
+        <span style={{ ...styles.sectionLine, background: quiet ? colors.goldMuted : colors.gold }} />
+        <h2 style={{ ...styles.sectionTitle, color: quiet ? colors.goldMuted : colors.gold }}>
           {title}
         </h2>
       </header>
@@ -190,12 +171,61 @@ function MissingBand({ children = MISSING }: { children?: ReactNode }) {
 }
 
 export default function SSIExecutiveDashboardPage() {
+  const router = useRouter()
+
+  const [authorized, setAuthorized] = useState(false)
+  const [checkingAccess, setCheckingAccess] = useState(true)
   const [records, setRecords] = useState<TrendBufferRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    async function verifyAccess() {
+      setCheckingAccess(true)
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session?.user) {
+        router.replace('/ssi/login')
+        return
+      }
+
+      if (!session.user.email_confirmed_at) {
+        await supabase.auth.signOut()
+        router.replace('/ssi/login')
+        return
+      }
+
+      const { data: roleRecord, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role,status')
+        .eq('user_id', session.user.id)
+        .single()
+
+      if (
+        roleError ||
+        !roleRecord ||
+        !allowedRoles.includes(roleRecord.role) ||
+        !allowedStatuses.includes(roleRecord.status)
+      ) {
+        await supabase.auth.signOut()
+        router.replace('/ssi/login')
+        return
+      }
+
+      setAuthorized(true)
+      setCheckingAccess(false)
+    }
+
+    verifyAccess()
+  }, [router])
+
+  useEffect(() => {
     async function loadDashboard() {
+      if (!authorized) return
+
       setLoading(true)
       setError(null)
 
@@ -216,22 +246,34 @@ export default function SSIExecutiveDashboardPage() {
     }
 
     loadDashboard()
-  }, [])
+  }, [authorized])
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    router.replace('/ssi/login')
+  }
 
   const latest = records[0] ?? null
+  const fourWeekRecords = useMemo(() => [...records].reverse(), [records])
 
-  const fourWeekRecords = useMemo(() => {
-    return [...records].reverse()
-  }, [records])
+  if (checkingAccess) {
+    return (
+      <main style={styles.page}>
+        <div style={styles.shell}>
+          <Section title="SSI Secure Access">
+            <MissingBand>Verifying authorized SSI access...</MissingBand>
+          </Section>
+        </div>
+      </main>
+    )
+  }
 
   return (
     <main style={styles.page}>
       <div style={styles.shell}>
         <header style={styles.hero}>
           <div>
-            <div style={styles.eyebrow}>
-              TSINAXA Healthcare Edition · SSI Executive Dashboard
-            </div>
+            <div style={styles.eyebrow}>TSINAXA SSI — Structural Stability Intelligence System</div>
             <h1 style={styles.title}>Executive Stability Brief</h1>
             <p style={styles.subtitle}>
               Current structural stability visibility from persisted SSI trend-buffer outputs.
@@ -240,9 +282,10 @@ export default function SSIExecutiveDashboardPage() {
 
           <div style={styles.updated}>
             <span style={styles.updatedLabel}>Latest persisted update</span>
-            <strong style={styles.updatedValue}>
-              {latest ? formatDate(latest.updated_at) : '—'}
-            </strong>
+            <strong style={styles.updatedValue}>{latest ? formatDate(latest.updated_at) : '—'}</strong>
+            <button type="button" style={styles.logoutButton} onClick={handleLogout}>
+              Logout
+            </button>
           </div>
         </header>
 
@@ -251,20 +294,14 @@ export default function SSIExecutiveDashboardPage() {
             <span style={styles.flowNavTitle}>SSI Flow</span>
             <span style={styles.flowNavRule} />
             <span style={styles.flowNavCaption}>
-              Assignments → Events → Trend Buffer → Executive Dashboard
+              Assignments → Events → Trend Buffer → Executive Dashboard → Weekly Brief
             </span>
           </div>
 
           <div style={styles.flowSteps}>
             {ssiFlow.map((item, index) => (
               <div key={item.href} style={styles.flowStepWrap}>
-                <a
-                  href={item.href}
-                  style={{
-                    ...styles.flowStep,
-                    ...(item.active ? styles.flowStepActive : {}),
-                  }}
-                >
+                <a href={item.href} style={{ ...styles.flowStep, ...(item.active ? styles.flowStepActive : {}) }}>
                   <span style={styles.flowStepIndex}>{index + 1}</span>
                   <span style={styles.flowStepText}>
                     <strong>{item.label}</strong>
@@ -297,11 +334,7 @@ export default function SSIExecutiveDashboardPage() {
                   <Tile label="Unit" value={latest.unit} strong />
                   <Tile label="Window Start" value={latest.window_start} />
                   <Tile label="Window End" value={latest.window_end} />
-                  <Tile
-                    label="Assignment Load Skew"
-                    value={skewStatus(latest.assignment_load_skew)}
-                    strong
-                  />
+                  <Tile label="Assignment Load Skew" value={skewStatus(latest.assignment_load_skew)} strong />
                 </div>
               </Section>
 
@@ -324,27 +357,15 @@ export default function SSIExecutiveDashboardPage() {
                 <div style={styles.compactGrid4}>
                   <Tile label="Total Events" value={latest.total_stability_events} strong />
                   <Tile label="High Intensity" value={latest.high_intensity_event_count} strong />
-                  <Tile
-                    label="Late / Last Minute"
-                    value={latest.late_or_last_minute_event_count}
-                    strong
-                  />
+                  <Tile label="Late / Last Minute" value={latest.late_or_last_minute_event_count} strong />
                   <Tile label="Full Buffer" value={MISSING} quiet />
                 </div>
               </Section>
 
               <Section title="Dominant System Force">
                 <div style={styles.compactGrid4}>
-                  <Tile
-                    label="Primary"
-                    value={dominantForceAt(latest.dominant_stability_forces, 0)}
-                    strong
-                  />
-                  <Tile
-                    label="Secondary"
-                    value={dominantForceAt(latest.dominant_stability_forces, 1)}
-                    quiet
-                  />
+                  <Tile label="Primary" value={dominantForceAt(latest.dominant_stability_forces, 0)} strong />
+                  <Tile label="Secondary" value={dominantForceAt(latest.dominant_stability_forces, 1)} quiet />
                   <Tile label="Supporting Basis" value={MISSING} quiet />
                   <Tile label="Force Notes" value={MISSING} quiet />
                 </div>
@@ -366,9 +387,7 @@ export default function SSIExecutiveDashboardPage() {
                     <tbody>
                       {['CNA', 'RN', 'LPN'].map((role) => (
                         <tr key={role}>
-                          <th scope="row" style={styles.rowHeader}>
-                            {role}
-                          </th>
+                          <th scope="row" style={styles.rowHeader}>{role}</th>
                           <td style={styles.td}>{MISSING}</td>
                           <td style={styles.td}>{MISSING}</td>
                           <td style={styles.td}>{MISSING}</td>
@@ -384,10 +403,7 @@ export default function SSIExecutiveDashboardPage() {
               <Section title="Cost Pressure Monitor">
                 <div style={styles.compactGrid3}>
                   <Tile label="Buffer Use Profile" value={latest.buffer_use_profile} strong />
-                  <Tile
-                    label="Repeated Buffer Depletion"
-                    value={latest.repeated_buffer_depletion_flag}
-                  />
+                  <Tile label="Repeated Buffer Depletion" value={latest.repeated_buffer_depletion_flag} />
                   <Tile label="Cost Pressure Signal" value={MISSING} quiet />
                 </div>
               </Section>
@@ -395,10 +411,7 @@ export default function SSIExecutiveDashboardPage() {
 
             <Layer title="Reference Layer" tone="reference">
               <Section title="System Trend Status" quiet>
-                <MissingBand>
-                  Trend Status is displayed once in the Leadership Alert Panel to avoid
-                  duplicate presentation.
-                </MissingBand>
+                <MissingBand>Trend Status is displayed once in the Leadership Alert Panel to avoid duplicate presentation.</MissingBand>
               </Section>
 
               <Section title="Stability Cost Matrix" quiet>
@@ -424,75 +437,23 @@ export default function SSIExecutiveDashboardPage() {
                     <tbody>
                       {fourWeekRecords.map((record, index) => (
                         <tr key={record.id}>
-                          <th scope="row" style={styles.rowHeader}>
-                            Week {index + 1}
-                          </th>
+                          <th scope="row" style={styles.rowHeader}>Week {index + 1}</th>
                           <td style={styles.td}>{display(record.unit)}</td>
                           <td style={styles.td}>{display(record.window_start)}</td>
                           <td style={styles.td}>{display(record.window_end)}</td>
-                          <td style={{ ...styles.td, color: colors.text, fontWeight: 900 }}>
-                            {display(record.trend_status)}
-                          </td>
+                          <td style={{ ...styles.td, color: colors.text, fontWeight: 900 }}>{display(record.trend_status)}</td>
                         </tr>
                       ))}
 
-                      {Array.from({
-                        length: Math.max(0, 4 - fourWeekRecords.length),
-                      }).map((_, index) => (
+                      {Array.from({ length: Math.max(0, 4 - fourWeekRecords.length) }).map((_, index) => (
                         <tr key={`missing-week-${index}`}>
-                          <th scope="row" style={styles.rowHeader}>
-                            Week {fourWeekRecords.length + index + 1}
-                          </th>
-                          <td style={styles.td} colSpan={4}>
-                            {MISSING}
-                          </td>
+                          <th scope="row" style={styles.rowHeader}>Week {fourWeekRecords.length + index + 1}</th>
+                          <td style={styles.td} colSpan={4}>{MISSING}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-              </Section>
-
-              <Section title="Stability Escalation Tier" quiet>
-                <div style={styles.compactGrid3}>
-                  <Tile label="Escalation Tier" value={MISSING} quiet />
-                  <Tile label="Signal Basis" value={MISSING} quiet />
-                  <Tile label="Leadership Threshold" value={MISSING} quiet />
-                </div>
-              </Section>
-
-              <Section title="TSINAXA Stability Index" quiet>
-                <div style={styles.compactGrid3}>
-                  <Tile label="Index Value" value={MISSING} quiet />
-                  <Tile label="Index Classification" value={MISSING} quiet />
-                  <Tile label="Index Meaning" value={MISSING} quiet />
-                </div>
-              </Section>
-
-              <Section title="Operational Fragility Panel" quiet>
-                <MissingBand>
-                  Operational fragility outputs are not persisted in the current buffer.
-                </MissingBand>
-              </Section>
-
-              <Section title="TSINAXA Stability Radar" quiet>
-                <div style={styles.compactGrid4}>
-                  <Tile label="Assignment Load" value={MISSING} quiet />
-                  <Tile label="Event Intensity" value={MISSING} quiet />
-                  <Tile label="Late Pressure" value={MISSING} quiet />
-                  <Tile label="Buffer Depletion" value={MISSING} quiet />
-                </div>
-                <div style={{ marginTop: 6 }}>
-                  <MissingBand>
-                    Radar outputs are not persisted in the current buffer.
-                  </MissingBand>
-                </div>
-              </Section>
-
-              <Section title="Latest Leadership Response" quiet>
-                <MissingBand>
-                  A distinct latest leadership response is not persisted in the current buffer.
-                </MissingBand>
               </Section>
 
               <Section title="Doctrine Boundary" quiet>
@@ -513,15 +474,11 @@ export default function SSIExecutiveDashboardPage() {
 const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: '100vh',
-    background:
-      'radial-gradient(circle at 50% -120px, rgba(214,178,94,0.10), transparent 420px), #050505',
+    background: 'radial-gradient(circle at 50% -120px, rgba(214,178,94,0.10), transparent 420px), #050505',
     color: colors.text,
     padding: '24px 24px 54px',
   },
-  shell: {
-    width: 'min(1240px, 100%)',
-    margin: '0 auto',
-  },
+  shell: { width: 'min(1240px, 100%)', margin: '0 auto' },
   hero: {
     display: 'grid',
     gridTemplateColumns: '1fr auto',
@@ -534,290 +491,47 @@ const styles: Record<string, CSSProperties> = {
     background: colors.shell,
     boxShadow: '0 18px 60px rgba(0,0,0,0.28)',
   },
-  eyebrow: {
-    marginBottom: 6,
-    color: colors.gold,
-    fontSize: 10,
-    fontWeight: 900,
-    letterSpacing: '0.16em',
-    textTransform: 'uppercase',
-  },
-  title: {
-    margin: 0,
-    fontSize: 34,
-    lineHeight: 1.05,
-    letterSpacing: '-0.025em',
-  },
-  subtitle: {
-    maxWidth: 760,
-    margin: '8px 0 0',
-    color: colors.muted,
-    fontSize: 13,
-    lineHeight: 1.5,
-  },
-  updated: {
-    minWidth: 220,
-    paddingLeft: 20,
-    borderLeft: `1px solid ${colors.line}`,
-    textAlign: 'right',
-  },
-  updatedLabel: {
-    display: 'block',
-    marginBottom: 5,
-    color: colors.goldMuted,
-    fontSize: 10,
-    fontWeight: 900,
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
-  },
-  updatedValue: {
-    color: colors.text,
-    fontSize: 13,
-  },
-  flowNav: {
-    border: `1px solid ${colors.line}`,
-    background: colors.shell,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 14,
-  },
-  flowNavHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
-  },
-  flowNavTitle: {
-    color: colors.gold,
-    fontWeight: 900,
-    letterSpacing: '0.14em',
-    textTransform: 'uppercase',
-    fontSize: 11,
-  },
-  flowNavRule: {
-    height: 1,
-    flex: 1,
-    background: colors.line,
-  },
-  flowNavCaption: {
-    color: colors.muted,
-    fontSize: 11,
-    fontWeight: 800,
-  },
-  flowSteps: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: 10,
-  },
-  flowStepWrap: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    minWidth: 0,
-  },
-  flowStep: {
-    flex: 1,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    textDecoration: 'none',
-    color: colors.muted,
-    border: `1px solid ${colors.lineSoft}`,
-    background: '#11100d',
-    borderRadius: 12,
-    padding: '10px 12px',
-    minWidth: 0,
-  },
-  flowStepActive: {
-    border: `1px solid ${colors.lineStrong}`,
-    background: 'rgba(214,178,94,0.14)',
-    color: colors.text,
-    boxShadow: `inset 3px 0 0 ${colors.gold}`,
-  },
-  flowStepIndex: {
-    display: 'grid',
-    placeItems: 'center',
-    width: 24,
-    height: 24,
-    borderRadius: 999,
-    background: 'rgba(214,178,94,0.16)',
-    color: colors.gold,
-    fontWeight: 900,
-    flexShrink: 0,
-  },
-  flowStepText: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 3,
-    minWidth: 0,
-  },
-  flowArrow: {
-    color: colors.goldMuted,
-    fontWeight: 900,
-    flexShrink: 0,
-  },
-  dashboard: {
-    display: 'grid',
-    gap: 12,
-  },
-  layer: {
-    display: 'grid',
-    gap: 8,
-    padding: 10,
-    border: `1px solid ${colors.lineSoft}`,
-    borderRadius: 16,
-    background: 'rgba(255,255,255,0.012)',
-  },
-  layerHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 16,
-    padding: '2px 4px 4px',
-  },
-  layerTitle: {
-    margin: 0,
-    color: colors.goldMuted,
-    fontSize: 10,
-    fontWeight: 900,
-    letterSpacing: '0.17em',
-    textTransform: 'uppercase',
-  },
-  layerRule: {
-    flex: 1,
-    height: 1,
-    background: colors.lineSoft,
-  },
-  section: {
-    overflow: 'hidden',
-    border: `1px solid ${colors.line}`,
-    borderRadius: 12,
-    background: colors.panel,
-  },
-  sectionHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 9,
-    minHeight: 34,
-    padding: '0 14px',
-    borderBottom: `1px solid ${colors.line}`,
-    background: colors.section,
-  },
-  sectionLine: {
-    width: 3,
-    height: 14,
-    borderRadius: 999,
-    background: colors.gold,
-  },
-  sectionTitle: {
-    margin: 0,
-    color: colors.gold,
-    fontSize: 11,
-    fontWeight: 900,
-    letterSpacing: '0.14em',
-    textTransform: 'uppercase',
-  },
-  sectionContent: {
-    padding: 10,
-  },
-  compactGrid4: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-    gap: 6,
-  },
-  compactGrid3: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: 6,
-  },
-  dataTile: {
-    border: `1px solid ${colors.line}`,
-    background: '#090909',
-  },
-  dataLabel: {
-    minHeight: 29,
-    display: 'flex',
-    alignItems: 'center',
-    padding: '7px 10px',
-    color: colors.muted,
-    background: colors.slate,
-    fontSize: 11,
-    fontWeight: 900,
-  },
-  dataValue: {
-    minHeight: 32,
-    display: 'flex',
-    alignItems: 'center',
-    padding: '7px 10px',
-    color: colors.text,
-    fontSize: 12,
-    fontWeight: 800,
-  },
-  dataValueStrong: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: 950,
-  },
-  action: {
-    padding: '9px 2px',
-    color: colors.text,
-    fontSize: 20,
-    fontWeight: 900,
-    lineHeight: 1.35,
-  },
-  missingBand: {
-    padding: '8px 12px',
-    color: colors.quiet,
-    border: `1px dashed ${colors.line}`,
-    background: 'rgba(214,178,94,0.03)',
-    fontSize: 11,
-    fontWeight: 800,
-    lineHeight: 1.45,
-    textAlign: 'center',
-  },
-  tableScroll: {
-    overflowX: 'auto',
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    tableLayout: 'fixed',
-  },
-  th: {
-    padding: '8px 9px',
-    border: `1px solid ${colors.line}`,
-    color: colors.text,
-    background: colors.slate,
-    fontSize: 10,
-    fontWeight: 950,
-    letterSpacing: '0.035em',
-    textTransform: 'uppercase',
-    textAlign: 'center',
-    verticalAlign: 'middle',
-  },
-  td: {
-    padding: '8px 9px',
-    border: `1px solid ${colors.line}`,
-    color: colors.muted,
-    fontSize: 11,
-    lineHeight: 1.35,
-    textAlign: 'left',
-    verticalAlign: 'middle',
-  },
-  rowHeader: {
-    padding: '8px 9px',
-    border: `1px solid ${colors.line}`,
-    color: colors.gold,
-    background: colors.section,
-    fontSize: 11,
-    fontWeight: 950,
-    textAlign: 'left',
-    verticalAlign: 'middle',
-  },
-  doctrine: {
-    padding: '6px 2px',
-    color: colors.muted,
-    fontSize: 12,
-    lineHeight: 1.6,
-  },
+  eyebrow: { marginBottom: 6, color: colors.gold, fontSize: 10, fontWeight: 900, letterSpacing: '0.16em', textTransform: 'uppercase' },
+  title: { margin: 0, fontSize: 34, lineHeight: 1.05, letterSpacing: '-0.025em' },
+  subtitle: { maxWidth: 760, margin: '8px 0 0', color: colors.muted, fontSize: 13, lineHeight: 1.5 },
+  updated: { minWidth: 220, paddingLeft: 20, borderLeft: `1px solid ${colors.line}`, textAlign: 'right' },
+  updatedLabel: { display: 'block', marginBottom: 5, color: colors.goldMuted, fontSize: 10, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase' },
+  updatedValue: { color: colors.text, fontSize: 13 },
+  logoutButton: { marginTop: 10, width: '100%', border: `1px solid ${colors.lineStrong}`, borderRadius: 999, background: '#11100d', color: colors.gold, padding: '9px 12px', fontWeight: 900, cursor: 'pointer' },
+  flowNav: { border: `1px solid ${colors.line}`, background: colors.shell, borderRadius: 14, padding: 14, marginBottom: 14 },
+  flowNavHeader: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 },
+  flowNavTitle: { color: colors.gold, fontWeight: 900, letterSpacing: '0.14em', textTransform: 'uppercase', fontSize: 11 },
+  flowNavRule: { height: 1, flex: 1, background: colors.line },
+  flowNavCaption: { color: colors.muted, fontSize: 11, fontWeight: 800 },
+  flowSteps: { display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 10 },
+  flowStepWrap: { display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 },
+  flowStep: { flex: 1, display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: colors.muted, border: `1px solid ${colors.lineSoft}`, background: '#11100d', borderRadius: 12, padding: '10px 12px', minWidth: 0 },
+  flowStepActive: { border: `1px solid ${colors.lineStrong}`, background: 'rgba(214,178,94,0.14)', color: colors.text, boxShadow: `inset 3px 0 0 ${colors.gold}` },
+  flowStepIndex: { display: 'grid', placeItems: 'center', width: 24, height: 24, borderRadius: 999, background: 'rgba(214,178,94,0.16)', color: colors.gold, fontWeight: 900, flexShrink: 0 },
+  flowStepText: { display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 },
+  flowArrow: { color: colors.goldMuted, fontWeight: 900, flexShrink: 0 },
+  dashboard: { display: 'grid', gap: 12 },
+  layer: { display: 'grid', gap: 8, padding: 10, border: `1px solid ${colors.lineSoft}`, borderRadius: 16, background: 'rgba(255,255,255,0.012)' },
+  layerHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '2px 4px 4px' },
+  layerTitle: { margin: 0, color: colors.goldMuted, fontSize: 10, fontWeight: 900, letterSpacing: '0.17em', textTransform: 'uppercase' },
+  layerRule: { flex: 1, height: 1, background: colors.lineSoft },
+  section: { overflow: 'hidden', border: `1px solid ${colors.line}`, borderRadius: 12, background: colors.panel },
+  sectionHeader: { display: 'flex', alignItems: 'center', gap: 9, minHeight: 34, padding: '0 14px', borderBottom: `1px solid ${colors.line}`, background: colors.section },
+  sectionLine: { width: 3, height: 14, borderRadius: 999, background: colors.gold },
+  sectionTitle: { margin: 0, color: colors.gold, fontSize: 11, fontWeight: 900, letterSpacing: '0.14em', textTransform: 'uppercase' },
+  sectionContent: { padding: 10 },
+  compactGrid4: { display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6 },
+  compactGrid3: { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 6 },
+  dataTile: { border: `1px solid ${colors.line}`, background: '#090909' },
+  dataLabel: { minHeight: 29, display: 'flex', alignItems: 'center', padding: '7px 10px', color: colors.muted, background: colors.slate, fontSize: 11, fontWeight: 900 },
+  dataValue: { minHeight: 32, display: 'flex', alignItems: 'center', padding: '7px 10px', color: colors.text, fontSize: 12, fontWeight: 800 },
+  dataValueStrong: { color: '#ffffff', fontSize: 14, fontWeight: 950 },
+  action: { padding: '9px 2px', color: colors.text, fontSize: 20, fontWeight: 900, lineHeight: 1.35 },
+  missingBand: { padding: '8px 12px', color: colors.quiet, border: `1px dashed ${colors.line}`, background: 'rgba(214,178,94,0.03)', fontSize: 11, fontWeight: 800, lineHeight: 1.45, textAlign: 'center' },
+  tableScroll: { overflowX: 'auto' },
+  table: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' },
+  th: { padding: '8px 9px', border: `1px solid ${colors.line}`, color: colors.text, background: colors.slate, fontSize: 10, fontWeight: 950, letterSpacing: '0.035em', textTransform: 'uppercase', textAlign: 'center', verticalAlign: 'middle' },
+  td: { padding: '8px 9px', border: `1px solid ${colors.line}`, color: colors.muted, fontSize: 11, lineHeight: 1.35, textAlign: 'left', verticalAlign: 'middle' },
+  rowHeader: { padding: '8px 9px', border: `1px solid ${colors.line}`, color: colors.gold, background: colors.section, fontSize: 11, fontWeight: 950, textAlign: 'left', verticalAlign: 'middle' },
+  doctrine: { padding: '6px 2px', color: colors.muted, fontSize: 12, lineHeight: 1.6 },
 }
