@@ -71,6 +71,7 @@ const allowedStatuses = ['ACTIVE']
 
 const DEFAULT_ACTION = 'No leadership action persisted.'
 const DEFAULT_OUTCOME = 'No observed outcome persisted.'
+const NOT_CAPTURED = 'Not captured in current trend buffer.'
 
 const leadershipActionOptions = [
   DEFAULT_ACTION,
@@ -503,8 +504,8 @@ function summarizeForPersistence(
     ...baseSummary,
     stability_score: null,
     predictability_insight: predictabilityInsight(baseSummary),
-    most_affected_role_pool: rolePressure?.rolePool ?? 'Not persisted in current buffer.',
-    most_affected_shift: rolePressure?.shiftType ?? 'Not persisted in current buffer.',
+    most_affected_role_pool: rolePressure?.rolePool ?? NOT_CAPTURED,
+    most_affected_shift: rolePressure?.shiftType ?? NOT_CAPTURED,
     fragility_level: fragilityLevel(baseSummary),
     cost_pressure_signal: bufferUseProfile,
     leadership_interpretation: leadershipInterpretation(baseSummary),
@@ -847,6 +848,40 @@ export default function SSITrendBufferPage() {
         </section>
 
         <section style={styles.panelWide}>
+          <h2 style={styles.panelTitle}>Threshold Defense Reference</h2>
+          <p style={styles.sectionNote}>
+            These rules are intentionally threshold-based, not numeric score-based. They are designed to defend executive classifications using observable recurrence, buffer consumption, and structural strain signals.
+          </p>
+
+          <div style={styles.defenseGrid}>
+            <DefenseCard
+              title="Buffer Use Profile"
+              body="HIGH = 2+ high-cost buffer responses or 4+ total buffer responses. MODERATE = 1 high-cost response or 2+ total responses. LOW = 1 response. NONE = no response recorded."
+            />
+            <DefenseCard
+              title="Repeated Buffer Depletion"
+              body="TRUE = 3+ buffer responses or 2+ high-cost buffer responses. This protects the system from normalizing backup capacity as routine staffing design."
+            />
+            <DefenseCard
+              title="Trend Status"
+              body="UNSTABLE = high-intensity recurrence, high buffer dependence, or repeated depletion. STRAINING = repeated visible events, one high-intensity event, moderate buffer use, assignment skew, or above-baseline concentration."
+            />
+            <DefenseCard
+              title="Risk Gauge / Fragility"
+              body="HIGH = unstable trend, repeated depletion, 2+ high-intensity events, or high buffer use. MODERATE = straining trend, one high-intensity event, or moderate buffer use. LOW = no threshold crossed."
+            />
+            <DefenseCard
+              title="Cost Pressure Signal"
+              body="Cost pressure reflects operational buffer consumption, not audited dollars. HIGH means high-cost or repeated buffer dependence was required to preserve stability."
+            />
+            <DefenseCard
+              title="Governance Boundary"
+              body="Trend Buffer classifies. Executive Dashboard reads persisted outputs. Weekly Brief narrates persisted outputs. No downstream page recalculates SSI thresholds."
+            />
+          </div>
+        </section>
+
+        <section style={styles.panelWide}>
           <h2 style={styles.panelTitle}>Historical Trend Windows</h2>
           <HistoricalTrendTable rows={historicalRows} />
         </section>
@@ -914,6 +949,15 @@ function Metric({ label, value }: { label: string; value: string }) {
     <div style={styles.metric}>
       <span>{label}</span>
       <strong>{value}</strong>
+    </div>
+  )
+}
+
+function DefenseCard({ title, body }: { title: string; body: string }) {
+  return (
+    <div style={styles.defenseCard}>
+      <strong>{title}</strong>
+      <p>{body}</p>
     </div>
   )
 }
@@ -1054,6 +1098,8 @@ const styles: Record<string, CSSProperties> = {
   summaryGrid: { display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: '12px', marginBottom: '18px' },
   previewGrid: { gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: '12px' },
   metric: { border: '1px solid rgba(214,178,94,0.22)', background: '#11100d', borderRadius: '16px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px', color: '#cfc7b5' },
+  defenseGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '12px' },
+  defenseCard: { border: '1px solid rgba(214,178,94,0.22)', background: '#11100d', borderRadius: '16px', padding: '14px', color: '#cfc7b5', lineHeight: 1.55 },
   tableWrap: { overflowX: 'auto' },
   table: { width: '100%', borderCollapse: 'collapse', minWidth: '1800px' },
   historyTable: { width: '100%', borderCollapse: 'collapse', minWidth: '1200px' },
