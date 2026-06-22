@@ -20,6 +20,20 @@ type TrendBufferRow = {
   dominant_stability_forces: string[] | string
   trend_status: string
   leadership_action_cue: string
+  stability_score: number | null
+  predictability_insight: string | null
+  most_affected_role_pool: string | null
+  most_affected_shift: string | null
+  fragility_level: string | null
+  cost_pressure_signal: string | null
+  leadership_interpretation: string | null
+  immediate_action_1: string | null
+  immediate_action_2: string | null
+  short_term_action_1: string | null
+  short_term_action_2: string | null
+  risk_outlook: string | null
+  last_action_taken: string | null
+  observed_outcome: string | null
   created_at: string
   updated_at: string
 }
@@ -341,14 +355,14 @@ export default function SSIExecutiveDashboardPage() {
               <Section title="Leadership Alert Panel" emphasis>
                 <div style={styles.compactGrid4}>
                   <Tile label="System Trend Status" value={latest.trend_status} strong />
-                  <Tile label="Stability Risk Gauge" value={MISSING} quiet />
-                  <Tile label="Buffer Cost Signal" value={MISSING} quiet />
-                  <Tile label="Critical Interpretation" value={MISSING} quiet />
+                  <Tile label="Stability Risk Gauge" value={latest.stability_score} />
+                  <Tile label="Buffer Cost Signal" value={latest.cost_pressure_signal} />
+                  <Tile label="Critical Interpretation" value={latest.leadership_interpretation} />
                 </div>
               </Section>
 
               <Section title="Recommended Leadership Action" emphasis>
-                <div style={styles.action}>{display(latest.leadership_action_cue)}</div>
+                <div style={styles.action}>{display(latest.immediate_action_1)}</div>
               </Section>
             </Layer>
 
@@ -366,8 +380,8 @@ export default function SSIExecutiveDashboardPage() {
                 <div style={styles.compactGrid4}>
                   <Tile label="Primary" value={dominantForceAt(latest.dominant_stability_forces, 0)} strong />
                   <Tile label="Secondary" value={dominantForceAt(latest.dominant_stability_forces, 1)} quiet />
-                  <Tile label="Supporting Basis" value={MISSING} quiet />
-                  <Tile label="Force Notes" value={MISSING} quiet />
+                  <Tile label="Supporting Basis" value={latest.predictability_insight} />
+                  <Tile label="Force Notes" value={latest.risk_outlook} />
                 </div>
               </Section>
 
@@ -388,8 +402,12 @@ export default function SSIExecutiveDashboardPage() {
                       {['CNA', 'RN', 'LPN'].map((role) => (
                         <tr key={role}>
                           <th scope="row" style={styles.rowHeader}>{role}</th>
-                          <td style={styles.td}>{MISSING}</td>
-                          <td style={styles.td}>{MISSING}</td>
+                          <td style={styles.td}>
+                            {latest.most_affected_role_pool?.startsWith(role) ? latest.most_affected_role_pool : MISSING}
+                          </td>
+                          <td style={styles.td}>
+                            {latest.most_affected_role_pool?.startsWith(role) ? latest.most_affected_shift : MISSING}
+                          </td>
                           <td style={styles.td}>{MISSING}</td>
                           <td style={styles.td}>{MISSING}</td>
                           <td style={styles.td}>{MISSING}</td>
@@ -404,7 +422,7 @@ export default function SSIExecutiveDashboardPage() {
                 <div style={styles.compactGrid3}>
                   <Tile label="Buffer Use Profile" value={latest.buffer_use_profile} strong />
                   <Tile label="Repeated Buffer Depletion" value={latest.repeated_buffer_depletion_flag} />
-                  <Tile label="Cost Pressure Signal" value={MISSING} quiet />
+                  <Tile label="Cost Pressure Signal" value={latest.cost_pressure_signal} />
                 </div>
               </Section>
             </Layer>
@@ -416,9 +434,9 @@ export default function SSIExecutiveDashboardPage() {
 
               <Section title="Stability Cost Matrix" quiet>
                 <div style={styles.compactGrid3}>
-                  <Tile label="Stable + Low Cost" value={MISSING} quiet />
-                  <Tile label="Straining + Moderate Cost" value={MISSING} quiet />
-                  <Tile label="Unstable + High Cost" value={MISSING} quiet />
+                  <Tile label="Stable + Low Cost" value="Low operational pressure." quiet />
+                  <Tile label="Straining + Moderate Cost" value="Increasing buffer consumption." quiet />
+                  <Tile label="Unstable + High Cost" value={latest.risk_outlook} />
                 </div>
               </Section>
 
