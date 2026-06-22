@@ -355,7 +355,7 @@ export default function SSIExecutiveDashboardPage() {
               <Section title="Leadership Alert Panel" emphasis>
                 <div style={styles.compactGrid4}>
                   <Tile label="System Trend Status" value={latest.trend_status} strong />
-                  <Tile label="Stability Risk Gauge" value={latest.stability_score} />
+                  <Tile label="Stability Risk Gauge" value={latest.fragility_level} />
                   <Tile label="Buffer Cost Signal" value={latest.cost_pressure_signal} />
                   <Tile label="Critical Interpretation" value={latest.leadership_interpretation} />
                 </div>
