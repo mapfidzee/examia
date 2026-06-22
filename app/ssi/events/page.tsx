@@ -5,9 +5,7 @@ import type { CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 
 import {
-  SSI_BUFFER_RESPONSE_OPTIONS,
   SSI_COMMON_SHIFT_BLOCK_OPTIONS,
-  SSI_EVENT_TYPE_OPTIONS,
   SSI_SHIFT_TYPE_OPTIONS,
   SSI_TIMING_CATEGORY_OPTIONS,
   buildSSIEventId,
@@ -42,6 +40,41 @@ const ssiFlow = [
   { label: 'Executive Dashboard', href: '/ssi', note: 'Leadership interpretation', active: false },
   { label: 'Weekly Brief', href: '/ssi/weekly-brief', note: 'Printable executive summary', active: false },
 ]
+
+const SSI_EVENT_TYPE_OPTIONS = [
+  'Late shift cancellation',
+  'Coverage gap',
+  'Scheduled shift converted to on-call',
+  'On-call activation without use',
+  'Delayed arrival',
+  'Medication delayed',
+  'Admission spike',
+  'Discharge pressure',
+  'Transfer delay',
+  'Late hand-off',
+  'Call-out',
+  'No-show',
+  'Assignment redistribution',
+  'High-acuity deterioration',
+  'Fall risk escalation',
+  'Behavioral escalation',
+  'Monitoring burden',
+] as const
+
+const SSI_BUFFER_RESPONSE_OPTIONS = [
+  'No response recorded',
+  'Peer-to-peer support',
+  'Overtime',
+  'Agency staff',
+  'Float staff',
+  'Assignment redistribution',
+  'Charge nurse coverage',
+  'Extra shift creation',
+  'Medication pass support',
+  'Supervisor support',
+  'Delayed non-urgent tasks',
+  'Family communication deferred',
+] as const
 
 const initialHeader: Header = {
   unit: '',

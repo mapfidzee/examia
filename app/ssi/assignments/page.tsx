@@ -6,8 +6,6 @@ import { useRouter } from 'next/navigation'
 
 import {
   SSI_COMMON_SHIFT_BLOCK_OPTIONS,
-  SSI_LOAD_COMPLEXITY_OPTIONS,
-  SSI_LOAD_REASON_OPTIONS,
   SSI_SHIFT_TYPE_OPTIONS,
   buildSSIShiftAssignmentId,
   calculateSSIAssignment,
@@ -52,6 +50,46 @@ const ssiFlow = [
   { label: 'Executive Dashboard', href: '/ssi', note: 'Leadership interpretation', active: false },
   { label: 'Weekly Brief', href: '/ssi/weekly-brief', note: 'Printable executive summary', active: false },
 ]
+
+const SSI_LOAD_REASON_OPTIONS = [
+  'NONE',
+  'High-acuity patient assigned',
+  'New admission at shift start',
+  'Transfer-in at shift start',
+  'Discharge/admission pressure',
+  'IV therapy workload',
+  'Complex wound/treatment workload',
+  'Frequent monitoring required',
+  'Behavioral monitoring required',
+  'High fall-risk cluster',
+  'Two-person assist cluster',
+  'Medication workload pressure',
+  'Missed medication risk',
+  'Hand-off pressure',
+  'Short staffing at shift start',
+  'Isolation/equipment burden',
+  'Post-procedure monitoring',
+  'Telemetry/clinical monitoring burden',
+] as const
+
+const SSI_LOAD_COMPLEXITY_OPTIONS = [
+  'NONE',
+  'High-acuity cluster',
+  'High-acuity + treatment cluster',
+  'Frequent monitoring cluster',
+  'Medication pass complexity',
+  'Missed medication risk cluster',
+  'Fall-risk supervision cluster',
+  'Behavioral supervision cluster',
+  'Two-person assist cluster',
+  'Admission/start-up complexity',
+  'Discharge/admission flow complexity',
+  'Isolation/equipment complexity',
+  'Post-procedure monitoring cluster',
+  'Telemetry/clinical monitoring burden',
+  'Hand-off instability cluster',
+  'Continuous monitoring burden',
+] as const
 
 const initialHeader: ShiftHeader = {
   unit: '',
