@@ -109,14 +109,24 @@ const ssiFlow = [
 ]
 
 const initialFilters = {
-  unit: '',
-  windowStart: '2026-03-01',
-  windowEnd: '2026-03-07',
-  shiftType: 'ALL' as ShiftTypeFilter,
+  unit: 'Med-Surg Simulation A',
+  windowStart: '2026-03-02',
+  windowEnd: '2026-03-08',
+  shiftType: 'DAY' as ShiftTypeFilter,
 }
 
 function normalizeBaselineDesign(value: string) {
   return String(value ?? '').trim()
+}
+
+function normalizeRolePool(value: string | null | undefined) {
+  const text = String(value ?? '').trim().toUpperCase()
+
+  if (text.startsWith('CNA')) return 'CNA'
+  if (text.startsWith('LPN')) return 'LPN'
+  if (text.startsWith('RN')) return 'RN'
+
+  return text || NOT_CAPTURED
 }
 
 function skewStatus(value: number) {
@@ -125,20 +135,28 @@ function skewStatus(value: number) {
 
 function isLate(value: string | null) {
   const text = String(value ?? '').toUpperCase()
-  return text.includes('LATE') || text.includes('LAST_MINUTE')
+  return text.includes('LATE') || text.includes('LAST_MINUTE') || text.includes('LAST MINUTE')
 }
 
 function bufferUsed(value: string | null) {
-  return String(value ?? '').trim() !== ''
+  const text = String(value ?? '').trim().toUpperCase()
+
+  if (!text) return false
+  if (text === 'NONE') return false
+  if (text.includes('NO BUFFER')) return false
+  if (text.includes('NOT USED')) return false
+
+  return true
 }
 
 function dominant(values: string[]) {
   const counts = values.filter(Boolean).reduce<Record<string, number>>((acc, value) => {
-    acc[value] = (acc[value] ?? 0) + 1
+    const cleaned = value.trim()
+    acc[cleaned] = (acc[cleaned] ?? 0) + 1
     return acc
   }, {})
 
-  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'NONE'
+  return Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] ?? 'NONE'
 }
 
 function bufferProfile(bufferCount: number, highCostCount: number) {
@@ -148,23 +166,47 @@ function bufferProfile(bufferCount: number, highCostCount: number) {
   return 'NONE'
 }
 
+function costPressureSignal(bufferCount: number, highCostCount: number) {
+  if (highCostCount >= 2 || bufferCount >= 4) return 'HIGH'
+  if (highCostCount >= 1 || bufferCount >= 1) return 'MODERATE'
+  return 'NONE'
+}
+
 function repeatedBufferDepletion(bufferCount: number, highCostCount: number) {
   return bufferCount >= 3 || highCostCount >= 2
 }
 
-function trendStatus(row: Omit<TrendRow, 'trendStatus' | 'trendStatusRule' | 'leadershipActionCue'>) {
-  if (
-    row.highIntensityEventCount >= 2 ||
-    row.bufferUseProfile === 'HIGH' ||
-    row.repeatedBufferDepletionFlag
-  ) {
-    return 'UNSTABLE'
+function eventStats(events: EventRow[]) {
+  const highIntensityEventCount = events.filter((row) => String(row.event_intensity ?? '').toUpperCase() === 'HIGH').length
+  const lateOrLastMinuteEventCount = events.filter((row) => isLate(row.timing_category)).length
+  const bufferCount = events.filter((row) => bufferUsed(row.buffer_response)).length
+  const highCostCount = events.filter((row) => row.buffer_cost_band === 'HIGH_BUFFER_COST').length
+  const profile = bufferProfile(bufferCount, highCostCount)
+  const repeatedFlag = repeatedBufferDepletion(bufferCount, highCostCount)
+
+  return {
+    totalStabilityEvents: events.length,
+    highIntensityEventCount,
+    lateOrLastMinuteEventCount,
+    bufferCount,
+    highCostCount,
+    bufferUseProfile: profile,
+    costPressureSignal: costPressureSignal(bufferCount, highCostCount),
+    repeatedBufferDepletionFlag: repeatedFlag,
+    dominantStabilityForces: dominant(events.map((row) => row.stability_force ?? '')),
+    affectedRole: dominant(events.map((row) => normalizeRolePool(row.role_pool))),
+    affectedShift: dominant(events.map((row) => row.shift_type)),
   }
+}
+
+function trendStatus(row: Omit<TrendRow, 'trendStatus' | 'trendStatusRule' | 'leadershipActionCue'>) {
+  if (row.bufferUseProfile === 'HIGH' || row.repeatedBufferDepletionFlag) return 'UNSTABLE'
 
   if (
     row.totalStabilityEvents >= 2 ||
-    row.highIntensityEventCount === 1 ||
+    row.highIntensityEventCount >= 1 ||
     row.bufferUseProfile === 'MODERATE' ||
+    row.bufferUseProfile === 'LOW' ||
     row.assignmentLoadSkew >= 2 ||
     row.pctHigher >= 50
   ) {
@@ -186,16 +228,14 @@ function trendRule(
     return 'High buffer dependence rule: two or more high-cost buffer responses, or four or more total buffer responses.'
   }
 
-  if (row.highIntensityEventCount >= 2) {
-    return 'High-intensity recurrence rule: two or more high-intensity events in the same reporting window.'
+  if (row.highIntensityEventCount >= 1) {
+    return 'High-intensity event rule: one or more high-intensity events in the reporting window.'
   }
 
-  if (status === 'UNSTABLE') {
-    return 'Unstable rule: high-intensity recurrence, high buffer dependence, or repeated buffer depletion.'
-  }
+  if (status === 'UNSTABLE') return 'Unstable rule: high buffer dependence or repeated buffer depletion.'
 
   if (status === 'STRAINING') {
-    return 'Straining rule: repeated visible events, one high-intensity event, moderate buffer use, assignment skew, or above-baseline concentration.'
+    return 'Straining rule: visible events, high-intensity events, buffer use, assignment skew, or above-baseline concentration.'
   }
 
   return 'Stable rule: no recurrence, no high buffer dependence, and no above-threshold assignment strain.'
@@ -209,21 +249,16 @@ function leadershipCue(
     return 'Review repeated buffer depletion before it becomes normalized operating design.'
   }
 
-  if (row.bufferUseProfile === 'HIGH' && row.totalStabilityEvents <= 1) {
-    return 'Investigate hidden strain: buffers are being consumed before visible instability is fully surfacing.'
+  if (row.dominantStabilityForces === 'Coverage') {
+    return 'Review coverage instability and staffing resilience before recurrence escalates.'
   }
 
   if (row.bufferUseProfile === 'HIGH') {
     return 'Review high buffer dependence and determine whether current staffing design is absorbing repeated instability.'
   }
 
-  if (status === 'UNSTABLE') {
-    return 'Immediate leadership intervention required.'
-  }
-
-  if (status === 'STRAINING') {
-    return 'Review recurring pressure before instability escalates.'
-  }
+  if (status === 'UNSTABLE') return 'Immediate leadership intervention required.'
+  if (status === 'STRAINING') return 'Review recurring pressure before instability escalates.'
 
   return 'Maintain current operating posture and continue monitoring.'
 }
@@ -237,7 +272,6 @@ function fragilityLevel(summary: {
   if (
     summary.trend_status === 'UNSTABLE' ||
     summary.repeated_buffer_depletion_flag ||
-    summary.high_intensity_event_count >= 2 ||
     summary.buffer_use_profile === 'HIGH'
   ) {
     return 'HIGH'
@@ -245,8 +279,9 @@ function fragilityLevel(summary: {
 
   if (
     summary.trend_status === 'STRAINING' ||
-    summary.high_intensity_event_count === 1 ||
-    summary.buffer_use_profile === 'MODERATE'
+    summary.high_intensity_event_count >= 1 ||
+    summary.buffer_use_profile === 'MODERATE' ||
+    summary.buffer_use_profile === 'LOW'
   ) {
     return 'MODERATE'
   }
@@ -269,9 +304,10 @@ function predictabilityInsight(summary: {
     summary.trend_status === 'STRAINING' ||
     summary.late_or_last_minute_event_count > 0 ||
     summary.assignment_load_skew > 0 ||
-    summary.buffer_use_profile === 'MODERATE'
+    summary.buffer_use_profile === 'MODERATE' ||
+    summary.buffer_use_profile === 'LOW'
   ) {
-    return 'Leaders can anticipate some pressure, but predictability is weakened by late movement, event recurrence, uneven assignment load, or moderate buffer use.'
+    return 'Leaders can anticipate some pressure, but predictability is weakened by event recurrence, uneven assignment load, or buffer use.'
   }
 
   return 'Leaders can reasonably anticipate operational conditions based on the persisted structural signals for this window.'
@@ -315,7 +351,7 @@ function riskOutlook(summary: {
     return 'cost pressure, staff fatigue, turnover exposure, and instability recurrence may increase.'
   }
 
-  if (summary.trend_status === 'STRAINING' || summary.buffer_use_profile === 'MODERATE') {
+  if (summary.trend_status === 'STRAINING' || summary.buffer_use_profile === 'MODERATE' || summary.buffer_use_profile === 'LOW') {
     return 'fatigue and instability recurrence may increase if structural pressure is not reviewed.'
   }
 
@@ -346,10 +382,10 @@ function actionSet(summary: {
     }
   }
 
-  if (summary.trend_status === 'STRAINING' || summary.buffer_use_profile === 'MODERATE') {
+  if (summary.trend_status === 'STRAINING' || summary.buffer_use_profile === 'MODERATE' || summary.buffer_use_profile === 'LOW') {
     return {
       immediate1: summary.leadership_action_cue,
-      immediate2: 'Review late or last-minute movement within the reporting window.',
+      immediate2: 'Review staffing instability within the reporting window.',
       short1: 'Monitor whether the same pressure pattern repeats next week.',
       short2: 'Protect role-pool reliability before the strain becomes structural.',
     }
@@ -381,7 +417,9 @@ function buildTrendRows(
 
   assignments.forEach((row) => {
     const normalizedBaselineDesign = normalizeBaselineDesign(row.baseline_design)
-    const key = `${row.unit}::${row.role_pool}::${row.shift_type}::${normalizedBaselineDesign}`
+    const normalizedRolePool = normalizeRolePool(row.role_pool)
+    const key = `${row.unit}::${normalizedRolePool}::${row.shift_type}::${normalizedBaselineDesign}`
+
     groups.set(key, [...(groups.get(key) ?? []), row])
   })
 
@@ -390,7 +428,7 @@ function buildTrendRows(
     const matchedEvents = events.filter(
       (event) =>
         event.unit === unit &&
-        event.role_pool === rolePool &&
+        normalizeRolePool(event.role_pool) === rolePool &&
         event.shift_type === shiftType &&
         event.event_date >= windowStart &&
         event.event_date <= windowEnd,
@@ -398,12 +436,7 @@ function buildTrendRows(
 
     const higherCount = group.filter((row) => Number(row.load_modifier ?? 0) > 0).length
     const assignmentLoadSkew = group.reduce((sum, row) => sum + Number(row.load_modifier ?? 0), 0)
-    const highIntensityEventCount = matchedEvents.filter((row) => row.event_intensity === 'HIGH').length
-    const lateOrLastMinuteEventCount = matchedEvents.filter((row) => isLate(row.timing_category)).length
-    const bufferCount = matchedEvents.filter((row) => bufferUsed(row.buffer_response)).length
-    const highCostCount = matchedEvents.filter((row) => row.buffer_cost_band === 'HIGH_BUFFER_COST').length
-    const profile = bufferProfile(bufferCount, highCostCount)
-    const repeatedFlag = repeatedBufferDepletion(bufferCount, highCostCount)
+    const stats = eventStats(matchedEvents)
 
     const base = {
       trendWindow: `${windowStart} → ${windowEnd}`,
@@ -413,12 +446,12 @@ function buildTrendRows(
       baselineDesign,
       assignmentLoadSkew,
       pctHigher: group.length ? Math.round((higherCount / group.length) * 100) : 0,
-      totalStabilityEvents: matchedEvents.length,
-      highIntensityEventCount,
-      lateOrLastMinuteEventCount,
-      bufferUseProfile: profile,
-      repeatedBufferDepletionFlag: repeatedFlag,
-      dominantStabilityForces: dominant(matchedEvents.map((row) => row.stability_force ?? '')),
+      totalStabilityEvents: stats.totalStabilityEvents,
+      highIntensityEventCount: stats.highIntensityEventCount,
+      lateOrLastMinuteEventCount: stats.lateOrLastMinuteEventCount,
+      bufferUseProfile: stats.bufferUseProfile,
+      repeatedBufferDepletionFlag: stats.repeatedBufferDepletionFlag,
+      dominantStabilityForces: stats.dominantStabilityForces,
     }
 
     const status = trendStatus(base)
@@ -435,6 +468,7 @@ function buildTrendRows(
 
 function summarizeForPersistence(
   rows: TrendRow[],
+  events: EventRow[],
   unit: string,
   windowStart: string,
   windowEnd: string,
@@ -442,46 +476,25 @@ function summarizeForPersistence(
   observedOutcome: string,
 ) {
   const assignmentLoadSkew = rows.reduce((sum, row) => sum + row.assignmentLoadSkew, 0)
-  const totalStabilityEvents = rows.reduce((sum, row) => sum + row.totalStabilityEvents, 0)
-  const highIntensityEventCount = rows.reduce((sum, row) => sum + row.highIntensityEventCount, 0)
-  const lateOrLastMinuteEventCount = rows.reduce((sum, row) => sum + row.lateOrLastMinuteEventCount, 0)
-  const repeatedBufferDepletionFlag = rows.some((row) => row.repeatedBufferDepletionFlag)
-
-  const dominantForces = rows
-    .map((row) => row.dominantStabilityForces)
-    .filter((force) => force && force !== 'NONE')
-
-  const bufferRank = ['NONE', 'LOW', 'MODERATE', 'HIGH']
-  const bufferUseProfile = rows.reduce(
-    (highest, row) =>
-      bufferRank.indexOf(row.bufferUseProfile) > bufferRank.indexOf(highest)
-        ? row.bufferUseProfile
-        : highest,
-    'NONE',
-  )
+  const eventSummary = eventStats(events)
+  const totalStabilityEvents = eventSummary.totalStabilityEvents
+  const highIntensityEventCount = eventSummary.highIntensityEventCount
+  const lateOrLastMinuteEventCount = eventSummary.lateOrLastMinuteEventCount
+  const repeatedBufferDepletionFlag = eventSummary.repeatedBufferDepletionFlag
+  const bufferUseProfile = eventSummary.bufferUseProfile
 
   const trendStatusValue =
-    rows.some((row) => row.trendStatus === 'UNSTABLE')
+    repeatedBufferDepletionFlag || bufferUseProfile === 'HIGH'
       ? 'UNSTABLE'
-      : rows.some((row) => row.trendStatus === 'STRAINING')
+      : totalStabilityEvents > 0 ||
+          highIntensityEventCount > 0 ||
+          bufferUseProfile === 'LOW' ||
+          bufferUseProfile === 'MODERATE' ||
+          assignmentLoadSkew > 0
         ? 'STRAINING'
         : rows.length
           ? 'STABLE'
           : 'NO DATA'
-
-  const leadershipActionCue =
-    rows.find((row) => row.trendStatus === 'UNSTABLE')?.leadershipActionCue ??
-    rows.find((row) => row.trendStatus === 'STRAINING')?.leadershipActionCue ??
-    rows[0]?.leadershipActionCue ??
-    'No trend-buffer output available.'
-
-  const rolePressure = rows
-    .slice()
-    .sort((a, b) => {
-      const bScore = b.totalStabilityEvents + b.highIntensityEventCount + b.assignmentLoadSkew
-      const aScore = a.totalStabilityEvents + a.highIntensityEventCount + a.assignmentLoadSkew
-      return bScore - aScore
-    })[0]
 
   const baseSummary = {
     unit,
@@ -493,9 +506,15 @@ function summarizeForPersistence(
     late_or_last_minute_event_count: lateOrLastMinuteEventCount,
     buffer_use_profile: bufferUseProfile,
     repeated_buffer_depletion_flag: repeatedBufferDepletionFlag,
-    dominant_stability_forces: dominantForces.length ? Array.from(new Set(dominantForces)) : ['NONE'],
+    dominant_stability_forces: eventSummary.dominantStabilityForces !== 'NONE' ? [eventSummary.dominantStabilityForces] : ['NONE'],
     trend_status: trendStatusValue,
-    leadership_action_cue: leadershipActionCue,
+    leadership_action_cue:
+      eventSummary.dominantStabilityForces === 'Coverage'
+        ? 'Review coverage instability and staffing resilience before recurrence escalates.'
+        : rows.find((row) => row.trendStatus === 'UNSTABLE')?.leadershipActionCue ??
+          rows.find((row) => row.trendStatus === 'STRAINING')?.leadershipActionCue ??
+          rows[0]?.leadershipActionCue ??
+          'No trend-buffer output available.',
   }
 
   const actions = actionSet(baseSummary)
@@ -504,10 +523,10 @@ function summarizeForPersistence(
     ...baseSummary,
     stability_score: null,
     predictability_insight: predictabilityInsight(baseSummary),
-    most_affected_role_pool: rolePressure?.rolePool ?? NOT_CAPTURED,
-    most_affected_shift: rolePressure?.shiftType ?? NOT_CAPTURED,
+    most_affected_role_pool: eventSummary.affectedRole !== 'NONE' ? eventSummary.affectedRole : rows[0]?.rolePool ?? NOT_CAPTURED,
+    most_affected_shift: eventSummary.affectedShift !== 'NONE' ? eventSummary.affectedShift : rows[0]?.shiftType ?? NOT_CAPTURED,
     fragility_level: fragilityLevel(baseSummary),
-    cost_pressure_signal: bufferUseProfile,
+    cost_pressure_signal: eventSummary.costPressureSignal,
     leadership_interpretation: leadershipInterpretation(baseSummary),
     immediate_action_1: actions.immediate1,
     immediate_action_2: actions.immediate2,
@@ -586,13 +605,14 @@ export default function SSITrendBufferPage() {
     () =>
       summarizeForPersistence(
         trendRows,
+        events,
         filters.unit,
         filters.windowStart,
         filters.windowEnd,
         lastActionTaken,
         observedOutcome,
       ),
-    [trendRows, filters.unit, filters.windowStart, filters.windowEnd, lastActionTaken, observedOutcome],
+    [trendRows, events, filters.unit, filters.windowStart, filters.windowEnd, lastActionTaken, observedOutcome],
   )
 
   const topSummary = useMemo(() => {
@@ -604,9 +624,9 @@ export default function SSITrendBufferPage() {
       unstable,
       straining,
       stable: trendRows.filter((row) => row.trendStatus === 'STABLE').length,
-      posture: unstable > 0 ? 'UNSTABLE' : straining > 0 ? 'STRAINING' : trendRows.length ? 'STABLE' : 'NO DATA',
+      posture: persistedSummary.trend_status,
     }
-  }, [trendRows])
+  }, [trendRows, persistedSummary.trend_status])
 
   function updateFilter(field: keyof typeof initialFilters, value: string) {
     setFilters((current) => ({ ...current, [field]: value }))
@@ -700,17 +720,39 @@ export default function SSITrendBufferPage() {
       return
     }
 
+    const memoryLastActionTaken = cleanAction(lastActionTaken)
+    const memoryObservedOutcome = cleanOutcome(observedOutcome)
+
     setSaving(true)
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('ssi_trend_buffer')
-      .upsert(persistedSummary, { onConflict: 'unit,window_start,window_end' })
+      .upsert(
+        {
+          ...persistedSummary,
+          last_action_taken: memoryLastActionTaken,
+          observed_outcome: memoryObservedOutcome,
+        },
+        { onConflict: 'unit,window_start,window_end' },
+      )
+      .select('id, unit, window_start, window_end, trend_status, stability_score, cost_pressure_signal, fragility_level, last_action_taken, observed_outcome, updated_at')
+      .maybeSingle()
 
     setSaving(false)
 
     if (error) {
       setMessage(error.message)
       return
+    }
+
+    if (data) {
+      setHistoricalRows((current) => {
+        const remaining = current.filter((row) => row.id !== data.id)
+        return [data as HistoricalTrendRecord, ...remaining].slice(0, 8)
+      })
+
+      setLastActionTaken(data.last_action_taken ?? DEFAULT_ACTION)
+      setObservedOutcome(data.observed_outcome ?? DEFAULT_OUTCOME)
     }
 
     setMessage('Saved leadership action memory into ssi_trend_buffer.')
@@ -803,7 +845,7 @@ export default function SSITrendBufferPage() {
         <section style={styles.panelWide}>
           <h2 style={styles.panelTitle}>Leadership Action Memory</h2>
           <p style={styles.sectionNote}>
-            Controlled leadership memory. These selections are persisted directly and are not inferred by the Weekly Brief.
+            Controlled leadership memory. These selections are persisted directly and are not inferred by downstream SSI pages.
           </p>
 
           <div style={styles.actionGrid}>
@@ -850,7 +892,7 @@ export default function SSITrendBufferPage() {
         <section style={styles.panelWide}>
           <h2 style={styles.panelTitle}>Threshold Defense Reference</h2>
           <p style={styles.sectionNote}>
-            These rules are intentionally threshold-based, not numeric score-based. They are designed to defend executive classifications using observable recurrence, buffer consumption, and structural strain signals.
+            These rules are intentionally threshold-based, not numeric score-based. They defend executive classifications using observable recurrence, buffer consumption, and structural strain signals.
           </p>
 
           <div style={styles.defenseGrid}>
@@ -864,19 +906,19 @@ export default function SSITrendBufferPage() {
             />
             <DefenseCard
               title="Trend Status"
-              body="UNSTABLE = high-intensity recurrence, high buffer dependence, or repeated depletion. STRAINING = repeated visible events, one high-intensity event, moderate buffer use, assignment skew, or above-baseline concentration."
+              body="UNSTABLE = high buffer dependence or repeated depletion. STRAINING = visible events, high-intensity events, buffer use, assignment skew, or above-baseline concentration."
             />
             <DefenseCard
               title="Risk Gauge / Fragility"
-              body="HIGH = unstable trend, repeated depletion, 2+ high-intensity events, or high buffer use. MODERATE = straining trend, one high-intensity event, or moderate buffer use. LOW = no threshold crossed."
+              body="HIGH = unstable trend, repeated depletion, or high buffer use. MODERATE = straining trend, one or more high-intensity events, or low/moderate buffer use. LOW = no threshold crossed."
             />
             <DefenseCard
               title="Cost Pressure Signal"
-              body="Cost pressure reflects operational buffer consumption, not audited dollars. HIGH means high-cost or repeated buffer dependence was required to preserve stability."
+              body="Cost pressure reflects operational buffer consumption, not audited dollars. MODERATE means a documented buffer response was required to preserve stability."
             />
             <DefenseCard
               title="Governance Boundary"
-              body="Trend Buffer classifies. Executive Dashboard reads persisted outputs. Weekly Brief narrates persisted outputs. No downstream page recalculates SSI thresholds."
+              body="Trend Buffer classifies. Downstream pages read persisted outputs. No downstream page recalculates SSI thresholds."
             />
           </div>
         </section>
@@ -894,7 +936,7 @@ export default function SSITrendBufferPage() {
         <section style={styles.footerPanel}>
           <h2 style={styles.panelTitle}>Doctrine Boundary</h2>
           <p style={styles.footerText}>
-            This page calculates and persists the controlled SSI trend-buffer output. Historical window visibility and leadership action memory are persisted here. Weekly Brief remains read-only and reads only from ssi_trend_buffer.
+            This page calculates and persists the controlled SSI trend-buffer output. Historical window visibility and leadership action memory are persisted here.
           </p>
         </section>
       </section>
