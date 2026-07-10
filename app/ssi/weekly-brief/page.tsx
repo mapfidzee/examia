@@ -8,7 +8,6 @@ import { supabase } from '@/lib/supabase'
 
 type TrendRecord = Record<string, any>
 
-const missing = 'Not persisted in current buffer.'
 const allowedRoles = ['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']
 const allowedStatuses = ['ACTIVE']
 
@@ -20,15 +19,20 @@ const ssiFlow = [
   { label: 'Weekly Brief', href: '/ssi/weekly-brief', note: 'Printable executive summary', active: true },
 ]
 
-function formatBool(value: unknown) {
-  return value === true ? 'Yes' : value === false ? 'No' : missing
+function hasValue(value: unknown) {
+  if (value === undefined || value === null) return false
+  if (Array.isArray(value)) return value.length > 0
+  return String(value).trim().length > 0
 }
 
-function formatValue(value: unknown, fallback = missing) {
-  if (value === undefined || value === null) return fallback
-  if (Array.isArray(value)) return value.length ? value.join(', ') : fallback
-  const text = String(value).trim()
-  return text ? text : fallback
+function formatBool(value: unknown) {
+  return value === true ? 'Yes' : value === false ? 'No' : ''
+}
+
+function formatValue(value: unknown) {
+  if (!hasValue(value)) return ''
+  if (Array.isArray(value)) return value.join(', ')
+  return String(value).trim()
 }
 
 export default function SSIWeeklyBriefPage() {
@@ -117,32 +121,60 @@ export default function SSIWeeklyBriefPage() {
     }
   }, [])
 
-  const get = (keys: string[], fallback = missing) => {
-    if (!record) return fallback
+  const get = (keys: string[]) => {
+    if (!record) return ''
 
     for (const key of keys) {
       const value = record[key]
-      const formatted = formatValue(value, '')
-      if (formatted) return formatted
+      if (hasValue(value)) return formatValue(value)
     }
 
-    return fallback
+    return ''
   }
 
-  const reportingStart = get(['window_start'], weekStart)
-  const reportingEnd = get(['window_end'], weekEnd)
-  const stabilityStatus = get(['trend_status', 'stability_status'], missing)
-  const stabilityScore = get(['stability_score'], missing)
+  const reportingStart = get(['window_start']) || weekStart
+  const reportingEnd = get(['window_end']) || weekEnd
+  const stabilityStatus = get(['trend_status', 'stability_status'])
 
-  const structuralSignals = useMemo(
-    () => [
-      `Total structural events recorded: ${get(['total_stability_events'])}`,
-      `High-intensity events observed: ${get(['high_intensity_event_count'])}`,
-      `Late or last-minute events observed: ${get(['late_or_last_minute_event_count'])}`,
-      `Assignment load skew: ${get(['assignment_load_skew'])}`,
-    ],
-    [record],
-  )
+  const structuralSignals = useMemo(() => {
+    const signals: string[] = []
+
+    if (record && hasValue(record.total_stability_events)) {
+      signals.push(`Total stability events recorded: ${formatValue(record.total_stability_events)}`)
+    }
+
+    if (record && hasValue(record.high_intensity_event_count)) {
+      signals.push(`High-intensity events observed: ${formatValue(record.high_intensity_event_count)}`)
+    }
+
+    if (record && hasValue(record.late_or_last_minute_event_count)) {
+      signals.push(`Late or last-minute events observed: ${formatValue(record.late_or_last_minute_event_count)}`)
+    }
+
+    if (record && hasValue(record.assignment_load_skew)) {
+      signals.push(`Assignment load skew: ${formatValue(record.assignment_load_skew)}`)
+    }
+
+    return signals
+  }, [record])
+
+  const hasFragilityFocus =
+    hasValue(record?.most_affected_role_pool) ||
+    hasValue(record?.most_affected_shift) ||
+    hasValue(record?.fragility_level)
+
+  const hasCostPressure =
+    hasValue(record?.cost_pressure_signal) ||
+    hasValue(record?.buffer_use_profile) ||
+    record?.repeated_buffer_depletion_flag !== undefined
+
+  const hasRecommendedAction =
+    hasValue(record?.immediate_action_1) ||
+    hasValue(record?.immediate_action_2) ||
+    hasValue(record?.short_term_action_1) ||
+    hasValue(record?.short_term_action_2)
+
+  const hasActionLog = hasValue(record?.last_action_taken) || hasValue(record?.observed_outcome)
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -177,7 +209,7 @@ export default function SSIWeeklyBriefPage() {
     }
 
     if (!data) {
-      setMessage('No persisted SSI trend-buffer record found for this unit and reporting period.')
+      setMessage('No SSI trend-buffer record found for this unit and reporting period.')
       return
     }
 
@@ -256,7 +288,7 @@ export default function SSIWeeklyBriefPage() {
             <p style={styles.eyebrow}>TSINAXA SSI — Structural Stability Intelligence System</p>
             <h1 style={styles.title}>Weekly Stability Brief</h1>
             <p style={styles.sub}>
-              Executive interpretation generated exclusively from persisted ssi_trend_buffer intelligence.
+              Executive interpretation generated exclusively from persisted SSI trend-buffer intelligence.
             </p>
           </div>
 
@@ -324,74 +356,107 @@ export default function SSIWeeklyBriefPage() {
           <header style={styles.header}>
             <p style={styles.eyebrow}>TSINAXA — Weekly Stability Brief</p>
             <h2 style={styles.heading}>Structural Stability Intelligence System</h2>
-            <p style={styles.text}><strong>Unit:</strong> {get(['unit'], unit)}</p>
+            <p style={styles.text}><strong>Unit:</strong> {get(['unit']) || unit}</p>
             <p style={styles.text}><strong>Reporting Period:</strong> {reportingStart} – {reportingEnd}</p>
             <p style={styles.text}><strong>Prepared by:</strong> TSINAXA</p>
           </header>
 
-          <BriefSection title="Overall System Status">
-            <p style={styles.text}><strong>Stability Status:</strong> {stabilityStatus}</p>
-            <p style={styles.text}><strong>Stability Score:</strong> {stabilityScore === missing ? missing : `${stabilityScore}%`}</p>
-          </BriefSection>
+          {stabilityStatus ? (
+            <BriefSection title="Overall System Status">
+              <p style={styles.text}><strong>Stability Status:</strong> {stabilityStatus}</p>
+            </BriefSection>
+          ) : null}
 
-          <BriefSection title="Key Structural Signals">
-            <ul style={styles.list}>
-              {structuralSignals.map((signal) => <li key={signal}>{signal}</li>)}
-            </ul>
-          </BriefSection>
+          {structuralSignals.length ? (
+            <BriefSection title="Key Structural Signals">
+              <ul style={styles.list}>
+                {structuralSignals.map((signal) => <li key={signal}>{signal}</li>)}
+              </ul>
+            </BriefSection>
+          ) : null}
 
-          <BriefSection title="Predictability Insight">
-            <p style={styles.text}>{get(['predictability_insight'])}</p>
-          </BriefSection>
+          {hasValue(record.predictability_insight) ? (
+            <BriefSection title="Predictability Insight">
+              <p style={styles.text}>{get(['predictability_insight'])}</p>
+            </BriefSection>
+          ) : null}
 
-          <BriefSection title="Fragility Focus">
-            <p style={styles.text}><strong>Most affected role pool:</strong> {get(['most_affected_role_pool'])}</p>
-            <p style={styles.text}><strong>Most affected shift:</strong> {get(['most_affected_shift'])}</p>
-            <p style={styles.text}><strong>Fragility level:</strong> {get(['fragility_level'])}</p>
-          </BriefSection>
+          {hasFragilityFocus ? (
+            <BriefSection title="Fragility Focus">
+              {hasValue(record.most_affected_role_pool) ? (
+                <p style={styles.text}><strong>Most affected role pool:</strong> {get(['most_affected_role_pool'])}</p>
+              ) : null}
+              {hasValue(record.most_affected_shift) ? (
+                <p style={styles.text}><strong>Most affected shift:</strong> {get(['most_affected_shift'])}</p>
+              ) : null}
+              {hasValue(record.fragility_level) ? (
+                <p style={styles.text}><strong>Fragility level:</strong> {get(['fragility_level'])}</p>
+              ) : null}
+            </BriefSection>
+          ) : null}
 
-          <BriefSection title="Cost Pressure Signal">
-            <p style={styles.text}>{get(['cost_pressure_signal', 'buffer_use_profile'])}</p>
-            <p style={styles.text}>
-              <strong>Repeated buffer depletion:</strong>{' '}
-              {record.repeated_buffer_depletion_flag === undefined
-                ? missing
-                : formatBool(record.repeated_buffer_depletion_flag)}
-            </p>
-          </BriefSection>
+          {hasCostPressure ? (
+            <BriefSection title="Cost and Buffer Pressure">
+              {hasValue(record.cost_pressure_signal) ? (
+                <p style={styles.text}><strong>Cost pressure signal:</strong> {get(['cost_pressure_signal'])}</p>
+              ) : null}
+              {hasValue(record.buffer_use_profile) ? (
+                <p style={styles.text}><strong>Buffer use profile:</strong> {get(['buffer_use_profile'])}</p>
+              ) : null}
+              {record.repeated_buffer_depletion_flag !== undefined ? (
+                <p style={styles.text}>
+                  <strong>Repeated buffer depletion:</strong> {formatBool(record.repeated_buffer_depletion_flag)}
+                </p>
+              ) : null}
+            </BriefSection>
+          ) : null}
 
-          <BriefSection title="Leadership Interpretation">
-            <p style={styles.text}>{get(['leadership_interpretation', 'leadership_action_cue'])}</p>
-          </BriefSection>
+          {hasValue(record.leadership_interpretation) || hasValue(record.leadership_action_cue) ? (
+            <BriefSection title="Leadership Interpretation">
+              <p style={styles.text}>{get(['leadership_interpretation', 'leadership_action_cue'])}</p>
+            </BriefSection>
+          ) : null}
 
-          <BriefSection title="Recommended Action">
-            <h4 style={styles.smallHeading}>Immediate</h4>
-            <ul style={styles.list}>
-              <li>{get(['immediate_action_1'])}</li>
-              <li>{get(['immediate_action_2'])}</li>
-            </ul>
+          {hasRecommendedAction ? (
+            <BriefSection title="Recommended Action">
+              {hasValue(record.immediate_action_1) || hasValue(record.immediate_action_2) ? (
+                <>
+                  <h4 style={styles.smallHeading}>Immediate</h4>
+                  <ul style={styles.list}>
+                    {hasValue(record.immediate_action_1) ? <li>{get(['immediate_action_1'])}</li> : null}
+                    {hasValue(record.immediate_action_2) ? <li>{get(['immediate_action_2'])}</li> : null}
+                  </ul>
+                </>
+              ) : null}
 
-            <h4 style={styles.smallHeading}>Short-Term</h4>
-            <ul style={styles.list}>
-              <li>{get(['short_term_action_1'])}</li>
-              <li>{get(['short_term_action_2'])}</li>
-            </ul>
-          </BriefSection>
+              {hasValue(record.short_term_action_1) || hasValue(record.short_term_action_2) ? (
+                <>
+                  <h4 style={styles.smallHeading}>Short-Term</h4>
+                  <ul style={styles.list}>
+                    {hasValue(record.short_term_action_1) ? <li>{get(['short_term_action_1'])}</li> : null}
+                    {hasValue(record.short_term_action_2) ? <li>{get(['short_term_action_2'])}</li> : null}
+                  </ul>
+                </>
+              ) : null}
+            </BriefSection>
+          ) : null}
 
-          <BriefSection title="Risk Outlook">
-            <p style={styles.text}>If current patterns persist, {get(['risk_outlook'])}</p>
-          </BriefSection>
+          {hasValue(record.risk_outlook) ? (
+            <BriefSection title="Risk Outlook">
+              <p style={styles.text}>If current patterns persist, {get(['risk_outlook'])}</p>
+            </BriefSection>
+          ) : null}
 
-          <BriefSection title="Action Log (System Memory)">
-            <p style={styles.text}>
-              <strong>Last action taken:</strong>{' '}
-              {get(['last_action_taken'], 'No leadership action persisted for this reporting period.')}
-            </p>
-            <p style={styles.text}>
-              <strong>Observed outcome:</strong>{' '}
-              {get(['observed_outcome'], 'No observed outcome persisted for this reporting period.')}
-            </p>
-          </BriefSection>
+          {hasActionLog ? (
+            <BriefSection title="Action Log">
+              {hasValue(record.last_action_taken) ? (
+                <p style={styles.text}><strong>Last leadership action:</strong> {get(['last_action_taken'])}</p>
+              ) : null}
+              {hasValue(record.observed_outcome) ? (
+                <p style={styles.text}><strong>Observed outcome:</strong> {get(['observed_outcome'])}</p>
+              ) : null}
+            </BriefSection>
+          ) : null}
 
           <footer style={styles.footer}>No Names. No Blame. No Surveillance. Only Structural Signals.</footer>
         </article>
@@ -438,29 +503,29 @@ const styles: Record<string, CSSProperties> = {
     minHeight: '100vh',
     background: '#050505',
     color: '#fff8e7',
-    padding: '32px',
+    padding: '28px',
     fontFamily: 'Inter, Arial, sans-serif',
   },
   controls: {
     maxWidth: '980px',
-    margin: '0 auto 24px',
-    padding: '28px',
-    borderRadius: '22px',
+    margin: '0 auto 20px',
+    padding: '24px',
+    borderRadius: '20px',
     background: '#090807',
     border: '1px solid rgba(214,178,94,0.28)',
   },
   brief: {
     maxWidth: '980px',
-    margin: '0 auto 24px',
-    padding: '28px',
-    borderRadius: '22px',
+    margin: '0 auto 20px',
+    padding: '24px',
+    borderRadius: '20px',
     background: '#070707',
     border: '1px solid rgba(214,178,94,0.28)',
   },
   topbar: {
     display: 'grid',
     gridTemplateColumns: '1fr auto',
-    gap: '24px',
+    gap: '20px',
     alignItems: 'start',
   },
   logoutButton: {
@@ -474,7 +539,7 @@ const styles: Record<string, CSSProperties> = {
   },
   eyebrow: {
     color: '#d6b25e',
-    fontSize: '12px',
+    fontSize: '11px',
     fontWeight: 800,
     letterSpacing: '0.12em',
     textTransform: 'uppercase',
@@ -483,34 +548,34 @@ const styles: Record<string, CSSProperties> = {
   title: {
     color: '#d6b25e',
     margin: '8px 0',
-    fontSize: '34px',
+    fontSize: '32px',
   },
   heading: {
     color: '#d6b25e',
-    margin: '6px 0 12px',
+    margin: '6px 0 10px',
   },
   smallHeading: {
     color: '#d6b25e',
-    margin: '12px 0 6px',
+    margin: '10px 0 4px',
     fontSize: '14px',
   },
   sub: {
     color: '#cfc7b5',
     margin: 0,
-    lineHeight: 1.6,
+    lineHeight: 1.5,
   },
   flowNav: {
     border: '1px solid rgba(214,178,94,0.28)',
     background: '#090807',
-    borderRadius: '20px',
-    padding: '16px',
-    margin: '22px 0 8px',
+    borderRadius: '18px',
+    padding: '14px',
+    margin: '18px 0 8px',
   },
   flowNavHeader: {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
-    marginBottom: '12px',
+    marginBottom: '10px',
   },
   flowNavTitle: {
     color: '#d6b25e',
@@ -585,7 +650,7 @@ const styles: Record<string, CSSProperties> = {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, 1fr)',
     gap: '14px',
-    marginTop: '24px',
+    marginTop: '20px',
   },
   label: {
     display: 'grid',
@@ -594,7 +659,7 @@ const styles: Record<string, CSSProperties> = {
     color: '#cfc7b5',
   },
   input: {
-    padding: '14px',
+    padding: '13px',
     borderRadius: '12px',
     border: '1px solid rgba(214,178,94,0.28)',
     background: '#111827',
@@ -604,10 +669,10 @@ const styles: Record<string, CSSProperties> = {
   actions: {
     display: 'flex',
     gap: '12px',
-    marginTop: '20px',
+    marginTop: '18px',
   },
   button: {
-    padding: '12px 20px',
+    padding: '11px 18px',
     border: 0,
     borderRadius: '999px',
     background: '#d6b25e',
@@ -616,38 +681,40 @@ const styles: Record<string, CSSProperties> = {
     cursor: 'pointer',
   },
   message: {
-    marginTop: '16px',
+    marginTop: '14px',
     color: '#d6b25e',
   },
   header: {
-    marginBottom: '20px',
-    paddingBottom: '20px',
+    marginBottom: '16px',
+    paddingBottom: '16px',
     borderBottom: '1px solid rgba(214,178,94,0.28)',
   },
   briefSection: {
-    marginBottom: '16px',
-    padding: '20px',
-    borderRadius: '18px',
+    marginBottom: '12px',
+    padding: '16px',
+    borderRadius: '16px',
     background: '#11100d',
     border: '1px solid rgba(214,178,94,0.18)',
+    breakInside: 'avoid',
   },
   sectionTitle: {
     color: '#d6b25e',
-    margin: '0 0 10px',
-    fontSize: '16px',
+    margin: '0 0 8px',
+    fontSize: '15px',
   },
   text: {
     color: '#cfc7b5',
-    lineHeight: 1.6,
+    lineHeight: 1.5,
+    margin: '6px 0',
   },
   list: {
     color: '#cfc7b5',
     paddingLeft: '20px',
-    margin: '8px 0 0',
-    lineHeight: 1.6,
+    margin: '6px 0 0',
+    lineHeight: 1.5,
   },
   footer: {
-    marginTop: '28px',
+    marginTop: '22px',
     textAlign: 'center',
     color: '#d6b25e',
     fontWeight: 800,

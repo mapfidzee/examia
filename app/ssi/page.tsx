@@ -40,7 +40,7 @@ type TrendBufferRow = {
 
 type LayerTone = 'leadership' | 'evidence' | 'reference'
 
-const MISSING = 'Not persisted in current buffer.'
+const MISSING = 'Not available in current trend output.'
 
 const ssiFlow = [
   { label: 'Assignments', href: '/ssi/assignments', note: 'Shift-start load capture', active: false },
@@ -87,9 +87,15 @@ function formatDate(value: string) {
   return date.toLocaleString()
 }
 
-function dominantForceAt(value: string[] | string, index: number) {
-  if (Array.isArray(value)) return display(value[index])
-  return index === 0 ? display(value) : MISSING
+function primaryDominantForce(value: string[] | string) {
+  if (Array.isArray(value)) return display(value[0])
+  return display(value)
+}
+
+function hasValue(value: unknown) {
+  if (value === null || value === undefined) return false
+  if (Array.isArray(value)) return value.length > 0
+  return String(value).trim().length > 0
 }
 
 function Layer({ title, tone, children }: { title: string; tone: LayerTone; children: ReactNode }) {
@@ -246,7 +252,7 @@ export default function SSIExecutiveDashboardPage() {
       const { data, error: loadError } = await supabase
         .from('ssi_trend_buffer')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('updated_at', { ascending: false })
         .limit(4)
 
       if (loadError) {
@@ -269,6 +275,8 @@ export default function SSIExecutiveDashboardPage() {
 
   const latest = records[0] ?? null
   const fourWeekRecords = useMemo(() => [...records].reverse(), [records])
+  const roleEvidenceAvailable =
+    latest && (hasValue(latest.most_affected_role_pool) || hasValue(latest.most_affected_shift))
 
   if (checkingAccess) {
     return (
@@ -368,55 +376,30 @@ export default function SSIExecutiveDashboardPage() {
 
             <Layer title="Evidence Layer" tone="evidence">
               <Section title="Stability Events Summary">
-                <div style={styles.compactGrid4}>
+                <div style={styles.compactGrid3}>
                   <Tile label="Total Events" value={latest.total_stability_events} strong />
                   <Tile label="High Intensity" value={latest.high_intensity_event_count} strong />
                   <Tile label="Late / Last Minute" value={latest.late_or_last_minute_event_count} strong />
-                  <Tile label="Full Buffer" value={MISSING} quiet />
                 </div>
               </Section>
 
               <Section title="Dominant System Force">
-                <div style={styles.compactGrid4}>
-                  <Tile label="Primary" value={dominantForceAt(latest.dominant_stability_forces, 0)} strong />
-                  <Tile label="Secondary" value={dominantForceAt(latest.dominant_stability_forces, 1)} quiet />
+                <div style={styles.compactGrid3}>
+                  <Tile label="Primary Force" value={primaryDominantForce(latest.dominant_stability_forces)} strong />
                   <Tile label="Supporting Basis" value={latest.predictability_insight} />
                   <Tile label="Force Notes" value={latest.risk_outlook} />
                 </div>
               </Section>
 
-              <Section title="Role Pool Comparison">
-                <div style={styles.tableScroll}>
-                  <table style={styles.table}>
-                    <thead>
-                      <tr>
-                        <th style={styles.th}>Role</th>
-                        <th style={styles.th}>Current Demand (Assignments)</th>
-                        <th style={styles.th}>Available Pool (Current)</th>
-                        <th style={styles.th}>Load Balance (Demand / Available)</th>
-                        <th style={styles.th}>Status</th>
-                        <th style={styles.th}>Notes</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {['CNA', 'RN', 'LPN'].map((role) => (
-                        <tr key={role}>
-                          <th scope="row" style={styles.rowHeader}>{role}</th>
-                          <td style={styles.td}>
-                            {latest.most_affected_role_pool?.startsWith(role) ? latest.most_affected_role_pool : MISSING}
-                          </td>
-                          <td style={styles.td}>
-                            {latest.most_affected_role_pool?.startsWith(role) ? latest.most_affected_shift : MISSING}
-                          </td>
-                          <td style={styles.td}>{MISSING}</td>
-                          <td style={styles.td}>{MISSING}</td>
-                          <td style={styles.td}>{MISSING}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Section>
+              {roleEvidenceAvailable ? (
+                <Section title="Role Pool Evidence">
+                  <div style={styles.compactGrid3}>
+                    <Tile label="Affected Role Evidence" value={latest.most_affected_role_pool} strong />
+                    <Tile label="Affected Shift Evidence" value={latest.most_affected_shift} />
+                    <Tile label="Interpretation Basis" value="Persisted trend-buffer role and shift concentration." quiet />
+                  </div>
+                </Section>
+              ) : null}
 
               <Section title="Cost Pressure Monitor">
                 <div style={styles.compactGrid3}>
@@ -463,12 +446,12 @@ export default function SSIExecutiveDashboardPage() {
                         </tr>
                       ))}
 
-                      {Array.from({ length: Math.max(0, 4 - fourWeekRecords.length) }).map((_, index) => (
-                        <tr key={`missing-week-${index}`}>
-                          <th scope="row" style={styles.rowHeader}>Week {fourWeekRecords.length + index + 1}</th>
-                          <td style={styles.td} colSpan={4}>{MISSING}</td>
+                      {fourWeekRecords.length === 0 ? (
+                        <tr>
+                          <th scope="row" style={styles.rowHeader}>Week</th>
+                          <td style={styles.td} colSpan={4}>No persisted trend windows available.</td>
                         </tr>
-                      ))}
+                      ) : null}
                     </tbody>
                   </table>
                 </div>

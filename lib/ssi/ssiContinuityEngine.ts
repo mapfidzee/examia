@@ -16,6 +16,22 @@ export type SSIDomain =
   | 'Staffing'
 
 export type SSIEventIntensity = 'LOW' | 'MODERATE' | 'HIGH'
+export type SSIRolePool = 'RN' | 'LPN' | 'CNA'
+
+export type SSIOperationalDiagnosticFinding = {
+  label: string
+  category:
+    | 'Clinical Intensity'
+    | 'Monitoring'
+    | 'Medication'
+    | 'Flow'
+    | 'Staffing'
+    | 'Environment'
+  weight: number
+  legacyReason: string
+  legacyComplexity: string
+  allowedRoles: SSIRolePool[]
+}
 
 export type SSIAssignmentInput = {
   assignmentId?: string
@@ -29,6 +45,7 @@ export type SSIAssignmentInput = {
   baselineCount: number
   loadReason?: string | null
   loadComplexity?: string | null
+  operationalDiagnosticFindings?: string[]
 }
 
 export type SSIAssignmentOutput = {
@@ -40,6 +57,11 @@ export type SSIAssignmentOutput = {
   starting_strain_signal: SSIStartingStrainSignal
   complexity_weight: number
   structural_strain_summary: string
+  derived_load_reason: string
+  derived_load_complexity: string
+  reserve_capacity_interpretation: string
+  localized_strain_interpretation: string
+  odf_count: number
 }
 
 export type SSIEventInput = {
@@ -65,6 +87,7 @@ export type SSIEventOutput = {
 export type SSIAssignmentSnapshotRow = {
   loadReason: string
   loadComplexity: string
+  operationalDiagnosticFindings?: string[]
   output: SSIAssignmentOutput | null
 }
 
@@ -79,48 +102,181 @@ export type SSIAssignmentStrainSnapshot = {
   calculated_count: number
 }
 
+export const SSI_OPERATIONAL_DIAGNOSTIC_FINDINGS: readonly SSIOperationalDiagnosticFinding[] = [
+  {
+    label: 'High-acuity care recipient assigned',
+    category: 'Clinical Intensity',
+    weight: 2,
+    legacyReason: 'High-acuity care recipient assigned',
+    legacyComplexity: 'High-acuity cluster',
+    allowedRoles: ['RN', 'LPN'],
+  },
+  {
+    label: 'New admission at shift start',
+    category: 'Flow',
+    weight: 1,
+    legacyReason: 'New admission at shift start',
+    legacyComplexity: 'Admission/startup complexity cluster',
+    allowedRoles: ['RN', 'LPN'],
+  },
+  {
+    label: 'Hospice/palliative care recipient assigned',
+    category: 'Clinical Intensity',
+    weight: 2,
+    legacyReason: 'Hospice/palliative care recipient assigned',
+    legacyComplexity: 'Hospice/palliative intensity cluster',
+    allowedRoles: ['RN', 'LPN'],
+  },
+  {
+    label: 'IV therapy care recipient assigned',
+    category: 'Clinical Intensity',
+    weight: 2,
+    legacyReason: 'IV therapy care recipient assigned',
+    legacyComplexity: 'High-acuity medication risk',
+    allowedRoles: ['RN', 'LPN'],
+  },
+  {
+    label: 'Complex wound care assigned',
+    category: 'Clinical Intensity',
+    weight: 2,
+    legacyReason: 'Complex wound care assigned',
+    legacyComplexity: 'High-acuity + wound/treatment cluster',
+    allowedRoles: ['RN', 'LPN'],
+  },
+  {
+    label: 'Multiple total-care care recipients assigned',
+    category: 'Clinical Intensity',
+    weight: 2,
+    legacyReason: 'Multiple total-care care recipients assigned',
+    legacyComplexity: 'Multiple total-care cluster',
+    allowedRoles: ['RN', 'LPN', 'CNA'],
+  },
+  {
+    label: 'Frequent monitoring required',
+    category: 'Monitoring',
+    weight: 2,
+    legacyReason: 'Frequent monitoring required',
+    legacyComplexity: 'Frequent monitoring cluster',
+    allowedRoles: ['RN', 'LPN', 'CNA'],
+  },
+  {
+    label: 'Behavioral monitoring required',
+    category: 'Monitoring',
+    weight: 2,
+    legacyReason: 'Behavioral monitoring required',
+    legacyComplexity: 'Behavior/fall-risk supervision cluster',
+    allowedRoles: ['RN', 'LPN', 'CNA'],
+  },
+  {
+    label: 'High fall-risk cluster',
+    category: 'Monitoring',
+    weight: 2,
+    legacyReason: 'High fall-risk cluster',
+    legacyComplexity: 'Behavior/fall-risk supervision cluster',
+    allowedRoles: ['RN', 'LPN', 'CNA'],
+  },
+  {
+    label: 'Two-person assist cluster',
+    category: 'Monitoring',
+    weight: 2,
+    legacyReason: 'Two-person assist cluster',
+    legacyComplexity: 'Two-person assist cluster',
+    allowedRoles: ['RN', 'LPN', 'CNA'],
+  },
+  {
+    label: 'Memory-care supervision density',
+    category: 'Monitoring',
+    weight: 2,
+    legacyReason: 'Memory-care supervision density',
+    legacyComplexity: 'Memory-care supervision cluster',
+    allowedRoles: ['RN', 'LPN', 'CNA'],
+  },
+  {
+    label: 'Medication workload pressure',
+    category: 'Medication',
+    weight: 2,
+    legacyReason: 'Medication workload pressure',
+    legacyComplexity: 'Medication pass complexity',
+    allowedRoles: ['RN', 'LPN'],
+  },
+  {
+    label: 'Missed medication risk',
+    category: 'Medication',
+    weight: 2,
+    legacyReason: 'Missed medication risk',
+    legacyComplexity: 'Missed medication risk cluster',
+    allowedRoles: ['RN', 'LPN'],
+  },
+  {
+    label: 'Handoff pressure',
+    category: 'Flow',
+    weight: 1,
+    legacyReason: 'Handoff pressure',
+    legacyComplexity: 'Handoff instability cluster',
+    allowedRoles: ['RN', 'LPN', 'CNA'],
+  },
+  {
+    label: 'Admission/discharge pressure',
+    category: 'Flow',
+    weight: 1,
+    legacyReason: 'Admission/discharge pressure',
+    legacyComplexity: 'Admission/discharge pressure cluster',
+    allowedRoles: ['RN', 'LPN'],
+  },
+  {
+    label: 'Monitoring burden',
+    category: 'Monitoring',
+    weight: 2,
+    legacyReason: 'Monitoring burden',
+    legacyComplexity: 'Continuous monitoring burden',
+    allowedRoles: ['RN', 'LPN', 'CNA'],
+  },
+  {
+    label: 'Short staffing at shift start',
+    category: 'Staffing',
+    weight: 2,
+    legacyReason: 'Short staffing at shift start',
+    legacyComplexity: 'Handoff instability cluster',
+    allowedRoles: ['RN', 'LPN', 'CNA'],
+  },
+  {
+    label: 'Isolation/equipment burden',
+    category: 'Environment',
+    weight: 1,
+    legacyReason: 'Isolation/equipment burden',
+    legacyComplexity: 'Isolation/equipment complexity cluster',
+    allowedRoles: ['RN', 'LPN', 'CNA'],
+  },
+  {
+    label: 'Post-procedure monitoring',
+    category: 'Monitoring',
+    weight: 2,
+    legacyReason: 'Post-procedure monitoring',
+    legacyComplexity: 'Post-procedure monitoring cluster',
+    allowedRoles: ['RN', 'LPN'],
+  },
+  {
+    label: 'Coverage gap',
+    category: 'Staffing',
+    weight: 2,
+    legacyReason: 'Coverage gap',
+    legacyComplexity: 'Handoff instability cluster',
+    allowedRoles: ['RN', 'LPN', 'CNA'],
+  },
+] as const
+
 export const SSI_LOAD_REASON_OPTIONS = [
   'NONE',
-  'High-acuity resident assigned',
-  'New admission at shift start',
-  'Hospice care resident assigned',
-  'IV therapy resident assigned',
-  'Complex wound care assigned',
-  'Frequent monitoring required',
-  'Multiple total-care residents',
-  'Behavioral observation required',
-  'High fall-risk cluster',
-  'Two-person assist cluster',
-  'Memory-care supervision density',
-  'Medication workload pressure',
-  'Missed medication risk',
-  'Handoff pressure',
-  'Admission/discharge pressure',
-  'Monitoring burden',
-  'Short staffing at shift start',
+  ...SSI_OPERATIONAL_DIAGNOSTIC_FINDINGS.map((finding) => finding.legacyReason),
 ] as const
 
 export const SSI_LOAD_COMPLEXITY_OPTIONS = [
   'NONE',
-  'Dual high-acuity cluster',
-  'High-acuity + wound/treatment cluster',
-  'Frequent monitoring cluster',
-  'Multiple total-care cluster',
-  'Two-person assist cluster',
-  'Behavior/fall-risk supervision cluster',
-  'Memory-care supervision cluster',
-  'Admission/startup complexity cluster',
-  'Isolation/equipment complexity cluster',
-  'Hospice/palliative intensity cluster',
-  'High-acuity medication risk',
-  'Medication pass complexity',
-  'Missed medication risk cluster',
-  'Handoff instability cluster',
-  'Admission/discharge pressure cluster',
-  'Continuous monitoring burden',
+  ...Array.from(new Set(SSI_OPERATIONAL_DIAGNOSTIC_FINDINGS.map((finding) => finding.legacyComplexity))),
 ] as const
 
 export const SSI_TIMING_CATEGORY_OPTIONS = [
+  'PRE_SHIFT',
   'AT_START',
   'EARLY',
   'MID_SHIFT',
@@ -199,6 +355,41 @@ function eventSequence(index: number): string {
   return String(index).padStart(3, '0')
 }
 
+function getRolePoolFromLabel(rolePool: string): SSIRolePool {
+  const normalized = rolePool.trim().toUpperCase()
+  if (normalized.startsWith('CNA')) return 'CNA'
+  if (normalized.startsWith('LPN')) return 'LPN'
+  return 'RN'
+}
+
+function getFindingsForInput(input: SSIAssignmentInput): SSIOperationalDiagnosticFinding[] {
+  const role = getRolePoolFromLabel(input.rolePool)
+  const selected = input.operationalDiagnosticFindings ?? []
+
+  return selected
+    .map((label) => SSI_OPERATIONAL_DIAGNOSTIC_FINDINGS.find((finding) => finding.label === label))
+    .filter((finding): finding is SSIOperationalDiagnosticFinding => Boolean(finding))
+    .filter((finding) => finding.allowedRoles.includes(role))
+}
+
+function deriveLegacyReason(findings: SSIOperationalDiagnosticFinding[]): string {
+  if (!findings.length) return 'NONE'
+  return [...findings].sort((a, b) => b.weight - a.weight)[0]?.legacyReason ?? 'NONE'
+}
+
+function deriveLegacyComplexity(findings: SSIOperationalDiagnosticFinding[]): string {
+  if (!findings.length) return 'NONE'
+  return [...findings].sort((a, b) => b.weight - a.weight)[0]?.legacyComplexity ?? 'NONE'
+}
+
+export function getSSIOperationalDiagnosticFindingsForRole(
+  rolePool: SSIRolePool,
+): SSIOperationalDiagnosticFinding[] {
+  return SSI_OPERATIONAL_DIAGNOSTIC_FINDINGS.filter((finding) =>
+    finding.allowedRoles.includes(rolePool),
+  )
+}
+
 export function buildSSIShiftAssignmentId(
   date: string,
   shiftType: string,
@@ -222,59 +413,48 @@ export function calculateSSIAssignment(input: SSIAssignmentInput): SSIAssignment
     loadDelta > 0 ? 'HIGHER' : loadDelta < 0 ? 'LOWER' : 'BASELINE'
 
   const load_modifier_score = load_modifier === 'HIGHER' ? 1 : load_modifier === 'LOWER' ? -1 : 0
-  const combined = `${normalize(input.loadReason)} ${normalize(input.loadComplexity)}`
 
-  const complexityPresent =
-    !includesAny(combined, ['none']) &&
-    includesAny(combined, [
-      'acuity',
-      'admission',
-      'discharge',
-      'hospice',
-      'iv therapy',
-      'wound',
-      'monitoring',
-      'total-care',
-      'behavior',
-      'fall-risk',
-      'two-person',
-      'memory-care',
-      'supervision',
-      'isolation',
-      'equipment',
-      'palliative',
-      'cluster',
-      'medication',
-      'handoff',
-      'missed medication',
-      'short staffing',
-    ])
+  const findings = getFindingsForInput(input)
+  const derived_load_reason =
+    findings.length > 0 ? deriveLegacyReason(findings) : input.loadReason || 'NONE'
+  const derived_load_complexity =
+    findings.length > 0 ? deriveLegacyComplexity(findings) : input.loadComplexity || 'NONE'
+
+  const legacyCombined = `${normalize(derived_load_reason)} ${normalize(derived_load_complexity)}`
+  const legacyComplexity =
+    derived_load_reason !== 'NONE' &&
+    derived_load_complexity !== 'NONE' &&
+    !includesAny(legacyCombined, ['none'])
+
+  const complexityPresent = findings.length > 0 || legacyComplexity
 
   const complexity_flag: SSIComplexityFlag = complexityPresent ? 'YES' : 'NO'
 
   const complexity_weight =
-    complexity_flag === 'NO'
-      ? 0
-      : includesAny(combined, [
-          'dual',
-          'multiple',
-          'cluster',
-          'high-acuity',
-          'medication',
-          'missed medication',
-          'handoff',
-          'short staffing',
-          'continuous',
-        ])
-        ? 2
-        : 1
+    findings.length > 0
+      ? Math.min(3, Math.max(...findings.map((finding) => finding.weight)) + (findings.length >= 3 ? 1 : 0))
+      : complexity_flag === 'NO'
+        ? 0
+        : includesAny(legacyCombined, [
+            'dual',
+            'multiple',
+            'cluster',
+            'high-acuity',
+            'medication',
+            'missed medication',
+            'handoff',
+            'short staffing',
+            'continuous',
+          ])
+          ? 2
+          : 1
 
   const complexity_status: SSIComplexityStatus =
     complexity_flag === 'YES' ? 'COMPLEXITY_PRESENT' : 'ROUTINE'
 
   let starting_strain_signal: SSIStartingStrainSignal = 'STABLE_START'
 
-  if (load_modifier === 'HIGHER' && complexity_weight >= 2) {
+  if (load_modifier === 'HIGHER' && complexity_weight >= 1) {
     starting_strain_signal = 'SEVERE_STARTING_STRAIN'
   } else if (load_modifier === 'HIGHER') {
     starting_strain_signal = 'VISIBLE_STARTING_STRAIN'
@@ -293,23 +473,91 @@ export function calculateSSIAssignment(input: SSIAssignmentInput): SSIAssignment
     structural_strain_summary: buildStructuralStrainSummary(
       input.unit,
       input.rolePool,
+      input.startingAssignmentCount,
+      input.baselineCount,
       load_modifier,
       starting_strain_signal,
+      findings,
     ),
+    derived_load_reason,
+    derived_load_complexity,
+    reserve_capacity_interpretation: buildReserveCapacityInterpretation(
+      input.startingAssignmentCount,
+      input.baselineCount,
+      findings.length,
+    ),
+    localized_strain_interpretation: buildLocalizedStrainInterpretation(
+      input.rolePool,
+      loadDelta,
+      findings.length,
+    ),
+    odf_count: findings.length,
   }
+}
+
+function buildReserveCapacityInterpretation(
+  startingCount: number,
+  baselineCount: number,
+  findingCount: number,
+): string {
+  if (findingCount === 0 && startingCount <= baselineCount) {
+    return 'No reserve-capacity concern is identified from this assignment row.'
+  }
+
+  if (startingCount < baselineCount && findingCount > 0) {
+    return 'Hidden care-intensity strain is present while assignment count remains below baseline. Reserve capacity remains available, but it is already being consumed by operational complexity.'
+  }
+
+  if (startingCount === baselineCount && findingCount > 0) {
+    return 'Hidden care-intensity strain is present at full baseline utilization. Reserve capacity is exhausted if additional disruption occurs.'
+  }
+
+  if (startingCount > baselineCount && findingCount > 0) {
+    return 'Visible and hidden strain are both present. Assignment count is above baseline while operational diagnostic findings add care intensity.'
+  }
+
+  if (startingCount > baselineCount) {
+    return 'Visible strain is present because assignment count is above baseline design.'
+  }
+
+  return 'Reserve capacity remains stable from the current evidence.'
+}
+
+function buildLocalizedStrainInterpretation(rolePool: string, loadDelta: number, findingCount: number): string {
+  if (loadDelta > 0 && findingCount > 0) {
+    return `${rolePool} shows localized role-pool strain from both assignment count and operational diagnostic findings.`
+  }
+
+  if (loadDelta > 0) {
+    return `${rolePool} shows localized visible strain from assignment count above baseline.`
+  }
+
+  if (findingCount > 0) {
+    return `${rolePool} shows localized hidden care-intensity strain from operational diagnostic findings.`
+  }
+
+  return `${rolePool} does not show localized strain in this row.`
 }
 
 function buildStructuralStrainSummary(
   unit: string,
   rolePool: string,
+  startingCount: number,
+  baselineCount: number,
   loadModifier: SSILoadModifier,
   signal: SSIStartingStrainSignal,
+  findings: SSIOperationalDiagnosticFinding[],
 ): string {
   const unitLabel = unit || 'This unit'
   const roleLabel = rolePool || 'this role entry'
+  const findingCount = findings.length
+  const findingText =
+    findingCount > 0
+      ? findings.map((finding) => finding.label).join(', ')
+      : 'no operational diagnostic findings selected'
 
   if (signal === 'SEVERE_STARTING_STRAIN') {
-    return `${unitLabel} starts above baseline with complexity attached to ${roleLabel}. Severe starting strain is present.`
+    return `${unitLabel} starts above baseline for ${roleLabel}. Operational diagnostic findings indicate ${findingText}. Severe starting strain is present because visible workload and hidden care intensity coexist.`
   }
 
   if (signal === 'VISIBLE_STARTING_STRAIN') {
@@ -317,25 +565,28 @@ function buildStructuralStrainSummary(
   }
 
   if (signal === 'HIDDEN_STRAIN_PRESENT') {
-    return `${unitLabel} may look numerically balanced, but complexity creates hidden strain in ${roleLabel}.`
+    if (startingCount < baselineCount) {
+      return `${unitLabel} starts below baseline count for ${roleLabel}, but operational diagnostic findings indicate ${findingText}. Hidden care-intensity strain is present with remaining reserve capacity.`
+    }
+
+    if (startingCount === baselineCount) {
+      return `${unitLabel} starts at full baseline for ${roleLabel}, and operational diagnostic findings indicate ${findingText}. Hidden care-intensity strain is present with exhausted reserve capacity.`
+    }
+
+    return `${unitLabel} shows hidden care-intensity strain in ${roleLabel}. Operational diagnostic findings indicate ${findingText}.`
   }
 
   if (loadModifier === 'LOWER') {
-    return `${unitLabel} starts below baseline count for ${roleLabel}. No strain is visible in this row, but redistribution should be reviewed.`
+    return `${unitLabel} starts below baseline count for ${roleLabel}. No structural strain is identified from current evidence, but redistribution should remain visible to leadership.`
   }
 
-  return `${unitLabel} starts within baseline design for ${roleLabel}. No structural strain is visible in this row.`
+  return `${unitLabel} starts within baseline design for ${roleLabel}. No structural strain is identified from current operational evidence.`
 }
 
 export function calculateSSIAssignmentStrainSnapshot(
   rows: SSIAssignmentSnapshotRow[],
 ): SSIAssignmentStrainSnapshot {
   const outputs = rows.map((row) => row.output).filter(Boolean) as SSIAssignmentOutput[]
-
-  const assignment_load_skew = outputs.reduce(
-    (sum, output) => sum + output.load_modifier_delta,
-    0,
-  )
 
   const hidden_strain_count = outputs.filter(
     (output) => output.starting_strain_signal === 'HIDDEN_STRAIN_PRESENT',
@@ -349,18 +600,29 @@ export function calculateSSIAssignmentStrainSnapshot(
     (output) => output.starting_strain_signal === 'SEVERE_STARTING_STRAIN',
   ).length
 
+  const assignment_load_skew = outputs.reduce((sum, output) => {
+    const visibleBurden = Math.max(0, output.load_modifier_delta)
+    const hiddenBurden = output.odf_count > 0 ? Math.max(1, output.complexity_weight) : 0
+    return sum + visibleBurden + hiddenBurden
+  }, 0)
+
+  const odfRows = outputs.filter((output) => output.odf_count > 0).length
+
   let structural_strain_reading = 'Not calculated yet'
 
   if (outputs.length > 0) {
     if (severe_strain_count > 0) {
       structural_strain_reading =
-        'Severe shift-start strain is visible. At least one role entry starts above baseline with complexity attached.'
+        'Severe shift-start strain is visible. At least one role entry starts above baseline while operational diagnostic findings add hidden care intensity.'
     } else if (visible_strain_count > 0) {
       structural_strain_reading =
         'Visible shift-start strain is present. At least one role entry starts above baseline.'
     } else if (hidden_strain_count > 0) {
       structural_strain_reading =
-        'Hidden structural strain is present. The shift may look balanced while complexity is already attached.'
+        'Hidden structural strain is present. The shift may look numerically balanced or below baseline, but operational diagnostic findings show localized care-intensity burden.'
+    } else if (odfRows > 0) {
+      structural_strain_reading =
+        'Operational diagnostic findings are present, but current strain thresholds do not classify the shift as strained.'
     } else {
       structural_strain_reading = 'Current shift-start structure appears stable across completed entries.'
     }
@@ -392,7 +654,7 @@ export function calculateSSIEvent(input: SSIEventInput): SSIEventOutput {
   const buffer = normalize(input.bufferResponse)
 
   const stability_force = classifyStabilityForce(event)
-  const highTiming = includesAny(timing, ['late', 'last_minute', 'last-minute'])
+  const highTiming = includesAny(timing, ['pre_shift', 'pre-shift', 'late', 'last_minute', 'last-minute'])
   const highEvent = includesAny(event, ['missed', 'no-show', 'call-out', 'cancellation', 'coverage gap', 'deterioration'])
   const moderateEvent = includesAny(event, ['delayed', 'delay', 'handoff', 'admission', 'discharge', 'transfer', 'monitoring'])
   const heavyBuffer = includesAny(buffer, ['agency', 'overtime', 'extra shift', 'charge nurse'])
@@ -454,7 +716,7 @@ function classifyStabilityForce(event: string): SSIDomain {
 }
 
 function defineBufferResponse(buffer: string): string {
-  if (buffer === '') return 'No buffer response was recorded.'
+  if (buffer === '') return 'No operational buffer response was recorded.'
   if (includesAny(buffer, ['overtime'])) return 'Stability was preserved by extending labor beyond normal design.'
   if (includesAny(buffer, ['agency'])) return 'Stability was preserved by external staffing support.'
   if (includesAny(buffer, ['float'])) return 'Stability was preserved by moving internal staff across units.'

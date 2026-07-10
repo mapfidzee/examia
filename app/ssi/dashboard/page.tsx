@@ -101,17 +101,17 @@ const observedOutcomeOptions = [
 ]
 
 const ssiFlow = [
-  { label: 'Assignments', href: '/ssi/assignments', note: 'Shift-start load capture', active: false },
-  { label: 'Events', href: '/ssi/events', note: 'Stability event capture', active: false },
-  { label: 'Trend Buffer', href: '/ssi/dashboard', note: 'Persisted structural signals', active: true },
+  { label: 'Assignments', href: '/ssi/assignments', note: 'ODM evidence acquisition', active: false },
+  { label: 'Events', href: '/ssi/events', note: 'Operational stability evidence', active: false },
+  { label: 'Trend Buffer', href: '/ssi/dashboard', note: 'Longitudinal aggregation', active: true },
   { label: 'Executive Dashboard', href: '/ssi', note: 'Leadership interpretation', active: false },
   { label: 'Weekly Brief', href: '/ssi/weekly-brief', note: 'Printable executive summary', active: false },
 ]
 
 const initialFilters = {
-  unit: 'Med-Surg Simulation A',
-  windowStart: '2026-03-02',
-  windowEnd: '2026-03-08',
+  unit: 'Wing B',
+  windowStart: '2026-04-06',
+  windowEnd: '2026-04-06',
   shiftType: 'DAY' as ShiftTypeFilter,
 }
 
@@ -135,7 +135,13 @@ function skewStatus(value: number) {
 
 function isLate(value: string | null) {
   const text = String(value ?? '').toUpperCase()
-  return text.includes('LATE') || text.includes('LAST_MINUTE') || text.includes('LAST MINUTE')
+  return (
+    text.includes('PRE_SHIFT') ||
+    text.includes('PRE-SHIFT') ||
+    text.includes('LATE') ||
+    text.includes('LAST_MINUTE') ||
+    text.includes('LAST MINUTE')
+  )
 }
 
 function bufferUsed(value: string | null) {
@@ -143,6 +149,7 @@ function bufferUsed(value: string | null) {
 
   if (!text) return false
   if (text === 'NONE') return false
+  if (text.includes('NO RESPONSE')) return false
   if (text.includes('NO BUFFER')) return false
   if (text.includes('NOT USED')) return false
 
@@ -177,7 +184,9 @@ function repeatedBufferDepletion(bufferCount: number, highCostCount: number) {
 }
 
 function eventStats(events: EventRow[]) {
-  const highIntensityEventCount = events.filter((row) => String(row.event_intensity ?? '').toUpperCase() === 'HIGH').length
+  const highIntensityEventCount = events.filter(
+    (row) => String(row.event_intensity ?? '').toUpperCase() === 'HIGH',
+  ).length
   const lateOrLastMinuteEventCount = events.filter((row) => isLate(row.timing_category)).length
   const bufferCount = events.filter((row) => bufferUsed(row.buffer_response)).length
   const highCostCount = events.filter((row) => row.buffer_cost_band === 'HIGH_BUFFER_COST').length
@@ -641,7 +650,7 @@ export default function SSITrendBufferPage() {
     event.preventDefault()
 
     if (!filters.unit || !filters.windowStart || !filters.windowEnd) {
-      setMessage('Enter Unit, Window_Start, and Window_End.')
+      setMessage('Enter Unit, Window Start, and Window End.')
       return
     }
 
@@ -711,7 +720,7 @@ export default function SSITrendBufferPage() {
 
   async function saveTrendBufferOutput() {
     if (!filters.unit || !filters.windowStart || !filters.windowEnd) {
-      setMessage('Enter Unit, Window_Start, and Window_End before saving.')
+      setMessage('Enter Unit, Window Start, and Window End before saving.')
       return
     }
 
@@ -778,10 +787,10 @@ export default function SSITrendBufferPage() {
         <header style={styles.header}>
           <div style={styles.headerTop}>
             <div>
-              <p style={styles.eyebrow}>TSINAXA SSI • STABILITY_TREND_BUFFER</p>
+              <p style={styles.eyebrow}>TSINAXA SSI • STABILITY TREND BUFFER</p>
               <h1 style={styles.title}>Stability Trend Buffer</h1>
               <p style={styles.subtitle}>
-                Calculate the window, verify the trend rows, then save the controlled trend-buffer output and leadership action memory into ssi_trend_buffer.
+                Calculate a reporting window from persisted Assignments and Stability Events, then save the controlled longitudinal output and leadership action memory.
               </p>
             </div>
 
@@ -819,11 +828,11 @@ export default function SSITrendBufferPage() {
         <form onSubmit={loadTrend} style={styles.panel}>
           <h2 style={styles.panelTitle}>Window Controls</h2>
           <Input label="Unit" value={filters.unit} onChange={(value) => updateFilter('unit', value)} />
-          <Input label="Window_Start" value={filters.windowStart} onChange={(value) => updateFilter('windowStart', value)} />
-          <Input label="Window_End" value={filters.windowEnd} onChange={(value) => updateFilter('windowEnd', value)} />
+          <Input label="Window Start" value={filters.windowStart} onChange={(value) => updateFilter('windowStart', value)} />
+          <Input label="Window End" value={filters.windowEnd} onChange={(value) => updateFilter('windowEnd', value)} />
 
           <label style={styles.label}>
-            <span>Shift_Type</span>
+            <span>Shift Type</span>
             <select value={filters.shiftType} onChange={(event) => updateFilter('shiftType', event.target.value)} style={styles.input}>
               <option value="ALL">ALL</option>
               <option value="DAY">DAY</option>
@@ -866,26 +875,30 @@ export default function SSITrendBufferPage() {
         </section>
 
         <section style={styles.summaryGrid}>
-          <Metric label="Trend_Rows" value={String(topSummary.rows)} />
+          <Metric label="Trend Rows" value={String(topSummary.rows)} />
           <Metric label="Stable" value={String(topSummary.stable)} />
           <Metric label="Straining" value={String(topSummary.straining)} />
           <Metric label="Unstable" value={String(topSummary.unstable)} />
-          <Metric label="Overall_Posture" value={topSummary.posture} />
+          <Metric label="Overall Posture" value={topSummary.posture} />
         </section>
 
         <section style={styles.panelWide}>
           <h2 style={styles.panelTitle}>Persisted Executive Summary Preview</h2>
+          <p style={styles.sectionNote}>
+            Assignment Load Skew reflects persisted assignment count variance. Week 3 Operational Load Burden remains visible in Assignments.
+          </p>
+
           <div style={styles.previewGrid}>
-            <Metric label="Assignment_Load_Skew" value={skewStatus(persistedSummary.assignment_load_skew)} />
-            <Metric label="Total_Stability_Events" value={String(persistedSummary.total_stability_events)} />
-            <Metric label="High_Intensity_Event_Count" value={String(persistedSummary.high_intensity_event_count)} />
-            <Metric label="Buffer_Use_Profile" value={persistedSummary.buffer_use_profile} />
-            <Metric label="Trend_Status" value={persistedSummary.trend_status} />
-            <Metric label="Stability_Risk_Gauge" value={persistedSummary.fragility_level} />
-            <Metric label="Fragility_Level" value={persistedSummary.fragility_level} />
-            <Metric label="Cost_Pressure" value={persistedSummary.cost_pressure_signal} />
-            <Metric label="Affected_Role" value={persistedSummary.most_affected_role_pool} />
-            <Metric label="Affected_Shift" value={persistedSummary.most_affected_shift} />
+            <Metric label="Assignment Load Skew" value={skewStatus(persistedSummary.assignment_load_skew)} />
+            <Metric label="Total Stability Events" value={String(persistedSummary.total_stability_events)} />
+            <Metric label="High Intensity Events" value={String(persistedSummary.high_intensity_event_count)} />
+            <Metric label="Buffer Use Profile" value={persistedSummary.buffer_use_profile} />
+            <Metric label="Trend Status" value={persistedSummary.trend_status} />
+            <Metric label="Stability Risk Gauge" value={persistedSummary.fragility_level} />
+            <Metric label="Fragility Level" value={persistedSummary.fragility_level} />
+            <Metric label="Cost Pressure" value={persistedSummary.cost_pressure_signal} />
+            <Metric label="Affected Role" value={persistedSummary.most_affected_role_pool} />
+            <Metric label="Affected Shift" value={persistedSummary.most_affected_shift} />
           </div>
         </section>
 
@@ -929,14 +942,14 @@ export default function SSITrendBufferPage() {
         </section>
 
         <section style={styles.panelWide}>
-          <h2 style={styles.panelTitle}>STABILITY_TREND_BUFFER Rows</h2>
+          <h2 style={styles.panelTitle}>Stability Trend Buffer Rows</h2>
           <TrendTable rows={trendRows} />
         </section>
 
         <section style={styles.footerPanel}>
           <h2 style={styles.panelTitle}>Doctrine Boundary</h2>
           <p style={styles.footerText}>
-            This page calculates and persists the controlled SSI trend-buffer output. Historical window visibility and leadership action memory are persisted here.
+            This page aggregates persisted Assignments and Stability Events into a controlled longitudinal signal. Downstream pages read the persisted output and do not recalculate SSI thresholds.
           </p>
         </section>
       </section>
@@ -1046,22 +1059,22 @@ function TrendTable({ rows }: { rows: TrendRow[] }) {
   if (!rows.length) return <p style={styles.message}>No trend rows calculated for this window.</p>
 
   const headers = [
-    'Trend_Window',
+    'Trend Window',
     'Unit',
-    'Role_Pool',
-    'Shift_Type',
-    'Baseline_Design',
-    'Assignment_Load_Skew',
-    'Pct_Higher',
-    'Total_Stability_Events',
-    'High_Intensity_Event_Count',
-    'Late_or_Last_Minute_Event_Count',
-    'Buffer_Use_Profile',
-    'Repeated_Buffer_Depletion_Flag',
-    'Dominant_Stability_Forces',
-    'Trend_Status',
-    'Trend_Status_Rule',
-    'Leadership_Action_Cue',
+    'Role Pool',
+    'Shift Type',
+    'Baseline Design',
+    'Assignment Load Skew',
+    'Pct Higher',
+    'Total Stability Events',
+    'High Intensity Events',
+    'Late / Pre-Shift Events',
+    'Buffer Use Profile',
+    'Repeated Buffer Depletion',
+    'Dominant Stability Forces',
+    'Trend Status',
+    'Trend Status Rule',
+    'Leadership Action Cue',
   ]
 
   return (

@@ -34,8 +34,8 @@ const allowedRoles = ['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']
 const allowedStatuses = ['ACTIVE']
 
 const ssiFlow = [
-  { label: 'Assignments', href: '/ssi/assignments', note: 'Shift-start load capture', active: false },
-  { label: 'Events', href: '/ssi/events', note: 'Stability event capture', active: true },
+  { label: 'Assignments', href: '/ssi/assignments', note: 'ODM evidence acquisition', active: false },
+  { label: 'Events', href: '/ssi/events', note: 'Operational stability evidence', active: true },
   { label: 'Trend Buffer', href: '/ssi/dashboard', note: 'Persisted structural signals', active: false },
   { label: 'Executive Dashboard', href: '/ssi', note: 'Leadership interpretation', active: false },
   { label: 'Weekly Brief', href: '/ssi/weekly-brief', note: 'Printable executive summary', active: false },
@@ -43,37 +43,53 @@ const ssiFlow = [
 
 const SSI_EVENT_TYPE_OPTIONS = [
   'Late shift cancellation',
-  'Coverage gap',
+  'Short-notice absence',
   'Scheduled shift converted to on-call',
   'On-call activation without use',
   'Delayed arrival',
+  'Call-out',
+  'No-show',
+  'Coverage gap',
+  'Unable to secure replacement',
+  'Late replacement secured',
+  'Mandatory overtime',
+  'Agency staffing required',
+  'Float staff required',
+  'Assignment redistribution',
   'Medication delayed',
+  'Medication supply delay',
+  'IV therapy delay',
+  'Hospice care escalation',
+  'Two-person assist required',
   'Admission spike',
   'Discharge pressure',
   'Transfer delay',
-  'Late hand-off',
-  'Call-out',
-  'No-show',
-  'Assignment redistribution',
+  'Late handoff',
   'High-acuity deterioration',
+  'Unexpected deterioration',
   'Fall risk escalation',
   'Behavioral escalation',
   'Monitoring burden',
+  'Unexpected isolation requirement',
+  'Equipment failure',
 ] as const
 
 const SSI_BUFFER_RESPONSE_OPTIONS = [
   'No response recorded',
   'Peer-to-peer support',
-  'Overtime',
-  'Agency staff',
-  'Float staff',
+  'Overtime used',
+  'Mandatory overtime used',
+  'Agency staff deployed',
+  'Float staff deployed',
   'Assignment redistribution',
   'Charge nurse coverage',
   'Extra shift creation',
   'Medication pass support',
-  'Supervisor support',
+  'Supervisor support provided',
+  'Leadership intervention',
   'Delayed non-urgent tasks',
   'Family communication deferred',
+  'Unable to recover coverage',
 ] as const
 
 const initialHeader: Header = {
@@ -100,6 +116,11 @@ function isValidDateText(value: string) {
 
 function sequenceLabel(index: number) {
   return String(index + 1).padStart(3, '0')
+}
+
+function displayValue(value?: string | null) {
+  if (!value) return 'Waiting for event details'
+  return value.replaceAll('_', ' ')
 }
 
 export default function SSIEventsPage() {
@@ -186,9 +207,9 @@ export default function SSIEventsPage() {
   const snapshot = useMemo(() => {
     return {
       activeEvents: activeRows.length,
-      calculatedEvents: completeRows.length,
+      validatedEvents: completeRows.length,
       highIntensity: completeRows.filter((item) => item.output?.event_intensity === 'HIGH').length,
-      buffersConsumed: completeRows.filter((item) =>
+      bufferResponsesUsed: completeRows.filter((item) =>
         ['HIGH_BUFFER_COST', 'MODERATE_BUFFER_COST'].includes(item.output?.buffer_cost_band ?? ''),
       ).length,
     }
@@ -224,12 +245,12 @@ export default function SSIEventsPage() {
     }
 
     if (!activeRows.length) {
-      setMessage('No event rows are active. This shift may have zero events.')
+      setMessage('No event rows are active. This shift may have zero recorded stability events.')
       return
     }
 
     if (activeRows.some((item) => !item.isComplete || !item.output)) {
-      setMessage('Each active event needs Role_Pool, Timing_Category, and Event_Type. Buffer_Response is optional.')
+      setMessage('Each active event needs Role Pool, Timing Category, and Event Type. Buffer Response is optional.')
       return
     }
 
@@ -263,7 +284,7 @@ export default function SSIEventsPage() {
       return
     }
 
-    setMessage(`Saved ${payload.length} stability event row(s).`)
+    setMessage(`Saved ${payload.length} operational stability event row(s).`)
     setRows(makeRows())
   }
 
@@ -287,11 +308,11 @@ export default function SSIEventsPage() {
         <div style={styles.header}>
           <div style={styles.headerTop}>
             <div>
-              <p style={styles.eyebrow}>TSINAXA SSI • STABILITY_EVENTS</p>
-              <h1 style={styles.title}>Visible Stability Events</h1>
+              <p style={styles.eyebrow}>TSINAXA SSI • OPERATIONAL STABILITY EVIDENCE</p>
+              <h1 style={styles.title}>Operational Stability Events</h1>
               <p style={styles.subtitle}>
-                Events are per shift, not per day. Activate only real events that happened. One row equals
-                one disruption or one buffer response.
+                Record observable operational facts that occurred before or during the shift. One row equals one
+                disruption, staffing adaptation, recovery action, or buffer response.
               </p>
             </div>
 
@@ -336,20 +357,20 @@ export default function SSIEventsPage() {
           <section style={styles.panel}>
             <h2 style={styles.panelTitle}>Shared Event Header</h2>
             <Input label="Unit" value={header.unit} onChange={(value) => updateHeader('unit', value)} />
-            <Input label="Date" placeholder="2026-03-06" value={header.date} onChange={(value) => updateHeader('date', value)} />
-            <Select label="Shift_Type" value={header.shiftType} options={SSI_SHIFT_TYPE_OPTIONS} onChange={(value) => updateHeader('shiftType', value)} />
-            <Select label="Shift_Block" value={header.shiftBlock} options={SSI_COMMON_SHIFT_BLOCK_OPTIONS} onChange={(value) => updateHeader('shiftBlock', value)} />
+            <Input label="Date" placeholder="2026-04-06" value={header.date} onChange={(value) => updateHeader('date', value)} />
+            <Select label="Shift Type" value={header.shiftType} options={SSI_SHIFT_TYPE_OPTIONS} onChange={(value) => updateHeader('shiftType', value)} />
+            <Select label="Shift Block" value={header.shiftBlock} options={SSI_COMMON_SHIFT_BLOCK_OPTIONS} onChange={(value) => updateHeader('shiftBlock', value)} />
           </section>
 
           <section style={styles.snapshot}>
-            <MiniMetric label="Active_Events" value={String(snapshot.activeEvents)} />
-            <MiniMetric label="Calculated_Events" value={String(snapshot.calculatedEvents)} />
-            <MiniMetric label="High_Intensity" value={String(snapshot.highIntensity)} />
-            <MiniMetric label="Buffers_Consumed" value={String(snapshot.buffersConsumed)} />
+            <MiniMetric label="Active Events" value={String(snapshot.activeEvents)} />
+            <MiniMetric label="Validated Events" value={String(snapshot.validatedEvents)} />
+            <MiniMetric label="High Intensity Events" value={String(snapshot.highIntensity)} />
+            <MiniMetric label="Buffer Responses Used" value={String(snapshot.bufferResponsesUsed)} />
           </section>
 
           <section style={styles.tablePanel}>
-            <h2 style={styles.panelTitle}>Shift Event Rows</h2>
+            <h2 style={styles.panelTitle}>Operational Event Rows</h2>
 
             {calculatedRows.map((item) => (
               <div key={item.row.id} style={styles.rowCard}>
@@ -369,11 +390,11 @@ export default function SSIEventsPage() {
 
                 {item.row.active ? (
                   <>
-                    <Input label="Role_Pool" placeholder="RN 1" value={item.row.rolePool} onChange={(value) => updateRow(item.row.id, 'rolePool', value)} />
-                    <Select label="Timing_Category" value={item.row.timingCategory} options={SSI_TIMING_CATEGORY_OPTIONS} onChange={(value) => updateRow(item.row.id, 'timingCategory', value)} />
-                    <Select label="Event_Type" value={item.row.eventType} options={SSI_EVENT_TYPE_OPTIONS} onChange={(value) => updateRow(item.row.id, 'eventType', value)} />
+                    <Input label="Role Pool" placeholder="RN 1" value={item.row.rolePool} onChange={(value) => updateRow(item.row.id, 'rolePool', value)} />
+                    <Select label="Timing Category" value={item.row.timingCategory} options={SSI_TIMING_CATEGORY_OPTIONS} onChange={(value) => updateRow(item.row.id, 'timingCategory', value)} />
+                    <Select label="Event Type" value={item.row.eventType} options={SSI_EVENT_TYPE_OPTIONS} onChange={(value) => updateRow(item.row.id, 'eventType', value)} />
                     <Select
-                      label="Buffer_Response"
+                      label="Buffer Response"
                       value={item.row.bufferResponse}
                       options={SSI_BUFFER_RESPONSE_OPTIONS}
                       optionalLabel="No response recorded"
@@ -381,11 +402,11 @@ export default function SSIEventsPage() {
                     />
 
                     <div style={styles.calculatedGrid}>
-                      <ReadOnly label="Stability_Force" value={item.output?.stability_force ?? 'Waiting for active event details'} />
-                      <ReadOnly label="Event_Intensity" value={item.output?.event_intensity ?? 'Waiting for active event details'} />
-                      <ReadOnly label="Coverage_Impact" value={item.output?.coverage_impact ?? 'Waiting for active event details'} />
-                      <ReadOnly label="Buffer_Cost_Band" value={item.output?.buffer_cost_band ?? 'Waiting for active event details'} />
-                      <ReadOnly label="Buffer_Response_Definition" value={item.output?.buffer_response_definition ?? 'Waiting for active event details'} wrap />
+                      <ReadOnly label="Stability Force" value={displayValue(item.output?.stability_force)} />
+                      <ReadOnly label="Event Intensity" value={displayValue(item.output?.event_intensity)} />
+                      <ReadOnly label="Coverage Impact" value={displayValue(item.output?.coverage_impact)} />
+                      <ReadOnly label="Buffer Cost Band" value={displayValue(item.output?.buffer_cost_band)} />
+                      <ReadOnly label="Buffer Response Meaning" value={item.output?.buffer_response_definition ?? 'Waiting for event details'} wrap />
                     </div>
                   </>
                 ) : null}
@@ -406,9 +427,9 @@ export default function SSIEventsPage() {
             </button>
             {boundaryOpen ? (
               <p style={styles.footerText}>
-                Assignment strain exists before events occur. Events record real disruptions or
-                buffer responses during the shift. Executive interpretation happens later after
-                the trend buffer is reviewed.
+                Assignments describe the structural starting condition before work begins. Stability Events record
+                observable operational facts that occurred before or during the shift. Trend Buffer aggregates repeated
+                evidence. Executive interpretation happens later.
               </p>
             ) : null}
           </section>
@@ -500,7 +521,6 @@ const styles: Record<string, CSSProperties> = {
   eyebrow: { color: '#d6b25e', letterSpacing: '0.14em', textTransform: 'uppercase', fontSize: '12px', margin: 0 },
   title: { fontSize: '38px', margin: '12px 0' },
   subtitle: { color: '#cfc7b5', margin: 0, maxWidth: '900px' },
-
   flowNav: { border: '1px solid rgba(214,178,94,0.28)', background: '#090807', borderRadius: '20px', padding: '16px', marginBottom: '18px' },
   flowNavHeader: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' },
   flowNavTitle: { color: '#d6b25e', fontWeight: 900, letterSpacing: '0.14em', textTransform: 'uppercase', fontSize: '12px' },
@@ -513,10 +533,9 @@ const styles: Record<string, CSSProperties> = {
   flowStepIndex: { display: 'grid', placeItems: 'center', width: '26px', height: '26px', borderRadius: '999px', background: 'rgba(214,178,94,0.16)', color: '#d6b25e', fontWeight: 900, flexShrink: 0 },
   flowStepText: { display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 },
   flowArrow: { color: '#9f8142', fontWeight: 900, flexShrink: 0 },
-
   panel: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px', border: '1px solid rgba(214,178,94,0.28)', background: '#090807', borderRadius: '22px', padding: '22px', marginBottom: '18px' },
   snapshot: { display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '10px', border: '1px solid rgba(214,178,94,0.28)', background: '#090807', borderRadius: '18px', padding: '12px', marginBottom: '18px' },
-  miniMetric: { background: '#11100d', border: '1px solid rgba(214,178,94,0.18)', borderRadius: '12px', padding: '10px 12px', display: 'flex', justifyContent: 'space-between', color: '#cfc7b5' },
+  miniMetric: { background: '#11100d', border: '1px solid rgba(214,178,94,0.18)', borderRadius: '12px', padding: '10px 12px', display: 'flex', justifyContent: 'space-between', color: '#cfc7b5', gap: '12px' },
   tablePanel: { border: '1px solid rgba(214,178,94,0.28)', background: '#090807', borderRadius: '22px', padding: '22px', marginBottom: '18px' },
   panelTitle: { gridColumn: '1 / -1', color: '#d6b25e', margin: '0 0 8px' },
   rowCard: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px', border: '1px solid rgba(214,178,94,0.16)', borderRadius: '16px', padding: '14px', marginTop: '12px' },

@@ -10,6 +10,7 @@ import {
   buildSSIShiftAssignmentId,
   calculateSSIAssignment,
   calculateSSIAssignmentStrainSnapshot,
+  getSSIOperationalDiagnosticFindingsForRole,
 } from '@/lib/ssi/ssiContinuityEngine'
 import { supabase } from '@/lib/supabase'
 
@@ -30,9 +31,16 @@ type RoleRow = {
   baselineDesign: string
   startingAssignmentCount: string
   baselineCount: string
-  loadReason: string
-  loadComplexity: string
+  operationalDiagnosticFindings: string[]
 }
+
+type FindingCategory =
+  | 'Clinical Intensity'
+  | 'Monitoring / Supervision'
+  | 'Medication / Licensed Workflow'
+  | 'Flow / Coordination'
+  | 'Staffing / Workforce'
+  | 'Environment / Equipment'
 
 const allowedRoles = ['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']
 const allowedStatuses = ['ACTIVE']
@@ -43,53 +51,22 @@ const roleSections: { rolePool: RolePool; count: number }[] = [
   { rolePool: 'CNA', count: 8 },
 ]
 
+const findingCategoryOrder: FindingCategory[] = [
+  'Clinical Intensity',
+  'Monitoring / Supervision',
+  'Medication / Licensed Workflow',
+  'Flow / Coordination',
+  'Staffing / Workforce',
+  'Environment / Equipment',
+]
+
 const ssiFlow = [
-  { label: 'Assignments', href: '/ssi/assignments', note: 'Shift-start load capture', active: true },
+  { label: 'Assignments', href: '/ssi/assignments', note: 'ODM evidence acquisition', active: true },
   { label: 'Events', href: '/ssi/events', note: 'Stability event capture', active: false },
   { label: 'Trend Buffer', href: '/ssi/dashboard', note: 'Persisted structural signals', active: false },
   { label: 'Executive Dashboard', href: '/ssi', note: 'Leadership interpretation', active: false },
   { label: 'Weekly Brief', href: '/ssi/weekly-brief', note: 'Printable executive summary', active: false },
 ]
-
-const SSI_LOAD_REASON_OPTIONS = [
-  'NONE',
-  'High-acuity patient assigned',
-  'New admission at shift start',
-  'Transfer-in at shift start',
-  'Discharge/admission pressure',
-  'IV therapy workload',
-  'Complex wound/treatment workload',
-  'Frequent monitoring required',
-  'Behavioral monitoring required',
-  'High fall-risk cluster',
-  'Two-person assist cluster',
-  'Medication workload pressure',
-  'Missed medication risk',
-  'Hand-off pressure',
-  'Short staffing at shift start',
-  'Isolation/equipment burden',
-  'Post-procedure monitoring',
-  'Telemetry/clinical monitoring burden',
-] as const
-
-const SSI_LOAD_COMPLEXITY_OPTIONS = [
-  'NONE',
-  'High-acuity cluster',
-  'High-acuity + treatment cluster',
-  'Frequent monitoring cluster',
-  'Medication pass complexity',
-  'Missed medication risk cluster',
-  'Fall-risk supervision cluster',
-  'Behavioral supervision cluster',
-  'Two-person assist cluster',
-  'Admission/start-up complexity',
-  'Discharge/admission flow complexity',
-  'Isolation/equipment complexity',
-  'Post-procedure monitoring cluster',
-  'Telemetry/clinical monitoring burden',
-  'Hand-off instability cluster',
-  'Continuous monitoring burden',
-] as const
 
 const initialHeader: ShiftHeader = {
   unit: '',
@@ -108,8 +85,7 @@ function makeInitialRows(): RoleRow[] {
       baselineDesign: '',
       startingAssignmentCount: '',
       baselineCount: '',
-      loadReason: 'NONE',
-      loadComplexity: 'NONE',
+      operationalDiagnosticFindings: [],
     })),
   )
 }
@@ -125,6 +101,39 @@ function deriveBaselineCount(baselineDesign: string, manualBaselineCount: string
   if (!match) return Number.NaN
 
   return Number(match[1])
+}
+
+function displayFindingCategory(category: string): FindingCategory {
+  if (category === 'Monitoring') return 'Monitoring / Supervision'
+  if (category === 'Medication') return 'Medication / Licensed Workflow'
+  if (category === 'Flow') return 'Flow / Coordination'
+  if (category === 'Staffing') return 'Staffing / Workforce'
+  if (category === 'Environment') return 'Environment / Equipment'
+  return 'Clinical Intensity'
+}
+
+function compactFindingLabel(label: string) {
+  return label
+    .replace(' care recipient assigned', '')
+    .replace(' care recipients assigned', '')
+    .replace(' assigned', '')
+    .replace(' required', '')
+    .replace(' cluster', '')
+    .replace('High-acuity', 'High acuity')
+    .replace('Complex wound care', 'Complex wound')
+    .replace('Medication workload pressure', 'Medication workload')
+    .replace('Missed medication risk', 'Missed medication')
+    .replace('Admission/discharge pressure', 'Admission/discharge')
+    .replace('Memory-care supervision density', 'Memory supervision')
+    .replace('Isolation/equipment burden', 'Isolation/equipment')
+}
+
+function displayStructuralDiagnosis(value?: string) {
+  if (value === 'STABLE_START') return 'Stable Structural Start'
+  if (value === 'HIDDEN_STRAIN_PRESENT') return 'Hidden Structural Strain'
+  if (value === 'VISIBLE_STARTING_STRAIN') return 'Visible Starting Structural Strain'
+  if (value === 'SEVERE_STARTING_STRAIN') return 'Severe Starting Structural Strain'
+  return 'Not calculated yet'
 }
 
 export default function SSIAssignmentsPage() {
@@ -143,6 +152,7 @@ export default function SSIAssignmentsPage() {
     CNA: false,
   })
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
+  const [expandedFindings, setExpandedFindings] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     async function verifyAccess() {
@@ -218,8 +228,7 @@ export default function SSIAssignmentsPage() {
             baselineDesign: row.baselineDesign,
             startingAssignmentCount: startingCount,
             baselineCount,
-            loadReason: row.loadReason,
-            loadComplexity: row.loadComplexity,
+            operationalDiagnosticFindings: row.operationalDiagnosticFindings,
           })
         : null
 
@@ -231,8 +240,9 @@ export default function SSIAssignmentsPage() {
     () =>
       calculateSSIAssignmentStrainSnapshot(
         calculatedRows.map((item) => ({
-          loadReason: item.row.loadReason,
-          loadComplexity: item.row.loadComplexity,
+          loadReason: item.output?.derived_load_reason ?? 'NONE',
+          loadComplexity: item.output?.derived_load_complexity ?? 'NONE',
+          operationalDiagnosticFindings: item.row.operationalDiagnosticFindings,
           output: item.output,
         })),
       ),
@@ -243,10 +253,18 @@ export default function SSIAssignmentsPage() {
     setHeader((current) => ({ ...current, [field]: value }))
   }
 
-  function updateRow(id: string, field: keyof RoleRow, value: string | boolean) {
+  function updateRow(id: string, field: keyof RoleRow, value: string | boolean | string[]) {
     setRows((current) =>
       current.map((row) => (row.id === id ? { ...row, [field]: value } : row)),
     )
+  }
+
+  function toggleFinding(row: RoleRow, finding: string) {
+    const selected = row.operationalDiagnosticFindings.includes(finding)
+      ? row.operationalDiagnosticFindings.filter((item) => item !== finding)
+      : [...row.operationalDiagnosticFindings, finding]
+
+    updateRow(row.id, 'operationalDiagnosticFindings', selected)
   }
 
   function toggleSection(rolePool: RolePool) {
@@ -255,6 +273,10 @@ export default function SSIAssignmentsPage() {
 
   function toggleRowDetails(id: string) {
     setExpandedRows((current) => ({ ...current, [id]: !current[id] }))
+  }
+
+  function toggleFindingPanel(id: string) {
+    setExpandedFindings((current) => ({ ...current, [id]: !current[id] }))
   }
 
   async function handleLogout() {
@@ -305,8 +327,8 @@ export default function SSIAssignmentsPage() {
         baseline_design: item.row.baselineDesign,
         starting_assignment_count: Number(item.row.startingAssignmentCount),
         baseline_count: item.baselineCount,
-        load_reason: item.row.loadReason,
-        load_complexity: item.row.loadComplexity,
+        load_reason: item.output.derived_load_reason,
+        load_complexity: item.output.derived_load_complexity,
         load_modifier: item.output.load_modifier_delta,
         complexity_flag: item.output.complexity_flag === 'YES',
         complexity_status: item.output.complexity_status,
@@ -324,9 +346,10 @@ export default function SSIAssignmentsPage() {
       return
     }
 
-    setMessage(`Saved ${payload.length} active assignment instance rows for ${header.shiftType}.`)
+    setMessage(`Saved ${payload.length} active ODM assignment rows for ${header.shiftType}.`)
     setRows(makeInitialRows())
     setExpandedRows({})
+    setExpandedFindings({})
   }
 
   if (checkingAccess || !authorized) {
@@ -349,11 +372,11 @@ export default function SSIAssignmentsPage() {
         <div style={styles.header}>
           <div style={styles.headerTop}>
             <div>
-              <p style={styles.eyebrow}>TSINAXA SSI • ASSIGNMENT_INSTANCES</p>
-              <h1 style={styles.title}>Hospital Shift-Start Assignment Set</h1>
+              <p style={styles.eyebrow}>TSINAXA SSI • ODM ASSIGNMENT EVIDENCE</p>
+              <h1 style={styles.title}>Operational Diagnostic Assignment Set</h1>
               <p style={styles.subtitle}>
-                Capture individual assignment entries inside each role pool. Save only active completed rows.
-                Hidden strain is detected at shift start before events are reported.
+                Acquire observable assignment evidence at shift start. SSI derives structural diagnosis
+                from the complete evidence set while preserving downstream compatibility.
               </p>
             </div>
 
@@ -419,12 +442,12 @@ export default function SSIAssignmentsPage() {
             />
           </section>
 
-          <section style={styles.stickySnapshot}>
-            <div style={styles.stickyTitle}>Current Shift Snapshot</div>
-            <MiniMetric label="Active_Rows" value={String(activeRows.length)} />
-            <MiniMetric label="Assignment_Load_Skew" value={String(snapshot.assignment_load_skew)} />
-            <MiniMetric label="Hidden" value={String(snapshot.hidden_strain_count)} />
-            <MiniMetric label="Severe" value={String(snapshot.severe_strain_count)} />
+          <section style={styles.topSnapshot}>
+            <div style={styles.stickyTitle}>Current Shift Diagnostic Snapshot</div>
+            <MiniMetric label="Active Rows" value={String(activeRows.length)} />
+            <MiniMetric label="Operational Load Burden" value={String(snapshot.assignment_load_skew)} />
+            <MiniMetric label="Hidden Strain Rows" value={String(snapshot.hidden_strain_count)} />
+            <MiniMetric label="Severe Strain Rows" value={String(snapshot.severe_strain_count)} />
           </section>
 
           <section style={styles.tablePanel}>
@@ -449,6 +472,16 @@ export default function SSIAssignmentsPage() {
                     ? sectionRows.map((row) => {
                         const item = calculatedRows.find((calculated) => calculated.row.id === row.id)
                         const rowExpanded = expandedRows[row.id] ?? false
+                        const findingsOpen =
+                          expandedFindings[row.id] ?? row.operationalDiagnosticFindings.length === 0
+                        const selectedCount = row.operationalDiagnosticFindings.length
+                        const availableFindings = getSSIOperationalDiagnosticFindingsForRole(row.rolePool)
+                        const groupedFindings = findingCategoryOrder.map((category) => ({
+                          category,
+                          findings: availableFindings.filter(
+                            (finding) => displayFindingCategory(finding.category) === category,
+                          ),
+                        }))
 
                         return (
                           <div key={row.id} style={styles.rowCard}>
@@ -496,27 +529,98 @@ export default function SSIAssignmentsPage() {
                                   value={row.baselineCount}
                                   onChange={(v) => updateRow(row.id, 'baselineCount', v)}
                                 />
-                                <Select
-                                  label="Load_Reason"
-                                  value={row.loadReason}
-                                  options={SSI_LOAD_REASON_OPTIONS}
-                                  onChange={(v) => updateRow(row.id, 'loadReason', v)}
-                                />
-                                <Select
-                                  label="Load_Complexity"
-                                  value={row.loadComplexity}
-                                  options={SSI_LOAD_COMPLEXITY_OPTIONS}
-                                  onChange={(v) => updateRow(row.id, 'loadComplexity', v)}
-                                />
+
+                                <div style={styles.findingPanel}>
+                                  <button
+                                    type="button"
+                                    style={styles.findingPanelToggle}
+                                    onClick={() => toggleFindingPanel(row.id)}
+                                  >
+                                    <span style={styles.findingPanelTitle}>
+                                      Operational Diagnostic Findings
+                                    </span>
+                                    <span style={styles.findingCount}>
+                                      {selectedCount === 0
+                                        ? 'No evidence selected'
+                                        : `${selectedCount} finding${selectedCount === 1 ? '' : 's'} selected`}
+                                    </span>
+                                    <span style={styles.findingPanelAction}>
+                                      {findingsOpen ? 'Collapse' : 'Review / edit'}
+                                    </span>
+                                  </button>
+
+                                  {selectedCount > 0 ? (
+                                    <div style={styles.badgeRow}>
+                                      {row.operationalDiagnosticFindings.map((finding) => (
+                                        <span key={finding} style={styles.badge}>
+                                          {compactFindingLabel(finding)}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p style={styles.noEvidenceText}>
+                                      Capture observable operational evidence before saving this assignment row.
+                                    </p>
+                                  )}
+
+                                  {findingsOpen ? (
+                                    <>
+                                      <div style={styles.findingInstruction}>
+                                        <strong>
+                                          Select every operational diagnostic finding truly present in this assignment.
+                                        </strong>
+                                        <span>Capture observable operational evidence.</span>
+                                        <span>Do not summarize the assignment into one reason.</span>
+                                        <span>
+                                          SSI derives the structural diagnosis from the complete evidence set.
+                                        </span>
+                                      </div>
+
+                                      <div style={styles.categoryGrid}>
+                                        {groupedFindings.map((group) =>
+                                          group.findings.length > 0 ? (
+                                            <div key={group.category} style={styles.findingCategoryBox}>
+                                              <h3 style={styles.categoryTitle}>{group.category}</h3>
+                                              <div style={styles.findingGrid}>
+                                                {group.findings.map((finding) => (
+                                                  <label key={finding.label} style={styles.findingOption}>
+                                                    <input
+                                                      type="checkbox"
+                                                      checked={row.operationalDiagnosticFindings.includes(
+                                                        finding.label,
+                                                      )}
+                                                      onChange={() => toggleFinding(row, finding.label)}
+                                                    />
+                                                    <span>{finding.label}</span>
+                                                  </label>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          ) : null,
+                                        )}
+                                      </div>
+                                    </>
+                                  ) : null}
+                                </div>
 
                                 <div style={styles.primarySignalGrid}>
                                   <ReadOnly
-                                    label="Starting_Strain_Signal"
-                                    value={item?.output?.starting_strain_signal ?? 'Not calculated yet'}
+                                    label="Structural Diagnosis"
+                                    value={displayStructuralDiagnosis(item?.output?.starting_strain_signal)}
                                   />
                                   <ReadOnly
-                                    label="Structural_Strain_Summary"
+                                    label="Structural Strain Summary"
                                     value={item?.output?.structural_strain_summary ?? 'Not calculated yet'}
+                                    wrap
+                                  />
+                                  <ReadOnly
+                                    label="Reserve Capacity"
+                                    value={item?.output?.reserve_capacity_interpretation ?? 'Not calculated yet'}
+                                    wrap
+                                  />
+                                  <ReadOnly
+                                    label="Localized Strain"
+                                    value={item?.output?.localized_strain_interpretation ?? 'Not calculated yet'}
                                     wrap
                                   />
                                 </div>
@@ -526,17 +630,27 @@ export default function SSIAssignmentsPage() {
                                   style={styles.detailToggle}
                                   onClick={() => toggleRowDetails(row.id)}
                                 >
-                                  {rowExpanded ? 'Hide calculation details' : 'Show calculation details'}
+                                  {rowExpanded ? 'Hide compatibility details' : 'Show compatibility details'}
                                 </button>
 
                                 {rowExpanded ? (
                                   <div style={styles.calculatedGrid}>
                                     <ReadOnly
-                                      label="Load_Modifier"
+                                      label="Derived Legacy Load Reason"
+                                      value={item?.output?.derived_load_reason ?? 'Not calculated yet'}
+                                      wrap
+                                    />
+                                    <ReadOnly
+                                      label="Derived Legacy Load Complexity"
+                                      value={item?.output?.derived_load_complexity ?? 'Not calculated yet'}
+                                      wrap
+                                    />
+                                    <ReadOnly
+                                      label="Load Modifier"
                                       value={item?.output?.load_modifier ?? 'Not calculated yet'}
                                     />
                                     <ReadOnly
-                                      label="Load_Delta"
+                                      label="Raw Assignment Count Delta"
                                       value={
                                         item?.output
                                           ? String(item.output.load_modifier_delta)
@@ -544,15 +658,15 @@ export default function SSIAssignmentsPage() {
                                       }
                                     />
                                     <ReadOnly
-                                      label="Complexity_Flag"
+                                      label="Complexity Flag"
                                       value={item?.output?.complexity_flag ?? 'Not calculated yet'}
                                     />
                                     <ReadOnly
-                                      label="Complexity_Status"
+                                      label="Complexity Status"
                                       value={item?.output?.complexity_status ?? 'Not calculated yet'}
                                     />
                                     <ReadOnly
-                                      label="Complexity_Weight"
+                                      label="Complexity Weight"
                                       value={
                                         item?.output
                                           ? String(item.output.complexity_weight)
@@ -585,21 +699,21 @@ export default function SSIAssignmentsPage() {
               style={styles.snapshotToggle}
               onClick={() => setSnapshotOpen((v) => !v)}
             >
-              {snapshotOpen ? 'Hide' : 'Show'} Assignment Strain Snapshot
+              {snapshotOpen ? 'Hide' : 'Show'} Assignment Diagnostic Snapshot
             </button>
 
             {snapshotOpen ? (
               <div style={styles.snapshotGrid}>
-                <ReadOnly label="Assignment_Load_Skew" value={String(snapshot.assignment_load_skew)} />
-                <ReadOnly label="Hidden_Strain_Count" value={String(snapshot.hidden_strain_count)} />
-                <ReadOnly label="Visible_Strain_Count" value={String(snapshot.visible_strain_count)} />
-                <ReadOnly label="Severe_Strain_Count" value={String(snapshot.severe_strain_count)} />
-                <ReadOnly label="Dominant_Load_Reason" value={snapshot.dominant_load_reason} wrap />
-                <ReadOnly label="Dominant_Load_Complexity" value={snapshot.dominant_load_complexity} wrap />
-                <ReadOnly label="Structural_Strain_Reading" value={snapshot.structural_strain_reading} wrap />
+                <ReadOnly label="Operational Load Burden" value={String(snapshot.assignment_load_skew)} />
+                <ReadOnly label="Hidden Strain Rows" value={String(snapshot.hidden_strain_count)} />
+                <ReadOnly label="Visible Strain Rows" value={String(snapshot.visible_strain_count)} />
+                <ReadOnly label="Severe Strain Rows" value={String(snapshot.severe_strain_count)} />
+                <ReadOnly label="Most Frequent Operational Finding" value={snapshot.dominant_load_reason} wrap />
+                <ReadOnly label="Dominant Derived Complexity" value={snapshot.dominant_load_complexity} wrap />
+                <ReadOnly label="Structural Strain Reading" value={snapshot.structural_strain_reading} wrap />
                 <ReadOnly
-                  label="Snapshot_Boundary"
-                  value="Current shift set only. 7-day trend belongs to /ssi/dashboard."
+                  label="Snapshot Boundary"
+                  value="Current shift set only. Longitudinal trend interpretation belongs to /ssi/dashboard."
                   wrap
                 />
               </div>
@@ -713,7 +827,6 @@ const styles: Record<string, CSSProperties> = {
   },
   title: { fontSize: '38px', margin: '12px 0' },
   subtitle: { color: '#cfc7b5', margin: 0, maxWidth: '920px' },
-
   flowNav: {
     border: '1px solid rgba(214,178,94,0.28)',
     background: '#090807',
@@ -769,7 +882,6 @@ const styles: Record<string, CSSProperties> = {
   },
   flowStepText: { display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 },
   flowArrow: { color: '#9f8142', fontWeight: 900, flexShrink: 0 },
-
   panel: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
@@ -778,12 +890,9 @@ const styles: Record<string, CSSProperties> = {
     background: '#090807',
     borderRadius: '22px',
     padding: '22px',
-    marginBottom: '14px',
+    marginBottom: '18px',
   },
-  stickySnapshot: {
-    position: 'sticky',
-    top: 0,
-    zIndex: 5,
+  topSnapshot: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
     gap: '10px',
@@ -809,6 +918,7 @@ const styles: Record<string, CSSProperties> = {
     display: 'flex',
     justifyContent: 'space-between',
     color: '#cfc7b5',
+    gap: '12px',
   },
   tablePanel: {
     border: '1px solid rgba(214,178,94,0.28)',
@@ -863,6 +973,85 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1.35,
   },
   checkLabel: { display: 'flex', alignItems: 'center', gap: '10px', color: '#cfc7b5', fontWeight: 700 },
+  findingPanel: {
+    gridColumn: '1 / -1',
+    border: '1px solid rgba(214,178,94,0.18)',
+    background: '#0d0c0a',
+    borderRadius: '16px',
+    padding: '12px',
+  },
+  findingPanelToggle: {
+    width: '100%',
+    display: 'grid',
+    gridTemplateColumns: '1fr auto auto',
+    alignItems: 'center',
+    gap: '12px',
+    background: '#11100d',
+    color: '#fff8e7',
+    border: '1px solid rgba(214,178,94,0.18)',
+    borderRadius: '14px',
+    padding: '12px 14px',
+    cursor: 'pointer',
+    textAlign: 'left',
+  },
+  findingPanelTitle: { color: '#d6b25e', fontWeight: 900 },
+  findingCount: {
+    color: '#cfc7b5',
+    fontSize: '12px',
+    fontWeight: 800,
+    border: '1px solid rgba(214,178,94,0.18)',
+    borderRadius: '999px',
+    padding: '6px 10px',
+  },
+  findingPanelAction: { color: '#d6b25e', fontSize: '12px', fontWeight: 900 },
+  badgeRow: { display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' },
+  badge: {
+    border: '1px solid rgba(214,178,94,0.22)',
+    background: 'rgba(214,178,94,0.09)',
+    color: '#fff8e7',
+    borderRadius: '999px',
+    padding: '6px 10px',
+    fontSize: '12px',
+    fontWeight: 800,
+  },
+  noEvidenceText: { color: '#9f8142', margin: '10px 0 0', fontSize: '13px' },
+  findingInstruction: {
+    marginTop: '12px',
+    border: '1px solid rgba(214,178,94,0.18)',
+    background: 'rgba(214,178,94,0.06)',
+    borderRadius: '14px',
+    padding: '12px',
+    display: 'grid',
+    gap: '4px',
+    color: '#cfc7b5',
+    fontSize: '13px',
+  },
+  categoryGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px', marginTop: '12px' },
+  findingCategoryBox: {
+    border: '1px solid rgba(214,178,94,0.14)',
+    background: '#11100d',
+    borderRadius: '14px',
+    padding: '12px',
+  },
+  categoryTitle: {
+    color: '#d6b25e',
+    margin: '0 0 10px',
+    fontSize: '13px',
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase',
+  },
+  findingGrid: { display: 'grid', gridTemplateColumns: '1fr', gap: '8px' },
+  findingOption: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    color: '#cfc7b5',
+    background: '#0d0c0a',
+    border: '1px solid rgba(214,178,94,0.13)',
+    borderRadius: '12px',
+    padding: '10px 12px',
+    fontSize: '13px',
+  },
   primarySignalGrid: {
     gridColumn: '1 / -1',
     display: 'grid',
