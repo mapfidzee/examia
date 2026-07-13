@@ -540,6 +540,31 @@ export default function SSIWeeklyBriefPage() {
 
   if (checkingAccess) {
     return (
+    <>
+      <style>{`
+        @media print {
+          html,
+          body {
+            background: #050505 !important;
+            color: #fff8e7 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          .ssi-weekly-brief-print,
+          .ssi-weekly-brief-print * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          .ssi-weekly-brief-print {
+            background: #070707 !important;
+            color: #fff8e7 !important;
+            border-color: rgba(214, 178, 94, 0.28) !important;
+          }
+        }
+      `}</style>
+
       <main style={styles.page}>
         <section style={styles.controls}>
           <p style={styles.eyebrow}>TSINAXA SSI • SECURE ACCESS</p>
@@ -548,9 +573,10 @@ export default function SSIWeeklyBriefPage() {
             Checking authorized structural stability access...
           </p>
         </section>
-      </main>
-    )
-  }
+           </main>
+    </>
+  )
+}
 
   if (accessError || !authorized) {
     return (
@@ -726,7 +752,7 @@ export default function SSIWeeklyBriefPage() {
       </section>
 
       {record ? (
-        <article style={styles.brief} ref={briefRef}>
+        <article className="ssi-weekly-brief-print" style={styles.brief} ref={briefRef}>
           <header style={styles.header}>
             <p style={styles.eyebrow}>TSINAXA — Weekly Stability Brief</p>
             <h2 style={styles.heading}>
@@ -935,7 +961,6 @@ export default function SSIWeeklyBriefPage() {
     </main>
   )
 }
-
 function Input({
   label,
   value,
