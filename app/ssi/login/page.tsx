@@ -127,7 +127,7 @@ export default function SSILoginPage() {
       }
 
       setRedirecting(true)
-      router.replace('/ssi/events')
+      router.replace('/ssi/assignments')
       router.refresh()
     } catch {
       if (!mountedRef.current) return
@@ -194,7 +194,7 @@ export default function SSILoginPage() {
       }
 
       setRedirecting(true)
-      router.replace('/ssi/events')
+      router.replace('/ssi/assignments')
       router.refresh()
     } catch {
       setAccessFailure(true)
