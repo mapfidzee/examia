@@ -34,6 +34,14 @@ type AssignmentRow = {
   load_modifier: number | null
   complexity_flag: boolean | null
   starting_strain_signal: string | null
+  operational_diagnostic_findings: string[] | null
+  structural_drivers: string[] | null
+  workload_composition: string[] | null
+  derived_strain_signals: string[] | null
+  reserve_capacity_status: string | null
+  localized_overload_flag: boolean | null
+  above_baseline_flag: boolean | null
+  assignment_overload_delta: number | null
 }
 
 type EventRow = {
@@ -73,6 +81,9 @@ type HistoricalTrendRecord = {
   unit: string
   window_start: string
   window_end: string
+  assessment_period: string
+  assessment_day_count: number
+  shift_scope: ShiftTypeFilter
   trend_status: string | null
   stability_score: number | null
   cost_pressure_signal: string | null
@@ -103,6 +114,9 @@ type LoadedWindow = {
   windowStart: string
   windowEnd: string
   shiftType: ShiftTypeFilter
+  assessmentPeriod: string
+  assessmentDayCount: number
+  shiftScope: ShiftTypeFilter
 }
 
 type WorkforceReliabilityOutput = {
@@ -122,6 +136,32 @@ type WorkforceReliabilityOutput = {
   consecutive_affected_windows: number
   workforce_reliability_summary: string | null
   workforce_consequence_outlook: string | null
+}
+
+type RolePoolStructuralStatus =
+  | 'STABLE'
+  | 'VISIBLE STRAIN'
+  | 'HIDDEN STRAIN'
+  | 'SEVERE STARTING STRAIN'
+  | 'REPEATED SEVERE STARTING STRAIN'
+  | 'COVERAGE INSTABILITY'
+  | 'COVERAGE INSTABILITY WITH HIDDEN STRAIN'
+
+type RolePoolProfile = {
+  rolePool: string
+  assignmentCount: number
+  eventCount: number
+  assignmentLoadSkew: number
+  aboveBaselineCount: number
+  localizedOverloadCount: number
+  hiddenStrainCount: number
+  severeStartCount: number
+  coverageGapCount: number
+  highIntensityEventCount: number
+  dominantReserveCapacity: string
+  status: RolePoolStructuralStatus
+  severityScore: number
+  summary: string
 }
 
 const allowedRoles = ['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']
@@ -255,6 +295,14 @@ const localSupportAdaptations = new Set([
   'Supervisor support provided',
 ])
 
+function setHasNormalizedValue(values: Set<string>, candidate: string) {
+  const normalizedCandidate = String(candidate ?? '').trim().toUpperCase()
+
+  return Array.from(values).some(
+    (value) => value.trim().toUpperCase() === normalizedCandidate,
+  )
+}
+
 async function withTimeout<T>(
   operation: PromiseLike<T>,
   timeoutMs: number,
@@ -313,6 +361,64 @@ function isValidCalendarDate(value: string) {
     reconstructed.getUTCMonth() === month - 1 &&
     reconstructed.getUTCDate() === day
   )
+}
+
+function inclusiveDayCount(windowStart: string, windowEnd: string) {
+  const start = new Date(`${windowStart}T00:00:00Z`)
+  const end = new Date(`${windowEnd}T00:00:00Z`)
+
+  return Math.floor((end.getTime() - start.getTime()) / 86400000) + 1
+}
+
+function assessmentPeriodForWindow(
+  windowStart: string,
+  windowEnd: string,
+) {
+  const dayCount = inclusiveDayCount(windowStart, windowEnd)
+
+  if (dayCount === 1) {
+    return 'DAILY'
+  }
+
+  if (dayCount === 7) {
+    return 'WEEKLY'
+  }
+
+  const start = new Date(`${windowStart}T00:00:00Z`)
+  const end = new Date(`${windowEnd}T00:00:00Z`)
+
+  const lastDayOfStartMonth = new Date(
+    Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0),
+  ).getUTCDate()
+
+  const isFullCalendarMonth =
+    start.getUTCDate() === 1 &&
+    end.getUTCFullYear() === start.getUTCFullYear() &&
+    end.getUTCMonth() === start.getUTCMonth() &&
+    end.getUTCDate() === lastDayOfStartMonth
+
+  if (isFullCalendarMonth) {
+    return 'MONTHLY'
+  }
+
+  const quarterStartMonth = start.getUTCMonth()
+  const isQuarterStart = [0, 3, 6, 9].includes(quarterStartMonth)
+  const lastDayOfQuarter = new Date(
+    Date.UTC(start.getUTCFullYear(), quarterStartMonth + 3, 0),
+  ).getUTCDate()
+
+  const isFullCalendarQuarter =
+    start.getUTCDate() === 1 &&
+    isQuarterStart &&
+    end.getUTCFullYear() === start.getUTCFullYear() &&
+    end.getUTCMonth() === quarterStartMonth + 2 &&
+    end.getUTCDate() === lastDayOfQuarter
+
+  if (isFullCalendarQuarter) {
+    return 'QUARTERLY'
+  }
+
+  return 'CUSTOM'
 }
 
 function normalizeBaselineDesign(value: string) {
@@ -400,6 +506,29 @@ function countValues(values: Array<string | null | undefined>) {
   }, {})
 }
 
+function countArrayValues(
+  rows: AssignmentRow[],
+  field:
+    | 'operational_diagnostic_findings'
+    | 'structural_drivers'
+    | 'workload_composition'
+    | 'derived_strain_signals',
+) {
+  return rows.reduce<Record<string, number>>((accumulator, row) => {
+    const values = Array.isArray(row[field]) ? row[field] ?? [] : []
+
+    values.forEach((value) => {
+      const normalized = String(value ?? '').trim()
+
+      if (normalized) {
+        accumulator[normalized] = (accumulator[normalized] ?? 0) + 1
+      }
+    })
+
+    return accumulator
+  }, {})
+}
+
 function sumCounts(counts: Record<string, number>) {
   return Object.values(counts).reduce((sum, count) => sum + count, 0)
 }
@@ -418,6 +547,412 @@ function filterCounts(
     },
     {},
   )
+}
+
+
+function normalizedSignalValues(row: AssignmentRow) {
+  return [
+    row.starting_strain_signal,
+    ...(Array.isArray(row.derived_strain_signals)
+      ? row.derived_strain_signals
+      : []),
+    ...(Array.isArray(row.operational_diagnostic_findings)
+      ? row.operational_diagnostic_findings
+      : []),
+  ]
+    .map((value) => String(value ?? '').trim().toUpperCase())
+    .filter(Boolean)
+}
+
+function assignmentHasSignal(
+  row: AssignmentRow,
+  token: 'HIDDEN' | 'SEVERE',
+) {
+  return normalizedSignalValues(row).some((value) =>
+    value.includes(token),
+  )
+}
+
+function joinRoleNames(rolePools: string[]) {
+  const unique = Array.from(new Set(rolePools.filter(Boolean)))
+
+  if (unique.length === 0) {
+    return NOT_CAPTURED
+  }
+
+  if (unique.length === 1) {
+    return unique[0]
+  }
+
+  if (unique.length === 2) {
+    return `${unique[0]} and ${unique[1]}`
+  }
+
+  return `${unique.slice(0, -1).join(', ')}, and ${
+    unique[unique.length - 1]
+  }`
+}
+
+function rolePoolOrder(rolePool: string) {
+  const order = ['RN', 'LPN', 'CNA']
+  const index = order.indexOf(rolePool)
+
+  return index === -1 ? order.length : index
+}
+
+function roleStatusForProfile(profile: {
+  hiddenStrainCount: number
+  severeStartCount: number
+  coverageGapCount: number
+  assignmentLoadSkew: number
+  aboveBaselineCount: number
+  localizedOverloadCount: number
+  highIntensityEventCount: number
+}): RolePoolStructuralStatus {
+  if (
+    profile.coverageGapCount > 0 &&
+    profile.hiddenStrainCount > 0
+  ) {
+    return 'COVERAGE INSTABILITY WITH HIDDEN STRAIN'
+  }
+
+  if (profile.coverageGapCount > 0) {
+    return 'COVERAGE INSTABILITY'
+  }
+
+  if (profile.severeStartCount >= 2) {
+    return 'REPEATED SEVERE STARTING STRAIN'
+  }
+
+  if (profile.severeStartCount === 1) {
+    return 'SEVERE STARTING STRAIN'
+  }
+
+  if (profile.hiddenStrainCount > 0) {
+    return 'HIDDEN STRAIN'
+  }
+
+  if (
+    profile.assignmentLoadSkew > 0 ||
+    profile.aboveBaselineCount > 0 ||
+    profile.localizedOverloadCount > 0 ||
+    profile.highIntensityEventCount > 0
+  ) {
+    return 'VISIBLE STRAIN'
+  }
+
+  return 'STABLE'
+}
+
+function buildRolePoolProfileSummary(profile: Omit<RolePoolProfile, 'summary'>) {
+  const findings: string[] = []
+
+  if (profile.coverageGapCount > 0) {
+    findings.push(
+      `${profile.rolePool} recorded ${
+        profile.coverageGapCount
+      } coverage gap event${
+        profile.coverageGapCount === 1 ? '' : 's'
+      }`,
+    )
+  }
+
+  if (profile.hiddenStrainCount > 0) {
+    findings.push(
+      `${profile.rolePool} showed hidden strain in ${
+        profile.hiddenStrainCount
+      } assignment${
+        profile.hiddenStrainCount === 1 ? '' : 's'
+      }`,
+    )
+  }
+
+  if (profile.severeStartCount > 0) {
+    findings.push(
+      `${profile.rolePool} started with severe strain ${
+        profile.severeStartCount
+      } time${profile.severeStartCount === 1 ? '' : 's'}`,
+    )
+  }
+
+  if (profile.aboveBaselineCount > 0) {
+    findings.push(
+      `${profile.aboveBaselineCount} ${profile.rolePool} assignment${
+        profile.aboveBaselineCount === 1 ? '' : 's'
+      } exceeded baseline design`,
+    )
+  }
+
+  if (profile.localizedOverloadCount > 0) {
+    findings.push(
+      `${profile.localizedOverloadCount} localized overload assignment${
+        profile.localizedOverloadCount === 1 ? '' : 's'
+      } affected ${profile.rolePool}`,
+    )
+  }
+
+  if (
+    profile.dominantReserveCapacity &&
+    profile.dominantReserveCapacity !== 'NONE' &&
+    profile.dominantReserveCapacity !== NOT_CAPTURED
+  ) {
+    findings.push(
+      `${profile.rolePool} reserve capacity was ${profile.dominantReserveCapacity.toLowerCase()}`,
+    )
+  }
+
+  if (findings.length === 0) {
+    return `${profile.rolePool} showed no persisted role-specific strain signal in this reporting window.`
+  }
+
+  return `${findings.join('. ')}.`
+}
+
+function buildRolePoolProfiles(
+  assignments: AssignmentRow[],
+  events: EventRow[],
+): RolePoolProfile[] {
+  const rolePools = Array.from(
+    new Set([
+      ...assignments.map((row) => normalizeRolePool(row.role_pool)),
+      ...events.map((row) => normalizeRolePool(row.role_pool)),
+    ]),
+  )
+    .filter(
+      (rolePool) =>
+        rolePool &&
+        rolePool !== 'NONE' &&
+        rolePool !== NOT_CAPTURED,
+    )
+    .sort(
+      (first, second) =>
+        rolePoolOrder(first) - rolePoolOrder(second) ||
+        first.localeCompare(second),
+    )
+
+  return rolePools.map((rolePool) => {
+    const roleAssignments = assignments.filter(
+      (row) => normalizeRolePool(row.role_pool) === rolePool,
+    )
+
+    const roleEvents = events.filter(
+      (row) => normalizeRolePool(row.role_pool) === rolePool,
+    )
+
+    const assignmentLoadSkew = roleAssignments.reduce(
+      (sum, row) => sum + Number(row.load_modifier ?? 0),
+      0,
+    )
+
+    const aboveBaselineCount = roleAssignments.filter(
+      (row) => row.above_baseline_flag === true,
+    ).length
+
+    const localizedOverloadCount = roleAssignments.filter(
+      (row) => row.localized_overload_flag === true,
+    ).length
+
+    const hiddenStrainCount = roleAssignments.filter((row) =>
+      assignmentHasSignal(row, 'HIDDEN'),
+    ).length
+
+    const severeStartCount = roleAssignments.filter((row) =>
+      assignmentHasSignal(row, 'SEVERE'),
+    ).length
+
+    const coverageGapCount = roleEvents.filter(
+      (row) =>
+        String(row.event_type ?? '').trim().toUpperCase() ===
+        'COVERAGE GAP',
+    ).length
+
+    const highIntensityEventCount = roleEvents.filter(
+      (row) =>
+        String(row.event_intensity ?? '').trim().toUpperCase() ===
+        'HIGH',
+    ).length
+
+    const reserveCapacityCounts = countValues(
+      roleAssignments.map((row) => row.reserve_capacity_status),
+    )
+
+    const dominantReserveCapacity =
+      dominantFromCounts(reserveCapacityCounts) ?? NOT_CAPTURED
+
+    const status = roleStatusForProfile({
+      hiddenStrainCount,
+      severeStartCount,
+      coverageGapCount,
+      assignmentLoadSkew,
+      aboveBaselineCount,
+      localizedOverloadCount,
+      highIntensityEventCount,
+    })
+
+    const severityScore =
+      coverageGapCount * 8 +
+      severeStartCount * 6 +
+      hiddenStrainCount * 5 +
+      highIntensityEventCount * 4 +
+      localizedOverloadCount * 3 +
+      aboveBaselineCount * 2 +
+      Math.max(assignmentLoadSkew, 0)
+
+    const profileWithoutSummary = {
+      rolePool,
+      assignmentCount: roleAssignments.length,
+      eventCount: roleEvents.length,
+      assignmentLoadSkew,
+      aboveBaselineCount,
+      localizedOverloadCount,
+      hiddenStrainCount,
+      severeStartCount,
+      coverageGapCount,
+      highIntensityEventCount,
+      dominantReserveCapacity,
+      status,
+      severityScore,
+    }
+
+    return {
+      ...profileWithoutSummary,
+      summary: buildRolePoolProfileSummary(profileWithoutSummary),
+    }
+  })
+}
+
+function materiallyAffectedRoleProfiles(
+  profiles: RolePoolProfile[],
+) {
+  return profiles.filter(
+    (profile) =>
+      profile.status !== 'STABLE' ||
+      profile.coverageGapCount > 0 ||
+      profile.hiddenStrainCount > 0 ||
+      profile.severeStartCount > 0,
+  )
+}
+
+function rolePoolScope(profiles: RolePoolProfile[]) {
+  const materialProfiles = materiallyAffectedRoleProfiles(profiles)
+
+  if (materialProfiles.length === 0) {
+    return profiles[0]?.rolePool ?? NOT_CAPTURED
+  }
+
+  const names = joinRoleNames(
+    materialProfiles.map((profile) => profile.rolePool),
+  )
+
+  return materialProfiles.length === 1
+    ? names
+    : `${names} role pools`
+}
+
+function rolePoolNarrative(profiles: RolePoolProfile[]) {
+  const materialProfiles = materiallyAffectedRoleProfiles(profiles)
+
+  if (materialProfiles.length === 0) {
+    return 'No material role-pool strain pattern was persisted for this reporting window.'
+  }
+
+  return materialProfiles
+    .map((profile) => profile.summary)
+    .join(' ')
+}
+
+function rolePoolPredictabilityNarrative(
+  profiles: RolePoolProfile[],
+) {
+  const coverageRoles = profiles
+    .filter((profile) => profile.coverageGapCount > 0)
+    .map((profile) => profile.rolePool)
+
+  const hiddenStrainRoles = profiles
+    .filter((profile) => profile.hiddenStrainCount > 0)
+    .map((profile) => profile.rolePool)
+
+  const repeatedSevereRoles = profiles
+    .filter((profile) => profile.severeStartCount >= 2)
+    .map((profile) => profile.rolePool)
+
+  const parts: string[] = []
+
+  if (coverageRoles.length > 0) {
+    parts.push(
+      `Coverage instability was recorded in ${joinRoleNames(
+        coverageRoles,
+      )}.`,
+    )
+  }
+
+  if (hiddenStrainRoles.length > 0) {
+    parts.push(
+      `Hidden strain was present in ${joinRoleNames(
+        hiddenStrainRoles,
+      )}.`,
+    )
+  }
+
+  if (repeatedSevereRoles.length > 0) {
+    parts.push(
+      `Repeated severe starting strain was present in ${joinRoleNames(
+        repeatedSevereRoles,
+      )}.`,
+    )
+  }
+
+  return parts.join(' ')
+}
+
+function roleAwareLeadershipCue(
+  profiles: RolePoolProfile[],
+  fallback: string,
+) {
+  const coverageRoles = profiles
+    .filter((profile) => profile.coverageGapCount > 0)
+    .map((profile) => profile.rolePool)
+
+  if (coverageRoles.length > 0) {
+    return `Review coverage instability affecting ${joinRoleNames(
+      coverageRoles,
+    )} and protect the distinct structural needs of every affected role pool.`
+  }
+
+  const hiddenStrainRoles = profiles
+    .filter((profile) => profile.hiddenStrainCount > 0)
+    .map((profile) => profile.rolePool)
+
+  const repeatedSevereRoles = profiles
+    .filter((profile) => profile.severeStartCount >= 2)
+    .map((profile) => profile.rolePool)
+
+  if (
+    hiddenStrainRoles.length > 0 ||
+    repeatedSevereRoles.length > 0
+  ) {
+    const parts: string[] = []
+
+    if (hiddenStrainRoles.length > 0) {
+      parts.push(
+        `hidden strain in ${joinRoleNames(hiddenStrainRoles)}`,
+      )
+    }
+
+    if (repeatedSevereRoles.length > 0) {
+      parts.push(
+        `repeated severe starting strain in ${joinRoleNames(
+          repeatedSevereRoles,
+        )}`,
+      )
+    }
+
+    return `Review ${parts.join(
+      ' and ',
+    )} before these role-specific pressures become normalized operating conditions.`
+  }
+
+  return fallback
 }
 
 function bufferProfile(bufferCount: number, highCostCount: number) {
@@ -820,10 +1355,14 @@ function buildTrendRows(
 
 function summarizeForPersistence(
   rows: TrendRow[],
+  assignments: AssignmentRow[],
   events: EventRow[],
   unit: string,
   windowStart: string,
   windowEnd: string,
+  assessmentPeriod: string,
+  assessmentDayCount: number,
+  shiftScope: ShiftTypeFilter,
   lastActionTaken: string,
   observedOutcome: string,
 ) {
@@ -832,7 +1371,57 @@ function summarizeForPersistence(
     0,
   )
 
+  const operationalDiagnosticFindingCounts = countArrayValues(
+    assignments,
+    'operational_diagnostic_findings',
+  )
+
+  const structuralDriverCounts = countArrayValues(
+    assignments,
+    'structural_drivers',
+  )
+
+  const workloadCompositionCounts = countArrayValues(
+    assignments,
+    'workload_composition',
+  )
+
+  const derivedStrainSignalCounts = countArrayValues(
+    assignments,
+    'derived_strain_signals',
+  )
+
+  const reserveCapacityStatusCounts = countValues(
+    assignments.map((row) => row.reserve_capacity_status),
+  )
+
+  const aboveBaselineAssignmentCount = assignments.filter(
+    (row) => row.above_baseline_flag === true,
+  ).length
+
+  const localizedOverloadAssignmentCount = assignments.filter(
+    (row) => row.localized_overload_flag === true,
+  ).length
+
+  const aboveBaselineAssignmentPercentage = assignments.length
+    ? Math.round(
+        (aboveBaselineAssignmentCount / assignments.length) * 100,
+      )
+    : 0
+
+  const maximumAssignmentOverload = assignments.reduce(
+    (maximum, row) =>
+      Math.max(maximum, Number(row.assignment_overload_delta ?? 0)),
+    0,
+  )
+
   const eventSummary = eventStats(events)
+  const roleProfiles = buildRolePoolProfiles(assignments, events)
+  const roleNarrative = rolePoolNarrative(roleProfiles)
+  const rolePredictability =
+    rolePoolPredictabilityNarrative(roleProfiles)
+  const affectedRoleScope = rolePoolScope(roleProfiles)
+
   const totalStabilityEvents = eventSummary.totalStabilityEvents
   const highIntensityEventCount =
     eventSummary.highIntensityEventCount
@@ -852,17 +1441,45 @@ function summarizeForPersistence(
           highIntensityEventCount > 0 ||
           bufferUseProfile === 'LOW' ||
           bufferUseProfile === 'MODERATE' ||
-          assignmentLoadSkew > 0
+          assignmentLoadSkew > 0 ||
+          materiallyAffectedRoleProfiles(roleProfiles).length > 0
         ? 'STRAINING'
         : rows.length
           ? 'STABLE'
           : 'NO DATA'
 
+  const fallbackLeadershipCue =
+    eventSummary.dominantStabilityForces === 'Coverage'
+      ? 'Review coverage instability and staffing resilience before recurrence escalates.'
+      : rows.find(
+            (row) => row.trendStatus === 'UNSTABLE',
+          )?.leadershipActionCue ??
+        rows.find(
+          (row) => row.trendStatus === 'STRAINING',
+        )?.leadershipActionCue ??
+        rows[0]?.leadershipActionCue ??
+        'No trend-buffer output available.'
+
   const baseSummary = {
     unit,
     window_start: windowStart,
     window_end: windowEnd,
+    assessment_period: assessmentPeriod,
+    assessment_day_count: assessmentDayCount,
+    shift_scope: shiftScope,
     assignment_load_skew: assignmentLoadSkew,
+    operational_diagnostic_finding_counts:
+      operationalDiagnosticFindingCounts,
+    structural_driver_counts: structuralDriverCounts,
+    workload_composition_counts: workloadCompositionCounts,
+    derived_strain_signal_counts: derivedStrainSignalCounts,
+    reserve_capacity_status_counts: reserveCapacityStatusCounts,
+    above_baseline_assignment_count: aboveBaselineAssignmentCount,
+    above_baseline_assignment_percentage:
+      aboveBaselineAssignmentPercentage,
+    maximum_assignment_overload: maximumAssignmentOverload,
+    localized_overload_assignment_count:
+      localizedOverloadAssignmentCount,
     total_stability_events: totalStabilityEvents,
     high_intensity_event_count: highIntensityEventCount,
     late_or_last_minute_event_count:
@@ -875,30 +1492,74 @@ function summarizeForPersistence(
         ? [eventSummary.dominantStabilityForces]
         : ['NONE'],
     trend_status: trendStatusValue,
-    leadership_action_cue:
-      eventSummary.dominantStabilityForces === 'Coverage'
-        ? 'Review coverage instability and staffing resilience before recurrence escalates.'
-        : rows.find(
-              (row) => row.trendStatus === 'UNSTABLE',
-            )?.leadershipActionCue ??
-          rows.find(
-            (row) => row.trendStatus === 'STRAINING',
-          )?.leadershipActionCue ??
-          rows[0]?.leadershipActionCue ??
-          'No trend-buffer output available.',
+    leadership_action_cue: roleAwareLeadershipCue(
+      roleProfiles,
+      fallbackLeadershipCue,
+    ),
   }
 
   const actions = actionSet(baseSummary)
 
+  const coverageRoles = roleProfiles
+    .filter((profile) => profile.coverageGapCount > 0)
+    .map((profile) => profile.rolePool)
+
+  const hiddenStrainRoles = roleProfiles
+    .filter((profile) => profile.hiddenStrainCount > 0)
+    .map((profile) => profile.rolePool)
+
+  const repeatedSevereRoles = roleProfiles
+    .filter((profile) => profile.severeStartCount >= 2)
+    .map((profile) => profile.rolePool)
+
+  const roleAwareImmediate2 =
+    coverageRoles.length > 0
+      ? `Review the recorded coverage gap in ${joinRoleNames(
+          coverageRoles,
+        )} without transferring that attribution to another role pool.`
+      : actions.immediate2
+
+  const roleAwareShort2 =
+    hiddenStrainRoles.length > 0 ||
+    repeatedSevereRoles.length > 0
+      ? `Protect role-pool reliability by addressing ${
+          hiddenStrainRoles.length > 0
+            ? `hidden strain in ${joinRoleNames(
+                hiddenStrainRoles,
+              )}`
+            : ''
+        }${
+          hiddenStrainRoles.length > 0 &&
+          repeatedSevereRoles.length > 0
+            ? ' and '
+            : ''
+        }${
+          repeatedSevereRoles.length > 0
+            ? `repeated severe starting strain in ${joinRoleNames(
+                repeatedSevereRoles,
+              )}`
+            : ''
+        }.`
+      : actions.short2
+
+  const baseLeadershipInterpretation =
+    leadershipInterpretation(baseSummary)
+
+  const basePredictabilityInsight =
+    predictabilityInsight(baseSummary)
+
+  const baseRiskOutlook = riskOutlook(baseSummary)
+
   return {
     ...baseSummary,
     stability_score: null,
-    predictability_insight:
-      predictabilityInsight(baseSummary),
-    most_affected_role_pool:
-      eventSummary.affectedRole !== 'NONE'
-        ? eventSummary.affectedRole
-        : rows[0]?.rolePool ?? NOT_CAPTURED,
+    predictability_insight: [
+      basePredictabilityInsight,
+      rolePredictability,
+    ]
+      .filter(Boolean)
+      .join(' '),
+    most_affected_role_pool: affectedRoleScope,
     most_affected_shift:
       eventSummary.affectedShift !== 'NONE'
         ? eventSummary.affectedShift
@@ -906,13 +1567,23 @@ function summarizeForPersistence(
     fragility_level: fragilityLevel(baseSummary),
     cost_pressure_signal:
       eventSummary.costPressureSignal,
-    leadership_interpretation:
-      leadershipInterpretation(baseSummary),
+    leadership_interpretation: [
+      baseLeadershipInterpretation,
+      roleNarrative,
+    ]
+      .filter(Boolean)
+      .join(' '),
     immediate_action_1: actions.immediate1,
-    immediate_action_2: actions.immediate2,
+    immediate_action_2: roleAwareImmediate2,
     short_term_action_1: actions.short1,
-    short_term_action_2: actions.short2,
-    risk_outlook: riskOutlook(baseSummary),
+    short_term_action_2: roleAwareShort2,
+    risk_outlook: [
+      baseRiskOutlook.charAt(0).toUpperCase() +
+        baseRiskOutlook.slice(1),
+      rolePredictability,
+    ]
+      .filter(Boolean)
+      .join(' '),
     last_action_taken: cleanAction(lastActionTaken),
     observed_outcome: cleanOutcome(observedOutcome),
   }
@@ -947,6 +1618,8 @@ function selectPreviousEligibleWindow(
             row.window_end === currentWindow.windowEnd
           ) &&
           row.window_end < currentWindow.windowStart &&
+          row.assessment_period === currentWindow.assessmentPeriod &&
+          row.shift_scope === currentWindow.shiftScope &&
           historicalHasWorkforceEvidence(row),
       )
       .sort(
@@ -1032,8 +1705,11 @@ function buildWorkforceReliabilityOutput(
 
     if (
       eventType &&
-      (staffingInstabilityEventTypes.has(eventType) ||
-        force === 'Coverage')
+      (setHasNormalizedValue(
+        staffingInstabilityEventTypes,
+        eventType,
+      ) ||
+        force.toUpperCase() === 'COVERAGE')
     ) {
       accumulator[eventType] =
         (accumulator[eventType] ?? 0) + 1
@@ -1167,10 +1843,42 @@ function buildWorkforceReliabilityOutput(
   const repeatedBufferFlag =
     baseSummary.repeated_buffer_depletion_flag
 
+  const roleProfiles = buildRolePoolProfiles(assignments, events)
+
+  const materiallyAffectedProfiles =
+    materiallyAffectedRoleProfiles(roleProfiles)
+
+  const hiddenStrainProfiles = roleProfiles.filter(
+    (profile) => profile.hiddenStrainCount > 0,
+  )
+
+  const severeStartProfiles = roleProfiles.filter(
+    (profile) => profile.severeStartCount > 0,
+  )
+
+  const repeatedSevereProfiles = roleProfiles.filter(
+    (profile) => profile.severeStartCount >= 2,
+  )
+
+  const coverageGapProfiles = roleProfiles.filter(
+    (profile) => profile.coverageGapCount > 0,
+  )
+
+  const roleSpecificStructuralPressure =
+    hiddenStrainProfiles.length > 0 ||
+    severeStartProfiles.length > 0 ||
+    coverageGapProfiles.length > 0 ||
+    materiallyAffectedProfiles.some(
+      (profile) =>
+        profile.aboveBaselineCount > 0 ||
+        profile.localizedOverloadCount > 0,
+    )
+
   if (
     reliabilityPatternDirection === 'DECREASING' &&
     staffingInstabilityEventCount < previousStaffingCount &&
-    baseSummary.trend_status !== 'UNSTABLE'
+    baseSummary.trend_status !== 'UNSTABLE' &&
+    !roleSpecificStructuralPressure
   ) {
     workforceReliabilityStatus = 'RECOVERING'
   } else if (
@@ -1188,13 +1896,18 @@ function buildWorkforceReliabilityOutput(
     repeatedWorkforceReliabilityFlag ||
     repeatedAdaptationFlag ||
     bufferUseProfile === 'MODERATE' ||
-    assignmentLoadSkew > 0
+    assignmentLoadSkew > 0 ||
+    hiddenStrainProfiles.length > 0 ||
+    repeatedSevereProfiles.length > 0 ||
+    coverageGapProfiles.length > 0
   ) {
     workforceReliabilityStatus = 'STRAINING'
   } else if (
     staffingInstabilityEventCount === 1 ||
     bufferResponseCount === 1 ||
-    lateEventCount === 1
+    lateEventCount === 1 ||
+    severeStartProfiles.length === 1 ||
+    materiallyAffectedProfiles.length === 1
   ) {
     workforceReliabilityStatus = 'WATCH'
   } else if (
@@ -1204,7 +1917,8 @@ function buildWorkforceReliabilityOutput(
     !repeatedAdaptationFlag &&
     bufferResponseCount === 0 &&
     assignmentLoadSkew === 0 &&
-    highIntensityEventCount === 0
+    highIntensityEventCount === 0 &&
+    !roleSpecificStructuralPressure
   ) {
     workforceReliabilityStatus = 'STABLE'
   }
@@ -1217,17 +1931,41 @@ function buildWorkforceReliabilityOutput(
 
   const summaryParts = [
     `Workforce reliability status is ${workforceReliabilityStatus}.`,
-    `${staffingInstabilityEventCount} staffing-instability event(s) were recorded in the loaded window.`,
+    staffingInstabilityEventCount > 0
+      ? `${staffingInstabilityEventCount} staffing-instability event(s) were recorded in the loaded window.`
+      : 'No staffing-instability event was recorded in the loaded window.',
+    lateEventCount > 0
+      ? `${lateEventCount} late or last-minute event(s) were recorded.`
+      : 'No late or last-minute event was recorded; this does not remove assignment-based hidden or severe strain.',
     dominantWorkforceEventType
       ? `The dominant workforce event was ${dominantWorkforceEventType}.`
       : null,
+    coverageGapProfiles.length > 0
+      ? `Coverage gap attribution remained with ${joinRoleNames(
+          coverageGapProfiles.map((profile) => profile.rolePool),
+        )}.`
+      : null,
+    hiddenStrainProfiles.length > 0
+      ? `Hidden strain was present in ${joinRoleNames(
+          hiddenStrainProfiles.map((profile) => profile.rolePool),
+        )}.`
+      : null,
+    repeatedSevereProfiles.length > 0
+      ? `Repeated severe starting strain was present in ${joinRoleNames(
+          repeatedSevereProfiles.map((profile) => profile.rolePool),
+        )}.`
+      : severeStartProfiles.length > 0
+        ? `Severe starting strain was present in ${joinRoleNames(
+            severeStartProfiles.map((profile) => profile.rolePool),
+          )}.`
+        : null,
     `The longitudinal pattern direction is ${reliabilityPatternDirection}.`,
     repeatedWorkforceEventType
       ? `${repeatedWorkforceEventType} repeated across the current and preceding eligible windows.`
       : null,
     affectedRole &&
     affectedRole !== NOT_CAPTURED
-      ? `The most affected role pool was ${affectedRole}.`
+      ? `Materially affected role-pool scope: ${affectedRole}.`
       : null,
     affectedShift &&
     affectedShift !== NOT_CAPTURED
@@ -1326,6 +2064,30 @@ function buildWorkforceReliabilityOutput(
     )
   }
 
+  if (hiddenStrainProfiles.length > 0) {
+    consequenceParts.push(
+      `Hidden strain in ${joinRoleNames(
+        hiddenStrainProfiles.map((profile) => profile.rolePool),
+      )} may reduce reserve capacity and increase fatigue even when staffing counts appear adequate.`,
+    )
+  }
+
+  if (repeatedSevereProfiles.length > 0) {
+    consequenceParts.push(
+      `Repeated severe starting strain in ${joinRoleNames(
+        repeatedSevereProfiles.map((profile) => profile.rolePool),
+      )} indicates that difficult shift starts are recurring rather than isolated.`,
+    )
+  }
+
+  if (coverageGapProfiles.length > 0) {
+    consequenceParts.push(
+      `Coverage gaps affecting ${joinRoleNames(
+        coverageGapProfiles.map((profile) => profile.rolePool),
+      )} may weaken predictability and transfer pressure to other role pools if unresolved.`,
+    )
+  }
+
   if (
     workforceReliabilityStatus === 'RECOVERING' ||
     reliabilityPatternDirection === 'DECREASING'
@@ -1335,7 +2097,10 @@ function buildWorkforceReliabilityOutput(
     )
   }
 
-  if (workforceReliabilityStatus === 'STABLE') {
+  if (
+    workforceReliabilityStatus === 'STABLE' &&
+    !roleSpecificStructuralPressure
+  ) {
     consequenceParts.push(
       'Current workforce reliability exposure is contained for this loaded reporting window.',
     )
@@ -1343,7 +2108,7 @@ function buildWorkforceReliabilityOutput(
 
   if (consequenceParts.length === 0) {
     consequenceParts.push(
-      'Current workforce reliability evidence should continue to be monitored because recurring staffing instability may weaken predictability, increase fatigue, and place pressure on continuity if the pattern persists.',
+      'Current workforce reliability and assignment evidence should continue to be monitored because role-specific hidden strain, severe starts, or staffing instability may weaken predictability, increase fatigue, and place pressure on continuity if the pattern persists.',
     )
   }
 
@@ -1393,6 +2158,9 @@ export default function SSITrendBufferPage() {
     useState(false)
   const [logoutInProgress, setLogoutInProgress] =
     useState(false)
+
+  const [organizationId, setOrganizationId] =
+    useState<string | null>(null)
 
   const [filters, setFilters] = useState(initialFilters)
   const [loadedWindow, setLoadedWindow] =
@@ -1458,6 +2226,7 @@ export default function SSITrendBufferPage() {
     setAccessFailure(false)
     setRedirectingToLogin(false)
     setAuthorized(false)
+    setOrganizationId(null)
 
     try {
       const {
@@ -1506,7 +2275,7 @@ export default function SSITrendBufferPage() {
         await withTimeout(
           supabase
             .from('user_roles')
-            .select('role,status')
+            .select('role,status,organization_id')
             .eq('user_id', session.user.id)
             .maybeSingle(),
           ACCESS_TIMEOUT_MS,
@@ -1528,7 +2297,8 @@ export default function SSITrendBufferPage() {
         allowedRoles.includes(roleRecord?.role ?? '') &&
         allowedStatuses.includes(
           roleRecord?.status ?? '',
-        )
+        ) &&
+        Boolean(roleRecord?.organization_id)
 
       if (!isAuthorized) {
         await safeSignOut()
@@ -1546,7 +2316,8 @@ export default function SSITrendBufferPage() {
         return
       }
 
-      setAuthorized(true)
+       setOrganizationId(roleRecord?.organization_id ?? null)
+       setAuthorized(true)
     } catch {
       if (
         mountedRef.current &&
@@ -1584,25 +2355,44 @@ export default function SSITrendBufferPage() {
       windowStart: filters.windowStart,
       windowEnd: filters.windowEnd,
       shiftType: filters.shiftType,
+      assessmentPeriod: assessmentPeriodForWindow(
+        filters.windowStart,
+        filters.windowEnd,
+      ),
+      assessmentDayCount: inclusiveDayCount(
+        filters.windowStart,
+        filters.windowEnd,
+      ),
+      shiftScope: filters.shiftType,
     }
 
     return summarizeForPersistence(
       trendRows,
+      assignments,
       events,
       sourceWindow.unit,
       sourceWindow.windowStart,
       sourceWindow.windowEnd,
+      sourceWindow.assessmentPeriod,
+      sourceWindow.assessmentDayCount,
+      sourceWindow.shiftScope,
       lastActionTaken,
       observedOutcome,
     )
   }, [
     trendRows,
+    assignments,
     events,
     loadedWindow,
     filters,
     lastActionTaken,
     observedOutcome,
   ])
+
+  const rolePoolProfiles = useMemo(
+    () => buildRolePoolProfiles(assignments, events),
+    [assignments, events],
+  )
 
   const workforceReliability = useMemo(() => {
     if (!loadedWindow) {
@@ -1743,6 +2533,13 @@ export default function SSITrendBufferPage() {
       return
     }
 
+    if (!organizationId) {
+      setMessage(
+        'SSI could not identify the healthcare organization. Return to login and try  again.',
+      )
+      return
+    }
+
     if (
       !validateWindow(
         filters.unit,
@@ -1760,8 +2557,9 @@ export default function SSITrendBufferPage() {
       let assignmentQuery = supabase
         .from('ssi_assignment_instances')
         .select(
-          'unit, role_pool, shift_type, assignment_date, baseline_design, load_modifier, complexity_flag, starting_strain_signal',
+          'unit, role_pool, shift_type, assignment_date, baseline_design, load_modifier, complexity_flag, starting_strain_signal, operational_diagnostic_findings, structural_drivers, workload_composition, derived_strain_signals, reserve_capacity_status, localized_overload_flag, above_baseline_flag, assignment_overload_delta',
         )
+        .eq('organization_id', organizationId)
         .eq('unit', filters.unit.trim())
         .gte('assignment_date', filters.windowStart)
         .lte('assignment_date', filters.windowEnd)
@@ -1769,8 +2567,9 @@ export default function SSITrendBufferPage() {
       let eventQuery = supabase
         .from('ssi_stability_events')
         .select(
-          'unit, role_pool, shift_type, event_date, timing_category, event_type, buffer_response, stability_force, event_intensity, buffer_cost_band',
+          'unit, role_pool, shift_type, event_date, timing_category, event_type,  buffer_response, stability_force, event_intensity, buffer_cost_band',
         )
+        .eq('organization_id', organizationId)
         .eq('unit', filters.unit.trim())
         .gte('event_date', filters.windowStart)
         .lte('event_date', filters.windowEnd)
@@ -1787,12 +2586,27 @@ export default function SSITrendBufferPage() {
         )
       }
 
+      const assessmentDayCount = inclusiveDayCount(
+        filters.windowStart,
+        filters.windowEnd,
+      )
+
+      const assessmentPeriod = assessmentPeriodForWindow(
+        filters.windowStart,
+        filters.windowEnd,
+      )
+
+      const shiftScope = filters.shiftType
+
       const historicalQuery = supabase
         .from('ssi_trend_buffer')
         .select(
-          'id, unit, window_start, window_end, trend_status, stability_score, cost_pressure_signal, fragility_level, last_action_taken, observed_outcome, updated_at, workforce_event_counts, organizational_adaptation_counts, staffing_instability_event_count, buffer_response_count, high_cost_buffer_response_count, dominant_workforce_event_type, dominant_organizational_adaptation, repeated_workforce_event_type, repeated_organizational_adaptation, workforce_reliability_status, reliability_pattern_direction, repeated_workforce_reliability_flag, repeated_adaptation_flag, consecutive_affected_windows, workforce_reliability_summary, workforce_consequence_outlook',
+          'id, unit, window_start, window_end, assessment_period, assessment_day_count, shift_scope, trend_status, stability_score, cost_pressure_signal, fragility_level, last_action_taken, observed_outcome, updated_at, workforce_event_counts, organizational_adaptation_counts, staffing_instability_event_count, buffer_response_count, high_cost_buffer_response_count, dominant_workforce_event_type, dominant_organizational_adaptation, repeated_workforce_event_type, repeated_organizational_adaptation, workforce_reliability_status, reliability_pattern_direction, repeated_workforce_reliability_flag, repeated_adaptation_flag, consecutive_affected_windows, workforce_reliability_summary, workforce_consequence_outlook',
         )
+        .eq('organization_id', organizationId)
         .eq('unit', filters.unit.trim())
+        .eq('assessment_period', assessmentPeriod)
+        .eq('shift_scope', shiftScope)
         .order('window_start', { ascending: false })
         .limit(12)
 
@@ -1836,6 +2650,9 @@ export default function SSITrendBufferPage() {
         windowStart: filters.windowStart,
         windowEnd: filters.windowEnd,
         shiftType: filters.shiftType,
+        assessmentPeriod,
+        assessmentDayCount,
+        shiftScope,
       }
 
       setAssignments(loadedAssignments)
@@ -1846,7 +2663,9 @@ export default function SSITrendBufferPage() {
       const currentWindow = loadedHistory.find(
         (row) =>
           row.window_start === filters.windowStart &&
-          row.window_end === filters.windowEnd,
+          row.window_end === filters.windowEnd &&
+          row.assessment_period === assessmentPeriod &&
+          row.shift_scope === shiftScope,
       )
 
       setLastActionTaken(
@@ -1901,7 +2720,14 @@ export default function SSITrendBufferPage() {
       return
     }
 
-    if (!loadedWindow) {
+    if (!organizationId) {
+      setMessage(
+       'SSI could not identify the healthcare organization. Return to login and try  again.',
+      )
+      return
+   }
+
+   if (!loadedWindow) {
       setMessage(
         'Calculate a valid reporting window before saving.',
       )
@@ -1938,6 +2764,7 @@ export default function SSITrendBufferPage() {
         cleanOutcome(observedOutcome)
 
       const payload = {
+        organization_id: organizationId,
         ...persistedSummary,
         ...workforceReliability,
         last_action_taken: memoryLastActionTaken,
@@ -1948,17 +2775,24 @@ export default function SSITrendBufferPage() {
         supabase
           .from('ssi_trend_buffer')
           .upsert(payload, {
-            onConflict: 'unit,window_start,window_end',
+            onConflict:
+              'organization_id,unit,window_start,window_end,assessment_period,shift_scope',
           })
           .select(
-            'id, unit, window_start, window_end, trend_status, stability_score, cost_pressure_signal, fragility_level, last_action_taken, observed_outcome, updated_at, workforce_event_counts, organizational_adaptation_counts, staffing_instability_event_count, buffer_response_count, high_cost_buffer_response_count, dominant_workforce_event_type, dominant_organizational_adaptation, repeated_workforce_event_type, repeated_organizational_adaptation, workforce_reliability_status, reliability_pattern_direction, repeated_workforce_reliability_flag, repeated_adaptation_flag, consecutive_affected_windows, workforce_reliability_summary, workforce_consequence_outlook',
+            'id, unit, window_start, window_end, assessment_period, assessment_day_count, shift_scope, trend_status, stability_score, cost_pressure_signal, fragility_level, last_action_taken, observed_outcome, updated_at, workforce_event_counts, organizational_adaptation_counts, staffing_instability_event_count, buffer_response_count, high_cost_buffer_response_count, dominant_workforce_event_type, dominant_organizational_adaptation, repeated_workforce_event_type, repeated_organizational_adaptation, workforce_reliability_status, reliability_pattern_direction, repeated_workforce_reliability_flag, repeated_adaptation_flag, consecutive_affected_windows, workforce_reliability_summary, workforce_consequence_outlook',
           )
           .maybeSingle(),
         SAVE_TIMEOUT_MS,
       )
 
       if (error) {
-        throw new Error('SSI_TREND_SAVE_FAILED')
+        console.error('SSI trend-buffer save error:', error)
+
+        throw new Error(
+          `${error.code ?? 'UNKNOWN'}: ${error.message}${
+            error.details ? ` — ${error.details}` : ''
+          }`,
+        )
       }
 
       if (!mountedRef.current) {
@@ -1998,9 +2832,15 @@ export default function SSITrendBufferPage() {
       setMessage(
         'The trend-buffer record and leadership action memory were saved.',
       )
-    } catch {
+    } catch (saveError) {
+      console.error('SSI trend-buffer save failure:', saveError)
+
       if (mountedRef.current) {
-        setMessage(SAVE_FAILURE_MESSAGE)
+        setMessage(
+          saveError instanceof Error
+            ? `Trend Buffer save failed: ${saveError.message}`
+            : SAVE_FAILURE_MESSAGE,
+        )
       }
     } finally {
       if (mountedRef.current) {
@@ -2287,7 +3127,9 @@ export default function SSITrendBufferPage() {
               Loaded evidence: {loadedWindow.unit} •{' '}
               {loadedWindow.windowStart} →{' '}
               {loadedWindow.windowEnd} •{' '}
-              {loadedWindow.shiftType}
+              Assessment Period: {loadedWindow.assessmentPeriod} •{' '}
+              Day Count: {loadedWindow.assessmentDayCount} •{' '}
+              Shift Scope: {loadedWindow.shiftScope}
             </p>
           ) : null}
         </form>
@@ -2353,73 +3195,207 @@ export default function SSITrendBufferPage() {
           </h2>
 
           <p style={styles.sectionNote}>
-            Assignment Load Skew reflects persisted assignment
-            count variance. Week 3 Operational Load Burden remains
-            visible in Assignments.
+            Assignment structural intelligence is displayed separately
+            from longitudinal stability intelligence. This presentation
+            change does not alter any SSI calculations or thresholds.
           </p>
 
-          <div style={styles.previewGrid}>
-            <Metric
-              label="Assignment Load Skew"
-              value={skewStatus(
-                persistedSummary.assignment_load_skew,
-              )}
-            />
+          <div style={styles.summaryGroup}>
+            <h3 style={styles.summaryGroupTitle}>
+              Assignment Structural Intelligence
+            </h3>
 
-            <Metric
-              label="Total Stability Events"
-              value={String(
-                persistedSummary.total_stability_events,
-              )}
-            />
+            <p style={styles.sectionNote}>
+              Persisted assignment evidence describing workload design,
+              structural pressure, reserve capacity, and localized
+              overload within the loaded reporting window.
+            </p>
 
-            <Metric
-              label="High Intensity Events"
-              value={String(
-                persistedSummary.high_intensity_event_count,
-              )}
-            />
+            <div style={styles.previewGrid}>
+              <Metric
+                label="Assignment Load Skew"
+                value={skewStatus(
+                  persistedSummary.assignment_load_skew,
+                )}
+              />
 
-            <Metric
-              label="Buffer Use Profile"
-              value={persistedSummary.buffer_use_profile}
-            />
+              <Metric
+                label="Above Baseline Assignments"
+                value={String(
+                  persistedSummary.above_baseline_assignment_count,
+                )}
+              />
 
-            <Metric
-              label="Trend Status"
-              value={persistedSummary.trend_status}
-            />
+              <Metric
+                label="Above Baseline Percentage"
+                value={`${persistedSummary.above_baseline_assignment_percentage}%`}
+              />
 
-            <Metric
-              label="Stability Risk Gauge"
-              value={persistedSummary.fragility_level}
-            />
+              <Metric
+                label="Maximum Assignment Overload"
+                value={String(
+                  persistedSummary.maximum_assignment_overload,
+                )}
+              />
 
-            <Metric
-              label="Fragility Level"
-              value={persistedSummary.fragility_level}
-            />
+              <Metric
+                label="Localized Overload Assignments"
+                value={String(
+                  persistedSummary.localized_overload_assignment_count,
+                )}
+              />
 
-            <Metric
-              label="Cost Pressure"
-              value={
-                persistedSummary.cost_pressure_signal
-              }
-            />
+              <Metric
+                label="Dominant Structural Driver"
+                value={
+                  dominantFromCounts(
+                    persistedSummary.structural_driver_counts,
+                  ) ?? NOT_CAPTURED
+                }
+              />
 
-            <Metric
-              label="Affected Role"
-              value={
-                persistedSummary.most_affected_role_pool
-              }
-            />
+              <Metric
+                label="Dominant Workload Composition"
+                value={
+                  dominantFromCounts(
+                    persistedSummary.workload_composition_counts,
+                  ) ?? NOT_CAPTURED
+                }
+              />
 
-            <Metric
-              label="Affected Shift"
-              value={
-                persistedSummary.most_affected_shift
-              }
-            />
+              <Metric
+                label="Dominant Derived Strain Signal"
+                value={
+                  dominantFromCounts(
+                    persistedSummary.derived_strain_signal_counts,
+                  ) ?? NOT_CAPTURED
+                }
+              />
+
+              <Metric
+                label="Dominant Reserve Capacity Status"
+                value={
+                  dominantFromCounts(
+                    persistedSummary.reserve_capacity_status_counts,
+                  ) ?? NOT_CAPTURED
+                }
+              />
+            </div>
+          </div>
+
+          <div style={styles.summaryGroup}>
+            <h3 style={styles.summaryGroupTitle}>
+              Role-Pool Structural Intelligence
+            </h3>
+
+            <p style={styles.sectionNote}>
+              RN, LPN, and CNA are assessed independently. Coverage
+              gaps remain attributed to the recorded role pool, while
+              hidden strain and repeated severe starting strain remain
+              visible even when another role has the highest aggregate
+              pressure.
+            </p>
+
+            {!rolePoolProfiles.length ? (
+              <p style={styles.message}>
+                No role-pool structural evidence is available for the
+                loaded reporting window.
+              </p>
+            ) : (
+              <div style={styles.narrativeGrid}>
+                {rolePoolProfiles.map((profile) => (
+                  <ReadOnlyNarrative
+                    key={profile.rolePool}
+                    label={`${profile.rolePool} — ${profile.status}`}
+                    value={profile.summary}
+                  />
+                ))}
+              </div>
+            )}
+
+            <div style={styles.previewGrid}>
+              {rolePoolProfiles.map((profile) => (
+                <Metric
+                  key={`${profile.rolePool}-profile`}
+                  label={`${profile.rolePool} Structural Profile`}
+                  value={[
+                    `Hidden: ${profile.hiddenStrainCount}`,
+                    `Severe Starts: ${profile.severeStartCount}`,
+                    `Coverage Gaps: ${profile.coverageGapCount}`,
+                    `Reserve: ${profile.dominantReserveCapacity}`,
+                  ].join(' • ')}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div style={styles.summaryGroup}>
+            <h3 style={styles.summaryGroupTitle}>
+              Longitudinal Stability Intelligence
+            </h3>
+
+            <p style={styles.sectionNote}>
+              Event recurrence, buffer use, fragility, cost pressure,
+              and affected operational areas derived from the loaded
+              reporting window.
+            </p>
+
+            <div style={styles.previewGrid}>
+              <Metric
+                label="Total Stability Events"
+                value={String(
+                  persistedSummary.total_stability_events,
+                )}
+              />
+
+              <Metric
+                label="High Intensity Events"
+                value={String(
+                  persistedSummary.high_intensity_event_count,
+                )}
+              />
+
+              <Metric
+                label="Buffer Use Profile"
+                value={persistedSummary.buffer_use_profile}
+              />
+
+              <Metric
+                label="Trend Status"
+                value={persistedSummary.trend_status}
+              />
+
+              <Metric
+                label="Stability Risk Gauge"
+                value={persistedSummary.fragility_level}
+              />
+
+              <Metric
+                label="Fragility Level"
+                value={persistedSummary.fragility_level}
+              />
+
+              <Metric
+                label="Cost Pressure"
+                value={
+                  persistedSummary.cost_pressure_signal
+                }
+              />
+
+              <Metric
+                label="Materially Affected Role Pools"
+                value={
+                  persistedSummary.most_affected_role_pool
+                }
+              />
+
+              <Metric
+                label="Affected Shift"
+                value={
+                  persistedSummary.most_affected_shift
+                }
+              />
+            </div>
           </div>
         </section>
 
@@ -2792,6 +3768,9 @@ function HistoricalTrendTable({
         <thead>
           <tr>
             <th style={styles.th}>Window</th>
+            <th style={styles.th}>Assessment Period</th>
+            <th style={styles.th}>Day Count</th>
+            <th style={styles.th}>Shift Scope</th>
             <th style={styles.th}>Status</th>
             <th style={styles.th}>Risk Gauge</th>
             <th style={styles.th}>Fragility</th>
@@ -2828,6 +3807,18 @@ function HistoricalTrendTable({
             <tr key={row.id}>
               <td style={styles.td}>
                 {row.window_start} → {row.window_end}
+              </td>
+
+              <td style={styles.td}>
+                {row.assessment_period}
+              </td>
+
+              <td style={styles.td}>
+                {row.assessment_day_count}
+              </td>
+
+              <td style={styles.td}>
+                {row.shift_scope}
               </td>
 
               <td style={styles.td}>
@@ -3187,6 +4178,16 @@ const styles: Record<string, CSSProperties> = {
     color: '#cfc7b5',
     margin: '0 0 16px',
     lineHeight: 1.6,
+  },
+  summaryGroup: {
+    borderTop: '1px solid rgba(214,178,94,0.18)',
+    paddingTop: '18px',
+    marginTop: '18px',
+  },
+  summaryGroupTitle: {
+    color: '#fff8e7',
+    margin: '0 0 6px',
+    fontSize: '16px',
   },
   loadedWindowNote: {
     gridColumn: '1 / -1',

@@ -226,6 +226,8 @@ export default function SSIEventsPage() {
   const [accessFailure, setAccessFailure] = useState(false)
   const [redirectingToLogin, setRedirectingToLogin] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
+  const [organizationId, setOrganizationId] =
+    useState<string | null>(null)
 
   const [header, setHeader] = useState<Header>(initialHeader)
   const [rows, setRows] = useState<EventRow[]>(makeRows)
@@ -265,6 +267,7 @@ export default function SSIEventsPage() {
     setAccessFailure(false)
     setRedirectingToLogin(false)
     setAuthorized(false)
+    setOrganizationId(null)
 
     try {
       const {
@@ -309,7 +312,7 @@ export default function SSIEventsPage() {
       const { data: roleRecord, error: roleError } = await withTimeout(
         supabase
           .from('user_roles')
-          .select('role,status')
+          .select('role,status,organization_id')
           .eq('user_id', session.user.id)
           .maybeSingle(),
         ACCESS_TIMEOUT_MS,
@@ -329,7 +332,8 @@ export default function SSIEventsPage() {
       const isAuthorized =
         Boolean(roleRecord) &&
         allowedRoles.includes(roleRecord?.role ?? '') &&
-        allowedStatuses.includes(roleRecord?.status ?? '')
+        allowedStatuses.includes(roleRecord?.status ?? '') &&
+        Boolean(roleRecord?.organization_id)
 
       if (!isAuthorized) {
         await safeSignOut()
@@ -347,6 +351,7 @@ export default function SSIEventsPage() {
         return
       }
 
+      setOrganizationId(roleRecord?.organization_id ?? null)
       setAuthorized(true)
     } catch {
       if (
@@ -471,7 +476,15 @@ export default function SSIEventsPage() {
 
     setMessage('')
 
-    if (
+
+    if (!organizationId) {
+      setMessage(
+        'SSI could not identify the healthcare organization. Return to login and try       again.',
+      )
+       return
+    }
+
+    if  (
       !header.unit.trim() ||
       !header.date.trim() ||
       !header.shiftType ||
@@ -513,6 +526,7 @@ export default function SSIEventsPage() {
         }
 
         return {
+          organization_id: organizationId,
           event_id: item.eventId,
           unit: header.unit,
           role_pool: item.row.rolePool,

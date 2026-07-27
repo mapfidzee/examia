@@ -54,11 +54,47 @@ type TrendRecord = {
   updated_at: string
 }
 
-type ProfileTableProps = {
-  values: Record<string, number> | null
-  firstColumnLabel: string
-  emptyMessage: string
+type ExecutiveCommunicationOutput = {
+  identity: {
+    unit: string
+    reportingPeriod: string
+    preparedBy: string
+  }
+  situationAssessment: string
+  conditionStatement: string
+  executiveAssessment: Array<{ label: string; value: string }>
+  structuralStory: {
+    narrative: string
+  }
+  consequences: Array<{ title: string; narrative: string }>
+  leadershipPriorities: Array<{
+    rank: number
+    action: string
+    benefit: string
+  }>
+  executiveImplication: string
+  stabilityOutlook: string
+  confidence: {
+    level: string
+    rationale: string
+    evidenceBasis: string[]
+  }
+  evidence: {
+    coreMetrics: Array<{ label: string; value: string }>
+    structuralContext: Array<{ label: string; value: string }>
+    workforceProfile: Array<{ label: string; value: string }>
+    economicDrivers: string[]
+    organizationalLearning: {
+      action: string
+      outcome: string
+      lesson: string
+    }
+    history: Array<{ label: string; value: string }>
+    workforceEventCounts: Record<string, number> | null
+    adaptationCounts: Record<string, number> | null
+  }
 }
+
 
 const allowedRoles = ['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']
 const allowedStatuses = ['ACTIVE']
@@ -165,6 +201,287 @@ function display(value: unknown) {
   if (typeof value === 'boolean') return value ? 'YES' : 'NO'
   if (Array.isArray(value)) return value.length > 0 ? value.join(', ') : MISSING
   return String(value).trim()
+}
+
+function cleanText(value: unknown) {
+  return hasValue(value) ? display(value) : ''
+}
+
+function uniqueValues(values: Array<string | null | undefined>) {
+  return Array.from(
+    new Set(values.map((value) => value?.trim()).filter((value): value is string => Boolean(value))),
+  )
+}
+
+function includesAny(value: unknown, terms: string[]) {
+  const normalized = cleanText(value).toLowerCase()
+  return terms.some((term) => normalized.includes(term))
+}
+
+function numericalValue(value: number | null | undefined) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0
+}
+
+function normalizedStatus(value: unknown) {
+  return cleanText(value).toUpperCase() || 'NOT CLASSIFIED'
+}
+
+function sentence(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+  return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`
+}
+
+function lowerLead(value: string) {
+  if (!value) return value
+  return `${value.charAt(0).toLowerCase()}${value.slice(1)}`
+}
+
+function deriveDirection(record: TrendRecord) {
+  const persisted = normalizedStatus(record.reliability_pattern_direction)
+
+  if (persisted === 'NEW') return 'EMERGING'
+  if (persisted !== 'NOT CLASSIFIED' && persisted !== MISSING.toUpperCase()) return persisted
+  if (record.repeated_workforce_reliability_flag || record.repeated_adaptation_flag) return 'DETERIORATING'
+  if (includesAny(record.trend_status, ['recover', 'improv', 'strength'])) return 'IMPROVING'
+  if (includesAny(record.trend_status, ['strain', 'fragile', 'escalat'])) return 'DECLINING'
+  return 'STABLE'
+}
+
+function deriveWorkforceSustainability(record: TrendRecord) {
+  const status = cleanText(record.workforce_reliability_status)
+  if (includesAny(status, ['critical', 'unstable', 'deteriorating'])) return 'HIGH CONCERN'
+  if (record.repeated_workforce_reliability_flag || numericalValue(record.staffing_instability_event_count) >= 2) return 'ELEVATED CONCERN'
+  if (status) return status.toUpperCase()
+  if (numericalValue(record.staffing_instability_event_count) > 0) return 'MODERATE CONCERN'
+  return 'LOW CURRENT CONCERN'
+}
+
+function deriveTurnoverOutlook(record: TrendRecord) {
+  const combined = [
+    record.workforce_consequence_outlook,
+    record.workforce_reliability_summary,
+    record.risk_outlook,
+    record.fragility_level,
+  ].map(cleanText).join(' ').toLowerCase()
+  if (combined.includes('critical') || combined.includes('severe')) return 'CRITICAL RETENTION RISK'
+  if (
+    record.repeated_workforce_reliability_flag ||
+    combined.includes('fatigue') ||
+    combined.includes('turnover') ||
+    combined.includes('burnout') ||
+    numericalValue(record.staffing_instability_event_count) >= 2
+  ) return 'ELEVATED RETENTION RISK'
+  if (numericalValue(record.staffing_instability_event_count) > 0 || includesAny(record.trend_status, ['strain', 'fragile'])) {
+    return 'MODERATE RETENTION RISK'
+  }
+  return 'LOW CURRENT RETENTION RISK'
+}
+
+function deriveEconomicExposure(record: TrendRecord) {
+  const persisted = cleanText(record.cost_pressure_signal)
+  if (persisted) return persisted.toUpperCase()
+  if (numericalValue(record.high_cost_buffer_response_count) > 0) return 'ELEVATED'
+  if (numericalValue(record.buffer_response_count) > 0 || numericalValue(record.staffing_instability_event_count) > 0) return 'MODERATE'
+  return 'LOW CURRENT EXPOSURE'
+}
+
+function deriveConfidence(record: TrendRecord) {
+  let score = 0
+  const basis: string[] = []
+  if (hasValue(record.assignment_load_skew) || hasValue(record.most_affected_role_pool)) {
+    score += 1
+    basis.push('Assignment evidence')
+  }
+  if (numericalValue(record.total_stability_events) > 0) {
+    score += 1
+    basis.push('Stability-event evidence')
+  }
+  if (hasValue(record.workforce_reliability_status) || numericalValue(record.staffing_instability_event_count) > 0) {
+    score += 1
+    basis.push('Workforce reliability evidence')
+  }
+  if (numericalValue(record.buffer_response_count) > 0 || hasValue(record.dominant_organizational_adaptation)) {
+    score += 1
+    basis.push('Organizational adaptation evidence')
+  }
+  if (numericalValue(record.consecutive_affected_windows) > 1 || record.repeated_workforce_reliability_flag || record.repeated_adaptation_flag) {
+    score += 1
+    basis.push('Longitudinal pattern evidence')
+  }
+  const level = score >= 4 ? 'HIGH' : score >= 2 ? 'MODERATE' : 'LIMITED'
+  const rationale = level === 'HIGH'
+    ? 'The assessment is supported by multiple independent persisted evidence layers and a repeated or longitudinal pattern.'
+    : level === 'MODERATE'
+      ? 'The assessment is supported by more than one persisted evidence layer, but longitudinal confirmation remains incomplete.'
+      : 'The assessment is based on a limited evidence set and should be treated as an early structural signal rather than a settled conclusion.'
+  return { level, rationale, basis: basis.length ? basis : ['Current trend-buffer record'] }
+}
+
+function buildPriorityList(record: TrendRecord) {
+  const actions = uniqueValues([
+    record.leadership_action_cue,
+    record.immediate_action_1,
+    record.immediate_action_2,
+    record.short_term_action_1,
+    record.short_term_action_2,
+  ])
+  const role = cleanText(record.most_affected_role_pool)
+  const shift = cleanText(record.most_affected_shift)
+  const defaults = [
+    `Restore baseline staffing reliability${role ? ` across the ${role.replace(/\s+role pools?/gi, '').trim()} workforce` : ''}${shift ? ` during the ${shift} shift` : ''}.`,
+    'Reduce dependence on assignment redistribution and other temporary adaptations.',
+    'Review the same structural signals in the next reporting window to confirm whether stability is improving.',
+  ]
+  const selected = [...actions, ...defaults].slice(0, 3)
+  const benefits = [
+    'Improves baseline reliability and reduces hidden workload concentration.',
+    'Restores operational predictability and protects reserve workforce capacity.',
+    'Creates early confirmation that leadership action is producing measurable structural improvement.',
+  ]
+  return selected.map((action, index) => ({ rank: index + 1, action: sentence(action), benefit: benefits[index] }))
+}
+
+function buildEconomicDrivers(record: TrendRecord) {
+  const drivers = uniqueValues([
+    numericalValue(record.staffing_instability_event_count) > 0 ? 'Overtime, premium-pay, and replacement-staffing exposure' : null,
+    numericalValue(record.buffer_response_count) > 0 ? 'Repeated operational workarounds that consume productive capacity' : null,
+    numericalValue(record.high_cost_buffer_response_count) > 0 ? 'High-cost buffer and agency-utilization exposure' : null,
+    deriveTurnoverOutlook(record).includes('ELEVATED') || deriveTurnoverOutlook(record).includes('CRITICAL')
+      ? 'Recruitment, onboarding, orientation, and lost-experience costs if retention deteriorates'
+      : null,
+    includesAny(record.workforce_consequence_outlook, ['fatigue', 'productivity']) ? 'Productivity loss associated with fatigue and declining reserve capacity' : null,
+    'Leadership time redirected from planned improvement to recurring operational stabilization',
+  ])
+  return drivers.length ? drivers : ['No material economic exposure driver was persisted for this reporting window.']
+}
+
+function buildCommunication(record: TrendRecord): ExecutiveCommunicationOutput {
+  const status = normalizedStatus(record.trend_status)
+  const direction = deriveDirection(record)
+  const workforce = deriveWorkforceSustainability(record)
+  const turnover = deriveTurnoverOutlook(record)
+  const economic = deriveEconomicExposure(record)
+  const role = display(record.most_affected_role_pool)
+  const workforceScope = role === MISSING
+    ? 'affected nursing workforce'
+    : `${role.replace(/\s+role pools?/gi, '').trim()} workforce`
+  const shift = display(record.most_affected_shift)
+  const force = display(record.dominant_stability_forces)
+  const event = cleanText(record.dominant_workforce_event_type)
+  const adaptation = cleanText(record.dominant_organizational_adaptation)
+  const reliability = cleanText(record.workforce_reliability_summary)
+  const predictability = cleanText(record.predictability_insight)
+  const confidence = deriveConfidence(record)
+  const persistedPriority = cleanText(record.leadership_action_cue)
+  const executivePriority = includesAny(persistedPriority, ['hidden strain'])
+    ? 'REVIEW HIDDEN RN & LPN STRAIN'
+    : persistedPriority || 'RESTORE BASELINE RELIABILITY'
+
+  const conditionStatement = `Continuity was maintained, but organizational resilience was ${status.toLowerCase()} and moving in a ${direction.toLowerCase()} direction because operations depended more heavily on workforce adaptation than dependable baseline capacity.`
+
+  const situationAssessment = [
+    `Continuity of care was maintained, but operations relied more heavily on workforce adaptation than dependable baseline capacity.`,
+    `Pressure was concentrated in ${display(record.unit)} during the ${shift} shift, affected the ${workforceScope}, and reflected ${reliability ? lowerLead(sentence(reliability)) : 'an emerging reliability concern.'}`,
+    `Leadership attention is required before recurring workarounds further reduce reserve capacity and become normal operating practice.`,
+  ].join(' ')
+
+  const initiatingPressure = event || (force !== MISSING ? force : 'The recorded structural pressure')
+  const responseNarrative = adaptation
+    ? `${adaptation} preserved immediate continuity`
+    : 'Available staff preserved immediate continuity'
+  const structuralNarrative = `${sentence(initiatingPressure)} created staffing pressure during the ${shift} shift. ${sentence(responseNarrative)} but concentrated hidden workload within the ${workforceScope}. As reserve capacity declined, operational predictability weakened and ${lowerLead(turnover)} increased.`
+
+  const operationalConsequence = predictability
+    ? `${sentence(predictability)} Recurring disruption is reducing flexibility for the next demand surge.`
+    : 'Care remained supportable, but recurring disruption reduced predictability and the capacity to absorb additional demand.'
+  const workforceConsequence = cleanText(record.workforce_consequence_outlook)
+    ? `${sentence(cleanText(record.workforce_consequence_outlook))} Continued reliance on the same workforce response may increase fatigue.`
+    : 'Hidden workload and recurring adaptation are reducing reserve capacity and increasing fatigue and retention exposure.'
+  const economicNarrative = `The pattern creates ${economic.toLowerCase()} exposure through premium staffing, repeated workarounds, productivity loss, and potential replacement costs.`
+  const organizationalConsequence = 'Dependence on temporary adaptation is weakening resilience and redirecting leadership attention from planned improvement to recurring stabilization.'
+
+  const executiveImplication = `Immediate operational continuity remains intact, but organizational resilience is weakening. If the current pattern persists, leadership should expect rising workforce fatigue, retention exposure, and labor expenditure despite continued day-to-day functionality.`
+
+  const outlook = includesAny(direction, ['declining', 'deteriorating']) || status.includes('STRAIN') || status.includes('FRAGILE')
+    ? `The next reporting window is likely to remain strained unless staffing reliability improves or assignment pressure is reduced. Improvement should be demonstrated through fewer late disruptions, less assignment redistribution, stronger reserve capacity, and reduced dependence on temporary workforce adaptation.`
+    : `The next reporting window is expected to remain manageable if current staffing reliability is preserved. Continued stability should be demonstrated through sustained reserve capacity, limited disruption, and low dependence on temporary workforce adaptation.`
+
+  const lesson = cleanText(record.last_action_taken) && cleanText(record.observed_outcome)
+    ? 'Review the leadership response and observed result together to determine whether structural pressure was reduced or only short-term continuity was protected. The evidence supports learning, but does not establish causation by itself.'
+    : 'No reliable organizational learning can yet be established because both a leadership response and its observed result have not been persisted.'
+
+  return {
+    identity: {
+      unit: display(record.unit),
+      reportingPeriod: `${display(record.window_start)} – ${display(record.window_end)}`,
+      preparedBy: 'TSINAXA',
+    },
+    situationAssessment,
+    conditionStatement,
+    executiveAssessment: [
+      { label: 'Operational Condition', value: status },
+      { label: 'Direction', value: direction },
+      { label: 'Workforce Sustainability', value: workforce },
+      { label: 'Turnover Outlook', value: turnover },
+      { label: 'Economic Exposure', value: economic },
+      { label: 'Executive Priority', value: executivePriority },
+    ],
+    structuralStory: { narrative: structuralNarrative },
+    consequences: [
+      { title: 'Operational', narrative: operationalConsequence },
+      { title: 'Workforce', narrative: workforceConsequence },
+      { title: 'Economic', narrative: economicNarrative },
+      { title: 'Organizational', narrative: organizationalConsequence },
+    ],
+    leadershipPriorities: buildPriorityList(record),
+    executiveImplication,
+    stabilityOutlook: outlook,
+    confidence: { level: confidence.level, rationale: confidence.rationale, evidenceBasis: confidence.basis },
+    evidence: {
+      coreMetrics: [
+        { label: 'Total stability events', value: display(record.total_stability_events) },
+        { label: 'High-intensity events', value: display(record.high_intensity_event_count) },
+        { label: 'Late or last-minute events', value: display(record.late_or_last_minute_event_count) },
+        { label: 'Staffing-instability events', value: display(record.staffing_instability_event_count) },
+        { label: 'Buffer responses', value: display(record.buffer_response_count) },
+        { label: 'High-cost responses', value: display(record.high_cost_buffer_response_count) },
+        { label: 'Assignment load skew', value: display(record.assignment_load_skew) },
+        { label: 'Fragility', value: display(record.fragility_level) },
+      ],
+      structuralContext: [
+        { label: 'Dominant stability forces', value: display(record.dominant_stability_forces) },
+        { label: 'Most affected workforce', value: workforceScope },
+        { label: 'Most affected shift', value: shift },
+        { label: 'Buffer use profile', value: display(record.buffer_use_profile) },
+        { label: 'Predictability insight', value: display(record.predictability_insight) },
+        { label: 'Risk outlook', value: display(record.risk_outlook) },
+      ],
+      workforceProfile: [
+        { label: 'Reliability status', value: display(record.workforce_reliability_status) },
+        { label: 'Pattern direction', value: direction },
+        { label: 'Dominant workforce event', value: display(record.dominant_workforce_event_type) },
+        { label: 'Repeated workforce event', value: display(record.repeated_workforce_event_type) },
+        { label: 'Dominant organizational adaptation', value: display(record.dominant_organizational_adaptation) },
+        { label: 'Consecutive affected windows', value: display(record.consecutive_affected_windows) },
+      ],
+      economicDrivers: buildEconomicDrivers(record),
+      organizationalLearning: {
+        action: display(record.last_action_taken),
+        outcome: display(record.observed_outcome),
+        lesson,
+      },
+      history: [
+        { label: 'Trend status', value: status },
+        { label: 'Stability score', value: hasValue(record.stability_score) ? `${display(record.stability_score)}%` : MISSING },
+        { label: 'Repeated reliability pattern', value: display(record.repeated_workforce_reliability_flag) },
+        { label: 'Repeated adaptation pattern', value: display(record.repeated_adaptation_flag) },
+        { label: 'Record updated', value: display(record.updated_at) },
+      ],
+      workforceEventCounts: record.workforce_event_counts,
+      adaptationCounts: record.organizational_adaptation_counts,
+    },
+  }
 }
 
 function withTimeout<T>(
@@ -470,29 +787,44 @@ export default function SSIWeeklyBriefPage() {
         throw new Error('BRIEF_NOT_AVAILABLE')
       }
 
-      const canvas = await html2canvas(briefRef.current, {
-        scale: 2,
-        backgroundColor: '#050505',
-        useCORS: true,
-      })
+      const pageElements = Array.from(
+        briefRef.current.querySelectorAll<HTMLElement>('.ssi-brief-page'),
+      )
 
-      const imageData = canvas.toDataURL('image/png')
+      if (pageElements.length === 0) {
+        throw new Error('BRIEF_PAGES_NOT_AVAILABLE')
+      }
+
       const pdf = new jsPDF('p', 'mm', 'a4')
       const pageWidth = pdf.internal.pageSize.getWidth()
       const pageHeight = pdf.internal.pageSize.getHeight()
-      const imageHeight = (canvas.height * pageWidth) / canvas.width
 
-      let heightLeft = imageHeight
-      let position = 0
+      for (let index = 0; index < pageElements.length; index += 1) {
+        const canvas = await html2canvas(pageElements[index], {
+          scale: 2,
+          backgroundColor: '#070707',
+          useCORS: true,
+        })
 
-      pdf.addImage(imageData, 'PNG', 0, position, pageWidth, imageHeight)
-      heightLeft -= pageHeight
+        const imageData = canvas.toDataURL('image/png')
+        const imageRatio = canvas.width / canvas.height
+        const pageRatio = pageWidth / pageHeight
 
-      while (heightLeft > 0) {
-        position = heightLeft - imageHeight
-        pdf.addPage()
-        pdf.addImage(imageData, 'PNG', 0, position, pageWidth, imageHeight)
-        heightLeft -= pageHeight
+        let imageWidth = pageWidth
+        let imageHeight = pageHeight
+        let x = 0
+        let y = 0
+
+        if (imageRatio > pageRatio) {
+          imageHeight = pageWidth / imageRatio
+          y = (pageHeight - imageHeight) / 2
+        } else {
+          imageWidth = pageHeight * imageRatio
+          x = (pageWidth - imageWidth) / 2
+        }
+
+        if (index > 0) pdf.addPage()
+        pdf.addImage(imageData, 'PNG', x, y, imageWidth, imageHeight)
       }
 
       pdf.save(
@@ -516,27 +848,10 @@ export default function SSIWeeklyBriefPage() {
   const reportingStart = record?.window_start ?? weekStart
   const reportingEnd = record?.window_end ?? weekEnd
 
-  const workforceEventEntries = useMemo(() => {
-    if (!record?.workforce_event_counts) return []
-
-    return Object.entries(record.workforce_event_counts).sort(
-      ([firstLabel, firstCount], [secondLabel, secondCount]) => {
-        if (secondCount !== firstCount) return secondCount - firstCount
-        return firstLabel.localeCompare(secondLabel)
-      },
-    )
-  }, [record])
-
-  const adaptationEntries = useMemo(() => {
-    if (!record?.organizational_adaptation_counts) return []
-
-    return Object.entries(record.organizational_adaptation_counts).sort(
-      ([firstLabel, firstCount], [secondLabel, secondCount]) => {
-        if (secondCount !== firstCount) return secondCount - firstCount
-        return firstLabel.localeCompare(secondLabel)
-      },
-    )
-  }, [record])
+  const communication = useMemo(
+    () => (record ? buildCommunication(record) : null),
+    [record],
+  )
 
   if (checkingAccess) {
     return (
@@ -557,10 +872,30 @@ export default function SSIWeeklyBriefPage() {
             print-color-adjust: exact !important;
           }
 
+          @page {
+            size: A4 portrait;
+            margin: 8mm;
+          }
+
           .ssi-weekly-brief-print {
-            background: #070707 !important;
+            background: #050505 !important;
             color: #fff8e7 !important;
-            border-color: rgba(214, 178, 94, 0.28) !important;
+          }
+
+          .ssi-brief-page {
+            width: 194mm !important;
+            min-height: 277mm !important;
+            margin: 0 auto !important;
+            padding: 8mm !important;
+            border-radius: 0 !important;
+            box-sizing: border-box !important;
+            break-after: page !important;
+            page-break-after: always !important;
+          }
+
+          .ssi-brief-page:last-child {
+            break-after: auto !important;
+            page-break-after: auto !important;
           }
         }
       `}</style>
@@ -612,6 +947,36 @@ export default function SSIWeeklyBriefPage() {
 
   return (
     <main style={styles.page}>
+      <style>{`
+        @media print {
+          @page { size: A4 portrait; margin: 8mm; }
+          html, body {
+            background: #050505 !important;
+            color: #fff8e7 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .ssi-weekly-brief-print,
+          .ssi-weekly-brief-print * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .ssi-brief-page {
+            width: 194mm !important;
+            min-height: 277mm !important;
+            margin: 0 auto !important;
+            padding: 8mm !important;
+            border-radius: 0 !important;
+            box-sizing: border-box !important;
+            break-after: page !important;
+            page-break-after: always !important;
+          }
+          .ssi-brief-page:last-child {
+            break-after: auto !important;
+            page-break-after: auto !important;
+          }
+        }
+      `}</style>
       <section
         style={{
           ...styles.controls,
@@ -625,7 +990,7 @@ export default function SSIWeeklyBriefPage() {
             </p>
             <h1 style={styles.title}>Weekly Stability Brief</h1>
             <p style={styles.sub}>
-              Executive interpretation generated exclusively from persisted SSI
+              Executive communication generated exclusively from persisted SSI
               trend-buffer intelligence.
             </p>
           </div>
@@ -751,211 +1116,160 @@ export default function SSIWeeklyBriefPage() {
         {message ? <p style={styles.message}>{message}</p> : null}
       </section>
 
-      {record ? (
+      {record && communication ? (
         <article className="ssi-weekly-brief-print" style={styles.brief} ref={briefRef}>
-          <header style={styles.header}>
-            <p style={styles.eyebrow}>TSINAXA — Weekly Stability Brief</p>
-            <h2 style={styles.heading}>
-              Structural Stability Intelligence System
-            </h2>
-            <p style={styles.text}>
-              <strong>Unit:</strong> {display(record.unit)}
-            </p>
-            <p style={styles.text}>
-              <strong>Reporting Period:</strong> {display(reportingStart)} –{' '}
-              {display(reportingEnd)}
-            </p>
-            <p style={styles.text}>
-              <strong>Prepared by:</strong> TSINAXA
-            </p>
-          </header>
+          <section className="ssi-brief-page ssi-brief-page-one" style={styles.briefPage}>
+            <header style={styles.header}>
+              <p style={styles.eyebrow}>TSINAXA™ EXECUTIVE SUMMARY</p>
+              <h2 style={styles.heading}>Weekly Structural Stability Brief</h2>
+              <div style={styles.identityGrid}>
+                <DataLine label="Unit" value={communication.identity.unit} />
+                <DataLine label="Reporting Period" value={communication.identity.reportingPeriod} />
+                <DataLine label="Prepared by" value={communication.identity.preparedBy} />
+              </div>
+            </header>
 
-          <BriefSection title="Overall System Status">
-            <DataLine label="Stability Status" value={record.trend_status} />
-            <DataLine label="Stability Score" value={record.stability_score} />
-          </BriefSection>
+            <section style={styles.narrativeSection}>
+              <p style={styles.sectionKicker}>Executive Summary</p>
+              <p style={styles.leadNarrative}>{communication.situationAssessment}</p>
+            </section>
 
-          <BriefSection title="Workforce Reliability Status">
-            <DataLine
-              label="Workforce Reliability Status"
-              value={record.workforce_reliability_status}
-            />
-            <DataLine
-              label="Pattern Direction"
-              value={record.reliability_pattern_direction}
-            />
-            <DataLine
-              label="Consecutive Affected Windows"
-              value={record.consecutive_affected_windows}
-            />
-            <DataLine
-              label="Repeated Workforce Reliability"
-              value={record.repeated_workforce_reliability_flag}
-            />
-            <DataLine
-              label="Repeated Organizational Adaptation"
-              value={record.repeated_adaptation_flag}
-            />
-          </BriefSection>
+            <section style={styles.conditionStatement}>
+              <p style={styles.sectionKicker}>Organizational Condition Statement</p>
+              <p style={styles.conditionText}>{communication.conditionStatement}</p>
+            </section>
 
-          <BriefSection title="Key Structural Signals">
-            <DataLine
-              label="Total Stability Events"
-              value={record.total_stability_events}
-            />
-            <DataLine
-              label="High-Intensity Events"
-              value={record.high_intensity_event_count}
-            />
-            <DataLine
-              label="Late or Last-Minute Events"
-              value={record.late_or_last_minute_event_count}
-            />
-            <DataLine
-              label="Assignment Load Skew"
-              value={record.assignment_load_skew}
-            />
-            <DataLine
-              label="Dominant Stability Forces"
-              value={record.dominant_stability_forces}
-            />
-          </BriefSection>
+            <section style={styles.openSection}>
+              <h3 style={styles.openSectionTitle}>Executive Assessment</h3>
+              <div style={styles.assessmentTable}>
+                {communication.executiveAssessment.map((item) => (
+                  <div key={item.label} style={styles.assessmentRow}>
+                    <span style={styles.assessmentLabel}>{item.label}</span>
+                    <strong style={styles.assessmentValue}>{item.value}</strong>
+                  </div>
+                ))}
+              </div>
+            </section>
 
-          <BriefSection title="Workforce Reliability Evidence">
-            <DataLine
-              label="Staffing Instability Events"
-              value={record.staffing_instability_event_count}
-            />
-            <DataLine
-              label="Dominant Workforce Event"
-              value={record.dominant_workforce_event_type}
-            />
-            <DataLine
-              label="Repeated Workforce Event"
-              value={record.repeated_workforce_event_type}
-            />
-            <DataLine
-              label="Buffer Responses"
-              value={record.buffer_response_count}
-            />
-            <DataLine
-              label="High-Cost Buffer Responses"
-              value={record.high_cost_buffer_response_count}
-            />
-            <DataLine
-              label="Dominant Organizational Adaptation"
-              value={record.dominant_organizational_adaptation}
-            />
-            <DataLine
-              label="Repeated Organizational Adaptation"
-              value={record.repeated_organizational_adaptation}
-            />
-          </BriefSection>
+            <section style={styles.openSection}>
+              <h3 style={styles.openSectionTitle}>Structural Story</h3>
+              <p style={styles.structuralStoryNarrative}>
+                {communication.structuralStory.narrative}
+              </p>
+            </section>
 
-          <BriefSection title="Workforce Event Profile">
-            <ProfileTable
-              entries={workforceEventEntries}
-              firstColumnLabel="Evidence Type"
-              emptyMessage="No workforce-event profile was persisted for this window."
-            />
-          </BriefSection>
+            <section style={styles.openSection}>
+              <h3 style={styles.openSectionTitle}>Organizational Consequences</h3>
+              <div style={styles.consequenceList}>
+                {communication.consequences.map((item) => (
+                  <div key={item.title} style={styles.consequenceItem}>
+                    <h4 style={styles.consequenceLabel}>{item.title}</h4>
+                    <p style={styles.consequenceLine}>{item.narrative}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
 
-          <BriefSection title="Organizational Adaptation Profile">
-            <ProfileTable
-              entries={adaptationEntries}
-              firstColumnLabel="Adaptation"
-              emptyMessage="No organizational-adaptation profile was persisted for this window."
-            />
-          </BriefSection>
+            <section style={styles.openSection}>
+              <h3 style={styles.openSectionTitle}>Leadership Priorities</h3>
+              <div style={styles.priorityList}>
+                {communication.leadershipPriorities.map((priority) => (
+                  <div key={priority.rank} style={styles.priorityRow}>
+                    <span style={styles.priorityNumber}>{priority.rank}</span>
+                    <div>
+                      <p style={styles.priorityAction}>{priority.action}</p>
+                      <p style={styles.priorityBenefit}><strong>Expected benefit:</strong> {priority.benefit}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
 
-          <BriefSection title="Predictability Insight">
-            <p style={styles.text}>{display(record.predictability_insight)}</p>
-          </BriefSection>
+            <section style={styles.implicationSection}>
+              <p style={styles.sectionKicker}>Executive Implication</p>
+              <p style={styles.implicationText}>{communication.executiveImplication}</p>
+            </section>
 
-          <BriefSection title="Fragility Focus">
-            <DataLine
-              label="Most Affected Role Pool"
-              value={record.most_affected_role_pool}
-            />
-            <DataLine
-              label="Most Affected Shift"
-              value={record.most_affected_shift}
-            />
-            <DataLine
-              label="Fragility Level"
-              value={record.fragility_level}
-            />
-          </BriefSection>
+            <section style={styles.outlookSection}>
+              <h3 style={styles.openSectionTitle}>Organizational Stability Outlook</h3>
+              <p style={styles.bodyNarrative}>{communication.stabilityOutlook}</p>
+            </section>
 
-          <BriefSection title="Cost and Buffer Pressure">
-            <DataLine
-              label="Cost Pressure Signal"
-              value={record.cost_pressure_signal}
-            />
-            <DataLine
-              label="Buffer Use Profile"
-              value={record.buffer_use_profile}
-            />
-            <DataLine
-              label="Repeated Buffer Depletion"
-              value={record.repeated_buffer_depletion_flag}
-            />
-          </BriefSection>
+            <section style={styles.confidenceSection}>
+              <div>
+                <span style={styles.confidenceLabel}>Executive Confidence</span>
+                <strong style={styles.confidenceValue}>{communication.confidence.level}</strong>
+              </div>
+              <p style={styles.confidenceRationale}>{communication.confidence.rationale}</p>
+            </section>
+          </section>
 
-          <BriefSection title="Leadership Interpretation">
-            <p style={styles.text}>
-              {display(record.leadership_interpretation)}
-            </p>
+          <section className="ssi-brief-page ssi-brief-page-two" style={styles.briefPage}>
+            <header style={styles.pageTwoHeader}>
+              <p style={styles.eyebrow}>TSINAXA SSI • SUPPORTING EVIDENCE</p>
+              <h2 style={styles.pageTwoTitle}>Evidence Behind the Executive Assessment</h2>
+              <p style={styles.pageTwoMeta}>{communication.identity.unit} • {communication.identity.reportingPeriod}</p>
+            </header>
 
-            <DataLine
-              label="Leadership Action Cue"
-              value={record.leadership_action_cue}
-            />
-          </BriefSection>
+            <section style={styles.evidenceSection}>
+              <h3 style={styles.openSectionTitle}>Core Evidence</h3>
+              <div style={styles.evidenceTable}>
+                {communication.evidence.coreMetrics.map((item) => (
+                  <div key={item.label} style={styles.evidenceRow}>
+                    <span>{item.label}</span><strong>{item.value}</strong>
+                  </div>
+                ))}
+              </div>
+            </section>
 
-          <BriefSection title="Workforce Reliability Interpretation">
-            <DataLine
-              label="Workforce Reliability Summary"
-              value={record.workforce_reliability_summary}
-            />
-            <DataLine
-              label="Workforce Consequence Outlook"
-              value={record.workforce_consequence_outlook}
-            />
-          </BriefSection>
+            <section style={styles.evidenceSection}>
+              <h3 style={styles.openSectionTitle}>Structural Context</h3>
+              <div style={styles.twoColumnEvidence}>
+                {communication.evidence.structuralContext.map((item) => (
+                  <DataLine key={item.label} label={item.label} value={item.value} />
+                ))}
+              </div>
+            </section>
 
-          <BriefSection title="Recommended Action">
-            <h4 style={styles.smallHeading}>Immediate</h4>
-            <ul style={styles.list}>
-              <li>{display(record.immediate_action_1)}</li>
-              <li>{display(record.immediate_action_2)}</li>
-            </ul>
+            <section style={styles.evidenceSection}>
+              <h3 style={styles.openSectionTitle}>Workforce Sustainability Profile</h3>
+              <div style={styles.twoColumnEvidence}>
+                {communication.evidence.workforceProfile.map((item) => (
+                  <DataLine key={item.label} label={item.label} value={item.value} />
+                ))}
+              </div>
+              <div style={styles.profileColumns}>
+                <ProfileTable title="Workforce Events" values={communication.evidence.workforceEventCounts} emptyMessage="No workforce event profile was persisted." />
+                <ProfileTable title="Organizational Adaptations" values={communication.evidence.adaptationCounts} emptyMessage="No organizational adaptation profile was persisted." />
+              </div>
+            </section>
 
-            <h4 style={styles.smallHeading}>Short-Term</h4>
-            <ul style={styles.list}>
-              <li>{display(record.short_term_action_1)}</li>
-              <li>{display(record.short_term_action_2)}</li>
-            </ul>
-          </BriefSection>
+            <section style={styles.evidenceSection}>
+              <h3 style={styles.openSectionTitle}>Economic Exposure Drivers</h3>
+              <ul style={styles.economicList}>
+                {communication.evidence.economicDrivers.map((driver) => <li key={driver}>{driver}</li>)}
+              </ul>
+            </section>
 
-          <BriefSection title="Risk Outlook">
-            <p style={styles.text}>{display(record.risk_outlook)}</p>
-          </BriefSection>
+            <section style={styles.evidenceSection}>
+              <h3 style={styles.openSectionTitle}>Organizational Learning Assessment</h3>
+              <DataLine label="Leadership response" value={communication.evidence.organizationalLearning.action} />
+              <DataLine label="Observed result" value={communication.evidence.organizationalLearning.outcome} />
+              <p style={styles.learningStatement}>{communication.evidence.organizationalLearning.lesson}</p>
+            </section>
 
-          <BriefSection title="Action Log">
-            <DataLine
-              label="Last Leadership Action"
-              value={record.last_action_taken}
-            />
-            <DataLine
-              label="Observed Outcome"
-              value={record.observed_outcome}
-            />
-          </BriefSection>
+            <section style={styles.evidenceSection}>
+              <h3 style={styles.openSectionTitle}>Historical and Evidence Context</h3>
+              <div style={styles.twoColumnEvidence}>
+                {communication.evidence.history.map((item) => (
+                  <DataLine key={item.label} label={item.label} value={item.value} />
+                ))}
+              </div>
+              <p style={styles.evidenceBasis}><strong>Assessment basis:</strong> {communication.confidence.evidenceBasis.join(' • ')}</p>
+            </section>
 
-          <footer style={styles.footer}>
-            No Names. No Blame. No Surveillance. Only Structural Signals.
-          </footer>
+            <footer style={styles.footer}>No Names. No Blame. No Surveillance. Only Structural Signals.</footer>
+          </section>
         </article>
       ) : null}
     </main>
@@ -988,12 +1302,19 @@ function Input({
 function BriefSection({
   title,
   children,
+  featured = false,
 }: {
   title: string
   children: ReactNode
+  featured?: boolean
 }) {
   return (
-    <section style={styles.briefSection}>
+    <section
+      style={{
+        ...styles.briefSection,
+        ...(featured ? styles.featuredSection : {}),
+      }}
+    >
       <h3 style={styles.sectionTitle}>{title}</h3>
       {children}
     </section>
@@ -1003,325 +1324,208 @@ function BriefSection({
 function DataLine({ label, value }: { label: string; value: unknown }) {
   return (
     <p style={styles.text}>
-      <strong>{label}:</strong> {display(value)}
+      <strong style={styles.dataLabel}>{label}:</strong> {display(value)}
     </p>
   )
 }
 
+function StatusTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={styles.statusTile}>
+      <span style={styles.tileLabel}>{label}</span>
+      <strong style={styles.statusValue}>{value}</strong>
+    </div>
+  )
+}
+
+function ConditionCard({ title, text }: { title: string; text: string }) {
+  return (
+    <div style={styles.conditionCard}>
+      <h4 style={styles.cardTitle}>{title}</h4>
+      <p style={styles.cardText}>{text}</p>
+    </div>
+  )
+}
+
+
 function ProfileTable({
-  entries,
-  firstColumnLabel,
+  title,
+  values,
   emptyMessage,
 }: {
-  entries: Array<[string, number]>
-  firstColumnLabel: string
+  title: string
+  values: Record<string, number> | null
   emptyMessage: string
 }) {
-  if (entries.length === 0) {
-    return <p style={styles.text}>{emptyMessage}</p>
-  }
+  const entries = values
+    ? Object.entries(values).sort(([, left], [, right]) => right - left)
+    : []
 
   return (
-    <div style={styles.tableScroll}>
-      <table style={styles.table}>
-        <thead>
-          <tr>
-            <th style={styles.th}>{firstColumnLabel}</th>
-            <th style={styles.th}>Count</th>
-          </tr>
-        </thead>
-
-        <tbody>
+    <div style={styles.profilePanel}>
+      <h4 style={styles.smallHeading}>{title}</h4>
+      {entries.length > 0 ? (
+        <div style={styles.profileTable}>
           {entries.map(([label, count]) => (
-            <tr key={label}>
-              <th scope="row" style={styles.rowHeader}>
-                {display(label)}
-              </th>
-              <td style={styles.td}>{display(count)}</td>
-            </tr>
+            <div key={label} style={styles.profileRow}>
+              <span style={styles.profileLabel}>{label}</span>
+              <strong style={styles.profileValue}>{count}</strong>
+            </div>
           ))}
-        </tbody>
-      </table>
+        </div>
+      ) : (
+        <p style={styles.missingText}>{emptyMessage}</p>
+      )}
+    </div>
+  )
+}
+
+function ActionList({
+  title,
+  actions,
+  emptyText,
+}: {
+  title: string
+  actions: string[]
+  emptyText: string
+}) {
+  return (
+    <div style={styles.actionPanel}>
+      <h4 style={styles.smallHeading}>{title}</h4>
+      {actions.length > 0 ? (
+        <ol style={styles.list}>
+          {actions.map((action) => (
+            <li key={action} style={styles.actionItem}>
+              {action}
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p style={styles.missingText}>{emptyText}</p>
+      )}
+    </div>
+  )
+}
+
+function MetricTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={styles.metricTile}>
+      <span style={styles.tileLabel}>{label}</span>
+      <strong style={styles.metricValue}>{value}</strong>
     </div>
   )
 }
 
 const styles: Record<string, CSSProperties> = {
-  page: {
-    minHeight: '100vh',
-    background: '#050505',
-    color: '#fff8e7',
-    padding: '28px',
-    fontFamily: 'Inter, Arial, sans-serif',
-  },
-  controls: {
-    maxWidth: '980px',
-    margin: '0 auto 20px',
-    padding: '24px',
-    borderRadius: '20px',
-    background: '#090807',
-    border: '1px solid rgba(214,178,94,0.28)',
-  },
-  brief: {
-    maxWidth: '980px',
-    margin: '0 auto 20px',
-    padding: '24px',
-    borderRadius: '20px',
-    background: '#070707',
-    border: '1px solid rgba(214,178,94,0.28)',
-  },
-  topbar: {
-    display: 'grid',
-    gridTemplateColumns: '1fr auto',
-    gap: '20px',
-    alignItems: 'start',
-  },
-  logoutButton: {
-    border: '1px solid rgba(214,178,94,0.42)',
-    background: '#11100d',
-    color: '#d6b25e',
-    borderRadius: '999px',
-    padding: '10px 18px',
-    fontWeight: 900,
-    cursor: 'pointer',
-  },
-  disabledButton: {
-    cursor: 'not-allowed',
-    opacity: 0.58,
-  },
-  eyebrow: {
-    color: '#d6b25e',
-    fontSize: '11px',
-    fontWeight: 800,
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
-    margin: 0,
-  },
-  title: {
-    color: '#d6b25e',
-    margin: '8px 0',
-    fontSize: '32px',
-  },
-  heading: {
-    color: '#d6b25e',
-    margin: '6px 0 10px',
-  },
-  smallHeading: {
-    color: '#d6b25e',
-    margin: '10px 0 4px',
-    fontSize: '14px',
-  },
-  sub: {
-    color: '#cfc7b5',
-    margin: 0,
-    lineHeight: 1.5,
-  },
-  flowNav: {
-    border: '1px solid rgba(214,178,94,0.28)',
-    background: '#090807',
-    borderRadius: '18px',
-    padding: '14px',
-    margin: '18px 0 8px',
-  },
-  flowNavHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    marginBottom: '10px',
-  },
-  flowNavTitle: {
-    color: '#d6b25e',
-    fontWeight: 900,
-    letterSpacing: '0.14em',
-    textTransform: 'uppercase',
-    fontSize: '12px',
-  },
-  flowNavRule: {
-    height: '1px',
-    flex: 1,
-    background: 'rgba(214,178,94,0.22)',
-  },
-  flowNavCaption: {
-    color: '#cfc7b5',
-    fontSize: '12px',
-    fontWeight: 700,
-  },
-  flowSteps: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-    gap: '10px',
-  },
-  flowStepWrap: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    minWidth: 0,
-  },
-  flowStep: {
-    flex: 1,
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    textDecoration: 'none',
-    color: '#cfc7b5',
-    border: '1px solid rgba(214,178,94,0.18)',
-    background: '#11100d',
-    borderRadius: '14px',
-    padding: '12px',
-    minWidth: 0,
-  },
-  flowStepActive: {
-    border: '1px solid rgba(214,178,94,0.58)',
-    background: 'rgba(214,178,94,0.14)',
-    color: '#fff8e7',
-    boxShadow: 'inset 3px 0 0 #d6b25e',
-  },
-  flowStepIndex: {
-    display: 'grid',
-    placeItems: 'center',
-    width: '26px',
-    height: '26px',
-    borderRadius: '999px',
-    background: 'rgba(214,178,94,0.16)',
-    color: '#d6b25e',
-    fontWeight: 900,
-    flexShrink: 0,
-  },
-  flowStepText: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '3px',
-    minWidth: 0,
-  },
-  flowArrow: {
-    color: '#9f8142',
-    fontWeight: 900,
-    flexShrink: 0,
-  },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '14px',
-    marginTop: '20px',
-  },
-  label: {
-    display: 'grid',
-    gap: '8px',
-    fontSize: '13px',
-    color: '#cfc7b5',
-  },
-  input: {
-    padding: '13px',
-    borderRadius: '12px',
-    border: '1px solid rgba(214,178,94,0.28)',
-    background: '#111827',
-    color: '#fff8e7',
-    fontSize: '15px',
-  },
-  actions: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '12px',
-    marginTop: '18px',
-  },
-  button: {
-    padding: '11px 18px',
-    border: 0,
-    borderRadius: '999px',
-    background: '#d6b25e',
-    color: '#050505',
-    fontWeight: 800,
-    cursor: 'pointer',
-  },
-  secondaryButton: {
-    padding: '11px 18px',
-    border: '1px solid rgba(214,178,94,0.42)',
-    borderRadius: '999px',
-    background: '#11100d',
-    color: '#d6b25e',
-    fontWeight: 800,
-    cursor: 'pointer',
-  },
-  message: {
-    marginTop: '14px',
-    color: '#d6b25e',
-    lineHeight: 1.5,
-  },
-  statusPanel: {
-    marginTop: '14px',
-    padding: '14px',
-    borderRadius: '14px',
-    border: '1px solid rgba(214,178,94,0.28)',
-    background: '#11100d',
-  },
-  header: {
-    marginBottom: '16px',
-    paddingBottom: '16px',
-    borderBottom: '1px solid rgba(214,178,94,0.28)',
-  },
-  briefSection: {
-    marginBottom: '12px',
-    padding: '16px',
-    borderRadius: '16px',
-    background: '#11100d',
-    border: '1px solid rgba(214,178,94,0.18)',
-    breakInside: 'avoid',
-  },
-  sectionTitle: {
-    color: '#d6b25e',
-    margin: '0 0 8px',
-    fontSize: '15px',
-  },
-  text: {
-    color: '#cfc7b5',
-    lineHeight: 1.5,
-    margin: '6px 0',
-    whiteSpace: 'pre-wrap',
-    overflowWrap: 'anywhere',
-  },
-  list: {
-    color: '#cfc7b5',
-    paddingLeft: '20px',
-    margin: '6px 0 0',
-    lineHeight: 1.5,
-  },
-  tableScroll: {
-    width: '100%',
-    overflowX: 'auto',
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-  },
-  th: {
-    padding: '9px 10px',
-    border: '1px solid rgba(214,178,94,0.28)',
-    background: '#111827',
-    color: '#fff8e7',
-    fontSize: '11px',
-    fontWeight: 900,
-    textAlign: 'left',
-  },
-  rowHeader: {
-    padding: '9px 10px',
-    border: '1px solid rgba(214,178,94,0.18)',
-    background: '#0d0d0c',
-    color: '#d6b25e',
-    fontSize: '12px',
-    fontWeight: 900,
-    textAlign: 'left',
-  },
-  td: {
-    padding: '9px 10px',
-    border: '1px solid rgba(214,178,94,0.18)',
-    color: '#cfc7b5',
-    fontSize: '12px',
-    textAlign: 'left',
-  },
-  footer: {
-    marginTop: '22px',
-    textAlign: 'center',
-    color: '#d6b25e',
-    fontWeight: 800,
-  },
+  page: { minHeight: '100vh', background: '#050505', color: '#fff8e7', padding: '28px', fontFamily: 'Inter, Arial, sans-serif' },
+  controls: { maxWidth: '980px', margin: '0 auto 20px', padding: '24px', borderRadius: '20px', background: '#090807', border: '1px solid rgba(214,178,94,0.28)' },
+  brief: { maxWidth: '980px', margin: '0 auto 20px', background: '#050505' },
+  briefPage: { minHeight: '1120px', padding: '28px', borderRadius: '20px', background: '#070707', border: '1px solid rgba(214,178,94,0.28)', marginBottom: '18px', boxSizing: 'border-box' },
+  topbar: { display: 'grid', gridTemplateColumns: '1fr auto', gap: '20px', alignItems: 'start' },
+  logoutButton: { border: '1px solid rgba(214,178,94,0.42)', background: '#11100d', color: '#d6b25e', borderRadius: '999px', padding: '10px 18px', fontWeight: 900, cursor: 'pointer' },
+  disabledButton: { cursor: 'not-allowed', opacity: 0.58 },
+  eyebrow: { color: '#d6b25e', fontSize: '11px', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', margin: 0 },
+  title: { color: '#d6b25e', margin: '8px 0', fontSize: '32px' },
+  heading: { color: '#d6b25e', margin: '7px 0 14px', fontSize: '28px', lineHeight: 1.18 },
+  smallHeading: { color: '#d6b25e', margin: '0 0 8px', fontSize: '14px' },
+  sub: { color: '#cfc7b5', margin: 0, lineHeight: 1.5 },
+  flowNav: { border: '1px solid rgba(214,178,94,0.28)', background: '#090807', borderRadius: '18px', padding: '14px', margin: '18px 0 8px' },
+  flowNavHeader: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' },
+  flowNavTitle: { color: '#d6b25e', fontWeight: 900, letterSpacing: '0.14em', textTransform: 'uppercase', fontSize: '12px' },
+  flowNavRule: { height: '1px', flex: 1, background: 'rgba(214,178,94,0.22)' },
+  flowNavCaption: { color: '#cfc7b5', fontSize: '12px', fontWeight: 700 },
+  flowSteps: { display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: '10px' },
+  flowStepWrap: { display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 },
+  flowStep: { flex: 1, display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', color: '#cfc7b5', border: '1px solid rgba(214,178,94,0.18)', background: '#11100d', borderRadius: '14px', padding: '12px', minWidth: 0 },
+  flowStepActive: { border: '1px solid rgba(214,178,94,0.58)', background: 'rgba(214,178,94,0.14)', color: '#fff8e7', boxShadow: 'inset 3px 0 0 #d6b25e' },
+  flowStepIndex: { display: 'grid', placeItems: 'center', width: '26px', height: '26px', borderRadius: '999px', background: 'rgba(214,178,94,0.16)', color: '#d6b25e', fontWeight: 900, flexShrink: 0 },
+  flowStepText: { display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 },
+  flowArrow: { color: '#9f8142', fontWeight: 900, flexShrink: 0 },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', marginTop: '20px' },
+  label: { display: 'grid', gap: '8px', fontSize: '13px', color: '#cfc7b5' },
+  input: { padding: '13px', borderRadius: '12px', border: '1px solid rgba(214,178,94,0.28)', background: '#111827', color: '#fff8e7', fontSize: '15px' },
+  actions: { display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '18px' },
+  button: { padding: '11px 18px', border: 0, borderRadius: '999px', background: '#d6b25e', color: '#050505', fontWeight: 800, cursor: 'pointer' },
+  secondaryButton: { padding: '11px 18px', border: '1px solid rgba(214,178,94,0.42)', borderRadius: '999px', background: '#11100d', color: '#d6b25e', fontWeight: 800, cursor: 'pointer' },
+  message: { marginTop: '14px', color: '#d6b25e', lineHeight: 1.5 },
+  statusPanel: { marginTop: '14px', padding: '14px', borderRadius: '14px', border: '1px solid rgba(214,178,94,0.28)', background: '#11100d' },
+  header: { marginBottom: '18px', paddingBottom: '16px', borderBottom: '1px solid rgba(214,178,94,0.28)' },
+  identityGrid: { display: 'grid', gridTemplateColumns: '1fr 1.35fr 1fr', gap: '10px' },
+  briefSection: { marginBottom: '10px', padding: '14px', borderRadius: '14px', background: '#11100d', border: '1px solid rgba(214,178,94,0.18)', breakInside: 'avoid' },
+  featuredSection: { border: '1px solid rgba(214,178,94,0.46)', background: 'linear-gradient(180deg, rgba(214,178,94,0.11), #11100d 34%)' },
+  sectionTitle: { color: '#d6b25e', margin: '0 0 9px', fontSize: '15px', letterSpacing: '0.03em' },
+  text: { color: '#cfc7b5', lineHeight: 1.58, margin: '4px 0', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', fontSize: '12.5px' },
+  dataLabel: { color: '#fff8e7' },
+  statusGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' },
+  statusTile: { border: '1px solid rgba(214,178,94,0.24)', borderRadius: '12px', padding: '11px', background: '#0b0b0a' },
+  tileLabel: { display: 'block', color: '#9f8142', textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '9.5px', fontWeight: 900, marginBottom: '5px' },
+  statusValue: { color: '#fff8e7', fontSize: '18px' },
+  executiveHeadline: { color: '#fff8e7', fontSize: '20px', lineHeight: 1.3, margin: '13px 0 7px' },
+  executiveSummary: { color: '#cfc7b5', lineHeight: 1.5, margin: 0, fontSize: '13px' },
+  conditionGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '9px' },
+  conditionCard: { borderLeft: '3px solid #d6b25e', borderRadius: '10px', padding: '10px 11px', background: '#0b0b0a' },
+  cardTitle: { color: '#fff8e7', margin: 0, fontSize: '12.5px' },
+  cardText: { color: '#cfc7b5', margin: '5px 0 0', lineHeight: 1.42, fontSize: '11.5px' },
+  riskGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '9px' },
+  riskCard: { border: '1px solid rgba(214,178,94,0.22)', borderRadius: '12px', padding: '11px', background: '#0b0b0a' },
+  riskHeader: { display: 'flex', justifyContent: 'space-between', gap: '8px', alignItems: 'start' },
+  priorityBadge: { color: '#050505', background: '#d6b25e', borderRadius: '999px', padding: '3px 7px', fontSize: '8px', fontWeight: 900, whiteSpace: 'nowrap' },
+  evidenceText: { color: '#9f9a90', margin: '7px 0 0', lineHeight: 1.35, fontSize: '10.5px' },
+  actionColumns: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' },
+  actionPanel: { border: '1px solid rgba(214,178,94,0.2)', borderRadius: '12px', padding: '11px', background: '#0b0b0a' },
+  list: { color: '#cfc7b5', paddingLeft: '19px', margin: '4px 0 0', lineHeight: 1.4, fontSize: '11.5px' },
+  actionItem: { marginBottom: '5px' },
+  missingText: { color: '#9f9a90', fontSize: '11px', lineHeight: 1.4, margin: 0 },
+  pageTwoHeader: { marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid rgba(214,178,94,0.28)' },
+  pageTwoTitle: { color: '#d6b25e', fontSize: '21px', margin: '5px 0 3px' },
+  pageTwoMeta: { color: '#cfc7b5', margin: 0, fontSize: '11px' },
+  outlookGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '9px' },
+  learningStatement: { color: '#fff8e7', borderLeft: '3px solid #d6b25e', paddingLeft: '10px', lineHeight: 1.45, margin: '9px 0 0', fontSize: '12px' },
+  metricGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' },
+  metricTile: { border: '1px solid rgba(214,178,94,0.2)', borderRadius: '10px', padding: '9px', background: '#0b0b0a' },
+  metricValue: { color: '#fff8e7', fontSize: '14px', overflowWrap: 'anywhere' },
+  contextGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: '16px', rowGap: '2px' },
+  profileColumns: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' },
+  profilePanel: { border: '1px solid rgba(214,178,94,0.2)', borderRadius: '12px', padding: '11px', background: '#0b0b0a' },
+  profileTable: { display: 'grid', gap: '5px' },
+  profileRow: { display: 'grid', gridTemplateColumns: '1fr auto', gap: '10px', alignItems: 'center', paddingBottom: '5px', borderBottom: '1px solid rgba(214,178,94,0.12)' },
+  profileLabel: { color: '#cfc7b5', fontSize: '10.5px', overflowWrap: 'anywhere' },
+  profileValue: { color: '#fff8e7', fontSize: '11.5px' },
+  footer: { marginTop: '36px', paddingTop: '18px', borderTop: '1px solid rgba(214,178,94,0.28)', textAlign: 'center', color: '#d6b25e', fontWeight: 800, fontSize: '12px' },
+  narrativeSection: { marginBottom: '16px', padding: '17px 18px', borderLeft: '4px solid #d6b25e', borderRadius: '10px', background: 'rgba(214,178,94,0.055)', breakInside: 'avoid' },
+  sectionKicker: { margin: '0 0 8px', color: '#d6b25e', fontSize: '11px', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase' },
+  leadNarrative: { margin: 0, color: '#fff8e7', fontSize: '14.5px', lineHeight: 1.62, fontWeight: 500, maxWidth: '900px' },
+  conditionStatement: { margin: '0 0 18px', padding: '13px 16px', border: '1px solid rgba(214,178,94,0.28)', borderLeft: '4px solid #d6b25e', borderRadius: '10px', background: '#0b0b0a', breakInside: 'avoid' },
+  conditionText: { margin: 0, color: '#fff8e7', fontSize: '13px', lineHeight: 1.5, fontWeight: 700 },
+  openSection: { marginBottom: '18px', paddingBottom: '17px', borderBottom: '1px solid rgba(214,178,94,0.18)', breakInside: 'avoid' },
+  openSectionTitle: { margin: '0 0 11px', color: '#d6b25e', fontSize: '17px', letterSpacing: '0.02em' },
+  bodyNarrative: { margin: 0, color: '#cfc7b5', fontSize: '12.5px', lineHeight: 1.6, maxWidth: '900px' },
+  assessmentTable: { display: 'grid', borderTop: '1px solid rgba(214,178,94,0.22)' },
+  assessmentRow: { display: 'grid', gridTemplateColumns: 'minmax(190px, 0.8fr) 1.4fr', gap: '20px', alignItems: 'center', minHeight: '34px', padding: '12px 0', borderBottom: '1px solid rgba(214,178,94,0.15)' },
+  assessmentLabel: { color: '#d6b25e', fontSize: '11.5px', fontWeight: 800, letterSpacing: '0.025em' },
+  assessmentValue: { color: '#fff8e7', fontSize: '11.5px', lineHeight: 1.4, textAlign: 'right', overflowWrap: 'anywhere' },
+  structuralStoryNarrative: { margin: 0, color: '#fff8e7', fontSize: '13.5px', lineHeight: 1.62, maxWidth: '900px' },
+  consequenceList: { display: 'grid', gap: '15px' },
+  consequenceItem: { display: 'grid', gap: '5px' },
+  consequenceLine: { margin: 0, color: '#cfc7b5', fontSize: '12.5px', lineHeight: 1.58 },
+  consequenceLabel: { margin: 0, color: '#d6b25e', fontSize: '12px', fontWeight: 900, letterSpacing: '0.025em' },
+  priorityList: { display: 'grid', gap: '12px', padding: '13px 14px', border: '1px solid rgba(214,178,94,0.2)', borderRadius: '12px', background: '#0b0b0a' },
+  priorityRow: { display: 'grid', gridTemplateColumns: '30px 1fr', gap: '12px', alignItems: 'start' },
+  priorityNumber: { display: 'grid', placeItems: 'center', width: '28px', height: '28px', borderRadius: '999px', border: '1px solid rgba(214,178,94,0.55)', color: '#d6b25e', fontWeight: 900, fontSize: '12px' },
+  priorityAction: { margin: '0 0 3px', color: '#fff8e7', fontSize: '12.5px', lineHeight: 1.4, fontWeight: 700 },
+  priorityBenefit: { margin: 0, color: '#cfc7b5', fontSize: '11px', lineHeight: 1.4 },
+  implicationSection: { marginBottom: '19px', padding: '21px 22px', borderLeft: '5px solid #d6b25e', background: 'rgba(214,178,94,0.075)', breakInside: 'avoid' },
+  implicationText: { margin: 0, color: '#fff8e7', fontSize: '15.5px', lineHeight: 1.62, fontWeight: 800 },
+  outlookSection: { marginBottom: '16px', padding: '14px 16px', background: '#0b0b0a', border: '1px solid rgba(214,178,94,0.2)', borderLeft: '3px solid rgba(214,178,94,0.5)', borderRadius: '10px', breakInside: 'avoid' },
+  confidenceSection: { display: 'grid', gridTemplateColumns: '220px 1fr', gap: '32px', alignItems: 'center', padding: '22px 24px', border: '1px solid rgba(214,178,94,0.26)', borderRadius: '10px', background: '#0b0b0a', breakInside: 'avoid' },
+  confidenceLabel: { display: 'block', color: '#9f8142', fontSize: '10px', fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase' },
+  confidenceValue: { display: 'block', marginTop: '12px', color: '#fff8e7', fontSize: '38px', lineHeight: 0.98, fontWeight: 900, letterSpacing: '0.035em' },
+  confidenceRationale: { margin: '4px 0 0', color: '#aaa395', fontSize: '10.75px', lineHeight: 1.58 },
+  evidenceSection: { marginBottom: '18px', paddingBottom: '16px', borderBottom: '1px solid rgba(214,178,94,0.18)', breakInside: 'avoid' },
+  evidenceTable: { display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: '26px' },
+  evidenceRow: { display: 'grid', gridTemplateColumns: '1fr auto', gap: '12px', padding: '8px 0', borderBottom: '1px solid rgba(214,178,94,0.12)', color: '#cfc7b5', fontSize: '11.5px' },
+  twoColumnEvidence: { display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: '24px', rowGap: '2px' },
+  economicList: { margin: 0, paddingLeft: '20px', color: '#cfc7b5', fontSize: '11.5px', lineHeight: 1.55 },
+  evidenceBasis: { margin: '10px 0 0', paddingTop: '8px', borderTop: '1px solid rgba(214,178,94,0.14)', color: '#cfc7b5', fontSize: '11px', lineHeight: 1.45 },
+
 }

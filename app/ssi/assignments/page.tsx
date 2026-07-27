@@ -245,6 +245,7 @@ export default function SSIAssignmentsPage() {
   const accessAttemptRef = useRef(0)
 
   const [authorized, setAuthorized] = useState(false)
+  const [organizationId, setOrganizationId] = useState<string | null>(null)
   const [checkingAccess, setCheckingAccess] = useState(true)
   const [accessFailure, setAccessFailure] = useState(false)
   const [redirectingToLogin, setRedirectingToLogin] = useState(false)
@@ -308,6 +309,7 @@ export default function SSIAssignmentsPage() {
     setAccessFailure(false)
     setRedirectingToLogin(false)
     setAuthorized(false)
+    setOrganizationId(null)
 
     try {
       const {
@@ -355,7 +357,7 @@ export default function SSIAssignmentsPage() {
       const { data: roleRecord, error: roleError } = await withTimeout(
         supabase
           .from('user_roles')
-          .select('role,status')
+          .select('role,status,organization_id')
           .eq('user_id', session.user.id)
           .maybeSingle(),
         ACCESS_TIMEOUT_MS,
@@ -372,10 +374,11 @@ export default function SSIAssignmentsPage() {
         return
       }
 
-      const isAuthorized =
-        Boolean(roleRecord) &&
-        allowedRoles.includes(roleRecord?.role ?? '') &&
-        allowedStatuses.includes(roleRecord?.status ?? '')
+     const isAuthorized =
+       Boolean(roleRecord) &&
+       allowedRoles.includes(roleRecord?.role ?? '') &&
+       allowedStatuses.includes(roleRecord?.status ?? '') &&
+       Boolean(roleRecord?.organization_id)
 
       if (!isAuthorized) {
         await safeSignOut()
@@ -393,6 +396,7 @@ export default function SSIAssignmentsPage() {
         return
       }
 
+      setOrganizationId(roleRecord?.organization_id ?? null)
       setAuthorized(true)
     } catch (error) {
       console.error('SSI assignment access verification failed.', error)
@@ -570,6 +574,12 @@ export default function SSIAssignmentsPage() {
     }
 
     setMessage('')
+    if (!organizationId) {
+      setMessage(
+        'SSI could not verify the healthcare organization. Please sign in again.',
+      )
+      return
+    }
 
     if (
       !header.unit.trim() ||
@@ -619,7 +629,10 @@ export default function SSIAssignmentsPage() {
           throw new Error('SSI_ASSIGNMENT_OUTPUT_UNAVAILABLE')
         }
 
+        
         return {
+            
+          organization_id: organizationId,
           assignment_id: item.assignmentId,
           unit: header.unit,
           role_pool: `${item.row.rolePool} ${item.row.entryNumber}`,
@@ -639,6 +652,20 @@ export default function SSIAssignmentsPage() {
           starting_strain_signal:
             item.output.starting_strain_signal,
           complexity_weight: item.output.complexity_weight,
+          operational_diagnostic_findings:
+            item.output.operational_diagnostic_findings,
+          structural_drivers: item.output.structural_drivers,
+          workload_composition: item.output.workload_composition,
+          derived_strain_signals: item.output.derived_strain_signals,
+          reserve_capacity_status:
+            item.output.reserve_capacity_status,
+          localized_overload_flag:
+            item.output.localized_overload_flag,
+          localized_strain_interpretation:
+            item.output.localized_strain_interpretation,
+          above_baseline_flag: item.output.above_baseline_flag,
+          assignment_overload_delta:
+            item.output.assignment_overload_delta,
         }
       })
 
