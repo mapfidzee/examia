@@ -213,31 +213,31 @@ const observedOutcomeOptions = [
 
 const ssiFlow = [
   {
-    label: 'Assignments',
+    label: 'Operational Diagnostic Assignment Set',
     href: '/ssi/assignments',
-    note: 'ODM evidence acquisition',
+    note: 'Shift-start structural evidence',
     active: false,
   },
   {
-    label: 'Events',
+    label: 'Operational Stability Events',
     href: '/ssi/events',
-    note: 'Operational stability evidence',
+    note: 'Operational disruption evidence',
     active: false,
   },
   {
-    label: 'Trend Buffer',
+    label: 'Structural Stability Assessment',
     href: '/ssi/dashboard',
-    note: 'Longitudinal aggregation',
+    note: 'Longitudinal structural assessment',
     active: true,
   },
   {
-    label: 'Executive Dashboard',
+    label: 'Executive Structural Interpretation',
     href: '/ssi',
-    note: 'Leadership interpretation',
+    note: 'Executive intelligence',
     active: false,
   },
   {
-    label: 'Weekly Brief',
+    label: 'Weekly Stability Brief',
     href: '/ssi/weekly-brief',
     note: 'Printable executive summary',
     active: false,
@@ -245,10 +245,10 @@ const ssiFlow = [
 ]
 
 const initialFilters = {
-  unit: 'Wing B',
-  windowStart: '2026-04-06',
-  windowEnd: '2026-04-06',
-  shiftType: 'DAY' as ShiftTypeFilter,
+  unit: '',
+  windowStart: '',
+  windowEnd: '',
+  shiftType: 'ALL' as ShiftTypeFilter,
 }
 
 const staffingInstabilityEventTypes = new Set([

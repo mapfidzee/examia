@@ -71,31 +71,31 @@ const findingCategoryOrder: FindingCategory[] = [
 
 const ssiFlow = [
   {
-    label: 'Assignments',
+    label: 'Operational Diagnostic Assignment Set',
     href: '/ssi/assignments',
-    note: 'ODM evidence acquisition',
+    note: 'Shift-start structural evidence',
     active: true,
   },
   {
-    label: 'Events',
+    label: 'Operational Stability Events',
     href: '/ssi/events',
-    note: 'Stability event capture',
+    note: 'Operational disruption evidence',
     active: false,
   },
   {
-    label: 'Trend Buffer',
+    label: 'Structural Stability Assessment',
     href: '/ssi/dashboard',
-    note: 'Persisted structural signals',
+    note: 'Longitudinal structural assessment',
     active: false,
   },
   {
-    label: 'Executive Dashboard',
+    label: 'Executive Structural Interpretation',
     href: '/ssi',
-    note: 'Leadership interpretation',
+    note: 'Executive intelligence',
     active: false,
   },
   {
-    label: 'Weekly Brief',
+    label: 'Weekly Stability Brief',
     href: '/ssi/weekly-brief',
     note: 'Printable executive summary',
     active: false,
@@ -818,8 +818,7 @@ export default function SSIAssignmentsPage() {
             <span style={styles.flowNavTitle}>SSI Flow</span>
             <span style={styles.flowNavRule} />
             <span style={styles.flowNavCaption}>
-              Assignments → Events → Trend Buffer → Executive Dashboard
-              → Weekly Brief
+              Operational Diagnostic Assignment Set → Operational Stability Events → Structural Stability Assessment → Executive Structural Interpretation → Weekly Stability Brief
             </span>
           </div>
 

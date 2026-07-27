@@ -52,11 +52,11 @@ type LayerTone = 'leadership' | 'evidence' | 'reference'
 const MISSING = 'Not persisted in the current Structural Stability Assessment.'
 
 const ssiFlow = [
-  { label: 'Assignments', href: '/ssi/assignments', note: 'Shift-start load capture', active: false },
-  { label: 'Events', href: '/ssi/events', note: 'Stability event capture', active: false },
+  { label: 'Operational Diagnostic Assignment Set', href: '/ssi/assignments', note: 'Shift-start structural evidence', active: false },
+  { label: 'Operational Stability Events', href: '/ssi/events', note: 'Operational disruption evidence', active: false },
   { label: 'Structural Stability Assessment', href: '/ssi/dashboard', note: 'Persisted structural findings', active: false },
-  { label: 'Executive Interpretation', href: '/ssi', note: 'Leadership interpretation', active: true },
-  { label: 'Weekly Brief', href: '/ssi/weekly-brief', note: 'Longitudinal executive summary', active: false },
+  { label: 'Executive Structural Interpretation', href: '/ssi', note: 'Executive intelligence', active: true },
+  { label: 'Weekly Stability Brief', href: '/ssi/weekly-brief', note: 'Longitudinal executive summary', active: false },
 ]
 
 const allowedRoles = ['SUPER_ADMIN', 'COMMAND_ADMIN', 'GOVERNANCE_OFFICER']
@@ -882,7 +882,7 @@ export default function SSIExecutiveDashboardPage() {
             <span style={styles.flowNavTitle}>SSI Flow</span>
             <span style={styles.flowNavRule} />
             <span style={styles.flowNavCaption}>
-              Assignments → Events → Structural Stability Assessment → Executive Interpretation → Weekly Brief
+              Operational Diagnostic Assignment Set → Operational Stability Events → Structural Stability Assessment → Executive Structural Interpretation → Weekly Stability Brief
             </span>
           </div>
 
@@ -922,7 +922,7 @@ export default function SSIExecutiveDashboardPage() {
           </Section>
         ) : (
           <div style={styles.dashboard}>
-            <Layer title="Executive Interpretation" tone="leadership">
+            <Layer title="Executive Structural Interpretation" tone="leadership">
               <Section title="Assessment Identification">
                 <div style={styles.compactGrid4}>
                   <Tile label="Unit" value={latest.unit} strong />
@@ -1309,7 +1309,7 @@ export default function SSIExecutiveDashboardPage() {
                 <div style={styles.versionSignature}>
                   <strong>
                     Structural Stability Intelligence (SSI) Executive
-                    Interpretation v1.0
+                    Structural Interpretation v1.0
                   </strong>
                   <span>
                     Interpretation generated exclusively from validated

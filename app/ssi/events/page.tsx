@@ -44,31 +44,31 @@ const SAVE_FAILURE_MESSAGE =
 
 const ssiFlow = [
   {
-    label: 'Assignments',
+    label: 'Operational Diagnostic Assignment Set',
     href: '/ssi/assignments',
-    note: 'ODM evidence acquisition',
+    note: 'Shift-start structural evidence',
     active: false,
   },
   {
-    label: 'Events',
+    label: 'Operational Stability Events',
     href: '/ssi/events',
-    note: 'Operational stability evidence',
+    note: 'Operational disruption evidence',
     active: true,
   },
   {
-    label: 'Trend Buffer',
+    label: 'Structural Stability Assessment',
     href: '/ssi/dashboard',
-    note: 'Persisted structural signals',
+    note: 'Longitudinal structural assessment',
     active: false,
   },
   {
-    label: 'Executive Dashboard',
+    label: 'Executive Structural Interpretation',
     href: '/ssi',
-    note: 'Leadership interpretation',
+    note: 'Executive intelligence',
     active: false,
   },
   {
-    label: 'Weekly Brief',
+    label: 'Weekly Stability Brief',
     href: '/ssi/weekly-brief',
     note: 'Printable executive summary',
     active: false,
@@ -696,8 +696,7 @@ export default function SSIEventsPage() {
             <span style={styles.flowNavTitle}>SSI Flow</span>
             <span style={styles.flowNavRule} />
             <span style={styles.flowNavCaption}>
-              Assignments → Events → Trend Buffer → Executive Dashboard
-              → Weekly Brief
+              Operational Diagnostic Assignment Set → Operational Stability Events → Structural Stability Assessment → Executive Structural Interpretation → Weekly Stability Brief
             </span>
           </div>
 
@@ -961,11 +960,7 @@ export default function SSIEventsPage() {
 
             {boundaryOpen ? (
               <p style={styles.footerText}>
-                Assignments describe the structural starting condition
-                before work begins. Stability Events record observable
-                operational facts that occurred before or during the
-                shift. Trend Buffer aggregates repeated evidence.
-                Executive interpretation happens later.
+                Operational Diagnostic Assignment Sets describe the structural starting condition before work begins. Operational Stability Events record observable operational facts before or during the shift. Structural Stability Assessment aggregates repeated evidence. Executive Structural Interpretation transforms that evidence into executive intelligence.
               </p>
             ) : null}
           </section>

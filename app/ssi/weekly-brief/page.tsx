@@ -159,31 +159,31 @@ const TREND_BUFFER_SELECT = `
 
 const ssiFlow = [
   {
-    label: 'Assignments',
+    label: 'Operational Diagnostic Assignment Set',
     href: '/ssi/assignments',
-    note: 'Shift-start load capture',
+    note: 'Shift-start structural evidence',
     active: false,
   },
   {
-    label: 'Events',
+    label: 'Operational Stability Events',
     href: '/ssi/events',
-    note: 'Stability event capture',
+    note: 'Operational disruption evidence',
     active: false,
   },
   {
-    label: 'Trend Buffer',
+    label: 'Structural Stability Assessment',
     href: '/ssi/dashboard',
-    note: 'Persisted structural signals',
+    note: 'Longitudinal structural assessment',
     active: false,
   },
   {
-    label: 'Executive Dashboard',
+    label: 'Executive Structural Interpretation',
     href: '/ssi',
-    note: 'Leadership interpretation',
+    note: 'Executive intelligence',
     active: false,
   },
   {
-    label: 'Weekly Brief',
+    label: 'Weekly Stability Brief',
     href: '/ssi/weekly-brief',
     note: 'Printable executive summary',
     active: true,
@@ -534,9 +534,9 @@ export default function SSIWeeklyBriefPage() {
   const [accessError, setAccessError] = useState<string | null>(null)
   const [accessAttempt, setAccessAttempt] = useState(0)
 
-  const [unit, setUnit] = useState('Wing B')
-  const [weekStart, setWeekStart] = useState('2026-03-01')
-  const [weekEnd, setWeekEnd] = useState('2026-03-07')
+  const [unit, setUnit] = useState('')
+  const [weekStart, setWeekStart] = useState('')
+  const [weekEnd, setWeekEnd] = useState('')
 
   const [record, setRecord] = useState<TrendRecord | null>(null)
   const [loading, setLoading] = useState(false)
@@ -733,6 +733,9 @@ export default function SSIWeeklyBriefPage() {
       setRecord(result.data as unknown as TrendRecord)
       setLoadError(null)
       setMessage('')
+      setUnit('')
+      setWeekStart('')
+      setWeekEnd('')
     } catch {
       if (mountedRef.current) {
         setLoadError(
@@ -1013,8 +1016,7 @@ export default function SSIWeeklyBriefPage() {
             <span style={styles.flowNavTitle}>SSI Flow</span>
             <span style={styles.flowNavRule} />
             <span style={styles.flowNavCaption}>
-              Assignments → Events → Trend Buffer → Executive Dashboard → Weekly
-              Brief
+              Operational Diagnostic Assignment Set → Operational Stability Events → Structural Stability Assessment → Executive Structural Interpretation → Weekly Stability Brief
             </span>
           </div>
 
